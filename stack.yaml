@@ -1,0 +1,7 @@
+resolver: lts-14.6
+
+packages:
+- schema
+
+extra-deps:
+- proto3-wire-1.0.0
