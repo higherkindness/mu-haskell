@@ -16,6 +16,7 @@ import Mu.Schema.Adapter.ProtoBuf
 import Mu.Schema.Adapter.Json ()
 
 import qualified Proto3.Wire.Encode as PBEnc
+import qualified Proto3.Wire.Decode as PBDec
 
 data Person
   = Person { firstName :: T.Text
@@ -30,6 +31,9 @@ data Person
 
 personToProtoBuf :: Person -> PBEnc.MessageBuilder
 personToProtoBuf = toProtoViaSchema @ExampleSchema
+
+protoBufToPerson :: PBDec.Parser PBDec.RawMessage Person
+protoBufToPerson = fromProtoViaSchema @ExampleSchema
 
 data Address
   = Address { postcode :: T.Text
@@ -46,16 +50,16 @@ data Gender = Male | Female | NonBinary
 
 -- Schema for these data types
 type ExampleSchema
-  = '[ 'DRecord "person"
+  = '[ 'DEnum   "gender" '["male", "female", "nb"]
+     , 'DRecord "address"
+               '[ 'FieldDef "postcode" ('TPrimitive T.Text)
+                , 'FieldDef "country"  ('TPrimitive T.Text) ]
+     , 'DRecord "person"
                 '[ 'FieldDef "firstName" ('TPrimitive T.Text)
                  , 'FieldDef "lastName"  ('TPrimitive T.Text)
                  , 'FieldDef "age"       ('TOption ('TPrimitive Int))
                  , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
                  , 'FieldDef "address"   ('TSchematic "address") ]
-     , 'DEnum   "gender" '["male", "female", "nb"]
-     , 'DRecord "address"
-               '[ 'FieldDef "postcode" ('TPrimitive T.Text)
-                , 'FieldDef "country"  ('TPrimitive T.Text) ]
      ]
 
 -- we can give a custom field mapping via a custom instance
@@ -68,8 +72,8 @@ instance HasSchema ExampleSchema "gender" Gender where
 -- Additional information for protocol buffers
 type instance ProtoBufFieldIds ExampleSchema "person"
   = '[ "firstName" ':<->: 1, "lastName" ':<->: 2
-     , "age" ':<->: 3, "gender" ':<->: 4, "address" ':<->: 5]
+     , "age" ':<->: 3, "gender" ':<->: 4, "address" ':<->: 5 ]
 type instance ProtoBufFieldIds ExampleSchema "gender"
-  = '[ "male" ':<->: 1, "female" ':<->: 2, "nb" ':<->: 3]
+  = '[ "male" ':<->: 1, "female" ':<->: 2, "nb" ':<->: 0 ]
 type instance ProtoBufFieldIds ExampleSchema "address"
-  = '[ "postcode" ':<->: 1, "country" ':<->: 2]
+  = '[ "postcode" ':<->: 1, "country" ':<->: 2 ]

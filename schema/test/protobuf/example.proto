@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+message person {
+  string firstName = 1;
+  string lastName = 2;
+  int32 age = 3;
+  gender gender = 4;
+  address address = 5;
+}
+
+message address {
+  string postcode = 1;
+  string country = 2;
+}
+
+enum gender {
+  nb = 0;
+  male = 1;
+  female = 2;
+}

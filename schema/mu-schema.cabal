@@ -43,3 +43,11 @@ executable test-avro
   hs-source-dirs:      test
   default-language:    Haskell2010
   ghc-options:         -Wall
+
+executable test-protobuf
+  main-is:             ProtoBuf.hs
+  build-depends:       base >=4.12 && <5, sop-core,
+                       mu-schema, proto3-wire, bytestring
+  hs-source-dirs:      test
+  default-language:    Haskell2010
+  ghc-options:         -Wall

@@ -2,3 +2,4 @@ stack.yaml.lock
 .*
 *~
 dist
+*.pyc
