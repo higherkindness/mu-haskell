@@ -34,10 +34,14 @@ instance forall sch sty t.
   schema = Tagged $ ASch.Union (schemas (Proxy @sch) (Proxy @sch))
 instance (HasSchema sch sty t, HasAvroSchemas sch sch, A.FromAvro (Term sch (sch :/: sty)))
          => A.FromAvro (WithSchema sch sty t) where
-  fromAvro v = WithSchema . fromSchema' @sch <$> A.fromAvro v
-instance (HasSchema sch sty t, HasAvroSchemas sch sch, A.ToAvro (Term sch (sch :/: sty)))
+  fromAvro (AVal.Union _ _ v) = WithSchema . fromSchema' @sch <$> A.fromAvro v
+  fromAvro v = ASch.badValue v "top-level"
+instance forall sch sty t.
+         (HasSchema sch sty t, HasAvroSchemas sch sch, A.ToAvro (Term sch (sch :/: sty)))
          => A.ToAvro (WithSchema sch sty t) where
-  toAvro (WithSchema v) = A.toAvro (toSchema' @sch v)
+  toAvro (WithSchema v) = AVal.Union (schemas (Proxy @sch) (Proxy @sch))
+                                     (unTagged $ A.schema @(Term sch (sch :/: sty)))
+                                     (A.toAvro (toSchema' @sch v))
 
 class HasAvroSchemas (r :: Schema tn fn) (sch :: Schema tn fn) where
   schemas :: Proxy r -> Proxy sch -> V.Vector ASch.Type
