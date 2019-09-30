@@ -25,9 +25,10 @@ import GHC.TypeLits
 
 import Mu.Schema
 
-instance A.HasAvroSchema (Term sch (sch :/: sty))
+instance forall sch sty t.
+         A.HasAvroSchema (Term sch (sch :/: sty))
          => A.HasAvroSchema (WithSchema sch sty t) where
-  schema = A.schema
+  schema = coerce $ A.schema @(Term sch (sch :/: sty))
 instance (HasSchema sch sty t, A.FromAvro (Term sch (sch :/: sty)))
          => A.FromAvro (WithSchema sch sty t) where
   fromAvro v = WithSchema . fromSchema' @sch <$> A.fromAvro v
@@ -48,18 +49,20 @@ instance forall sch name choices.
   schema = Tagged $ ASch.mkEnum enumName [] Nothing choicesNames
     where enumName = nameTypeName (Proxy @name)
           choicesNames = symbols nameText (Proxy @choices)
-instance A.HasAvroSchema (FieldValue sch t)
+instance forall sch t.
+         A.HasAvroSchema (FieldValue sch t)
          => A.HasAvroSchema (Term sch ('DSimple t)) where
-  schema = A.schema
+  schema = coerce $ A.schema @(FieldValue sch t)
 
 instance A.HasAvroSchema (FieldValue sch 'TNull) where
   schema = Tagged ASch.Null
-instance A.HasAvroSchema t
+instance forall sch t. A.HasAvroSchema t
          => A.HasAvroSchema (FieldValue sch ('TPrimitive t)) where
-  schema = A.schema
-instance A.HasAvroSchema (Term sch (sch :/: t))
+  schema = coerce $ A.schema @t
+instance forall sch t.
+         A.HasAvroSchema (Term sch (sch :/: t))
          => A.HasAvroSchema (FieldValue sch ('TSchematic t)) where
-  schema = A.schema
+  schema = coerce $ A.schema @(Term sch (sch :/: t))
 instance forall sch choices.
          HasAvroSchemaUnion (FieldValue sch) choices
          => A.HasAvroSchema (FieldValue sch ('TUnion choices)) where
