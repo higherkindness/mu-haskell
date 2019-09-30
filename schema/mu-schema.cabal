@@ -35,3 +35,11 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall -fprint-potential-instances
+
+executable test-avro
+  main-is:             Avro.hs
+  build-depends:       base >=4.12 && <5, sop-core,
+                       mu-schema, avro, bytestring
+  hs-source-dirs:      test
+  default-language:    Haskell2010
+  ghc-options:         -Wall
