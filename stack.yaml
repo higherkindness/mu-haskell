@@ -5,3 +5,5 @@ packages:
 
 extra-deps:
 - proto3-wire-1.0.0
+- git: https://github.com/serras/avro.git
+  commit: 7ba39ebb6b74c64fffb3d3a972b4000185579f19

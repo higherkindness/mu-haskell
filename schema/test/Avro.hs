@@ -1,4 +1,5 @@
-{-# language OverloadedStrings, TypeApplications #-}
+{-# language OverloadedStrings, TypeApplications,
+             NamedFieldPuns #-}
 module Main where
 
 import Data.Avro
@@ -18,8 +19,14 @@ examplePerson2 = Person "Cuarenta" "Siete" Nothing Nothing exampleAddress
 
 main :: IO ()
 main = do -- Obtain the filenames
-          [genFile, _conFile] <- getArgs
+          [genFile, conFile] <- getArgs
+          -- Read the file produced by Python
+          putStrLn "haskell/consume"
+          cbs <- BS.readFile conFile
+          let [people] = decodeContainer @Person cbs
+          print people
           -- Encode a couple of values
-          bs <- encodeContainer [[examplePerson1, examplePerson2]]
-          BS.writeFile genFile bs
-          putStrLn "done!"
+          putStrLn "haskell/generate"
+          print [examplePerson1, examplePerson2]
+          gbs <- encodeContainer [[examplePerson1, examplePerson2]]
+          BS.writeFile genFile gbs

@@ -14,7 +14,7 @@
     "fields": [
       {"name": "firstName", "type": "string"},
       {"name": "lastName", "type": "string"},
-      {"name": "age",  "type": ["int", "null"]},
+      {"name": "age",  "type": ["long", "null"]},
       {"name": "gender", "type": ["gender", "null"]},
       {"name": "address", "type": "address"}
     ]
