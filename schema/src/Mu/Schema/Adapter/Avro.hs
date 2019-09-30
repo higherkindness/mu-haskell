@@ -26,15 +26,28 @@ import GHC.TypeLits
 import Mu.Schema
 
 instance forall sch sty t.
-         A.HasAvroSchema (Term sch (sch :/: sty))
+         HasAvroSchemas sch sch
          => A.HasAvroSchema (WithSchema sch sty t) where
-  schema = coerce $ A.schema @(Term sch (sch :/: sty))
-instance (HasSchema sch sty t, A.FromAvro (Term sch (sch :/: sty)))
+  -- the previous iteration added only the schema of the type
+  -- schema = coerce $ A.schema @(Term sch (sch :/: sty))
+  -- but now we prefer to have all of them
+  schema = Tagged $ ASch.Union (schemas (Proxy @sch) (Proxy @sch))
+instance (HasSchema sch sty t, HasAvroSchemas sch sch, A.FromAvro (Term sch (sch :/: sty)))
          => A.FromAvro (WithSchema sch sty t) where
   fromAvro v = WithSchema . fromSchema' @sch <$> A.fromAvro v
-instance (HasSchema sch sty t, A.ToAvro (Term sch (sch :/: sty)))
+instance (HasSchema sch sty t, HasAvroSchemas sch sch, A.ToAvro (Term sch (sch :/: sty)))
          => A.ToAvro (WithSchema sch sty t) where
   toAvro (WithSchema v) = A.toAvro (toSchema' @sch v)
+
+class HasAvroSchemas (r :: Schema tn fn) (sch :: Schema tn fn) where
+  schemas :: Proxy r -> Proxy sch -> V.Vector ASch.Type
+instance HasAvroSchemas r '[] where
+  schemas _ _ = V.empty
+instance forall r d ds.
+         (A.HasAvroSchema (Term r d), HasAvroSchemas r ds)
+         => HasAvroSchemas r (d ': ds) where
+  schemas pr _ = V.cons thisSchema (schemas pr (Proxy @ds))
+    where thisSchema = unTagged $ A.schema @(Term r d)
 
 -- HasAvroSchema instances
 
@@ -60,9 +73,11 @@ instance forall sch t. A.HasAvroSchema t
          => A.HasAvroSchema (FieldValue sch ('TPrimitive t)) where
   schema = coerce $ A.schema @t
 instance forall sch t.
-         A.HasAvroSchema (Term sch (sch :/: t))
+         -- A.HasAvroSchema (Term sch (sch :/: t))
+         KnownName t
          => A.HasAvroSchema (FieldValue sch ('TSchematic t)) where
-  schema = coerce $ A.schema @(Term sch (sch :/: t))
+  -- schema = coerce $ A.schema @(Term sch (sch :/: t))
+  schema = Tagged $ ASch.NamedType (nameTypeName (Proxy @t))
 instance forall sch choices.
          HasAvroSchemaUnion (FieldValue sch) choices
          => A.HasAvroSchema (FieldValue sch ('TUnion choices)) where
@@ -126,7 +141,7 @@ instance A.FromAvro (FieldValue sch 'TNull) where
   fromAvro v         = A.badValue v "null"
 instance A.FromAvro t => A.FromAvro (FieldValue sch ('TPrimitive t)) where
   fromAvro v = FPrimitive <$> A.fromAvro v
-instance A.FromAvro (Term sch (sch :/: t))
+instance (KnownName t, A.FromAvro (Term sch (sch :/: t)))
          => A.FromAvro (FieldValue sch ('TSchematic t)) where
   fromAvro v = FSchematic <$> A.fromAvro v
 instance (HasAvroSchemaUnion (FieldValue sch) choices, FromAvroUnion sch choices)
@@ -201,7 +216,7 @@ instance A.ToAvro (FieldValue sch 'TNull) where
   toAvro FNull = AVal.Null
 instance A.ToAvro t => A.ToAvro (FieldValue sch ('TPrimitive t)) where
   toAvro (FPrimitive v) = A.toAvro v
-instance A.ToAvro (Term sch (sch :/: t))
+instance (KnownName t, A.ToAvro (Term sch (sch :/: t)))
          => A.ToAvro (FieldValue sch ('TSchematic t)) where
   toAvro (FSchematic v) = A.toAvro v
 instance forall sch choices.
