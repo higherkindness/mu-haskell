@@ -4,7 +4,7 @@
              FlexibleInstances, FlexibleContexts,
              ScopedTypeVariables, TypeApplications,
              UndecidableInstances,
-             OverloadedStrings,
+             OverloadedStrings, ConstraintKinds,
              AllowAmbiguousTypes #-}
 module Mu.Schema.Adapter.ProtoBuf where
 
@@ -20,13 +20,18 @@ import qualified Proto3.Wire.Decode as PBDec
 
 import Mu.Schema
 
+class ProtoBridgeTerm sch (sch :/: sty) => IsProtoSchema sch sty
+instance ProtoBridgeTerm sch (sch :/: sty) => IsProtoSchema sch sty
+
+type HasProtoSchema sch sty a = (HasSchema sch sty a, IsProtoSchema sch sty)
+
 toProtoViaSchema :: forall sch a sty.
-                    (HasSchema sch sty a, ProtoBridgeTerm sch (sch :/: sty))
+                    (HasProtoSchema sch sty a)
                  => a -> PBEnc.MessageBuilder
 toProtoViaSchema = termToProto . toSchema' @sch
 
 fromProtoViaSchema :: forall sch a sty.
-                      (HasSchema sch sty a, ProtoBridgeTerm sch (sch :/: sty))
+                      (HasProtoSchema sch sty a)
                    => PBDec.Parser PBDec.RawMessage a
 fromProtoViaSchema = fromSchema' @sch <$> protoToTerm
 
