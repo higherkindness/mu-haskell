@@ -5,35 +5,33 @@
              UndecidableInstances #-}
 module Mu.Rpc where
 
-import Data.Kind
 import GHC.TypeLits
 
 import Mu.Schema
 
-type Service' = Service Symbol
+type Service' = Service Symbol Symbol
 
 -- | A service is a set of methods.
-type Service serviceName
-  = [Method serviceName]
+data Service serviceName methodName
+  = Service serviceName [Method methodName]
 
 -- | A method is defined by its name, arguments, and return type.
-data Method serviceName
-  = Method serviceName [Argument] Return
+data Method methodName
+  = Method methodName [Argument] Return
 
 -- | Look up a method in a service definition using its name.
 --   Useful to declare handlers like @HandlerIO (MyService :-->: "MyMethod")@.
-type family (:-->:) (s :: Service snm) (m :: snm) :: Method snm where
-  '[] :-->: m = TypeError ('Text "could not find method " ':<>: 'ShowType m)
-  ('Method m args r ': ms) :-->: m = 'Method m args r
-  (other ': ms) :-->: m = ms :-->: m
+type family (:-->:) (s :: Service snm mnm) (m :: mnm) :: Method mnm where
+  'Service sname methods :-->: m = LookupMethod methods m
+
+type family LookupMethod (s :: [Method mnm]) (m :: snm) :: Method snm where
+  LookupMethod '[] m = TypeError ('Text "could not find method " ':<>: 'ShowType m)
+  LookupMethod ('Method m args r ': ms) m = 'Method m args r
+  LookupMethod (other            ': ms) m = LookupMethod ms m
 
 -- | This is used to pack together a schema and a type defined in that schema.
 type SchemaAndType typeName fieldName
   = (Schema typeName fieldName, typeName)
-
--- | Version of 'HasSchema' that works with 'SchemaAndType'
-type family HasSchema' (st :: SchemaAndType typeName fieldName) (t :: Type) :: Constraint where
-  HasSchema' '(sch, sty) t = HasSchema sch sty t
 
 -- | Defines the way in which arguments are handled.
 data Argument where

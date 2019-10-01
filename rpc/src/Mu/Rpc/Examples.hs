@@ -4,7 +4,8 @@
              FlexibleInstances,
              OverloadedStrings,
              DeriveGeneric, DeriveAnyClass,
-             TypeApplications, TypeOperators #-}
+             TypeApplications, TypeOperators,
+             PartialTypeSignatures #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Rpc.Examples where
 
@@ -26,18 +27,19 @@ type QuickstartSchema
      ]
 
 type QuickStartService
-  = '[ 'Method "SayHello"
-               '[ 'ArgSingle '(QuickstartSchema, "HelloRequest")]
-               ('RetSingle '(QuickstartSchema, "HelloResponse")) ]
+  = 'Service "Example"
+      '[ 'Method "SayHello"
+                 '[ 'ArgSingle '(QuickstartSchema, "HelloRequest")]
+                 ('RetSingle '(QuickstartSchema, "HelloResponse")) ]
 
 newtype HelloRequest = HelloRequest { name :: T.Text }
   deriving (Generic, HasSchema QuickstartSchema "HelloRequest")
 newtype HelloResponse = HelloResponse { message :: T.Text }
   deriving (Generic, HasSchema QuickstartSchema "HelloResponse")
 
-quickstartServer :: ServerIO QuickStartService
+quickstartServer :: ServerIO QuickStartService _
 quickstartServer
-  = Handler sayHello :* Nil
+  = Server (sayHello :<|>: H0)
   where sayHello :: HelloRequest -> IO HelloResponse
         sayHello (HelloRequest nm) = return (HelloResponse ("hi, " <> nm))
             
