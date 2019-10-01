@@ -1,5 +1,6 @@
 {-# language DataKinds, PolyKinds,
              GADTs, TypeFamilies,
+             ExistentialQuantification,
              MultiParamTypeClasses,
              FlexibleInstances,
              UndecidableInstances,
@@ -12,31 +13,31 @@ import Data.Kind
 import Data.SOP
 
 import Mu.Rpc
-import Mu.Schema
 
-type ServerT sch m = NP (HandlerT sch m)
+type ServerT m = NP (HandlerT m)
+type ServerIO  = ServerT IO
 
-data HandlerT sch m method where
-  Handler :: Handles sch m args ret
-          => Handler' sch m args ret
-          -> HandlerT sch m ('Method name args ret)
+data HandlerT m method where
+  Handler :: forall m h args ret name. Handles args ret m h
+          => h -> HandlerT m ('Method name args ret)
+type HandlerIO = HandlerT IO
 
-class Handles (sch :: Schema tn fn) (m :: Type -> Type)
-              (args :: [Object]) (ret :: Object) where
-  type Handler' sch m args ret :: Type
+-- Define a relation for handling
+class Handles (args :: [Argument]) (ret :: Return)
+              (m :: Type -> Type) (h :: Type)
 
 -- Arguments
-instance (HasSchema sch sty t, Handles sch m args r)
-         => Handles sch m ('Single t ': args) r where
-  type Handler' sch m ('Single t ': args) r
-    = t -> Handler' sch m args r
-instance (HasSchema sch sty t, Handles sch m args r)
-         => Handles sch m ('Stream t ': args) r where
-  type Handler' sch m ('Stream t ': args) r
-    = ConduitT () t m () -> Handler' sch m args r
-
--- Results
-instance HasSchema sch sty t => Handles sch m '[] ('Single t) where
-  type Handler' sch m '[] ('Single t) = m t
-instance HasSchema sch sty t => Handles sch m '[] ('Stream t) where
-  type Handler' sch m '[] ('Stream t) = ConduitT t Void m ()
+instance (HasSchema' sty t, Handles args ret m h)
+         => Handles ('ArgSingle sty ': args) ret m
+                    (t -> h)
+instance (HasSchema' sty t, Handles args ret m h)
+         => Handles ('ArgStream sty ': args) ret m
+                    (ConduitT () t m () -> h)
+-- Result with exception
+instance (HasSchema' ety e, HasSchema' vty v)
+         => Handles '[] ('RetThrows ety vty) m
+                    (m (Either e v))
+instance (HasSchema' vty v)
+         => Handles '[] ('RetSingle vty) m (m v)
+instance (HasSchema' vty v)
+         => Handles '[] ('RetStream vty) m (ConduitT v Void m ())
