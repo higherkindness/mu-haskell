@@ -36,7 +36,7 @@ instance (HasSchema sch sty t, Handles args ret m h)
                     (t -> h)
 instance (HasSchema sch sty t, Handles args ret m h)
          => Handles ('ArgStream sch sty ': args) ret m
-                    (ConduitT () t m () -> h)
+                    (ConduitT () t IO () -> h)
 -- Result with exception
 instance (HasSchema esch ety e, HasSchema vsch vty v)
          => Handles '[] ('RetThrows esch ety vsch vty) m
@@ -44,4 +44,4 @@ instance (HasSchema esch ety e, HasSchema vsch vty v)
 instance (HasSchema vsch vty v)
          => Handles '[] ('RetSingle vsch vty) m (m v)
 instance (HasSchema vsch vty v)
-         => Handles '[] ('RetStream vsch vty) m (ConduitT v Void m ())
+         => Handles '[] ('RetStream vsch vty) m (ConduitT v Void m () -> m ())

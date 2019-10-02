@@ -3,12 +3,19 @@
              FlexibleInstances, FlexibleContexts,
              UndecidableInstances,
              TypeApplications, TypeOperators,
-             ScopedTypeVariables #-}
+             ScopedTypeVariables,
+             TupleSections #-}
 {-# OPTIONS_GHC -fprint-explicit-foralls -fprint-explicit-kinds #-}
 module Mu.Server.GRpc where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
+import Control.Concurrent.Async
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TMVar
+import Control.Monad.IO.Class
+import Data.Conduit
+import Data.Conduit.TMChan
 import Data.Kind
 import Data.Proxy
 import Network.GRPC.HTTP2.Encoding (uncompressed, gzip)
@@ -79,3 +86,50 @@ instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
                               (v -> IO r) where
   gRpcMethodHandler _ _ rpc h
     = unary (fromProtoViaSchema @vsch, toProtoViaSchema @rsch) rpc (\_req -> h)
+
+instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
+         => GRpcMethodHandler '[ 'ArgStream vsch vty ] ('RetSingle rsch rty)
+                              (ConduitT () v IO () -> IO r) where
+  gRpcMethodHandler _ _ rpc h
+    = clientStream (fromProtoViaSchema @vsch, toProtoViaSchema @rsch) rpc cstream
+    where cstream :: req -> IO ((), ClientStream v r ())
+          cstream _ = do
+            -- Create a new TMChan
+            chan <- newTMChanIO
+            let producer = sourceTMChan @IO chan
+            -- Start executing the handler in another thread
+            withAsync (h producer) $ \promise ->
+              -- Build the actual handler
+              let cstreamHandler _ newInput
+                    = do atomically $ writeTMChan chan newInput
+                         return ()
+                  cstreamFinalizer _
+                    = do atomically $ closeTMChan chan
+                         wait promise
+              -- Return the information
+              in return ((), ClientStream cstreamHandler cstreamFinalizer)
+
+instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
+         => GRpcMethodHandler '[ 'ArgSingle vsch vty ] ('RetStream rsch rty)
+                              (v -> ConduitT r Void IO () -> IO ()) where
+  gRpcMethodHandler _ _ rpc h
+    = serverStream (fromProtoViaSchema @vsch, toProtoViaSchema @rsch) rpc sstream
+    where sstream :: req -> v -> IO ((), ServerStream r ())
+          sstream _ v = do
+            -- Variable to connect input and output
+            var <- newEmptyTMVarIO
+            -- Define the handler
+            let toMVarConduit :: ConduitT r Void IO ()
+                  = do x <- await
+                       liftIO $ atomically $ putTMVar var x
+                       toMVarConduit
+            -- Start executing the handler
+            withAsync (h v toMVarConduit) $ \promise ->
+              -- Return the information
+              let readNext _
+                    = do nextOutput <- atomically $ takeTMVar var
+                         case nextOutput of
+                           Just o  -> return $ Just ((), o)
+                           Nothing -> do cancel promise
+                                         return Nothing
+              in return ((), ServerStream readNext)
