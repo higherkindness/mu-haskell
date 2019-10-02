@@ -19,11 +19,12 @@ extra-source-files:  CHANGELOG.md
 
 library
   exposed-modules:     Mu.Rpc,
-                       Mu.Server
+                       Mu.Server,
+                       Mu.Rpc.Examples
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.12 && <5, sop-core,
-                       mu-schema, conduit
+                       mu-schema, conduit, text
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall -fprint-potential-instances

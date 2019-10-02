@@ -23,7 +23,20 @@ library
   -- other-extensions:
   build-depends:       base >=4.12 && <5, sop-core,
                        mu-schema, mu-rpc, warp-grpc,
-                       conduit, bytestring
+                       conduit, bytestring,
+                       wai, http2-grpc-types,
+                       warp, warp-tls
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall -fprint-potential-instances
+
+executable grpc-example
+  main-is:             ExampleMain.hs
+  build-depends:       base >=4.12 && <5, sop-core,
+                       mu-schema, mu-rpc, warp-grpc,
+                       conduit, bytestring,
+                       wai, http2-grpc-types,
+                       warp, warp-tls
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  ghc-options:         -Wall
