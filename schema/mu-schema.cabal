@@ -5,7 +5,7 @@ cabal-version:       >=1.10
 
 name:                mu-schema
 version:             0.1.0.0
--- synopsis:
+synopsis:            Format-independent schemas for serialization
 -- description:
 -- bug-reports:
 license:             Apache-2.0
@@ -15,7 +15,7 @@ maintainer:          alejandro.serrano@47deg.com
 -- copyright:
 category:            Network
 build-type:          Simple
-extra-source-files:  CHANGELOG.md
+extra-source-files:  README.md, CHANGELOG.md
 
 library
   exposed-modules:     Mu.Schema,
