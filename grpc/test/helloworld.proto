@@ -1,4 +1,5 @@
 // Copyright 2015 gRPC authors.
+// Modified 2019, by Alejandro Serrano.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,11 +26,18 @@ package helloworld;
 service Greeter {
   // Sends a greeting
   rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc SayHi (HiRequest) returns (stream HelloReply) {}
+  rpc SayManyHellos (stream HelloRequest) returns (stream HelloReply) {}
 }
 
 // The request message containing the user's name.
 message HelloRequest {
   string name = 1;
+}
+
+// The request message containing the amount of greetings.
+message HiRequest {
+  int32 number = 1;
 }
 
 // The response message containing the greetings

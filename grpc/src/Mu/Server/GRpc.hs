@@ -101,11 +101,9 @@ instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
             withAsync (h producer) $ \promise ->
               -- Build the actual handler
               let cstreamHandler _ newInput
-                    = do atomically $ writeTMChan chan newInput
-                         return ()
+                    = atomically (writeTMChan chan newInput)
                   cstreamFinalizer _
-                    = do atomically $ closeTMChan chan
-                         wait promise
+                    = atomically (closeTMChan chan) >> wait promise
               -- Return the information
               in return ((), ClientStream cstreamHandler cstreamFinalizer)
 
@@ -118,18 +116,48 @@ instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
           sstream _ v = do
             -- Variable to connect input and output
             var <- newEmptyTMVarIO
-            -- Define the handler
-            let toMVarConduit :: ConduitT r Void IO ()
-                  = do x <- await
-                       liftIO $ atomically $ putTMVar var x
-                       toMVarConduit
             -- Start executing the handler
-            withAsync (h v toMVarConduit) $ \promise ->
+            promise <- async (h v (toTMVarConduit var))
               -- Return the information
-              let readNext _
-                    = do nextOutput <- atomically $ takeTMVar var
-                         case nextOutput of
-                           Just o  -> return $ Just ((), o)
-                           Nothing -> do cancel promise
-                                         return Nothing
-              in return ((), ServerStream readNext)
+            let readNext _
+                  = do nextOutput <- atomically $ takeTMVar var
+                       case nextOutput of
+                         Just o  -> return $ Just ((), o)
+                         Nothing -> do cancel promise
+                                       return Nothing
+            return ((), ServerStream readNext)
+
+instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
+         => GRpcMethodHandler '[ 'ArgStream vsch vty ] ('RetStream rsch rty)
+                              (ConduitT () v IO () -> ConduitT r Void IO () -> IO ()) where
+  gRpcMethodHandler _ _ rpc h
+    = bidiStream (fromProtoViaSchema @vsch, toProtoViaSchema @rsch) rpc bdstream
+    where bdstream :: req -> IO ((), BiDiStream v r ())
+          bdstream _ = do
+            -- Create a new TMChan and a new variable
+            chan <- newTMChanIO
+            let producer = sourceTMChan @IO chan
+            var <- newEmptyTMVarIO
+            -- Start executing the handler
+            promise <- async (h producer (toTMVarConduit var))
+            -- Build the actual handler
+            let cstreamHandler _ newInput
+                  = atomically (writeTMChan chan newInput)
+                cstreamFinalizer _
+                  = atomically (closeTMChan chan) >> wait promise
+                readNext _
+                  = do nextOutput <- atomically $ tryTakeTMVar var
+                       case nextOutput of
+                         Just (Just o) ->
+                           return $ WriteOutput () o
+                         Just Nothing  -> do
+                           cancel promise
+                           return $ Abort
+                         Nothing -> do -- no new elements to output
+                           return $ WaitInput cstreamHandler cstreamFinalizer
+            return ((), BiDiStream readNext)
+
+toTMVarConduit :: TMVar (Maybe r) -> ConduitT r Void IO ()
+toTMVarConduit var = do x <- await
+                        liftIO $ atomically $ putTMVar var x
+                        toTMVarConduit var
