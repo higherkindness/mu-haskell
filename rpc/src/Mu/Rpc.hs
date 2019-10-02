@@ -29,27 +29,22 @@ type family LookupMethod (s :: [Method mnm]) (m :: snm) :: Method snm where
   LookupMethod ('Method m args r ': ms) m = 'Method m args r
   LookupMethod (other            ': ms) m = LookupMethod ms m
 
--- | This is used to pack together a schema and a type defined in that schema.
-type SchemaAndType typeName fieldName
-  = (Schema typeName fieldName, typeName)
-
 -- | Defines the way in which arguments are handled.
 data Argument where
   -- | Use a single value.
-  ArgSingle :: SchemaAndType typeName fieldName -> Argument
+  ArgSingle :: Schema typeName fieldName -> typeName -> Argument
   -- | Consume a stream of values.
-  ArgStream :: SchemaAndType typeName fieldName -> Argument
+  ArgStream :: Schema typeName fieldName -> typeName -> Argument
 
 -- | Defines the different possibilities for returning
 --   information from a method.
 data Return where
   -- | Return a single value.
-  RetSingle :: SchemaAndType typeName fieldName -> Return
+  RetSingle :: Schema typeName fieldName -> typeName -> Return
   -- | Return a value or an error
   --   (this can be found in Avro IDL).
-  RetThrows :: SchemaAndType typeName fieldName
-            -> SchemaAndType typeName fieldName
-            -> Return
+  RetThrows :: Schema typeName fieldName -> typeName
+            -> Schema typeName fieldName -> typeName -> Return
   -- | Return a stream of values
   --   (this can be found in gRPC).
-  RetStream :: SchemaAndType typeName fieldName -> Return
+  RetStream :: Schema typeName fieldName -> typeName -> Return

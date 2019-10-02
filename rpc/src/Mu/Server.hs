@@ -32,16 +32,16 @@ class Handles (args :: [Argument]) (ret :: Return)
 
 -- Arguments
 instance (HasSchema sch sty t, Handles args ret m h)
-         => Handles ('ArgSingle '(sch,sty) ': args) ret m
+         => Handles ('ArgSingle sch sty ': args) ret m
                     (t -> h)
 instance (HasSchema sch sty t, Handles args ret m h)
-         => Handles ('ArgStream '(sch,sty) ': args) ret m
+         => Handles ('ArgStream sch sty ': args) ret m
                     (ConduitT () t m () -> h)
 -- Result with exception
 instance (HasSchema esch ety e, HasSchema vsch vty v)
-         => Handles '[] ('RetThrows '(esch,ety) '(vsch,vty)) m
+         => Handles '[] ('RetThrows esch ety vsch vty) m
                     (m (Either e v))
 instance (HasSchema vsch vty v)
-         => Handles '[] ('RetSingle '(vsch,vty)) m (m v)
+         => Handles '[] ('RetSingle vsch vty) m (m v)
 instance (HasSchema vsch vty v)
-         => Handles '[] ('RetStream '(vsch,vty)) m (ConduitT v Void m ())
+         => Handles '[] ('RetStream vsch vty) m (ConduitT v Void m ())

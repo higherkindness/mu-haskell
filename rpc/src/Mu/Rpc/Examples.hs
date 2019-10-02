@@ -5,7 +5,8 @@
              OverloadedStrings,
              DeriveGeneric, DeriveAnyClass,
              TypeApplications, TypeOperators,
-             PartialTypeSignatures #-}
+             PartialTypeSignatures,
+             TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Rpc.Examples where
 
@@ -15,6 +16,7 @@ import GHC.Generics
 import Mu.Schema
 import Mu.Rpc
 import Mu.Server
+import Mu.Schema.Adapter.ProtoBuf
 
 -- Defines the service from gRPC Quickstart
 -- https://grpc.io/docs/quickstart/python/
@@ -26,11 +28,16 @@ type QuickstartSchema
                 '[ 'FieldDef "message" ('TPrimitive T.Text) ]
      ]
 
+type instance ProtoBufFieldIds QuickstartSchema "HelloRequest"
+  = '[ "name" ':<->: 1 ]
+type instance ProtoBufFieldIds QuickstartSchema "HelloResponse"
+  = '[ "message" ':<->: 1 ]
+
 type QuickStartService
-  = 'Service "Example"
+  = 'Service "Greeter"
       '[ 'Method "SayHello"
-                 '[ 'ArgSingle '(QuickstartSchema, "HelloRequest")]
-                 ('RetSingle '(QuickstartSchema, "HelloResponse")) ]
+                 '[ 'ArgSingle QuickstartSchema "HelloRequest"]
+                 ('RetSingle QuickstartSchema "HelloResponse") ]
 
 newtype HelloRequest = HelloRequest { name :: T.Text }
   deriving (Generic, HasSchema QuickstartSchema "HelloRequest")
