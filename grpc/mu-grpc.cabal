@@ -28,7 +28,7 @@ library
                        conduit, bytestring, text,
                        wai, http2-grpc-types,
                        warp, warp-tls,
-                       async, stm, stm-conduit,
+                       async, stm, stm-conduit, stm-chans,
                        http2, http2-client,
                        http2-client-grpc-proto3-wire
   hs-source-dirs:      src
@@ -42,7 +42,7 @@ executable grpc-example-server
                        conduit, bytestring, text,
                        wai, http2-grpc-types,
                        warp, warp-tls,
-                       async, stm, stm-conduit,
+                       async, stm, stm-conduit, stm-chans,
                        http2, http2-client,
                        http2-client-grpc-proto3-wire
   hs-source-dirs:      src

@@ -3,22 +3,32 @@
              FlexibleInstances, FlexibleContexts,
              ScopedTypeVariables, TypeApplications,
              TypeOperators, DeriveFunctor,
-             AllowAmbiguousTypes #-}
+             AllowAmbiguousTypes,
+             TupleSections #-}
 module Mu.Client.GRpc (
   GrpcClient
 , GrpcClientConfig
 , grpcClientConfigSimple
 , setupGrpcClient'
 , gRpcCall
+, CompressMode(..)
 , GRpcReply(..)
 ) where
 
+import Control.Monad.IO.Class
+import Control.Concurrent.Async
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TMChan
+import Control.Concurrent.STM.TMVar
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
+import Data.Conduit
+import qualified Data.Conduit.Combinators as C
+import Data.Conduit.TMChan
 import GHC.TypeLits
 import Network.HTTP2 (ErrorCode)
 import Network.HTTP2.Client (ClientIO, TooMuchConcurrency, ClientError, runExceptT)
-import Network.GRPC.Proto3Wire.Client (RPC(..), RawReply)
+import Network.GRPC.Proto3Wire.Client (RPC(..), RawReply, CompressMode(..), StreamDone(..))
 import Network.GRPC.Proto3Wire.Client.Helpers
 
 import Mu.Rpc
@@ -52,11 +62,21 @@ data GRpcReply a
   | GRpcOk a
   deriving (Show, Functor)
 
-buildGRpcReply :: Either TooMuchConcurrency (RawReply a) -> GRpcReply a
-buildGRpcReply (Left tmc) = GRpcTooMuchConcurrency tmc
-buildGRpcReply (Right (Left ec)) = GRpcErrorCode ec
-buildGRpcReply (Right (Right (_, _, Left es))) = GRpcErrorString es
-buildGRpcReply (Right (Right (_, _, Right r))) = GRpcOk r
+buildGRpcReply1 :: Either TooMuchConcurrency (RawReply a) -> GRpcReply a
+buildGRpcReply1 (Left tmc) = GRpcTooMuchConcurrency tmc
+buildGRpcReply1 (Right (Left ec)) = GRpcErrorCode ec
+buildGRpcReply1 (Right (Right (_, _, Left es))) = GRpcErrorString es
+buildGRpcReply1 (Right (Right (_, _, Right r))) = GRpcOk r
+
+buildGRpcReply2 :: Either TooMuchConcurrency (r, (RawReply a)) -> GRpcReply a
+buildGRpcReply2 (Left tmc) = GRpcTooMuchConcurrency tmc
+buildGRpcReply2 (Right (_, (Left ec))) = GRpcErrorCode ec
+buildGRpcReply2 (Right (_, (Right (_, _, Left es)))) = GRpcErrorString es
+buildGRpcReply2 (Right (_, (Right (_, _, Right r)))) = GRpcOk r
+
+buildGRpcReply3 :: Either TooMuchConcurrency v -> GRpcReply ()
+buildGRpcReply3 (Left tmc) = GRpcTooMuchConcurrency tmc
+buildGRpcReply3 (Right _)  = GRpcOk ()
 
 simplifyResponse :: ClientIO (GRpcReply a) -> IO (GRpcReply a)
 simplifyResponse reply = do
@@ -73,7 +93,59 @@ instance (KnownName name, HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
                            (v -> IO (GRpcReply r)) where
   gRpcMethodCall pkgName srvName _ client x
     = simplifyResponse $ 
-      buildGRpcReply <$>
+      buildGRpcReply1 <$>
       rawUnary (toProtoViaSchema @vsch, fromProtoViaSchema @rsch) rpc client x
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
+
+instance (KnownName name, HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
+         => GRpcMethodCall ('Method name '[ 'ArgStream vsch vty ] ('RetSingle rsch rty))
+                           (CompressMode -> IO (ConduitT v Void IO (GRpcReply r))) where
+  gRpcMethodCall pkgName srvName _ client compress
+    = do -- Create a new TMChan
+         chan <- newTMChanIO :: IO (TMChan v)
+         -- Start executing the client in another thread
+         promise <- async $ 
+            simplifyResponse $ 
+            buildGRpcReply2 <$>
+            rawStreamClient (toProtoViaSchema @vsch, fromProtoViaSchema @rsch) rpc client ()
+                            (\_ -> do nextVal <- liftIO $ atomically $ readTMChan chan
+                                      case nextVal of
+                                        Nothing -> return ((), Left StreamDone)
+                                        Just v  -> return ((), Right (compress, v)))
+         -- This conduit feeds information to the other thread
+         let go = do x <- await
+                     case x of
+                       Just v  -> do liftIO $ atomically $ writeTMChan chan v
+                                     go
+                       Nothing -> do liftIO $ atomically $ closeTMChan chan
+                                     liftIO $ wait promise
+         return go 
+      where methodName = BS.pack (nameVal (Proxy @name))
+            rpc = RPC pkgName srvName methodName
+
+instance (KnownName name, HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
+         => GRpcMethodCall ('Method name '[ 'ArgSingle vsch vty ] ('RetStream rsch rty))
+                           (v -> IO (ConduitT () (GRpcReply r) IO ())) where
+  gRpcMethodCall pkgName srvName _ client x
+    = do -- Create a new TMChan
+         chan <- newTMChanIO
+         var  <- newEmptyTMVarIO  -- if full, this means an error
+         -- Start executing the client in another thread
+         async $ do
+            v <- simplifyResponse $ 
+                 buildGRpcReply3 <$>
+                 rawStreamServer (toProtoViaSchema @vsch, fromProtoViaSchema @rsch) rpc client () x
+                                 (\_ _ newVal -> liftIO $ atomically $ writeTMChan chan newVal)
+            case v of
+              GRpcOk () -> return ()
+              _ -> liftIO $ atomically $ putTMVar var v
+         -- This conduit feeds information to the other thread
+         let go = do err <- liftIO $ atomically $ tryTakeTMVar var
+                     case err of
+                       Just e  -> yield $ (\_ -> error "this should never happen") <$> e
+                       Nothing -> -- no error, everything is fine
+                         sourceTMChan chan .| C.map GRpcOk
+         return go
+      where methodName = BS.pack (nameVal (Proxy @name))
+            rpc = RPC pkgName srvName methodName

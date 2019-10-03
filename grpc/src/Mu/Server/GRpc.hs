@@ -98,14 +98,14 @@ instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
             chan <- newTMChanIO
             let producer = sourceTMChan @IO chan
             -- Start executing the handler in another thread
-            withAsync (h producer) $ \promise ->
-              -- Build the actual handler
-              let cstreamHandler _ newInput
-                    = atomically (writeTMChan chan newInput)
-                  cstreamFinalizer _
-                    = atomically (closeTMChan chan) >> wait promise
-              -- Return the information
-              in return ((), ClientStream cstreamHandler cstreamFinalizer)
+            promise <- async (h producer)
+            -- Build the actual handler
+            let cstreamHandler _ newInput
+                  = atomically (writeTMChan chan newInput)
+                cstreamFinalizer _
+                  = atomically (closeTMChan chan) >> wait promise
+            -- Return the information
+            return ((), ClientStream cstreamHandler cstreamFinalizer)
 
 instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
          => GRpcMethodHandler '[ 'ArgSingle vsch vty ] ('RetStream rsch rty)
