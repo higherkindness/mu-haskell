@@ -133,7 +133,7 @@ instance (KnownName name, HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
          chan <- newTMChanIO
          var  <- newEmptyTMVarIO  -- if full, this means an error
          -- Start executing the client in another thread
-         async $ do
+         _ <- async $ do
             v <- simplifyResponse $ 
                  buildGRpcReply3 <$>
                  rawStreamServer (toProtoViaSchema @vsch, fromProtoViaSchema @rsch) rpc client () x
@@ -160,7 +160,7 @@ instance (KnownName name, HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
          outchan <- newTMChanIO
          var <- newEmptyTMVarIO  -- if full, this means an error
          -- Start executing the client in another thread
-         async $ do
+         _ <- async $ do
             v <- simplifyResponse $ 
                  buildGRpcReply3 <$>
                  rawGeneralStream
