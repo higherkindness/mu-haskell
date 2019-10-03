@@ -1,4 +1,4 @@
-resolver: lts-14.6
+resolver: lts-14.7
 
 packages:
 - schema
@@ -8,7 +8,10 @@ packages:
 extra-deps:
 - proto3-wire-1.0.0
 - http2-grpc-types-0.4.0.0
+- http2-client-0.9.0.0
 - git: https://github.com/serras/avro.git
   commit: 7ba39ebb6b74c64fffb3d3a972b4000185579f19
 - git: https://github.com/47deg/warp-grpc.git
   commit: d8cd78f0a8d78119df27e3271bc5204d7b26aeb8
+- git: https://github.com/47deg/http2-client-grpc.git
+  commit: 7bec906c9b4942a277ec173d6d6cc6e678f45496
