@@ -18,12 +18,14 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
 library
-  exposed-modules:     Mu.Server.GRpc
+  exposed-modules:     Mu.Server.GRpc,
+                       Mu.Client.GRpc,
+                       Mu.Client.GRpc.Examples
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.12 && <5, sop-core,
                        mu-schema, mu-rpc, warp-grpc,
-                       conduit, bytestring,
+                       conduit, bytestring, text,
                        wai, http2-grpc-types,
                        warp, warp-tls,
                        async, stm, stm-conduit,
@@ -37,7 +39,7 @@ executable grpc-example-server
   main-is:             ExampleServer.hs
   build-depends:       base >=4.12 && <5, sop-core,
                        mu-schema, mu-rpc, warp-grpc,
-                       conduit, bytestring,
+                       conduit, bytestring, text,
                        wai, http2-grpc-types,
                        warp, warp-tls,
                        async, stm, stm-conduit,

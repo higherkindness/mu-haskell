@@ -2,15 +2,14 @@
              MultiParamTypeClasses,
              FlexibleInstances, FlexibleContexts,
              ScopedTypeVariables, TypeApplications,
-             TypeOperators,
+             TypeOperators, DeriveFunctor,
              AllowAmbiguousTypes #-}
 module Mu.Client.GRpc (
   GrpcClient
 , GrpcClientConfig
 , grpcClientConfigSimple
-, setupGrpcClient
+, setupGrpcClient'
 , gRpcCall
-, GRpcClientIO
 , GRpcReply(..)
 ) where
 
@@ -26,8 +25,12 @@ import Mu.Rpc
 import Mu.Schema
 import Mu.Schema.Adapter.ProtoBuf
 
-type GRpcClientIO = ClientIO
+setupGrpcClient' :: GrpcClientConfig -> IO (Either ClientError GrpcClient)
+setupGrpcClient' = runExceptT . setupGrpcClient
 
+-- | Call a method from a `mu-rpc` definition.
+--   This method is thought to be used with `TypeApplications`:
+--   > gRpcCall @"packageName" @ServiceDeclaration @"method" 
 gRpcCall :: forall (pkg :: Symbol) (s :: Service snm mnm) (methodName :: mnm) h.
             (KnownName pkg, GRpcServiceMethodCall s (s :-->: methodName) h)
          => GrpcClient -> h
@@ -47,6 +50,7 @@ data GRpcReply a
   | GRpcErrorString String
   | GRpcClientError ClientError
   | GRpcOk a
+  deriving (Show, Functor)
 
 buildGRpcReply :: Either TooMuchConcurrency (RawReply a) -> GRpcReply a
 buildGRpcReply (Left tmc) = GRpcTooMuchConcurrency tmc
@@ -54,7 +58,7 @@ buildGRpcReply (Right (Left ec)) = GRpcErrorCode ec
 buildGRpcReply (Right (Right (_, _, Left es))) = GRpcErrorString es
 buildGRpcReply (Right (Right (_, _, Right r))) = GRpcOk r
 
-simplifyResponse :: GRpcClientIO (GRpcReply a) -> IO (GRpcReply a)
+simplifyResponse :: ClientIO (GRpcReply a) -> IO (GRpcReply a)
 simplifyResponse reply = do
   r <- runExceptT reply
   case r of
@@ -67,7 +71,7 @@ class GRpcMethodCall method h where
 instance (KnownName name, HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
          => GRpcMethodCall ('Method name '[ 'ArgSingle vsch vty ] ('RetSingle rsch rty))
                            (v -> IO (GRpcReply r)) where
-  gRpcMethodCall pkgName srvName m client x
+  gRpcMethodCall pkgName srvName _ client x
     = simplifyResponse $ 
       buildGRpcReply <$>
       rawUnary (toProtoViaSchema @vsch, fromProtoViaSchema @rsch) rpc client x
