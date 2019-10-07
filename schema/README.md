@@ -41,6 +41,34 @@ As you can see, a *schema* is just a list of schema types. Each of these types h
 
 Note that GHC requires all of `DEnum`, `DRecord`, `FieldDef`, and so forth to be prefixed by a quote sign `'`. This declares that we are working with [promoted types](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#datatype-promotion) (you do not have to understand what a promoted type is, but you need to remember to use the quote sign).
 
+### Creating an initial schema
+
+Writing the schema can be quite tiring, especially if most of the field names coincide between schema and Haskell type. As part of the library we offer you a facility to generate the initial schema using the GHC interpeter.
+
+In order to use it, you need to create a Stack project with `mu-schema` as dependency. You then have to enter into an interpreter session and load the `Mu.Schema.FromTypes` module. Finally, you can ask for the schema of a list of types using `kind!`:
+
+```haskell
+> import Data.Text as T
+> import Mu.Schema.FromTypes
+> :set -XDataKinds -XKindSignatures
+> :kind! (SchemaFromTypes '[ AsRecord Person "person", AsRecord Address "address", AsEnum Gender "gender" ] :: Schema')
+(SchemaFromTypes '[ AsRecord Person "person", AsRecord Address "address", AsEnum Gender "gender" ] :: Schema') :: [TypeDef Symbol Symbol]
+= '[ 'DRecord
+       "person"
+       '[ 'FieldDef "firstName" ('TPrimitive Text),
+          'FieldDef "lastName" ('TPrimitive Text),
+          'FieldDef "age" ('TOption ('TPrimitive Int)),
+          'FieldDef "gender" ('TOption ('TSchematic "gender")),
+          'FieldDef "address" ('TSchematic "address")],
+     'DRecord
+       "address"
+       '[ 'FieldDef "postcode" ('TPrimitive Text),
+          'FieldDef "country" ('TPrimitive Text)],
+     'DEnum "gender" '["Male", "Female", "NonBinary"]]
+```
+
+The result of the last operation can be copied as-is in your source file, provided that you import all the required modules.
+
 ## Mapping Haskell types
 
 These schemas become more useful once you can map your Haskell types to them. `mu-schema` uses the generics mechanism built in GHC to automatically derive these mappings, asuming that you declare your data types using field names.

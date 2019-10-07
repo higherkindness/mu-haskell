@@ -22,6 +22,7 @@ library
                        Mu.Schema.Definition,
                        Mu.Schema.Interpretation,
                        Mu.Schema.Class,
+                       Mu.Schema.FromTypes,
                        Mu.Schema.Examples,
                        Mu.Schema.Adapter.Avro,
                        Mu.Schema.Adapter.ProtoBuf,

@@ -15,6 +15,8 @@ import Mu.Schema.Adapter.Avro ()
 import Mu.Schema.Adapter.ProtoBuf
 import Mu.Schema.Adapter.Json ()
 
+import Mu.Schema.FromTypes
+
 import qualified Proto3.Wire.Encode as PBEnc
 import qualified Proto3.Wire.Decode as PBDec
 
@@ -62,12 +64,14 @@ type ExampleSchema
                  , 'FieldDef "address"   ('TSchematic "address") ]
      ]
 
+type GenderFieldMapping
+  = '[ "Male"      ':<->: "male"
+     , "Female"    ':<->: "female"
+     , "NonBinary" ':<->: "nb" ]
+
 -- we can give a custom field mapping via a custom instance
 instance HasSchema ExampleSchema "gender" Gender where
-  type FieldMapping ExampleSchema "gender" Gender
-    = '[ "Male"      ':<->: "male"
-       , "Female"    ':<->: "female"
-       , "NonBinary" ':<->: "nb" ]
+  type FieldMapping ExampleSchema "gender" Gender = GenderFieldMapping
 
 -- Additional information for protocol buffers
 type instance ProtoBufFieldIds ExampleSchema "person"
@@ -77,3 +81,8 @@ type instance ProtoBufFieldIds ExampleSchema "gender"
   = '[ "male" ':<->: 1, "female" ':<->: 2, "nb" ':<->: 0 ]
 type instance ProtoBufFieldIds ExampleSchema "address"
   = '[ "postcode" ':<->: 1, "country" ':<->: 2 ]
+
+type ExampleSchema2
+  = SchemaFromTypes '[ AsRecord Person "person"
+                     , AsRecord Address "address"
+                     , 'AsEnum' Gender "gender" GenderFieldMapping ]

@@ -68,3 +68,26 @@ type family (sch :: Schema t f) :/: (name :: t) :: TypeDef t f where
   ('DRecord name fields  ': rest) :/: name = 'DRecord name fields
   ('DEnum   name choices ': rest) :/: name = 'DEnum   name choices
   (other                 ': rest) :/: name = rest :/: name
+
+-- | Defines a mapping between two elements.
+data Mapping  a b = a :<->: b
+-- | Defines a set of mappings between elements of @a@ and @b@.
+type Mappings a b = [Mapping a b]
+
+-- | Finds the corresponding right value of @v@
+--   in a mapping @ms@. When the kinds are 'Symbol',
+--   return the same value if not found.
+type family MappingRight (ms :: Mappings a b) (v :: a) :: b where
+  MappingRight '[] (v :: Symbol) = v
+  MappingRight '[] v             = TypeError ('Text "Cannot find value " ':<>: 'ShowType v)
+  MappingRight ((x ':<->: y) ': rest) x = y
+  MappingRight (other        ': rest) x = MappingRight rest x
+
+-- | Finds the corresponding left value of @v@
+--   in a mapping @ms@. When the kinds are 'Symbol',
+--   return the same value if not found.
+type family MappingLeft (ms :: Mappings a b) (v :: b) :: a where
+  MappingLeft '[] (v :: Symbol) = v
+  MappingLeft '[] v             = TypeError ('Text "Cannot find value " ':<>: 'ShowType v)
+  MappingLeft ((x ':<->: y) ': rest) y = x
+  MappingLeft (other        ': rest) y = MappingLeft rest y
