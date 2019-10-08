@@ -33,7 +33,7 @@ class HandlesRef (ref :: TypeRef) (t :: Type)
 
 -- Type references
 instance HasSchema sch sty t => HandlesRef ('FromSchema sch sty) t
-instance HandlesRef ('FromRegistry subject t) t
+instance HandlesRef ('FromRegistry subject t last) t
 
 -- Arguments
 instance (HandlesRef ref t, Handles args ret m h)

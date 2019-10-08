@@ -30,9 +30,11 @@ type family LookupMethod (s :: [Method mnm]) (m :: snm) :: Method snm where
   LookupMethod ('Method m args r ': ms) m = 'Method m args r
   LookupMethod (other            ': ms) m = LookupMethod ms m
 
+-- | Defines how to handle the type
 data TypeRef where
   FromSchema   :: Schema typeName fieldName -> typeName -> TypeRef
-  FromRegistry :: subject -> Type -> TypeRef
+  -- | Registry subject, type to convert to, and preferred serialization version
+  FromRegistry :: subject -> Type -> Nat -> TypeRef
 
 -- | Defines the way in which arguments are handled.
 data Argument where

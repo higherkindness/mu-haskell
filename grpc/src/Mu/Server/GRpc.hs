@@ -31,6 +31,8 @@ import Mu.Server
 import Mu.Schema
 import Mu.Schema.Adapter.ProtoBuf
 
+import Mu.GRpc.Shared
+
 runGRpcApp
   :: (KnownName name, GRpcMethodHandlers methods handlers)
   => Port -> ByteString -> ServerIO ('Service name methods) handlers
@@ -81,17 +83,19 @@ instance (KnownName name, GRpcMethodHandler args r h, GRpcMethodHandlers rest hs
 class GRpcMethodHandler args r h where
   gRpcMethodHandler :: Proxy args -> Proxy r -> RPC -> h -> ServiceHandler
 
-instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
-         => GRpcMethodHandler '[ 'ArgSingle vsch vty ] ('RetSingle rsch rty)
+instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
+         => GRpcMethodHandler '[ 'ArgSingle vref ] ('RetSingle rref)
                               (v -> IO r) where
   gRpcMethodHandler _ _ rpc h
-    = unary (fromProtoViaSchema @vsch, toProtoViaSchema @rsch) rpc (\_req -> h)
+    = unary (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
+            rpc (\_req -> h)
 
-instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
-         => GRpcMethodHandler '[ 'ArgStream vsch vty ] ('RetSingle rsch rty)
+instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
+         => GRpcMethodHandler '[ 'ArgStream vref ] ('RetSingle rref)
                               (ConduitT () v IO () -> IO r) where
   gRpcMethodHandler _ _ rpc h
-    = clientStream (fromProtoViaSchema @vsch, toProtoViaSchema @rsch) rpc cstream
+    = clientStream (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
+                   rpc cstream
     where cstream :: req -> IO ((), ClientStream v r ())
           cstream _ = do
             -- Create a new TMChan
@@ -107,11 +111,12 @@ instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
             -- Return the information
             return ((), ClientStream cstreamHandler cstreamFinalizer)
 
-instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
-         => GRpcMethodHandler '[ 'ArgSingle vsch vty ] ('RetStream rsch rty)
+instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
+         => GRpcMethodHandler '[ 'ArgSingle vref ] ('RetStream rref)
                               (v -> ConduitT r Void IO () -> IO ()) where
   gRpcMethodHandler _ _ rpc h
-    = serverStream (fromProtoViaSchema @vsch, toProtoViaSchema @rsch) rpc sstream
+    = serverStream (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
+                   rpc sstream
     where sstream :: req -> v -> IO ((), ServerStream r ())
           sstream _ v = do
             -- Variable to connect input and output
@@ -127,11 +132,12 @@ instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
                                        return Nothing
             return ((), ServerStream readNext)
 
-instance (HasProtoSchema vsch vty v, HasProtoSchema rsch rty r)
-         => GRpcMethodHandler '[ 'ArgStream vsch vty ] ('RetStream rsch rty)
+instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
+         => GRpcMethodHandler '[ 'ArgStream vref ] ('RetStream rref)
                               (ConduitT () v IO () -> ConduitT r Void IO () -> IO ()) where
   gRpcMethodHandler _ _ rpc h
-    = bidiStream (fromProtoViaSchema @vsch, toProtoViaSchema @rsch) rpc bdstream
+    = bidiStream (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
+                 rpc bdstream
     where bdstream :: req -> IO ((), BiDiStream v r ())
           bdstream _ = do
             -- Create a new TMChan and a new variable

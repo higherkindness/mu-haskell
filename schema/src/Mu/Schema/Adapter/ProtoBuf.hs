@@ -9,10 +9,12 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Schema.Adapter.ProtoBuf (
   ProtoBufFieldIds
+, IsProtoSchema
 , HasProtoSchema
 , toProtoViaSchema
 , fromProtoViaSchema
 , parseProtoViaSchema
+, FromProtoBufRegistry
 , fromProtoBufWithRegistry
 , parseProtoBufWithRegistry
 ) where
