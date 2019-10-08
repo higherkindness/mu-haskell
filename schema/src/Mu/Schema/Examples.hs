@@ -16,7 +16,7 @@ import Mu.Schema.Adapter.Avro ()
 import Mu.Schema.Adapter.ProtoBuf
 import Mu.Schema.Adapter.Json ()
 
-import Mu.Schema.FromTypes
+-- import Mu.Schema.FromTypes
 
 import qualified Proto3.Wire.Encode as PBEnc
 import qualified Proto3.Wire.Decode as PBDec
