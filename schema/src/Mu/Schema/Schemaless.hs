@@ -84,21 +84,26 @@ instance Ord FieldValue where
     = case eqT @a @b of
         Nothing   -> typeOf x <= typeOf y
         Just Refl -> x <= y
+  FPrimitive _ <= _            = True
   FSchematic _ <= FNull        = False
   FSchematic _ <= FPrimitive _ = False
   FSchematic x <= FSchematic y = x <= y
+  FSchematic _ <= _            = True
   FOption    _ <= FNull        = False
   FOption    _ <= FPrimitive _ = False
   FOption    _ <= FSchematic _ = False
   FOption    x <= FOption    y = x <= y
+  FOption    _ <= _            = True
   FList      _ <= FNull        = False
   FList      _ <= FPrimitive _ = False
   FList      _ <= FSchematic _ = False
   FList      _ <= FOption    _ = False
   FList      x <= FList      y = x <= y
+  FList      _ <= _            = True
   FMap       _ <= FNull        = False
   FMap       _ <= FPrimitive _ = False
   FMap       _ <= FSchematic _ = False
   FMap       _ <= FOption    _ = False
   FMap       _ <= FList      _ = False
   FMap       x <= FMap       y = x <= y
+  -- FMap       _ <= _            = True
