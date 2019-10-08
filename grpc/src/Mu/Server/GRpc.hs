@@ -29,7 +29,6 @@ import Network.Wai.Handler.WarpTLS (TLSSettings, runTLS)
 import Mu.Rpc
 import Mu.Server
 import Mu.Schema
-import Mu.Schema.Adapter.ProtoBuf
 
 import Mu.GRpc.Shared
 

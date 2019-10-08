@@ -34,7 +34,6 @@ import Network.GRPC.Proto3Wire.Client.Helpers
 
 import Mu.Rpc
 import Mu.Schema
-import Mu.Schema.Adapter.ProtoBuf
 
 import Mu.GRpc.Shared
 
