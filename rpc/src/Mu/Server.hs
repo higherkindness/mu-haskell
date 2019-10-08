@@ -29,19 +29,24 @@ type HandlersIO methods = HandlersT methods IO
 -- Define a relation for handling
 class Handles (args :: [Argument]) (ret :: Return)
               (m :: Type -> Type) (h :: Type)
+class HandlesRef (ref :: TypeRef) (t :: Type)
+
+-- Type references
+instance HasSchema sch sty t => HandlesRef ('FromSchema sch sty) t
+instance HandlesRef ('FromRegistry subject t) t
 
 -- Arguments
-instance (HasSchema sch sty t, Handles args ret m h)
-         => Handles ('ArgSingle sch sty ': args) ret m
+instance (HandlesRef ref t, Handles args ret m h)
+         => Handles ('ArgSingle ref ': args) ret m
                     (t -> h)
-instance (HasSchema sch sty t, Handles args ret m h)
-         => Handles ('ArgStream sch sty ': args) ret m
+instance (HandlesRef ref t, Handles args ret m h)
+         => Handles ('ArgStream ref ': args) ret m
                     (ConduitT () t IO () -> h)
 -- Result with exception
-instance (HasSchema esch ety e, HasSchema vsch vty v)
-         => Handles '[] ('RetThrows esch ety vsch vty) m
+instance (HandlesRef eref e, HandlesRef vref v)
+         => Handles '[] ('RetThrows eref vref) m
                     (m (Either e v))
-instance (HasSchema vsch vty v)
-         => Handles '[] ('RetSingle vsch vty) m (m v)
-instance (HasSchema vsch vty v)
-         => Handles '[] ('RetStream vsch vty) m (ConduitT v Void m () -> m ())
+instance (HandlesRef ref v)
+         => Handles '[] ('RetSingle ref) m (m v)
+instance (HandlesRef ref v)
+         => Handles '[] ('RetStream ref) m (ConduitT v Void m () -> m ())

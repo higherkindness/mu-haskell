@@ -42,14 +42,14 @@ type instance ProtoBufFieldIds QuickstartSchema "HiRequest"
 type QuickStartService
   = 'Service "Greeter"
       '[ 'Method "SayHello"
-                 '[ 'ArgSingle QuickstartSchema "HelloRequest" ]
-                 ('RetSingle QuickstartSchema "HelloResponse")
+                 '[ 'ArgSingle ('FromSchema QuickstartSchema "HelloRequest") ]
+                 ('RetSingle ('FromSchema QuickstartSchema "HelloResponse"))
        , 'Method "SayHi"
-                 '[ 'ArgSingle QuickstartSchema "HiRequest"]
-                 ('RetStream QuickstartSchema "HelloResponse")
+                 '[ 'ArgSingle ('FromSchema QuickstartSchema "HiRequest")]
+                 ('RetStream ('FromSchema QuickstartSchema "HelloResponse"))
        , 'Method "SayManyHellos"
-                 '[ 'ArgStream QuickstartSchema "HelloRequest"]
-                 ('RetStream QuickstartSchema "HelloResponse") ]
+                 '[ 'ArgStream ('FromSchema QuickstartSchema "HelloRequest")]
+                 ('RetStream ('FromSchema QuickstartSchema "HelloResponse")) ]
 
 newtype HelloRequest = HelloRequest { name :: T.Text }
   deriving (Generic, HasSchema QuickstartSchema "HelloRequest")

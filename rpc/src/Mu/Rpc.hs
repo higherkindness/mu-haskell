@@ -5,6 +5,7 @@
              UndecidableInstances #-}
 module Mu.Rpc where
 
+import Data.Kind
 import GHC.TypeLits
 
 import Mu.Schema
@@ -29,22 +30,25 @@ type family LookupMethod (s :: [Method mnm]) (m :: snm) :: Method snm where
   LookupMethod ('Method m args r ': ms) m = 'Method m args r
   LookupMethod (other            ': ms) m = LookupMethod ms m
 
+data TypeRef where
+  FromSchema   :: Schema typeName fieldName -> typeName -> TypeRef
+  FromRegistry :: subject -> Type -> TypeRef
+
 -- | Defines the way in which arguments are handled.
 data Argument where
   -- | Use a single value.
-  ArgSingle :: Schema typeName fieldName -> typeName -> Argument
+  ArgSingle :: TypeRef -> Argument
   -- | Consume a stream of values.
-  ArgStream :: Schema typeName fieldName -> typeName -> Argument
+  ArgStream :: TypeRef -> Argument
 
 -- | Defines the different possibilities for returning
 --   information from a method.
 data Return where
   -- | Return a single value.
-  RetSingle :: Schema typeName fieldName -> typeName -> Return
+  RetSingle :: TypeRef -> Return
   -- | Return a value or an error
   --   (this can be found in Avro IDL).
-  RetThrows :: Schema typeName fieldName -> typeName
-            -> Schema typeName fieldName -> typeName -> Return
+  RetThrows :: TypeRef -> TypeRef -> Return
   -- | Return a stream of values
   --   (this can be found in gRPC).
-  RetStream :: Schema typeName fieldName -> typeName -> Return
+  RetStream :: TypeRef -> Return
