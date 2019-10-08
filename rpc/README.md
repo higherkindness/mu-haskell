@@ -49,8 +49,8 @@ import Mu.Rpc
 type QuickStartService
   = 'Service "Greeter"
       '[ 'Method "SayHello"
-                 '[ 'ArgSingle QuickstartSchema "HelloRequest" ]
-                 ('RetSingle QuickstartSchema "HelloResponse") ]
+                 '[ 'ArgSingle ('FromSchema QuickstartSchema "HelloRequest") ]
+                 ('RetSingle ('FromSchema QuickstartSchema "HelloResponse")) ]
 ```
 
 In order to support both [Avro IDL](https://avro.apache.org/docs/current/idl.html) and [gRPC](https://grpc.io/), the declaration of the method arguments and returns in a bit fancier that you might expect:
@@ -95,8 +95,8 @@ type QuickStartService
   = 'Service "Greeter"
       '[ 'Method "SayHello" ...
        , 'Method "SayManyHellos"
-                 '[ 'ArgStream QuickstartSchema "HelloRequest"]
-                 ('RetStream QuickstartSchema "HelloResponse") ]
+                 '[ 'ArgStream ('FromSchema QuickstartSchema "HelloRequest")]
+                 ('RetStream ('FromSchema QuickstartSchema "HelloResponse")) ]
 ```
 
 To define the implementation of this method we build upon the great [Conduit](https://github.com/snoyberg/conduit) library. Your input is now a producer of values, as defined by that library, and you must write the results to the provided sink. Better said with an example:
@@ -137,4 +137,23 @@ The following line starts a server at port 8080, where the service can be found 
 
 ```haskell
 main = runGRpcApp 8080 "helloworld" quickstartServer
+```
+
+## Using the Registry
+
+In this example we have used `FromSchema` to declare a specific schema the arguments must adhere to. However, schemas evolve over time, and you might want to handle all those versions. To do so, you first need to register your schemas using `mu-rpc`'s registry:
+
+```haskell
+type instance Registry "helloworld"
+  = '[ 2 ':<->: QuickstartSchemaV2, 1 ':<->: QuickstartSchema ]
+```
+
+Now you can use the name of the subject in the registry to accomodate for different schemas. In this case, apart from that name, we need to specify the *Haskell* type to use during (de)serialization, and the *version number* to use for serialization.
+
+```haskell
+type QuickStartService
+  = 'Service "Greeter"
+      '[ 'Method "SayHello"
+                 '[ 'ArgSingle ('FromRegistry "helloworld" HelloRequest 2) ]
+                 ('RetSingle ('FromRegistry "helloworld" HelloResponse 1)) ]
 ```

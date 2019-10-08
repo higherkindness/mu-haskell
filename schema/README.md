@@ -117,6 +117,19 @@ type instance ProtoBufFieldIds ExampleSchema "address"
   = '[ "postcode" ':<->: 1, "country" ':<->: 2 ]
 ```
 
+## Registry
+
+Schemas evolve over time. It is a good practice to keep an inventory of all the schemas you can work with, in the form of a *registry*. Using `mu-schema` you can declare one such registry by giving an instance of the `Registry` type family:
+
+```haskell
+{-# language TypeFamilies #-}
+
+type instance Registry "example"
+  = '[ 2 ':<->: ExampleSchemaV2, 1 ':<->: ExampleSchema ]
+```
+
+The argument to registry is a tag which identifies that set of schemas. Here we use a type-level string, but you can use any other kind. We then indicate to which type-level schema each version corresponds to. Once we have done that you can use functions like `fromRegistry` to try to parse a term into a Haskell type by trying each of the schemas.
+
 ## In the future
 
 Unfortunately, in the current version you have to write all these mappings by hand. In the future, we intend to provide a quasiquoter which reads an Avro or Protocol Buffers schema definition and writes the schema type for you.
