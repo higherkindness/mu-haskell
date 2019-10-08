@@ -24,6 +24,8 @@ library
                        Mu.Schema.Class,
                        Mu.Schema.FromTypes,
                        Mu.Schema.Examples,
+                       Mu.Schema.Schemaless,
+                       Mu.Schema.Registry,
                        Mu.Schema.Adapter.Avro,
                        Mu.Schema.Adapter.ProtoBuf,
                        Mu.Schema.Adapter.Json

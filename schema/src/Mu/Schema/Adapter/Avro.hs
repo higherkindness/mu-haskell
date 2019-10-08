@@ -7,6 +7,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Schema.Adapter.Avro where
 
+import Control.Arrow ((***))
 import qualified Data.Avro as A
 import qualified Data.Avro.Schema as ASch
 import qualified Data.Avro.Types.Value as AVal
@@ -24,6 +25,39 @@ import qualified Data.Vector as V
 import GHC.TypeLits
 
 import Mu.Schema
+import qualified Mu.Schema.Schemaless as SLess
+
+instance SLess.ToSchemalessTerm (AVal.Value t) where
+  toSchemalessTerm (AVal.Record _ r)
+    = SLess.TRecord $ map (\(k,v) -> SLess.Field k (SLess.toSchemalessValue v))
+                    $ HM.toList r
+  toSchemalessTerm (AVal.Enum _ i _)
+    = SLess.TEnum i
+  toSchemalessTerm (AVal.Union _ _ v)
+    = SLess.toSchemalessTerm v
+  toSchemalessTerm v = SLess.TSimple (SLess.toSchemalessValue v)
+
+instance SLess.ToSchemalessValue (AVal.Value t) where
+  toSchemalessValue (AVal.Null)      = SLess.FNull
+  toSchemalessValue (AVal.Boolean b) = SLess.FPrimitive b
+  toSchemalessValue (AVal.Int b)     = SLess.FPrimitive b
+  toSchemalessValue (AVal.Long b)    = SLess.FPrimitive b
+  toSchemalessValue (AVal.Float b)   = SLess.FPrimitive b
+  toSchemalessValue (AVal.Double b)  = SLess.FPrimitive b
+  toSchemalessValue (AVal.String b)  = SLess.FPrimitive b
+  toSchemalessValue (AVal.Fixed _ b) = SLess.FPrimitive b
+  toSchemalessValue (AVal.Array v)
+    = SLess.FList $ map SLess.toSchemalessValue $ V.toList v
+  toSchemalessValue (AVal.Map hm)
+    = SLess.FMap $ M.fromList
+                 $ map (SLess.FPrimitive *** SLess.toSchemalessValue)
+                 $ HM.toList hm
+  toSchemalessValue (AVal.Union _ _ v)
+    = SLess.toSchemalessValue v
+  toSchemalessValue r@(AVal.Record _ _)
+    = SLess.FSchematic (SLess.toSchemalessTerm r)
+  toSchemalessValue e@(AVal.Enum _ _ _)
+    = SLess.FSchematic (SLess.toSchemalessTerm e)
 
 instance forall sch sty t.
          HasAvroSchemas sch sch

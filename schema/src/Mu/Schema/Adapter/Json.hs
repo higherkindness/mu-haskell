@@ -13,8 +13,26 @@ import Data.Functor.Contravariant
 import qualified Data.HashMap.Strict as HM
 import Data.SOP (NS(..), NP(..))
 import qualified Data.Text as T
+import qualified Data.Vector as V
 
 import Mu.Schema
+import qualified Mu.Schema.Schemaless as SLess
+
+instance SLess.ToSchemalessTerm Value where
+  toSchemalessTerm (Object o)
+    = SLess.TRecord $ map (\(k,v) -> SLess.Field k (SLess.toSchemalessValue v))
+                    $ HM.toList o
+  toSchemalessTerm v = SLess.TSimple (SLess.toSchemalessValue v)
+
+instance SLess.ToSchemalessValue Value where
+  toSchemalessValue r@(Object _)
+    = SLess.FSchematic (SLess.toSchemalessTerm r)
+  toSchemalessValue Null       = SLess.FNull
+  toSchemalessValue (String s) = SLess.FPrimitive s
+  toSchemalessValue (Number n) = SLess.FPrimitive n
+  toSchemalessValue (Bool   b) = SLess.FPrimitive b
+  toSchemalessValue (Array xs)
+    = SLess.FList $ map SLess.toSchemalessValue $ V.toList xs
 
 instance forall sch sty a.
          (HasSchema sch sty a, ToJSON (Term sch (sch :/: sty)))

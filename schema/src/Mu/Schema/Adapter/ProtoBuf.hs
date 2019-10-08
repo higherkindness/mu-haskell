@@ -6,8 +6,18 @@
              UndecidableInstances,
              OverloadedStrings, ConstraintKinds,
              AllowAmbiguousTypes #-}
-module Mu.Schema.Adapter.ProtoBuf where
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+module Mu.Schema.Adapter.ProtoBuf (
+  ProtoBufFieldIds
+, HasProtoSchema
+, toProtoViaSchema
+, fromProtoViaSchema
+, parseProtoViaSchema
+, fromProtoBufWithRegistry
+, parseProtoBufWithRegistry
+) where
 
+import Control.Applicative
 import qualified Data.ByteString as BS
 import Data.Int
 import Data.SOP (All)
@@ -19,6 +29,7 @@ import qualified Proto3.Wire.Encode as PBEnc
 import qualified Proto3.Wire.Decode as PBDec
 
 import Mu.Schema
+import Mu.Schema.Registry as R
 
 class ProtoBridgeTerm sch (sch :/: sty) => IsProtoSchema sch sty
 instance ProtoBridgeTerm sch (sch :/: sty) => IsProtoSchema sch sty
@@ -35,8 +46,41 @@ fromProtoViaSchema :: forall sch a sty.
                    => PBDec.Parser PBDec.RawMessage a
 fromProtoViaSchema = fromSchema' @sch <$> protoToTerm
 
+parseProtoViaSchema :: forall sch a sty.
+                       (HasProtoSchema sch sty a)
+                    => BS.ByteString -> Either PBDec.ParseError a
+parseProtoViaSchema = PBDec.parse (fromProtoViaSchema @sch)
+
 -- | Defines for each field in the schema the corresponding field ID.
 type family ProtoBufFieldIds (sch :: Schema tn fn) (t :: tn) :: [Mapping fn Nat]
+
+fromProtoBufWithRegistry
+  :: forall (subject :: k) t. 
+     FromProtoBufRegistry (R.Registry subject) t
+  => PBDec.Parser PBDec.RawMessage t
+fromProtoBufWithRegistry = fromProtoBufRegistry' (Proxy @(Registry subject))
+
+parseProtoBufWithRegistry
+  :: forall (subject :: k) t. 
+     FromProtoBufRegistry (R.Registry subject) t
+  => BS.ByteString -> Either PBDec.ParseError t
+parseProtoBufWithRegistry = PBDec.parse (fromProtoBufWithRegistry @k @subject)
+
+class FromProtoBufRegistry (ms :: Mappings Nat Schema') t where
+  fromProtoBufRegistry' :: Proxy ms -> PBDec.Parser PBDec.RawMessage t
+
+instance FromProtoBufRegistry '[] t where
+  fromProtoBufRegistry' _ = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "no schema found in registry"))
+instance (HasProtoSchema s sty t, FromProtoBufRegistry ms t)
+         => FromProtoBufRegistry ( (n ':<->: s) ': ms) t where
+  fromProtoBufRegistry' _ = fromProtoViaSchema @s <|> fromProtoBufRegistry' (Proxy @ms)
+
+instance Alternative (PBDec.Parser i) where
+  empty = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "cannot parse"))
+  PBDec.Parser x <|> PBDec.Parser y
+    = PBDec.Parser $ \i -> case x i of
+                             Left _      -> y i
+                             r@(Right _) -> r
 
 -- Top-level terms
 class ProtoBridgeTerm (sch :: Schema tn fn) (t :: TypeDef tn fn) where

@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import GHC.Generics
 
 import Mu.Schema
+import Mu.Schema.Registry as R
 import Mu.Schema.Adapter.Avro ()
 import Mu.Schema.Adapter.ProtoBuf
 import Mu.Schema.Adapter.Json ()
@@ -82,7 +83,24 @@ type instance ProtoBufFieldIds ExampleSchema "gender"
 type instance ProtoBufFieldIds ExampleSchema "address"
   = '[ "postcode" ':<->: 1, "country" ':<->: 2 ]
 
+{-
 type ExampleSchema2
   = SchemaFromTypes '[ AsRecord Person "person"
                      , AsRecord Address "address"
-                     , 'AsEnum' Gender "gender" GenderFieldMapping ]
+                     , AsEnum Gender "gender" ]
+-}
+type ExampleSchema2
+  = '[ 'DEnum   "gender" '["Male", "Female", "NonBinary"]
+     , 'DRecord "address"
+               '[ 'FieldDef "postcode" ('TPrimitive T.Text)
+                , 'FieldDef "country"  ('TPrimitive T.Text) ]
+     , 'DRecord "person"
+                '[ 'FieldDef "firstName" ('TPrimitive T.Text)
+                 , 'FieldDef "lastName"  ('TPrimitive T.Text)
+                 , 'FieldDef "age"       ('TOption ('TPrimitive Int))
+                 , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
+                 , 'FieldDef "address"   ('TSchematic "address") ]
+     ]
+
+type instance R.Registry "example"
+  = '[ 2 ':<->: ExampleSchema2, 1 ':<->: ExampleSchema]
