@@ -8,6 +8,7 @@ import Data.Text as T
 import GHC.Generics
 
 import Mu.Schema
+import Mu.Schema.Adapter.ProtoBuf
 import Mu.Rpc
 
 -- Schema for data serialization
@@ -39,14 +40,25 @@ instance HasSchema HealthCheckSchema "HealthStatus" HealthStatus where
 newtype AllStatus = AllStatus { all :: [HealthStatus] }
   deriving (Show, Eq, Ord, Generic, HasSchema HealthCheckSchema "AllStatus")
 
+-- Protocol buffer field ids
+type instance ProtoBufFieldIds HealthCheckSchema "HealthCheck"
+  = '[ "nameService" ':<->: 1 ]
+type instance ProtoBufFieldIds HealthCheckSchema "ServerStatus"
+  = '[ "status" ':<->: 1 ]
+type instance ProtoBufFieldIds HealthCheckSchema "HealthStatus"
+  = '[ "hc" ':<->: 1, "status" ':<->: 2 ]
+type instance ProtoBufFieldIds HealthCheckSchema "AllStatus"
+  = '[ "all" ':<->: 1 ]
+
 -- Service definition
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/service.scala
 type HS = 'FromSchema HealthCheckSchema
 type HealthCheckService
-  = 'Service "HealthCheck"
+  = 'Service "HealthCheckService"
       '[ 'Method "setStatus" '[ 'ArgSingle (HS "HealthStatus") ] 'RetNothing
        , 'Method "check" '[ 'ArgSingle (HS "HealthCheck") ] ('RetSingle (HS "ServerStatus"))
        , 'Method "clearStatus" '[ 'ArgSingle (HS "HealthCheck") ] 'RetNothing
        , 'Method "checkAll" '[ ] ('RetSingle (HS "AllStatus"))
        , 'Method "cleanAll" '[ ] 'RetNothing
+       , 'Method "watch" '[ 'ArgSingle (HS "HealthCheck") ] ('RetStream (HS "ServerStatus"))
        ]
