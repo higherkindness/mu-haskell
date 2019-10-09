@@ -86,7 +86,7 @@ type family Find (xs :: [k]) (x :: k) :: Where where
 
 type family FindCon (xs :: * -> *) (x :: Symbol) :: Where where
   FindCon (C1 ('MetaCons x p s) f) x = 'Here
-  FindCon ((C1 ('MetaCons x p s) f) :+: rest) x = 'Here
+  FindCon (C1 ('MetaCons x p s) f :+: rest) x = 'Here
   FindCon (other :+: rest) x = 'There (FindCon rest x)
   FindCon nothing          x = TypeError ('Text "Could not find constructor " ':<>: 'ShowType x)
 
@@ -98,7 +98,7 @@ type family FindSel (xs :: * -> *) (x :: Symbol) :: Where where
   FindSel (other :*: rest) x = 'There (FindSel rest x)
   FindSel nothing          x = TypeError ('Text "Could not find selector " ':<>: 'ShowType x)
 
-type family FindField (xs :: [FieldDef ts fs]) (x :: ts) :: Where where
+type family FindField (xs :: [FieldDef ts fs]) (x :: fs) :: Where where
   FindField '[] x = TypeError ('Text "Could not find field " ':<>: 'ShowType x)
   FindField ('FieldDef name t ': xs) name = 'Here
   FindField (other            ': xs) name = 'There (FindField xs name)
@@ -137,7 +137,7 @@ instance GSchemaFieldType sch 'TNull () where
   toSchemaFieldType _   = FNull
   fromSchemaFieldType _ = ()
 instance GSchemaFieldType sch ('TPrimitive t) t where
-  toSchemaFieldType x = FPrimitive x
+  toSchemaFieldType = FPrimitive
   fromSchemaFieldType (FPrimitive x) = x
 -- This instance "ties the loop" with the whole schema,
 -- and it the reason why we need to thread the @sch@
