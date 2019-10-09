@@ -19,6 +19,11 @@ class ProtoBufTypeRef (ref :: TypeRef) t where
   fromProtoBufTypeRef :: Proxy ref -> PBDec.Parser PBDec.RawMessage t
   toProtoBufTypeRef   :: Proxy ref -> t -> PBEnc.MessageBuilder
 
+unitFromProtoBuf :: PBDec.Parser PBDec.RawMessage ()
+unitFromProtoBuf = return ()
+unitToProtoBuf :: () -> PBEnc.MessageBuilder
+unitToProtoBuf _ = mempty
+
 instance (HasProtoSchema sch sty t)
          => ProtoBufTypeRef ('FromSchema sch sty) t where
   fromProtoBufTypeRef _ = fromProtoViaSchema @sch

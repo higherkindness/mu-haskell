@@ -87,7 +87,19 @@ instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
                               (v -> IO r) where
   gRpcMethodHandler _ _ rpc h
     = unary (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
-            rpc (\_req -> h)
+            rpc (const h)
+
+instance (ProtoBufTypeRef vref v)
+         => GRpcMethodHandler '[ 'ArgSingle vref ] 'RetNothing (v -> IO ()) where
+  gRpcMethodHandler _ _ rpc h
+    = unary (fromProtoBufTypeRef (Proxy @vref), unitToProtoBuf)
+            rpc (const h)
+
+instance (ProtoBufTypeRef rref r)
+         => GRpcMethodHandler '[ ] ('RetSingle rref) (IO r) where
+  gRpcMethodHandler _ _ rpc h
+    = unary (unitFromProtoBuf, toProtoBufTypeRef (Proxy @rref))
+            rpc (\_ _ -> h)
 
 instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
          => GRpcMethodHandler '[ 'ArgStream vref ] ('RetSingle rref)
@@ -157,8 +169,8 @@ instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
                            return $ WriteOutput () o
                          Just Nothing  -> do
                            cancel promise
-                           return $ Abort
-                         Nothing -> do -- no new elements to output
+                           return Abort
+                         Nothing -> -- no new elements to output
                            return $ WaitInput cstreamHandler cstreamFinalizer
             return ((), BiDiStream readNext)
 
