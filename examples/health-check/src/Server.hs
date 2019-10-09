@@ -20,7 +20,7 @@ main = do
   m <- M.newIO
   upd <- newTBMChanIO 100
   putStrLn "running health check application"
-  runGRpcApp 8080 "healtcheck" (server m upd)
+  runGRpcApp 8080 "healthcheck" (server m upd)
 
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/handler/HealthServiceImpl.scala
@@ -69,7 +69,7 @@ cleanAll m
 
 watch :: StatusUpdates -> HealthCheck -> ConduitT ServerStatus Void IO () -> IO ()
 watch upd hc@(HealthCheck nm) sink
-  = do putStr "watch" >> print nm
+  = do putStr "watch: " >> print nm
        runConduit $ sourceTBMChan upd
                  .| C.filter (\(HealthStatus c _) -> hc == c)
                  .| C.map (\(HealthStatus _ s) -> s)
