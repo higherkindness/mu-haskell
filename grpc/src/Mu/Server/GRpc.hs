@@ -82,12 +82,16 @@ instance (KnownName name, GRpcMethodHandler args r h, GRpcMethodHandlers rest hs
 class GRpcMethodHandler args r h where
   gRpcMethodHandler :: Proxy args -> Proxy r -> RPC -> h -> ServiceHandler
 
-instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
-         => GRpcMethodHandler '[ 'ArgSingle vref ] ('RetSingle rref)
-                              (v -> IO r) where
+instance GRpcMethodHandler '[ ] 'RetNothing (IO ()) where
   gRpcMethodHandler _ _ rpc h
-    = unary (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
-            rpc (const h)
+    = unary (unitFromProtoBuf, unitToProtoBuf)
+            rpc (\_ _ -> h)
+
+instance (ProtoBufTypeRef rref r)
+         => GRpcMethodHandler '[ ] ('RetSingle rref) (IO r) where
+  gRpcMethodHandler _ _ rpc h
+    = unary (unitFromProtoBuf, toProtoBufTypeRef (Proxy @rref))
+            rpc (\_ _ -> h)
 
 instance (ProtoBufTypeRef vref v)
          => GRpcMethodHandler '[ 'ArgSingle vref ] 'RetNothing (v -> IO ()) where
@@ -95,11 +99,12 @@ instance (ProtoBufTypeRef vref v)
     = unary (fromProtoBufTypeRef (Proxy @vref), unitToProtoBuf)
             rpc (const h)
 
-instance (ProtoBufTypeRef rref r)
-         => GRpcMethodHandler '[ ] ('RetSingle rref) (IO r) where
+instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
+         => GRpcMethodHandler '[ 'ArgSingle vref ] ('RetSingle rref)
+                              (v -> IO r) where
   gRpcMethodHandler _ _ rpc h
-    = unary (unitFromProtoBuf, toProtoBufTypeRef (Proxy @rref))
-            rpc (\_ _ -> h)
+    = unary (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
+            rpc (const h)
 
 instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
          => GRpcMethodHandler '[ 'ArgStream vref ] ('RetSingle rref)

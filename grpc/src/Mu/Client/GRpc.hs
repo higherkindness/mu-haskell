@@ -90,6 +90,39 @@ simplifyResponse reply = do
 class GRpcMethodCall method h where
   gRpcMethodCall :: ByteString -> ByteString -> Proxy method -> GrpcClient -> h
 
+instance (KnownName name)
+         => GRpcMethodCall ('Method name '[ ] 'RetNothing)
+                           (IO (GRpcReply ())) where
+  gRpcMethodCall pkgName srvName _ client
+    = simplifyResponse $ 
+      buildGRpcReply1 <$>
+      rawUnary (unitToProtoBuf, unitFromProtoBuf)
+               rpc client ()
+    where methodName = BS.pack (nameVal (Proxy @name))
+          rpc = RPC pkgName srvName methodName
+
+instance (KnownName name, ProtoBufTypeRef rref r)
+         => GRpcMethodCall ('Method name '[ ] ('RetSingle rref))
+                           (IO (GRpcReply r)) where
+  gRpcMethodCall pkgName srvName _ client
+    = simplifyResponse $ 
+      buildGRpcReply1 <$>
+      rawUnary (unitToProtoBuf, fromProtoBufTypeRef (Proxy @rref))
+               rpc client ()
+    where methodName = BS.pack (nameVal (Proxy @name))
+          rpc = RPC pkgName srvName methodName
+
+instance (KnownName name, ProtoBufTypeRef vref v)
+         => GRpcMethodCall ('Method name '[ 'ArgSingle vref ] 'RetNothing)
+                           (v -> IO (GRpcReply ())) where
+  gRpcMethodCall pkgName srvName _ client x
+    = simplifyResponse $ 
+      buildGRpcReply1 <$>
+      rawUnary (toProtoBufTypeRef (Proxy @vref), unitFromProtoBuf)
+               rpc client x
+    where methodName = BS.pack (nameVal (Proxy @name))
+          rpc = RPC pkgName srvName methodName
+
 instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
          => GRpcMethodCall ('Method name '[ 'ArgSingle vref ] ('RetSingle rref))
                            (v -> IO (GRpcReply r)) where
