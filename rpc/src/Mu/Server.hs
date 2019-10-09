@@ -43,6 +43,7 @@ instance (HandlesRef ref t, Handles args ret m h)
          => Handles ('ArgStream ref ': args) ret m
                     (ConduitT () t IO () -> h)
 -- Result with exception
+instance Handles '[] 'RetNothing m (m ())
 instance (HandlesRef eref e, HandlesRef vref v)
          => Handles '[] ('RetThrows eref vref) m
                     (m (Either e v))

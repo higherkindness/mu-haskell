@@ -46,6 +46,8 @@ data Argument where
 -- | Defines the different possibilities for returning
 --   information from a method.
 data Return where
+  -- | Fire and forget.
+  RetNothing :: Return
   -- | Return a single value.
   RetSingle :: TypeRef -> Return
   -- | Return a value or an error

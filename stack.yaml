@@ -4,6 +4,7 @@ packages:
 - schema
 - rpc
 - grpc
+- examples/health-check
 
 extra-deps:
 - proto3-wire-1.0.0
@@ -15,3 +16,8 @@ extra-deps:
   commit: d8cd78f0a8d78119df27e3271bc5204d7b26aeb8
 - git: https://github.com/47deg/http2-client-grpc.git
   commit: 7bec906c9b4942a277ec173d6d6cc6e678f45496
+- primitive-0.7.0.0
+- primitive-extras-0.8
+- primitive-unlifted-0.1.2.0
+- stm-hamt-1.2.0.4
+- stm-containers-1.1.0.4
