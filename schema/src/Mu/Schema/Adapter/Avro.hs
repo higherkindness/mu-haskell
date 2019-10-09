@@ -38,7 +38,7 @@ instance SLess.ToSchemalessTerm (AVal.Value t) where
   toSchemalessTerm v = SLess.TSimple (SLess.toSchemalessValue v)
 
 instance SLess.ToSchemalessValue (AVal.Value t) where
-  toSchemalessValue (AVal.Null)      = SLess.FNull
+  toSchemalessValue AVal.Null        = SLess.FNull
   toSchemalessValue (AVal.Boolean b) = SLess.FPrimitive b
   toSchemalessValue (AVal.Int b)     = SLess.FPrimitive b
   toSchemalessValue (AVal.Long b)    = SLess.FPrimitive b
@@ -46,6 +46,7 @@ instance SLess.ToSchemalessValue (AVal.Value t) where
   toSchemalessValue (AVal.Double b)  = SLess.FPrimitive b
   toSchemalessValue (AVal.String b)  = SLess.FPrimitive b
   toSchemalessValue (AVal.Fixed _ b) = SLess.FPrimitive b
+  toSchemalessValue (AVal.Bytes b)   = SLess.FPrimitive b
   toSchemalessValue (AVal.Array v)
     = SLess.FList $ map SLess.toSchemalessValue $ V.toList v
   toSchemalessValue (AVal.Map hm)
