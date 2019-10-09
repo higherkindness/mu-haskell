@@ -4,7 +4,7 @@
              FlexibleContexts, MultiParamTypeClasses,
              AllowAmbiguousTypes, StandaloneDeriving,
              FlexibleInstances, UndecidableInstances #-}
-module Mu.Schema.Schemaless (
+module Mu.Schema.Interpretation.Schemaless (
   -- * Terms without an associated schema
   Term(..), Field(..), FieldValue(..)
   -- * Checking and conversion against a schema

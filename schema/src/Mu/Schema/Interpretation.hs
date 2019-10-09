@@ -44,14 +44,14 @@ data FieldValue (sch :: Schema typeName fieldName) (t :: FieldType typeName) whe
 -- CRAZY EQ AND SHOW INSTANCES
 -- ===========================
 
-instance All (Eq `Compose` (Field sch)) args
+instance All (Eq `Compose` Field sch) args
          => Eq (Term sch ('DRecord name args)) where
   TRecord xs == TRecord ys = xs == ys
 instance forall sch name args.
-         (KnownName name, All (Show `Compose` (Field sch)) args)
+         (KnownName name, All (Show `Compose` Field sch) args)
          => Show (Term sch ('DRecord name args)) where
   show (TRecord xs) = "record " ++ nameVal (Proxy @name) ++ " { " ++ printFields xs ++ " }"
-    where printFields :: forall fs. All (Show `Compose` (Field sch)) fs
+    where printFields :: forall fs. All (Show `Compose` Field sch) fs
                       => NP (Field sch) fs -> String
           printFields Nil         = ""
           printFields (x :* Nil)  = show x
@@ -90,7 +90,7 @@ instance Eq (FieldValue sch t) => Eq (FieldValue sch ('TList t)) where
 instance (Eq (FieldValue sch k), Eq (FieldValue sch v))
          => Eq (FieldValue sch ('TMap k v)) where
   FMap x == FMap y = x == y
-instance All (Eq `Compose` (FieldValue sch)) choices
+instance All (Eq `Compose` FieldValue sch) choices
          => Eq (FieldValue sch ('TUnion choices)) where
   FUnion x == FUnion y = x == y
 
@@ -107,8 +107,8 @@ instance Ord (FieldValue sch t) => Ord (FieldValue sch ('TList t)) where
 instance (Ord (FieldValue sch k), Ord (FieldValue sch v))
          => Ord (FieldValue sch ('TMap k v)) where
   compare (FMap x) (FMap y) = compare x y
-instance ( All (Ord `Compose` (FieldValue sch)) choices
-         , All (Eq  `Compose` (FieldValue sch)) choices )
+instance ( All (Ord `Compose` FieldValue sch) choices
+         , All (Eq  `Compose` FieldValue sch) choices )
          => Ord (FieldValue sch ('TUnion choices)) where
   compare (FUnion x) (FUnion y) = compare x y
 
@@ -126,6 +126,6 @@ instance Show (FieldValue sch t) => Show (FieldValue sch ('TList t)) where
 instance (Show (FieldValue sch k), Show (FieldValue sch v))
          => Show (FieldValue sch ('TMap k v)) where
   show (FMap x) = show x
-instance All (Show `Compose` (FieldValue sch)) choices
+instance All (Show `Compose` FieldValue sch) choices
          => Show (FieldValue sch ('TUnion choices)) where
   show (FUnion x) = show x

@@ -25,7 +25,7 @@ import qualified Data.Vector as V
 import GHC.TypeLits
 
 import Mu.Schema
-import qualified Mu.Schema.Schemaless as SLess
+import qualified Mu.Schema.Interpretation.Schemaless as SLess
 
 instance SLess.ToSchemalessTerm (AVal.Value t) where
   toSchemalessTerm (AVal.Record _ r)

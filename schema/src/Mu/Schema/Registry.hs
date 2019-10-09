@@ -15,7 +15,7 @@ import Control.Applicative
 import GHC.TypeLits
 
 import Mu.Schema
-import qualified Mu.Schema.Schemaless as SLess
+import qualified Mu.Schema.Interpretation.Schemaless as SLess
 
 type family Registry (subject :: k) :: Mappings Nat Schema'
 
