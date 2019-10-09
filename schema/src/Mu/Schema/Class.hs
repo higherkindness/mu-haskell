@@ -330,6 +330,8 @@ instance GFromSchemaRecordSearch sch v args (FindField args (MappingRight fmap n
 instance (GFromSchemaRecord sch fmap args oneway, GFromSchemaRecord sch fmap args oranother)
          => GFromSchemaRecord sch fmap args (oneway :*: oranother) where
   fromSchemaRecord p x = fromSchemaRecord p x :*: fromSchemaRecord p x
+instance GFromSchemaRecord sch fmap args U1 where
+  fromSchemaRecord _ _ = U1
 
 class GFromSchemaRecordSearch (sch :: Schema ts fs) (v :: *) (args :: [FieldDef ts fs]) (w :: Where) where
   fromSchemaRecordSearch :: Proxy w -> NP (Field sch) args -> v
