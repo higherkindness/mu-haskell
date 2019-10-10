@@ -33,7 +33,9 @@ instance KnownNat n => KnownName (n :: Nat) where
 --   both type and field names, although in practice
 --   you always want to use 'Schema''.
 type Schema typeName fieldName
-  = [TypeDef typeName fieldName]
+  = SchemaB Type typeName fieldName
+type SchemaB builtin typeName fieldName
+  = [TypeDefB builtin typeName fieldName]
 
 -- | Libraries can define custom annotations
 --   to indicate additional information. 
@@ -44,10 +46,11 @@ type Annotation = Type
 --   * a record: a list of key-value pairs,
 --   * an enumeration: an element of a list of choices,
 --   * a reference to a primitive type.
-data TypeDef typeName fieldName
-  = DRecord typeName [Annotation] [FieldDef typeName fieldName]
+type TypeDef = TypeDefB Type
+data TypeDefB builtin typeName fieldName
+  = DRecord typeName [Annotation] [FieldDefB builtin typeName fieldName]
   | DEnum   typeName [Annotation] [ChoiceDef fieldName]
-  | DSimple (FieldType typeName)
+  | DSimple (FieldTypeB builtin typeName)
 
 -- | Defines each of the choices in an enumeration.
 data ChoiceDef fieldName
@@ -55,20 +58,22 @@ data ChoiceDef fieldName
 
 -- | Defines a field in a record
 --   by a name and the corresponding type.
-data FieldDef typeName fieldName
-  = FieldDef fieldName [Annotation] (FieldType typeName)
+type FieldDef = FieldDefB Type
+data FieldDefB builtin typeName fieldName
+  = FieldDef fieldName [Annotation] (FieldTypeB builtin typeName)
 
 -- | Types of fields of a record.
 --   References to other types in the same schema
 --   are done via the 'TSchematic' constructor.
-data FieldType typeName
+type FieldType = FieldTypeB Type
+data FieldTypeB builtin typeName
   = TNull
-  | TPrimitive Type
+  | TPrimitive builtin
   | TSchematic typeName
-  | TOption (FieldType typeName)
-  | TList   (FieldType typeName)
-  | TMap    (FieldType typeName) (FieldType typeName)
-  | TUnion  [FieldType typeName]
+  | TOption (FieldTypeB builtin typeName)
+  | TList   (FieldTypeB builtin typeName)
+  | TMap    (FieldTypeB builtin typeName) (FieldTypeB builtin typeName)
+  | TUnion  [FieldTypeB builtin typeName]
 
 -- | Lookup a type in a schema by its name.
 type family (sch :: Schema t f) :/: (name :: t) :: TypeDef t f where

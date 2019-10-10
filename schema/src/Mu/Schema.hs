@@ -2,8 +2,12 @@
 -- | Schemas for Mu microservices
 module Mu.Schema (
   -- * Schema definition
-  Schema, Schema', Annotation, KnownName(..)
-, TypeDef(..), ChoiceDef(..), FieldDef(..), FieldType(..)
+  Schema, Schema'
+, Annotation, KnownName(..)
+, TypeDef, TypeDefB(..)
+, ChoiceDef(..)
+, FieldDef, FieldDefB(..)
+, FieldType, FieldTypeB(..)
   -- ** Lookup type in schema
 , (:/:)
   -- * Interpretation of schemas
