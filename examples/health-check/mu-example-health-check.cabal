@@ -36,8 +36,18 @@ executable health-server
   default-language:    Haskell2010
   ghc-options:         -Wall
 
-executable health-client
-  main-is:             Client.hs
+executable health-client-tyapps
+  main-is:             ClientTyApps.hs
+  other-modules:       Common
+  build-depends:       base >=4.12 && <5, text,
+                       mu-schema, mu-rpc, mu-grpc,
+                       conduit
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+
+executable health-client-record
+  main-is:             ClientRecord.hs
   other-modules:       Common
   build-depends:       base >=4.12 && <5, text,
                        mu-schema, mu-rpc, mu-grpc,

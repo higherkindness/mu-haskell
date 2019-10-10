@@ -21,6 +21,7 @@ library
   exposed-modules:     Mu.GRpc.Shared,
                        Mu.Server.GRpc,
                        Mu.Client.GRpc,
+                       Mu.Client.GRpc.Record,
                        Mu.Client.GRpc.Examples
   -- other-modules:
   -- other-extensions:

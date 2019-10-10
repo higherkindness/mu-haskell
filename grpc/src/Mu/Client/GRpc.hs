@@ -10,10 +10,11 @@ module Mu.Client.GRpc (
 , GrpcClientConfig
 , grpcClientConfigSimple
 , setupGrpcClient'
-, GRpcServiceMethodCall
 , GRpcMethodCall
 , (:-->:)
 , gRpcCall
+, GRpcServiceMethodCall
+, gRpcServiceMethodCall
 , CompressMode(..)
 , GRpcReply(..)
 ) where
