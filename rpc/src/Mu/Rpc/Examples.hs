@@ -24,20 +24,13 @@ import Mu.Schema.Adapter.ProtoBuf
 -- https://grpc.io/docs/quickstart/python/
 
 type QuickstartSchema
-  = '[ 'DRecord "HelloRequest"
-               '[ 'FieldDef "name" ('TPrimitive T.Text) ]
-     , 'DRecord "HelloResponse"
-                '[ 'FieldDef "message" ('TPrimitive T.Text) ]
-     , 'DRecord "HiRequest"
-               '[ 'FieldDef "number" ('TPrimitive Int) ]
+  = '[ 'DRecord "HelloRequest" '[]
+               '[ 'FieldDef "name" '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
+     , 'DRecord "HelloResponse" '[]
+                '[ 'FieldDef "message" '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
+     , 'DRecord "HiRequest" '[]
+               '[ 'FieldDef "number" '[ ProtoBufId 1 ] ('TPrimitive Int) ]
      ]
-
-type instance ProtoBufFieldIds QuickstartSchema "HelloRequest"
-  = '[ "name" ':<->: 1 ]
-type instance ProtoBufFieldIds QuickstartSchema "HelloResponse"
-  = '[ "message" ':<->: 1 ]
-type instance ProtoBufFieldIds QuickstartSchema "HiRequest"
-  = '[ "number" ':<->: 1 ]
 
 type QuickStartService
   = 'Service "Greeter"

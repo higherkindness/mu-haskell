@@ -8,12 +8,15 @@
              AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Schema.Adapter.ProtoBuf (
-  ProtoBufFieldIds
+  -- * Custom annotations
+  ProtoBufId
+  -- * Conversion using schemas
 , IsProtoSchema
 , HasProtoSchema
 , toProtoViaSchema
 , fromProtoViaSchema
 , parseProtoViaSchema
+  -- * Conversion using registry
 , FromProtoBufRegistry
 , fromProtoBufWithRegistry
 , parseProtoBufWithRegistry
@@ -22,6 +25,7 @@ module Mu.Schema.Adapter.ProtoBuf (
 import Control.Applicative
 import qualified Data.ByteString as BS
 import Data.Int
+import Data.Kind
 import Data.SOP (All)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
@@ -32,6 +36,18 @@ import qualified Proto3.Wire.Decode as PBDec
 
 import Mu.Schema
 import Mu.Schema.Registry as R
+
+-- ANNOTATION FOR CONVERSION
+
+data ProtoBufId (n :: Nat)
+
+type family FindProtoBufId (f :: fn) (xs :: [Type]) :: Nat where
+  FindProtoBufId f '[]
+    = TypeError ('Text "protocol buffers id not available for field " ':<>: 'ShowType f)
+  FindProtoBufId f (ProtoBufId n ': rest) = n
+  FindProtoBufId f (other        ': rest) = FindProtoBufId f rest  
+
+-- CONVERSION USING SCHEMAS
 
 class ProtoBridgeTerm sch (sch :/: sty) => IsProtoSchema sch sty
 instance ProtoBridgeTerm sch (sch :/: sty) => IsProtoSchema sch sty
@@ -53,8 +69,7 @@ parseProtoViaSchema :: forall sch a sty.
                     => BS.ByteString -> Either PBDec.ParseError a
 parseProtoViaSchema = PBDec.parse (fromProtoViaSchema @sch)
 
--- | Defines for each field in the schema the corresponding field ID.
-type family ProtoBufFieldIds (sch :: Schema tn fn) (t :: tn) :: [Mapping fn Nat]
+-- CONVERSION USING REGISTRY
 
 fromProtoBufWithRegistry
   :: forall (subject :: k) t. 
@@ -74,8 +89,13 @@ class FromProtoBufRegistry (ms :: Mappings Nat Schema') t where
 instance FromProtoBufRegistry '[] t where
   fromProtoBufRegistry' _ = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "no schema found in registry"))
 instance (HasProtoSchema s sty t, FromProtoBufRegistry ms t)
-         => FromProtoBufRegistry ( (n ':<->: s) ': ms) t where
+         => FromProtoBufRegistry ( (n ':-> s) ': ms) t where
   fromProtoBufRegistry' _ = fromProtoViaSchema @s <|> fromProtoBufRegistry' (Proxy @ms)
+
+
+-- =======================================
+-- IMPLEMENTATION OF GENERIC SERIALIZATION
+-- =======================================
 
 instance Alternative (PBDec.Parser i) where
   empty = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "cannot parse"))
@@ -95,9 +115,9 @@ class ProtoBridgeEmbedTerm (sch :: Schema tn fn) (t :: TypeDef tn fn) where
   embedProtoToFieldValue :: PBDec.Parser PBDec.RawField (Term sch t)
   embedProtoToOneFieldValue :: PBDec.Parser PBDec.RawPrimitive (Term sch t)
 
-class ProtoBridgeField (sch :: Schema tn fn) (ms :: [Mapping fn Nat]) (f :: FieldDef tn fn) where
-  fieldToProto :: Proxy ms -> Field sch f -> PBEnc.MessageBuilder
-  protoToField :: Proxy ms -> PBDec.Parser PBDec.RawMessage (Field sch f)
+class ProtoBridgeField (sch :: Schema tn fn) (f :: FieldDef tn fn) where
+  fieldToProto :: Field sch f -> PBEnc.MessageBuilder
+  protoToField :: PBDec.Parser PBDec.RawMessage (Field sch f)
 
 class ProtoBridgeFieldValue (sch :: Schema tn fn) (t :: FieldType tn) where
   fieldValueToProto :: FieldNumber -> FieldValue sch t -> PBEnc.MessageBuilder
@@ -113,68 +133,64 @@ class ProtoBridgeOneFieldValue (sch :: Schema tn fn) (t :: FieldType tn) where
 -- RECORDS
 -- -------
 
-instance forall sch name args.
-         ( All (ProtoBridgeField sch (ProtoBufFieldIds sch name)) args
-         , ProtoBridgeFields sch (ProtoBufFieldIds sch name) args )
-         => ProtoBridgeTerm sch ('DRecord name args) where
+instance (All (ProtoBridgeField sch) args, ProtoBridgeFields sch args)
+         => ProtoBridgeTerm sch ('DRecord name anns args) where
   termToProto (TRecord fields) = go fields
-    where go :: forall fs. All (ProtoBridgeField sch (ProtoBufFieldIds sch name)) fs
+    where go :: forall fs. All (ProtoBridgeField sch) fs
              => NP (Field sch) fs -> PBEnc.MessageBuilder
           go Nil = mempty
-          go (f :* fs) = fieldToProto (Proxy @(ProtoBufFieldIds sch name)) f <> go fs
-  protoToTerm = TRecord <$> protoToFields (Proxy @(ProtoBufFieldIds sch name))
+          go (f :* fs) = fieldToProto f <> go fs
+  protoToTerm = TRecord <$> protoToFields
 
-class ProtoBridgeFields sch ms fields where
-  protoToFields :: Proxy ms -> PBDec.Parser PBDec.RawMessage (NP (Field sch) fields)
-instance ProtoBridgeFields sch ms '[] where
-  protoToFields _ = pure Nil
-instance (ProtoBridgeField sch ms f, ProtoBridgeFields sch ms fs)
-         => ProtoBridgeFields sch ms (f ': fs) where
-  protoToFields p = (:*) <$> protoToField p <*> protoToFields p
+class ProtoBridgeFields sch fields where
+  protoToFields :: PBDec.Parser PBDec.RawMessage (NP (Field sch) fields)
+instance ProtoBridgeFields sch '[] where
+  protoToFields = pure Nil
+instance (ProtoBridgeField sch f, ProtoBridgeFields sch fs)
+         => ProtoBridgeFields sch (f ': fs) where
+  protoToFields = (:*) <$> protoToField <*> protoToFields
 
-instance forall sch name args.
-         ProtoBridgeTerm sch ('DRecord name args)
-         => ProtoBridgeEmbedTerm sch ('DRecord name args) where
+instance ProtoBridgeTerm sch ('DRecord name anns args)
+         => ProtoBridgeEmbedTerm sch ('DRecord name anns args) where
   termToEmbedProto fid v = PBEnc.embedded fid (termToProto v)
   embedProtoToFieldValue = do
-    t <- PBDec.embedded (protoToTerm @_ @_ @sch @('DRecord name args))
+    t <- PBDec.embedded (protoToTerm @_ @_ @sch @('DRecord name anns args))
     case t of
       Nothing -> PBDec.Parser (\_ -> Left (PBDec.WireTypeError "expected message"))
       Just v  -> return v
-  embedProtoToOneFieldValue = PBDec.embedded' (protoToTerm @_ @_ @sch @('DRecord name args))
+  embedProtoToOneFieldValue = PBDec.embedded' (protoToTerm @_ @_ @sch @('DRecord name anns args))
 
 -- ENUMERATIONS
 -- ------------
 
 instance TypeError ('Text "protobuf requires wrapping enums in a message")
-         => ProtoBridgeTerm sch ('DEnum name choices) where
+         => ProtoBridgeTerm sch ('DEnum name anns choices) where
   termToProto = error "protobuf requires wrapping enums in a message"
   protoToTerm = error "protobuf requires wrapping enums in a message"
 
-instance forall sch name choices.
-         ProtoBridgeEnum (ProtoBufFieldIds sch name) choices
-         => ProtoBridgeEmbedTerm sch ('DEnum name choices) where
-  termToEmbedProto fid (TEnum v) = enumToProto (Proxy @(ProtoBufFieldIds sch name)) fid v
+instance ProtoBridgeEnum choices
+         => ProtoBridgeEmbedTerm sch ('DEnum name anns choices) where
+  termToEmbedProto fid (TEnum v) = enumToProto fid v
   embedProtoToFieldValue    = do n <- PBDec.one PBDec.int32 0
-                                 TEnum <$> protoToEnum (Proxy @(ProtoBufFieldIds sch name)) n
+                                 TEnum <$> protoToEnum n
   embedProtoToOneFieldValue = do n <- PBDec.int32
-                                 TEnum <$> protoToEnum (Proxy @(ProtoBufFieldIds sch name)) n
+                                 TEnum <$> protoToEnum n
 
-class ProtoBridgeEnum (ms :: [Mapping fn Nat]) (choices :: [fn]) where
-  enumToProto :: Proxy ms -> FieldNumber -> NS Proxy choices -> PBEnc.MessageBuilder
-  protoToEnum :: Proxy ms -> Int32 -> PBDec.Parser a (NS Proxy choices)
-instance ProtoBridgeEnum ms '[] where
+class ProtoBridgeEnum (choices :: [ChoiceDef fn]) where
+  enumToProto :: FieldNumber -> NS Proxy choices -> PBEnc.MessageBuilder
+  protoToEnum :: Int32 -> PBDec.Parser a (NS Proxy choices)
+instance ProtoBridgeEnum '[] where
   enumToProto = error "empty enum"
-  protoToEnum _ _ = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "unknown enum type"))
-instance (KnownNat (MappingRight ms c), ProtoBridgeEnum ms cs)
-         => ProtoBridgeEnum ms (c ': cs) where
-  enumToProto _ fid (Z _) = PBEnc.int32 fid enumValue
-    where enumValue = fromIntegral (natVal (Proxy @(MappingRight ms c)))
-  enumToProto p fid (S v) = enumToProto p fid v
-  protoToEnum p n
+  protoToEnum _ = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "unknown enum type"))
+instance (KnownNat (FindProtoBufId c anns), ProtoBridgeEnum cs)
+         => ProtoBridgeEnum ('ChoiceDef c anns ': cs) where
+  enumToProto fid (Z _) = PBEnc.int32 fid enumValue
+    where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId c anns)))
+  enumToProto fid (S v) = enumToProto fid v
+  protoToEnum n
     | n == enumValue = return (Z Proxy)
-    | otherwise      = S <$> protoToEnum p n
-    where enumValue = fromIntegral (natVal (Proxy @(MappingRight ms c)))
+    | otherwise      = S <$> protoToEnum n
+    where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId c anns)))
 
 -- SIMPLE
 -- ------
@@ -188,13 +204,12 @@ instance TypeError ('Text "protobuf requires wrapping primitives in a message")
 -- FIELDS --
 -- ---------
 
-instance forall sch ms name t.
-         (ProtoBridgeFieldValue sch t, KnownNat (MappingRight ms name))
-         => ProtoBridgeField sch ms ('FieldDef name t) where
-  fieldToProto _ (Field v) = fieldValueToProto fieldId v
-    where fieldId = fromInteger $ natVal (Proxy @(MappingRight ms name))
-  protoToField _ = Field <$> protoToFieldValue `at` fieldId
-    where fieldId = fromInteger $ natVal (Proxy @(MappingRight ms name))
+instance (ProtoBridgeFieldValue sch t, KnownNat (FindProtoBufId name anns))
+         => ProtoBridgeField sch ('FieldDef name anns t) where
+  fieldToProto (Field v) = fieldValueToProto fieldId v
+    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId name anns))
+  protoToField = Field <$> protoToFieldValue `at` fieldId
+    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId name anns))
 
 -- ------------------
 -- TYPES OF FIELDS --

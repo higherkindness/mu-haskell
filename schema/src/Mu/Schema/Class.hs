@@ -1,6 +1,6 @@
 {-# language PolyKinds, DataKinds, GADTs,
              TypeFamilies, TypeOperators,
-             MultiParamTypeClasses, FunctionalDependencies,
+             FunctionalDependencies,
              FlexibleInstances, FlexibleContexts,
              TypeApplications, ScopedTypeVariables,
              UndecidableInstances,
@@ -98,10 +98,15 @@ type family FindSel (xs :: * -> *) (x :: Symbol) :: Where where
   FindSel (other :*: rest) x = 'There (FindSel rest x)
   FindSel nothing          x = TypeError ('Text "Could not find selector " ':<>: 'ShowType x)
 
+type family FindEnumChoice (xs :: [ChoiceDef fs]) (x :: fs) :: Where where
+  FindEnumChoice '[] x = TypeError ('Text "Could not find enum choice " ':<>: 'ShowType x)
+  FindEnumChoice ('ChoiceDef name anns ': xs) name = 'Here
+  FindEnumChoice (other                ': xs) name = 'There (FindEnumChoice xs name)
+
 type family FindField (xs :: [FieldDef ts fs]) (x :: fs) :: Where where
   FindField '[] x = TypeError ('Text "Could not find field " ':<>: 'ShowType x)
-  FindField ('FieldDef name t ': xs) name = 'Here
-  FindField (other            ': xs) name = 'There (FindField xs name)
+  FindField ('FieldDef name anns t ': xs) name = 'Here
+  FindField (other                 ': xs) name = 'There (FindField xs name)
 
 -- Generic type definitions
 class GSchemaTypeDef (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
@@ -178,14 +183,14 @@ instance AllZip (GSchemaFieldType sch) ts vs
 
 instance {-# OVERLAPPABLE #-}
          (GToSchemaEnumDecompose fmap choices f, GFromSchemaEnumDecompose fmap choices f)
-         => GSchemaTypeDef sch fmap ('DEnum name choices) f where
+         => GSchemaTypeDef sch fmap ('DEnum name anns choices) f where
   toSchemaTypeDef p x = TEnum (toSchemaEnumDecomp p x)
   fromSchemaTypeDef p (TEnum x) = fromSchemaEnumDecomp p x
 -- This instance removes unneeded metadata from the
 -- top of the type.
 instance {-# OVERLAPS #-}
-         GSchemaTypeDef sch fmap ('DEnum name choices) f 
-         => GSchemaTypeDef sch fmap ('DEnum name choices) (D1 meta f) where
+         GSchemaTypeDef sch fmap ('DEnum name anns choices) f 
+         => GSchemaTypeDef sch fmap ('DEnum name anns choices) (D1 meta f) where
   toSchemaTypeDef p (M1 x) = toSchemaTypeDef p x
   fromSchemaTypeDef p x = M1 (fromSchemaTypeDef p x)
 
@@ -197,18 +202,16 @@ instance {-# OVERLAPS #-}
 --    this is done by 'MappingRight' and 'Find'
 -- 3. from that location, build a 'Proxy' value
 --    this is done by 'GToSchemaEnumProxy'
-class GToSchemaEnumDecompose (fmap :: Mappings Symbol fs) (choices :: [fs]) (f :: * -> *) where
+class GToSchemaEnumDecompose (fmap :: Mappings Symbol fs) (choices :: [ChoiceDef fs]) (f :: * -> *) where
   toSchemaEnumDecomp :: Proxy fmap -> f a -> NS Proxy choices
-instance forall fmap choices oneway oranother.
-         (GToSchemaEnumDecompose fmap choices oneway, GToSchemaEnumDecompose fmap choices oranother)
+instance (GToSchemaEnumDecompose fmap choices oneway, GToSchemaEnumDecompose fmap choices oranother)
          => GToSchemaEnumDecompose fmap choices (oneway :+: oranother) where
   toSchemaEnumDecomp p (L1 x) = toSchemaEnumDecomp p x
   toSchemaEnumDecomp p (R1 x) = toSchemaEnumDecomp p x
-instance forall fmap choices c p s f.
-         GToSchemaEnumProxy choices (Find choices (MappingRight fmap c))
+instance GToSchemaEnumProxy choices (FindEnumChoice choices (MappingRight fmap c))
          => GToSchemaEnumDecompose fmap choices (C1 ('MetaCons c p s) f) where
   toSchemaEnumDecomp _ _
-    = toSchemaEnumProxy (Proxy @choices) (Proxy @(Find choices (MappingRight fmap c)))
+    = toSchemaEnumProxy (Proxy @choices) (Proxy @(FindEnumChoice choices (MappingRight fmap c)))
 -- Types which have no constructor information cannot be used here
 
 class GToSchemaEnumProxy (choices :: [k]) (w :: Where) where
@@ -227,13 +230,12 @@ instance forall c cs w. GToSchemaEnumProxy cs w
 -- 2. from that location, build a 'U1' value wrapped
 --    in as many 'L1' and 'R1' required.
 --    this is done by 'GFromSchemaEnumU1'
-class GFromSchemaEnumDecompose (fmap :: Mappings Symbol fs) (choices :: [fs]) (f :: * -> *) where
+class GFromSchemaEnumDecompose (fmap :: Mappings Symbol fs) (choices :: [ChoiceDef fs]) (f :: * -> *) where
   fromSchemaEnumDecomp :: Proxy fmap -> NS Proxy choices -> f a
 instance GFromSchemaEnumDecompose fmap '[] f where
   fromSchemaEnumDecomp _ _ = error "This should never happen"
-instance forall fmap c cs f.
-         (GFromSchemaEnumU1 f (FindCon f (MappingLeft fmap c)), GFromSchemaEnumDecompose fmap cs f)
-         => GFromSchemaEnumDecompose fmap (c ': cs) f where
+instance (GFromSchemaEnumU1 f (FindCon f (MappingLeft fmap c)), GFromSchemaEnumDecompose fmap cs f)
+         => GFromSchemaEnumDecompose fmap ('ChoiceDef c anns ': cs) f where
   fromSchemaEnumDecomp _ (Z _) = fromSchemaEnumU1 (Proxy @f) (Proxy @(FindCon f (MappingLeft fmap c)))
   fromSchemaEnumDecomp p (S x) = fromSchemaEnumDecomp p x
 
@@ -253,19 +255,19 @@ instance forall other rest w. GFromSchemaEnumU1 rest w
 
 instance {-# OVERLAPPABLE #-}
          (GToSchemaRecord sch fmap args f, GFromSchemaRecord sch fmap args f)
-         => GSchemaTypeDef sch fmap ('DRecord name args) f where
+         => GSchemaTypeDef sch fmap ('DRecord name anns args) f where
   toSchemaTypeDef p x = TRecord (toSchemaRecord p x)
   fromSchemaTypeDef p (TRecord x) = fromSchemaRecord p x
 -- This instance removes unneeded metadata from the
 -- top of the type.
 instance {-# OVERLAPS #-}
-         GSchemaTypeDef sch fmap ('DRecord name args) f 
-         => GSchemaTypeDef sch fmap ('DRecord name args) (D1 meta f) where
+         GSchemaTypeDef sch fmap ('DRecord name anns args) f 
+         => GSchemaTypeDef sch fmap ('DRecord name anns args) (D1 meta f) where
   toSchemaTypeDef p (M1 x) = toSchemaTypeDef p x
   fromSchemaTypeDef p x = M1 (fromSchemaTypeDef p x)
 instance {-# OVERLAPS #-}
-         GSchemaTypeDef sch fmap ('DRecord name args) f 
-         => GSchemaTypeDef sch fmap ('DRecord name args) (C1 meta f) where
+         GSchemaTypeDef sch fmap ('DRecord name anns args) f 
+         => GSchemaTypeDef sch fmap ('DRecord name anns args) (C1 meta f) where
   toSchemaTypeDef p (M1 x) = toSchemaTypeDef p x
   fromSchemaTypeDef p x = M1 (fromSchemaTypeDef p x)
 
@@ -287,10 +289,9 @@ class GToSchemaRecord (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
   toSchemaRecord :: Proxy fmap -> f a -> NP (Field sch) args
 instance GToSchemaRecord sch fmap '[] f where
   toSchemaRecord _ _ = Nil
-instance forall sch fmap name t cs f.
-         ( GToSchemaRecord sch fmap cs f
+instance ( GToSchemaRecord sch fmap cs f
          , GToSchemaRecordSearch sch t f (FindSel f (MappingLeft fmap name)) )
-         => GToSchemaRecord sch fmap ('FieldDef name t ': cs) f where
+         => GToSchemaRecord sch fmap ('FieldDef name anns t ': cs) f where
   toSchemaRecord p x = this  :* toSchemaRecord p x
     where this = Field (toSchemaRecordSearch (Proxy @(FindSel f (MappingLeft fmap name))) x)
 
@@ -335,7 +336,7 @@ instance GFromSchemaRecord sch fmap args U1 where
 
 class GFromSchemaRecordSearch (sch :: Schema ts fs) (v :: *) (args :: [FieldDef ts fs]) (w :: Where) where
   fromSchemaRecordSearch :: Proxy w -> NP (Field sch) args -> v
-instance GSchemaFieldType sch t v => GFromSchemaRecordSearch sch v ('FieldDef name t ': rest) 'Here where
+instance GSchemaFieldType sch t v => GFromSchemaRecordSearch sch v ('FieldDef name anns t ': rest) 'Here where
   fromSchemaRecordSearch _ (Field x :* _) = fromSchemaFieldType x
 instance forall sch v other rest n.
          GFromSchemaRecordSearch sch v rest n

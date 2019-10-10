@@ -1,20 +1,9 @@
-{-# language PolyKinds             #-}
-{-# language DataKinds             #-}
-{-# language GADTs                 #-}
-{-# language TypeFamilies          #-}
-{-# language TypeOperators         #-}
-{-# language FlexibleInstances     #-}
-{-# language FlexibleContexts      #-}
-{-# language TypeApplications      #-}
-{-# language ScopedTypeVariables   #-}
-{-# language UndecidableInstances  #-}
-{-# language MultiParamTypeClasses #-}
-{-# language DefaultSignatures     #-}
+{-# language DataKinds #-}
 -- | Schemas for Mu microservices
 module Mu.Schema (
   -- * Schema definition
-  Schema, Schema', KnownName(..)
-, TypeDef(..), FieldDef(..), FieldType(..)
+  Schema, Schema', Annotation, KnownName(..)
+, TypeDef(..), ChoiceDef(..), FieldDef(..), FieldType(..)
   -- ** Lookup type in schema
 , (:/:)
   -- * Interpretation of schemas

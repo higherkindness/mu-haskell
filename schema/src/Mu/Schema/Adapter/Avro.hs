@@ -57,11 +57,10 @@ instance SLess.ToSchemalessValue (AVal.Value t) where
     = SLess.toSchemalessValue v
   toSchemalessValue r@(AVal.Record _ _)
     = SLess.FSchematic (SLess.toSchemalessTerm r)
-  toSchemalessValue e@(AVal.Enum _ _ _)
+  toSchemalessValue e@AVal.Enum {}
     = SLess.FSchematic (SLess.toSchemalessTerm e)
 
-instance forall sch sty t.
-         HasAvroSchemas sch sch
+instance HasAvroSchemas sch sch
          => A.HasAvroSchema (WithSchema sch sty t) where
   -- the previous iteration added only the schema of the type
   -- schema = coerce $ A.schema @(Term sch (sch :/: sty))
@@ -71,8 +70,7 @@ instance (HasSchema sch sty t, HasAvroSchemas sch sch, A.FromAvro (Term sch (sch
          => A.FromAvro (WithSchema sch sty t) where
   fromAvro (AVal.Union _ _ v) = WithSchema . fromSchema' @sch <$> A.fromAvro v
   fromAvro v = ASch.badValue v "top-level"
-instance forall sch sty t.
-         (HasSchema sch sty t, HasAvroSchemas sch sch, A.ToAvro (Term sch (sch :/: sty)))
+instance (HasSchema sch sty t, HasAvroSchemas sch sch, A.ToAvro (Term sch (sch :/: sty)))
          => A.ToAvro (WithSchema sch sty t) where
   toAvro (WithSchema v) = AVal.Union (schemas (Proxy @sch) (Proxy @sch))
                                      (unTagged $ A.schema @(Term sch (sch :/: sty)))
@@ -91,29 +89,25 @@ instance forall r d ds.
 -- HasAvroSchema instances
 
 instance (KnownName name, HasAvroSchemaFields sch args)
-         => A.HasAvroSchema (Term sch ('DRecord name args)) where
+         => A.HasAvroSchema (Term sch ('DRecord name anns args)) where
   schema = Tagged $ ASch.Record recordName [] Nothing Nothing fields
     where recordName = nameTypeName (Proxy @name)
           fields = schemaF (Proxy @sch) (Proxy @args)
-instance forall sch name choices.
-         (KnownName name, KnownNames choices)
-          => A.HasAvroSchema (Term sch ('DEnum name choices)) where
+instance (KnownName name, HasAvroSchemaEnum choices)
+          => A.HasAvroSchema (Term sch ('DEnum name anns choices)) where
   schema = Tagged $ ASch.mkEnum enumName [] Nothing choicesNames
     where enumName = nameTypeName (Proxy @name)
-          choicesNames = symbols nameText (Proxy @choices)
-instance forall sch t.
-         A.HasAvroSchema (FieldValue sch t)
+          choicesNames = schemaE (Proxy @choices)
+instance A.HasAvroSchema (FieldValue sch t)
          => A.HasAvroSchema (Term sch ('DSimple t)) where
   schema = coerce $ A.schema @(FieldValue sch t)
 
 instance A.HasAvroSchema (FieldValue sch 'TNull) where
   schema = Tagged ASch.Null
-instance forall sch t. A.HasAvroSchema t
+instance A.HasAvroSchema t
          => A.HasAvroSchema (FieldValue sch ('TPrimitive t)) where
   schema = coerce $ A.schema @t
-instance forall sch t.
-         -- A.HasAvroSchema (Term sch (sch :/: t))
-         KnownName t
+instance KnownName t
          => A.HasAvroSchema (FieldValue sch ('TSchematic t)) where
   -- schema = coerce $ A.schema @(Term sch (sch :/: t))
   schema = Tagged $ ASch.NamedType (nameTypeName (Proxy @t))
@@ -137,39 +131,43 @@ instance A.HasAvroSchema (FieldValue sch v)
 
 class HasAvroSchemaUnion (f :: k -> *) (xs :: [k]) where
   schemaU :: Proxy f -> Proxy xs -> NonEmpty ASch.Type
-instance forall f v.
-         A.HasAvroSchema (f v) => HasAvroSchemaUnion f '[v] where
+instance A.HasAvroSchema (f v) => HasAvroSchemaUnion f '[v] where
   schemaU _ _ = vSchema :| []
     where vSchema = unTagged (A.schema @(f v))
-instance forall f x y zs.
-         (A.HasAvroSchema (f x), HasAvroSchemaUnion f (y ': zs))
+instance (A.HasAvroSchema (f x), HasAvroSchemaUnion f (y ': zs))
          => HasAvroSchemaUnion f (x ': y ': zs) where
   schemaU p _ = xSchema :| NonEmptyList.toList yzsSchema
     where xSchema = unTagged (A.schema @(f x))
           yzsSchema = schemaU p (Proxy @(y ': zs))
 
-class HasAvroSchemaFields sch (fs :: [k]) where
+class HasAvroSchemaFields sch (fs :: [FieldDef tn fn]) where
   schemaF :: Proxy sch -> Proxy fs -> [ASch.Field]
 instance HasAvroSchemaFields sch '[] where
   schemaF _ _ = []
-instance forall sch name t fs. 
-         (KnownName name, A.HasAvroSchema (FieldValue sch t), HasAvroSchemaFields sch fs)
-         => HasAvroSchemaFields sch ('FieldDef name t ': fs) where
+instance (KnownName name, A.HasAvroSchema (FieldValue sch t), HasAvroSchemaFields sch fs)
+         => HasAvroSchemaFields sch ('FieldDef name anns t ': fs) where
   schemaF psch _ = schemaThis : schemaF psch (Proxy @fs)
     where fieldName = nameText (Proxy @name)
           schemaT = unTagged $ A.schema @(FieldValue sch t)
           schemaThis = ASch.Field fieldName [] Nothing Nothing schemaT Nothing
 
+class HasAvroSchemaEnum (fs :: [ChoiceDef fn]) where
+  schemaE :: Proxy fs -> [T.Text]
+instance HasAvroSchemaEnum '[] where
+  schemaE _ = []
+instance (KnownName name, HasAvroSchemaEnum fs)
+         => HasAvroSchemaEnum ('ChoiceDef name anns ': fs) where
+  schemaE _ = nameText (Proxy @name) : schemaE (Proxy @fs)
+
 -- FromAvro instances
 
 instance (KnownName name, HasAvroSchemaFields sch args, FromAvroFields sch args)
-         => A.FromAvro (Term sch ('DRecord name args)) where
+         => A.FromAvro (Term sch ('DRecord name anns args)) where
   fromAvro (AVal.Record _ fields) = TRecord <$> fromAvroF fields
   fromAvro v = A.badValue v "record"
-instance forall sch name choices.
-         (KnownName name, KnownNames choices, GetNthIfPossible choices)
-          => A.FromAvro (Term sch ('DEnum name choices)) where
-  fromAvro v@(AVal.Enum _ n _) = TEnum <$> getNthIfPossible v n
+instance (KnownName name, HasAvroSchemaEnum choices, FromAvroEnum choices)
+          => A.FromAvro (Term sch ('DEnum name anns choices)) where
+  fromAvro v@(AVal.Enum _ n _) = TEnum <$> fromAvroEnum v n
   fromAvro v = A.badValue v "enum"
 instance A.FromAvro (FieldValue sch t)
          => A.FromAvro (Term sch ('DSimple t)) where
@@ -201,20 +199,19 @@ instance A.FromAvro (FieldValue sch v)
          => A.FromAvro (FieldValue sch ('TMap ('TPrimitive String) v)) where
   fromAvro v = FMap . M.mapKeys (FPrimitive . T.unpack) <$> A.fromAvro v
 
-class GetNthIfPossible (vs :: [k]) where
-  getNthIfPossible :: AVal.Value ASch.Type -> Int -> A.Result (NS Proxy vs)
-instance GetNthIfPossible '[] where
-  getNthIfPossible v _ = A.badValue v "element not found"
-instance GetNthIfPossible vs => GetNthIfPossible (v ': vs) where
-  getNthIfPossible _ 0 = return (Z Proxy)
-  getNthIfPossible v n = S <$> getNthIfPossible v (n-1)
+class FromAvroEnum (vs :: [ChoiceDef fn]) where
+  fromAvroEnum :: AVal.Value ASch.Type -> Int -> A.Result (NS Proxy vs)
+instance FromAvroEnum '[] where
+  fromAvroEnum v _ = A.badValue v "element not found"
+instance FromAvroEnum vs => FromAvroEnum (v ': vs) where
+  fromAvroEnum _ 0 = return (Z Proxy)
+  fromAvroEnum v n = S <$> fromAvroEnum v (n-1)
 
 class FromAvroUnion sch choices where
   fromAvroU :: ASch.Type -> AVal.Value ASch.Type -> ASch.Result (NS (FieldValue sch) choices)
 instance FromAvroUnion sch '[] where
   fromAvroU _ v = A.badValue v "union choice not found"
-instance forall sch u us.
-         (A.FromAvro (FieldValue sch u), FromAvroUnion sch us)
+instance (A.FromAvro (FieldValue sch u), FromAvroUnion sch us)
          => FromAvroUnion sch (u ': us) where
   fromAvroU branch v
     | ASch.matches branch (unTagged (A.schema @(FieldValue sch u)))
@@ -226,9 +223,8 @@ class FromAvroFields sch (fs :: [FieldDef Symbol Symbol]) where
   fromAvroF :: HM.HashMap T.Text (AVal.Value ASch.Type) -> A.Result (NP (Field sch) fs)
 instance FromAvroFields sch '[] where
   fromAvroF _ = return Nil
-instance forall sch name t fs.
-         (KnownName name, A.FromAvro (FieldValue sch t), FromAvroFields sch fs)
-         => FromAvroFields sch ('FieldDef name t ': fs) where
+instance (KnownName name, A.FromAvro (FieldValue sch t), FromAvroFields sch fs)
+         => FromAvroFields sch ('FieldDef name anns t ': fs) where
   fromAvroF v = case HM.lookup fieldName v of
                   Nothing -> A.badValue v "field not found"
                   Just f  -> (:*) <$> (Field <$> A.fromAvro f) <*> fromAvroF v
@@ -236,16 +232,14 @@ instance forall sch name t fs.
 
 -- ToAvro instances
 
-instance forall sch name args.
-         (KnownName name, HasAvroSchemaFields sch args, ToAvroFields sch args)
-         => A.ToAvro (Term sch ('DRecord name args)) where
+instance (KnownName name, HasAvroSchemaFields sch args, ToAvroFields sch args)
+         => A.ToAvro (Term sch ('DRecord name anns args)) where
   toAvro (TRecord fields) = AVal.Record wholeSchema (toAvroF fields)
-    where wholeSchema = unTagged (A.schema @(Term sch ('DRecord name args)))
-instance forall sch name choices.
-         (KnownName name, KnownNames choices, ToAvroEnum choices)
-          => A.ToAvro (Term sch ('DEnum name choices)) where
+    where wholeSchema = unTagged (A.schema @(Term sch ('DRecord name anns args)))
+instance (KnownName name, HasAvroSchemaEnum choices, ToAvroEnum choices)
+          => A.ToAvro (Term sch ('DEnum name anns choices)) where
   toAvro (TEnum n) = AVal.Enum wholeSchema choice text
-    where wholeSchema = unTagged (A.schema @(Term sch ('DEnum name choices)))
+    where wholeSchema = unTagged (A.schema @(Term sch ('DEnum name anns choices)))
           (choice, text) = toAvroE n
 instance A.ToAvro (FieldValue sch t)
          => A.ToAvro (Term sch ('DSimple t)) where
@@ -289,12 +283,12 @@ instance forall sch u us.
   toAvroU (Z v) = (unTagged (A.schema @(FieldValue sch u)), A.toAvro v)
   toAvroU (S n) = toAvroU n
 
-class KnownNames choices => ToAvroEnum choices where
+class ToAvroEnum choices where
   toAvroE :: NS Proxy choices -> (Int, T.Text)
 instance ToAvroEnum '[] where
   toAvroE = error "ToAvro in an empty enum"
-instance forall u us. (KnownName u, ToAvroEnum us)
-         => ToAvroEnum (u ': us) where
+instance (KnownName u, ToAvroEnum us)
+         => ToAvroEnum ('ChoiceDef u anns ': us) where
   toAvroE (Z _) = (0, nameText (Proxy @u))
   toAvroE (S v) = let (n, t) = toAvroE v in (n + 1, t)
 
@@ -302,22 +296,13 @@ class ToAvroFields sch (fs :: [FieldDef Symbol Symbol]) where
   toAvroF :: NP (Field sch) fs -> HM.HashMap T.Text (AVal.Value ASch.Type)
 instance ToAvroFields sch '[] where
   toAvroF _ = HM.empty
-instance forall sch name t fs.
-         (KnownName name, A.ToAvro (FieldValue sch t), ToAvroFields sch fs)
-         => ToAvroFields sch ('FieldDef name t ': fs) where
+instance (KnownName name, A.ToAvro (FieldValue sch t), ToAvroFields sch fs)
+         => ToAvroFields sch ('FieldDef name anns t ': fs) where
   toAvroF (Field v :* rest) = HM.insert fieldName fieldValue (toAvroF rest)
     where fieldName  = nameText (Proxy @name)
           fieldValue = A.toAvro v
 
 -- Conversion of symbols to other things
-
-class KnownNames (ss :: [k]) where
-  symbols :: (forall (s :: k). KnownName s => Proxy s -> a) -> Proxy ss -> [a]
-instance KnownNames '[] where
-  symbols _ _ = []
-instance forall s ss. (KnownName s, KnownNames ss) => KnownNames (s ': ss) where
-  symbols f _ = f (Proxy @s) : symbols f (Proxy @ss)
-
 nameText :: KnownName s => proxy s -> T.Text
 nameText = T.pack . nameVal
 nameTypeName :: KnownName s => proxy s -> ASch.TypeName

@@ -1,5 +1,5 @@
 {-# language PolyKinds, DataKinds, GADTs,
-             KindSignatures, ScopedTypeVariables,
+             ScopedTypeVariables,
              TypeApplications, TypeOperators,
              FlexibleContexts, MultiParamTypeClasses,
              AllowAmbiguousTypes, StandaloneDeriving,
@@ -67,7 +67,7 @@ class CheckSchema (s :: Schema tn fn) (t :: TypeDef tn fn) where
   checkSchema' :: Term -> Maybe (S.Term s t)
 class CheckSchemaFields (s :: Schema tn fn) (fields :: [FieldDef tn fn]) where
   checkSchemaFields :: [Field] -> Maybe (NP (S.Field s) fields)
-class CheckSchemaEnum (choices :: [fn]) where
+class CheckSchemaEnum (choices :: [ChoiceDef fn]) where
   checkSchemaEnumInt  :: Int -> Maybe (NS Proxy choices)
   checkSchemaEnumText :: T.Text -> Maybe (NS Proxy choices)
 class CheckSchemaValue (s :: Schema tn fn) (field :: FieldType tn) where
@@ -75,13 +75,13 @@ class CheckSchemaValue (s :: Schema tn fn) (field :: FieldType tn) where
 class CheckSchemaUnion (s :: Schema tn fn) (ts :: [FieldType tn]) where
   checkSchemaUnion :: FieldValue -> Maybe (NS (S.FieldValue s) ts)
 
-instance CheckSchemaFields s fields => CheckSchema s ('DRecord nm fields) where
+instance CheckSchemaFields s fields => CheckSchema s ('DRecord nm anns fields) where
   checkSchema' (TRecord fields) = S.TRecord <$> checkSchemaFields fields
   checkSchema' _ = Nothing
 instance CheckSchemaFields s '[] where
   checkSchemaFields _ = pure Nil
 instance (KnownName nm, CheckSchemaValue s ty, CheckSchemaFields s rest)
-         => CheckSchemaFields s ('FieldDef nm ty ': rest) where
+         => CheckSchemaFields s ('FieldDef nm anns ty ': rest) where
   checkSchemaFields fs
     = do let name = T.pack (nameVal (Proxy @nm))
          Field _ v <- find (\(Field fieldName _) -> fieldName == name) fs
@@ -89,7 +89,7 @@ instance (KnownName nm, CheckSchemaValue s ty, CheckSchemaFields s rest)
          r' <- checkSchemaFields @_ @_ @s @rest fs
          return (S.Field v' :* r')
 
-instance CheckSchemaEnum choices => CheckSchema s ('DEnum nm choices) where
+instance CheckSchemaEnum choices => CheckSchema s ('DEnum nm anns choices) where
   checkSchema' (TEnum n) = S.TEnum <$> checkSchemaEnumInt n
   checkSchema' (TSimple (FPrimitive (n :: a)))
     = case (eqT @a @Int, eqT @a @T.Text, eqT @a @String) of
@@ -102,7 +102,7 @@ instance CheckSchemaEnum '[] where
   checkSchemaEnumInt  _ = Nothing
   checkSchemaEnumText _ = Nothing
 instance (KnownName c, CheckSchemaEnum cs)
-         => CheckSchemaEnum (c ': cs) where
+         => CheckSchemaEnum ('ChoiceDef c anns ': cs) where
   checkSchemaEnumInt 0 = Just (Z Proxy)
   checkSchemaEnumInt n = S <$> checkSchemaEnumInt (n-1)
   checkSchemaEnumText t

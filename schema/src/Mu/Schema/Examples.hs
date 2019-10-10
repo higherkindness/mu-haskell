@@ -53,35 +53,29 @@ data Gender = Male | Female | NonBinary
 
 -- Schema for these data types
 type ExampleSchema
-  = '[ 'DEnum   "gender" '["male", "female", "nb"]
-     , 'DRecord "address"
-               '[ 'FieldDef "postcode" ('TPrimitive T.Text)
-                , 'FieldDef "country"  ('TPrimitive T.Text) ]
-     , 'DRecord "person"
-                '[ 'FieldDef "firstName" ('TPrimitive T.Text)
-                 , 'FieldDef "lastName"  ('TPrimitive T.Text)
-                 , 'FieldDef "age"       ('TOption ('TPrimitive Int))
-                 , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
-                 , 'FieldDef "address"   ('TSchematic "address") ]
+  = '[ 'DEnum   "gender" '[]
+               '[ 'ChoiceDef "male"   '[ ProtoBufId 1 ]
+                , 'ChoiceDef "female" '[ ProtoBufId 2 ]
+                , 'ChoiceDef "nb"     '[ ProtoBufId 0 ] ]
+     , 'DRecord "address" '[]
+               '[ 'FieldDef "postcode" '[ ProtoBufId 1 ] ('TPrimitive T.Text)
+                , 'FieldDef "country"  '[ ProtoBufId 2 ] ('TPrimitive T.Text) ]
+     , 'DRecord "person" '[]
+                '[ 'FieldDef "firstName" '[ ProtoBufId 1 ] ('TPrimitive T.Text)
+                 , 'FieldDef "lastName"  '[ ProtoBufId 2 ] ('TPrimitive T.Text)
+                 , 'FieldDef "age"       '[ ProtoBufId 3 ] ('TOption ('TPrimitive Int))
+                 , 'FieldDef "gender"    '[ ProtoBufId 4 ] ('TOption ('TSchematic "gender"))
+                 , 'FieldDef "address"   '[ ProtoBufId 5 ] ('TSchematic "address") ]
      ]
 
 type GenderFieldMapping
-  = '[ "Male"      ':<->: "male"
-     , "Female"    ':<->: "female"
-     , "NonBinary" ':<->: "nb" ]
+  = '[ "Male"      ':-> "male"
+     , "Female"    ':-> "female"
+     , "NonBinary" ':-> "nb" ]
 
 -- we can give a custom field mapping via a custom instance
 instance HasSchema ExampleSchema "gender" Gender where
   type FieldMapping ExampleSchema "gender" Gender = GenderFieldMapping
-
--- Additional information for protocol buffers
-type instance ProtoBufFieldIds ExampleSchema "person"
-  = '[ "firstName" ':<->: 1, "lastName" ':<->: 2
-     , "age" ':<->: 3, "gender" ':<->: 4, "address" ':<->: 5 ]
-type instance ProtoBufFieldIds ExampleSchema "gender"
-  = '[ "male" ':<->: 1, "female" ':<->: 2, "nb" ':<->: 0 ]
-type instance ProtoBufFieldIds ExampleSchema "address"
-  = '[ "postcode" ':<->: 1, "country" ':<->: 2 ]
 
 {-
 type ExampleSchema2
@@ -90,17 +84,20 @@ type ExampleSchema2
                      , AsEnum Gender "gender" ]
 -}
 type ExampleSchema2
-  = '[ 'DEnum   "gender" '["Male", "Female", "NonBinary"]
-     , 'DRecord "address"
-               '[ 'FieldDef "postcode" ('TPrimitive T.Text)
-                , 'FieldDef "country"  ('TPrimitive T.Text) ]
-     , 'DRecord "person"
-                '[ 'FieldDef "firstName" ('TPrimitive T.Text)
-                 , 'FieldDef "lastName"  ('TPrimitive T.Text)
-                 , 'FieldDef "age"       ('TOption ('TPrimitive Int))
-                 , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
-                 , 'FieldDef "address"   ('TSchematic "address") ]
+  = '[ 'DEnum   "gender" '[]
+               '[ 'ChoiceDef "Male"      '[ ProtoBufId 1 ]
+                , 'ChoiceDef "Female"    '[ ProtoBufId 2 ]
+                , 'ChoiceDef "NonBinary" '[ ProtoBufId 0 ] ]
+     , 'DRecord "address" '[]
+               '[ 'FieldDef "postcode" '[ ProtoBufId 1 ] ('TPrimitive T.Text)
+                , 'FieldDef "country"  '[ ProtoBufId 2 ] ('TPrimitive T.Text) ]
+     , 'DRecord "person" '[]
+                '[ 'FieldDef "firstName" '[ ProtoBufId 1 ] ('TPrimitive T.Text)
+                 , 'FieldDef "lastName"  '[ ProtoBufId 2 ] ('TPrimitive T.Text)
+                 , 'FieldDef "age"       '[ ProtoBufId 3 ] ('TOption ('TPrimitive Int))
+                 , 'FieldDef "gender"    '[ ProtoBufId 4 ] ('TOption ('TSchematic "gender"))
+                 , 'FieldDef "address"   '[ ProtoBufId 5 ] ('TSchematic "address") ]
      ]
 
 type instance R.Registry "example"
-  = '[ 2 ':<->: ExampleSchema2, 1 ':<->: ExampleSchema]
+  = '[ 2 ':-> ExampleSchema2, 1 ':-> ExampleSchema]

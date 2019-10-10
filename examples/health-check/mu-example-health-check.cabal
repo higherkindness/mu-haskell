@@ -26,6 +26,7 @@ library
 
 executable health-server
   main-is:             Server.hs
+  other-modules:       Common
   build-depends:       base >=4.12 && <5, text,
                        mu-schema, mu-rpc, mu-grpc,
                        stm, stm-containers,

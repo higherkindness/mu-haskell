@@ -13,15 +13,15 @@ import Mu.Rpc
 
 -- Schema for data serialization
 type HealthCheckSchema
-  = '[ 'DRecord "HealthCheck"
-                '[ 'FieldDef "nameService" ('TPrimitive T.Text) ]
-     , 'DRecord "ServerStatus"
-                '[ 'FieldDef "status" ('TPrimitive T.Text) ]
-     , 'DRecord "HealthStatus"
-                '[ 'FieldDef "hc" ('TSchematic "HealthCheck")
-                 , 'FieldDef "status" ('TSchematic "ServerStatus") ]
-     , 'DRecord "AllStatus"
-                '[ 'FieldDef "all" ('TList ('TSchematic "HealthStatus")) ]
+  = '[ 'DRecord "HealthCheck" '[]
+                '[ 'FieldDef "nameService" '[ ProtoBufId 1] ('TPrimitive T.Text) ]
+     , 'DRecord "ServerStatus" '[]
+                '[ 'FieldDef "status" '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
+     , 'DRecord "HealthStatus" '[]
+                '[ 'FieldDef "hc" '[ ProtoBufId 1 ] ('TSchematic "HealthCheck")
+                 , 'FieldDef "status" '[ ProtoBufId 2 ] ('TSchematic "ServerStatus") ]
+     , 'DRecord "AllStatus" '[]
+                '[ 'FieldDef "all" '[ ProtoBufId 1 ] ('TList ('TSchematic "HealthStatus")) ]
      ]
 
 -- Haskell types for serialization
@@ -35,20 +35,10 @@ data HealthStatus = HealthStatus { healthCheck :: HealthCheck, serverStatus :: S
   deriving (Show, Eq, Ord, Generic)
 instance HasSchema HealthCheckSchema "HealthStatus" HealthStatus where
   type FieldMapping HealthCheckSchema "HealthStatus" HealthStatus
-         = [ "healthCheck" ':<->: "hc", "serverStatus" ':<->: "status" ]
+         = [ "healthCheck" ':-> "hc", "serverStatus" ':-> "status" ]
 
 newtype AllStatus = AllStatus { all :: [HealthStatus] }
   deriving (Show, Eq, Ord, Generic, HasSchema HealthCheckSchema "AllStatus")
-
--- Protocol buffer field ids
-type instance ProtoBufFieldIds HealthCheckSchema "HealthCheck"
-  = '[ "nameService" ':<->: 1 ]
-type instance ProtoBufFieldIds HealthCheckSchema "ServerStatus"
-  = '[ "status" ':<->: 1 ]
-type instance ProtoBufFieldIds HealthCheckSchema "HealthStatus"
-  = '[ "hc" ':<->: 1, "status" ':<->: 2 ]
-type instance ProtoBufFieldIds HealthCheckSchema "AllStatus"
-  = '[ "all" ':<->: 1 ]
 
 -- Service definition
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/service.scala

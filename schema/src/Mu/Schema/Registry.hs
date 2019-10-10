@@ -30,5 +30,5 @@ class FromRegistry (ms :: Mappings Nat Schema') (t :: Type) where
 instance FromRegistry '[] t where
   fromRegistry' _ _ = Nothing
 instance (HasSchema s sty t, SLess.CheckSchema s (s :/: sty), FromRegistry ms t)
-         => FromRegistry ( (n ':<->: s) ': ms) t where
+         => FromRegistry ( (n ':-> s) ': ms) t where
   fromRegistry' _ t = SLess.fromSchemalessTerm @s t <|> fromRegistry' (Proxy @ms) t

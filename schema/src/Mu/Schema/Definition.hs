@@ -35,20 +35,28 @@ instance KnownNat n => KnownName (n :: Nat) where
 type Schema typeName fieldName
   = [TypeDef typeName fieldName]
 
+-- | Libraries can define custom annotations
+--   to indicate additional information. 
+type Annotation = Type
+
 -- | Defines a type in a schema.
 --   Each type can be:
 --   * a record: a list of key-value pairs,
 --   * an enumeration: an element of a list of choices,
 --   * a reference to a primitive type.
 data TypeDef typeName fieldName
-  = DRecord typeName [FieldDef typeName fieldName]
-  | DEnum   typeName [fieldName]
+  = DRecord typeName [Annotation] [FieldDef typeName fieldName]
+  | DEnum   typeName [Annotation] [ChoiceDef fieldName]
   | DSimple (FieldType typeName)
+
+-- | Defines each of the choices in an enumeration.
+data ChoiceDef fieldName
+  = ChoiceDef fieldName [Annotation]
 
 -- | Defines a field in a record
 --   by a name and the corresponding type.
 data FieldDef typeName fieldName
-  = FieldDef fieldName (FieldType typeName)
+  = FieldDef fieldName [Annotation] (FieldType typeName)
 
 -- | Types of fields of a record.
 --   References to other types in the same schema
@@ -65,12 +73,12 @@ data FieldType typeName
 -- | Lookup a type in a schema by its name.
 type family (sch :: Schema t f) :/: (name :: t) :: TypeDef t f where
   '[] :/: name = TypeError ('Text "Cannot find type " ':<>: 'ShowType name ':<>: 'Text " in the schema")
-  ('DRecord name fields  ': rest) :/: name = 'DRecord name fields
-  ('DEnum   name choices ': rest) :/: name = 'DEnum   name choices
-  (other                 ': rest) :/: name = rest :/: name
+  ('DRecord name ann fields  ': rest) :/: name = 'DRecord name ann fields
+  ('DEnum   name ann choices ': rest) :/: name = 'DEnum   name ann choices
+  (other                     ': rest) :/: name = rest :/: name
 
 -- | Defines a mapping between two elements.
-data Mapping  a b = a :<->: b
+data Mapping  a b = a :-> b
 -- | Defines a set of mappings between elements of @a@ and @b@.
 type Mappings a b = [Mapping a b]
 
@@ -80,8 +88,8 @@ type Mappings a b = [Mapping a b]
 type family MappingRight (ms :: Mappings a b) (v :: a) :: b where
   MappingRight '[] (v :: Symbol) = v
   MappingRight '[] v             = TypeError ('Text "Cannot find value " ':<>: 'ShowType v)
-  MappingRight ((x ':<->: y) ': rest) x = y
-  MappingRight (other        ': rest) x = MappingRight rest x
+  MappingRight ((x ':-> y) ': rest) x = y
+  MappingRight (other      ': rest) x = MappingRight rest x
 
 -- | Finds the corresponding left value of @v@
 --   in a mapping @ms@. When the kinds are 'Symbol',
@@ -89,5 +97,5 @@ type family MappingRight (ms :: Mappings a b) (v :: a) :: b where
 type family MappingLeft (ms :: Mappings a b) (v :: b) :: a where
   MappingLeft '[] (v :: Symbol) = v
   MappingLeft '[] v             = TypeError ('Text "Cannot find value " ':<>: 'ShowType v)
-  MappingLeft ((x ':<->: y) ': rest) y = x
-  MappingLeft (other        ': rest) y = MappingLeft rest y
+  MappingLeft ((x ':-> y) ': rest) y = x
+  MappingLeft (other      ': rest) y = MappingLeft rest y
