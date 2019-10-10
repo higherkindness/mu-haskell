@@ -31,8 +31,10 @@ import GHC.Generics
 import Mu.Schema
 
 type QuickstartSchema
-  = '[ 'DRecord "HelloRequest"  '[ 'FieldDef "name"    ('TPrimitive T.Text) ]
-     , 'DRecord "HelloResponse" '[ 'FieldDef "message" ('TPrimitive T.Text) ]
+  = '[ 'DRecord "HelloRequest"  '[]
+                '[ 'FieldDef "name"    '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
+     , 'DRecord "HelloResponse" '[]
+                '[ 'FieldDef "message" '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
      ]
 
 newtype HelloRequest = HelloRequest { name :: T.Text }
@@ -120,20 +122,7 @@ quickstartServer = Server (sayHello :<|>: sayManyHellos :<|>: H0)
 
 ## Running the server with `mu-grpc`
 
-The combination of the declaration of a service API and a corresponding implementation as a `Server` may may served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library `mu-grpc`. Since gRPC uses Protocol Buffers for communication, we need to declare the field name to field identifier mapping as discussed in the `mu-schema` documentation:
-
-```haskell
-{-# language TypeFamilies #-}
-
-import Mu.Schema.Adapter.ProtoBuf
-
-type instance ProtoBufFieldIds QuickstartSchema "HelloRequest"
-  = '[ "name" ':<->: 1 ]
-type instance ProtoBufFieldIds QuickstartSchema "HelloResponse"
-  = '[ "message" ':<->: 1 ]
-```
-
-The following line starts a server at port 8080, where the service can be found under the package name `helloworld`:
+The combination of the declaration of a service API and a corresponding implementation as a `Server` may may served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library `mu-grpc`. The following line starts a server at port 8080, where the service can be found under the package name `helloworld`:
 
 ```haskell
 main = runGRpcApp 8080 "helloworld" quickstartServer
@@ -145,7 +134,7 @@ In this example we have used `FromSchema` to declare a specific schema the argum
 
 ```haskell
 type instance Registry "helloworld"
-  = '[ 2 ':<->: QuickstartSchemaV2, 1 ':<->: QuickstartSchema ]
+  = '[ 2 ':-> QuickstartSchemaV2, 1 ':-> QuickstartSchema ]
 ```
 
 Now you can use the name of the subject in the registry to accomodate for different schemas. In this case, apart from that name, we need to specify the *Haskell* type to use during (de)serialization, and the *version number* to use for serialization.

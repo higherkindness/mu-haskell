@@ -18,16 +18,19 @@ import Mu.Schema
 import qualified Data.Text as T
 
 type ExampleSchema
-  = '[ 'DEnum   "gender" '["male", "female", "nb"]
+  = '[ 'DEnum   "gender" '[]
+                '[ 'ChoiceDef "male"   '[]
+                 , 'ChoiceDef "female" '[]
+                 , 'ChoiceDef "nb"     '[] ]
      , 'DRecord "address"
-               '[ 'FieldDef "postcode" ('TPrimitive T.Text)
-                , 'FieldDef "country"  ('TPrimitive T.Text) ]
+               '[ 'FieldDef "postcode" '[] ('TPrimitive T.Text)
+                , 'FieldDef "country"  '[] ('TPrimitive T.Text) ]
      , 'DRecord "person"
-                '[ 'FieldDef "firstName" ('TPrimitive T.Text)
-                 , 'FieldDef "lastName"  ('TPrimitive T.Text)
-                 , 'FieldDef "age"       ('TOption ('TPrimitive Int))
-                 , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
-                 , 'FieldDef "address"   ('TSchematic "address") ]
+                '[ 'FieldDef "firstName" '[] ('TPrimitive T.Text)
+                 , 'FieldDef "lastName"  '[] ('TPrimitive T.Text)
+                 , 'FieldDef "age"       '[] ('TOption ('TPrimitive Int))
+                 , 'FieldDef "gender"    '[] ('TOption ('TSchematic "gender"))
+                 , 'FieldDef "address"   '[] ('TSchematic "address") ]
      ]
 ```
 
@@ -55,16 +58,22 @@ In order to use it, you need to create a Stack project with `mu-schema` as depen
 (SchemaFromTypes '[ AsRecord Person "person", AsRecord Address "address", AsEnum Gender "gender" ] :: Schema') :: [TypeDef Symbol Symbol]
 = '[ 'DRecord
        "person"
-       '[ 'FieldDef "firstName" ('TPrimitive Text),
-          'FieldDef "lastName" ('TPrimitive Text),
-          'FieldDef "age" ('TOption ('TPrimitive Int)),
-          'FieldDef "gender" ('TOption ('TSchematic "gender")),
-          'FieldDef "address" ('TSchematic "address")],
+       '[]
+       '[ 'FieldDef "firstName" '[] ('TPrimitive Text),
+          'FieldDef "lastName" '[] ('TPrimitive Text),
+          'FieldDef "age" '[] ('TOption ('TPrimitive Int)),
+          'FieldDef "gender" '[] ('TOption ('TSchematic "gender")),
+          'FieldDef "address" '[] ('TSchematic "address")],
      'DRecord
        "address"
-       '[ 'FieldDef "postcode" ('TPrimitive Text),
-          'FieldDef "country" ('TPrimitive Text)],
-     'DEnum "gender" '["Male", "Female", "NonBinary"]]
+       '[]
+       '[ 'FieldDef "postcode" '[] ('TPrimitive Text),
+          'FieldDef "country" '[] ('TPrimitive Text)],
+     'DEnum
+       "gender"
+       '[]
+       '[ 'ChoiceDef "Male" '[], 'ChoiceDef "Female" '[],
+          'ChoiceDef "NonBinary" '[]]
 ```
 
 The result of the last operation can be copied as-is in your source file, provided that you import all the required modules.
@@ -101,20 +110,24 @@ Sometimes the names of the fields in the Haskell data type and the names of the 
 
 instance HasSchema ExampleSchema "gender" Gender where
   type FieldMapping ExampleSchema "gender" Gender
-    = '[ "Male"      ':<->: "male"
-       , "Female"    ':<->: "female"
-       , "NonBinary" ':<->: "nb" ]
+    = '[ "Male"      ':-> "male"
+       , "Female"    ':-> "female"
+       , "NonBinary" ':-> "nb" ]
 ```
 
 ### Protocol Buffers field identifiers
 
-If you want to use (de)serialization to Protocol Buffers, you need to declare one more piece of information. A Protocol Buffer record or enumeration assigns both names and *numeric identifiers* to each field or value, respectively. Thus, if you want to use Protocol Buffers or gRPC support from `mu-grpc`, you need to write a few more lines:
+If you want to use (de)serialization to Protocol Buffers, you need to declare one more piece of information. A Protocol Buffer record or enumeration assigns both names and *numeric identifiers* to each field or value, respectively. This is done via an *annotation* in each field:
 
 ```haskell
 import Mu.Schema.Adapter.ProtoBuf
 
-type instance ProtoBufFieldIds ExampleSchema "address"
-  = '[ "postcode" ':<->: 1, "country" ':<->: 2 ]
+type ExampleSchema
+  = '[ ...
+     , 'DRecord "address"
+               '[ 'FieldDef "postcode" '[ ProtoBufId 1 ] ('TPrimitive T.Text)
+                , 'FieldDef "country"  '[ ProtoBufId 2 ] ('TPrimitive T.Text) ]
+     , ... ]
 ```
 
 ## Registry
@@ -125,7 +138,7 @@ Schemas evolve over time. It is a good practice to keep an inventory of all the 
 {-# language TypeFamilies #-}
 
 type instance Registry "example"
-  = '[ 2 ':<->: ExampleSchemaV2, 1 ':<->: ExampleSchema ]
+  = '[ 2 ':-> ExampleSchemaV2, 1 ':-> ExampleSchema ]
 ```
 
 The argument to registry is a tag which identifies that set of schemas. Here we use a type-level string, but you can use any other kind. We then indicate to which type-level schema each version corresponds to. Once we have done that you can use functions like `fromRegistry` to try to parse a term into a Haskell type by trying each of the schemas.
