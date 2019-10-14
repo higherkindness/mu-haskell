@@ -17,14 +17,14 @@ import GHC.TypeLits
 import Mu.Schema
 import qualified Mu.Schema.Interpretation.Schemaless as SLess
 
-type family Registry (subject :: k) :: Mappings Nat Schema'
+type Registry = Mappings Nat Schema'
 
-fromRegistry :: forall (subject :: k) t. 
-                FromRegistry (Registry subject) t
+fromRegistry :: forall r t. 
+                FromRegistry r t
              => SLess.Term -> Maybe t
-fromRegistry = fromRegistry' (Proxy @(Registry subject))
+fromRegistry = fromRegistry' (Proxy @r)
 
-class FromRegistry (ms :: Mappings Nat Schema') (t :: Type) where
+class FromRegistry (ms :: Registry) (t :: Type) where
   fromRegistry' :: Proxy ms -> SLess.Term -> Maybe t
 
 instance FromRegistry '[] t where

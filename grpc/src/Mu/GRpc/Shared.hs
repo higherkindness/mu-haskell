@@ -11,7 +11,6 @@ import qualified Proto3.Wire.Decode as PBDec
 
 import Mu.Rpc
 import Mu.Schema
-import Mu.Schema.Registry
 
 import Mu.Schema.Adapter.ProtoBuf
 
@@ -29,8 +28,8 @@ instance (HasProtoSchema sch sty t)
   fromProtoBufTypeRef _ = fromProtoViaSchema @sch
   toProtoBufTypeRef   _ = toProtoViaSchema @sch
 
-instance ( FromProtoBufRegistry (Registry subject) t
-         , HasProtoSchema (MappingRight (Registry subject) last) sty t)
-         => ProtoBufTypeRef ('FromRegistry subject t last) t where
-  fromProtoBufTypeRef _ = fromProtoBufWithRegistry @_ @subject
-  toProtoBufTypeRef   _ = toProtoViaSchema @(MappingRight (Registry subject) last)
+instance ( FromProtoBufRegistry r t
+         , HasProtoSchema (MappingRight r last) sty t)
+         => ProtoBufTypeRef ('FromRegistry r t last) t where
+  fromProtoBufTypeRef _ = fromProtoBufWithRegistry @r
+  toProtoBufTypeRef   _ = toProtoViaSchema @(MappingRight r last)

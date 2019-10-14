@@ -1,7 +1,7 @@
 {-# language PolyKinds, DataKinds, GADTs,
-             TypeFamilies, TypeOperators, RecordWildCards,
+             TypeFamilies, TypeOperators,
              MultiParamTypeClasses, FlexibleInstances,
-             TypeSynonymInstances, TypeApplications,
+             TypeApplications,
              DeriveGeneric, DerivingVia, DeriveAnyClass #-}
 module Mu.Schema.Examples where
 
@@ -11,7 +11,6 @@ import qualified Data.Text as T
 import GHC.Generics
 
 import Mu.Schema
-import Mu.Schema.Registry as R
 import Mu.Schema.Adapter.Avro ()
 import Mu.Schema.Adapter.ProtoBuf
 import Mu.Schema.Adapter.Json ()
@@ -99,5 +98,5 @@ type ExampleSchema2
                  , 'FieldDef "address"   '[ ProtoBufId 5 ] ('TSchematic "address") ]
      ]
 
-type instance R.Registry "example"
+type ExampleRegistry
   = '[ 2 ':-> ExampleSchema2, 1 ':-> ExampleSchema]

@@ -72,16 +72,16 @@ parseProtoViaSchema = PBDec.parse (fromProtoViaSchema @sch)
 -- CONVERSION USING REGISTRY
 
 fromProtoBufWithRegistry
-  :: forall (subject :: k) t. 
-     FromProtoBufRegistry (R.Registry subject) t
+  :: forall (r :: R.Registry) t. 
+     FromProtoBufRegistry r t
   => PBDec.Parser PBDec.RawMessage t
-fromProtoBufWithRegistry = fromProtoBufRegistry' (Proxy @(Registry subject))
+fromProtoBufWithRegistry = fromProtoBufRegistry' (Proxy @r)
 
 parseProtoBufWithRegistry
-  :: forall (subject :: k) t. 
-     FromProtoBufRegistry (R.Registry subject) t
+  :: forall (r :: R.Registry) t. 
+     FromProtoBufRegistry r t
   => BS.ByteString -> Either PBDec.ParseError t
-parseProtoBufWithRegistry = PBDec.parse (fromProtoBufWithRegistry @k @subject)
+parseProtoBufWithRegistry = PBDec.parse (fromProtoBufWithRegistry @r)
 
 class FromProtoBufRegistry (ms :: Mappings Nat Schema') t where
   fromProtoBufRegistry' :: Proxy ms -> PBDec.Parser PBDec.RawMessage t

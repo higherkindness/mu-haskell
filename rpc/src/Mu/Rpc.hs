@@ -14,6 +14,7 @@ import Data.Kind
 import GHC.TypeLits
 
 import Mu.Schema
+import Mu.Schema.Registry
 
 type Service' = Service Symbol Symbol
 
@@ -48,7 +49,7 @@ type family LookupMethod (s :: [Method mnm]) (m :: snm) :: Method snm where
 data TypeRef where
   FromSchema   :: Schema typeName fieldName -> typeName -> TypeRef
   -- | Registry subject, type to convert to, and preferred serialization version
-  FromRegistry :: subject -> Type -> Nat -> TypeRef
+  FromRegistry :: Registry -> Type -> Nat -> TypeRef
 
 -- | Defines the way in which arguments are handled.
 data Argument where
