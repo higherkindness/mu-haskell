@@ -28,19 +28,17 @@ type HealthCheckSchema
 -- Haskell types for serialization
 $(generateTypesFromSchema (++ "Msg") ''HealthCheckSchema)
 {-
-newtype HealthCheck = HealthCheck { nameService :: T.Text }
+newtype HealthCheckMsg = HealthCheckMsg { healthCheckNameMsgService :: T.Text }
   deriving (Show, Eq, Ord, Generic, HasSchema HealthCheckSchema "HealthCheck")
 
-newtype ServerStatus = ServerStatus { status :: T.Text }
+newtype ServerStatusMsg = ServerStatusMsg { serverStatusMsgStatus :: T.Text }
   deriving (Show, Eq, Ord, Generic, HasSchema HealthCheckSchema "ServerStatus")
 
-data HealthStatus = HealthStatus { healthCheck :: HealthCheck, serverStatus :: ServerStatus }
-  deriving (Show, Eq, Ord, Generic)
-instance HasSchema HealthCheckSchema "HealthStatus" HealthStatus where
-  type FieldMapping HealthCheckSchema "HealthStatus" HealthStatus
-         = [ "healthCheck" ':-> "hc", "serverStatus" ':-> "status" ]
+data HealthStatusMsg = HealthStatusMsg { healthStatusMsgHealthCheck  :: HealthCheckMsg,
+                                       , healthStatusMsgServerStatus :: ServerStatusMsg }
+  deriving (Show, Eq, Ord, Generic, HasSchema "HealthStatus")
 
-newtype AllStatus = AllStatus { all :: [HealthStatus] }
+newtype AllStatusMsg = AllStatusMsg { allStatusMsgAll :: [HealthStatusMsg] }
   deriving (Show, Eq, Ord, Generic, HasSchema HealthCheckSchema "AllStatus")
 -}
 
