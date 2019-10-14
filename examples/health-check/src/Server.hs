@@ -26,7 +26,7 @@ main = do
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/handler/HealthServiceImpl.scala
 
 type StatusMap = M.Map T.Text T.Text
-type StatusUpdates = TBMChan HealthStatus
+type StatusUpdates = TBMChan HealthStatusMsg
 
 server :: StatusMap -> StatusUpdates -> ServerIO HealthCheckService _
 server m upd
@@ -37,40 +37,40 @@ server m upd
             cleanAll m :<|>:
             watch upd :<|>: H0)
 
-setStatus :: StatusMap -> StatusUpdates -> HealthStatus -> IO ()
-setStatus m upd s@(HealthStatus (HealthCheck nm) (ServerStatus ss))
+setStatus :: StatusMap -> StatusUpdates -> HealthStatusMsg -> IO ()
+setStatus m upd s@(HealthStatusMsg (HealthCheckMsg nm) (ServerStatusMsg ss))
   = do putStr "setStatus: " >> print (nm, ss)
        atomically $ do M.insert ss nm m
                        writeTBMChan upd s
 
-checkH :: StatusMap -> HealthCheck -> IO ServerStatus
-checkH m (HealthCheck nm)
+checkH :: StatusMap -> HealthCheckMsg -> IO ServerStatusMsg
+checkH m (HealthCheckMsg nm)
   = do putStr "check: " >> print nm
        ss <- atomically $ M.lookup nm m
-       return $ ServerStatus (fromMaybe "UNKNOWN" ss)
+       return $ ServerStatusMsg (fromMaybe "UNKNOWN" ss)
 
-clearStatus :: StatusMap -> HealthCheck -> IO ()
-clearStatus m (HealthCheck nm)
+clearStatus :: StatusMap -> HealthCheckMsg -> IO ()
+clearStatus m (HealthCheckMsg nm)
   = do putStr "clearStatus: " >> print nm
        atomically $ M.delete nm m
 
-checkAll :: StatusMap -> IO AllStatus
+checkAll :: StatusMap -> IO AllStatusMsg
 checkAll m
   = do putStrLn "checkAll"
-       AllStatus <$> atomically (consumeValues kvToStatus (M.unfoldlM m))
+       AllStatusMsg <$> atomically (consumeValues kvToStatus (M.unfoldlM m))
   where consumeValues :: Monad m => (k -> v -> a) -> UnfoldlM m (k,v) -> m [a]
         consumeValues f = foldlM' (\xs (x,y) -> pure (f x y:xs)) []
-        kvToStatus k v = HealthStatus (HealthCheck k) (ServerStatus v)
+        kvToStatus k v = HealthStatusMsg (HealthCheckMsg k) (ServerStatusMsg v)
 
 cleanAll :: StatusMap -> IO ()
 cleanAll m
   = do putStrLn "cleanAll"
        atomically $ M.reset m
 
-watch :: StatusUpdates -> HealthCheck -> ConduitT ServerStatus Void IO () -> IO ()
-watch upd hc@(HealthCheck nm) sink
+watch :: StatusUpdates -> HealthCheckMsg -> ConduitT ServerStatusMsg Void IO () -> IO ()
+watch upd hc@(HealthCheckMsg nm) sink
   = do putStr "watch: " >> print nm
        runConduit $ sourceTBMChan upd
-                 .| C.filter (\(HealthStatus c _) -> hc == c)
-                 .| C.map (\(HealthStatus _ s) -> s)
+                 .| C.filter (\(HealthStatusMsg c _) -> hc == c)
+                 .| C.map (\(HealthStatusMsg _ s) -> s)
                  .| sink

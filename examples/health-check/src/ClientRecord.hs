@@ -16,12 +16,12 @@ import Mu.Client.GRpc.Record
 import Common
 
 data HealthCall
-  = HealthCall { setStatus :: HealthStatus -> IO (GRpcReply ()) 
-               , check :: HealthCheck -> IO (GRpcReply ServerStatus) 
-               , clearStatus :: HealthCheck -> IO (GRpcReply ()) 
-               , checkAll :: IO (GRpcReply AllStatus) 
+  = HealthCall { setStatus :: HealthStatusMsg -> IO (GRpcReply ()) 
+               , check :: HealthCheckMsg -> IO (GRpcReply ServerStatusMsg) 
+               , clearStatus :: HealthCheckMsg -> IO (GRpcReply ()) 
+               , checkAll :: IO (GRpcReply AllStatusMsg) 
                , cleanAll :: IO (GRpcReply ()) 
-               , watch :: HealthCheck -> IO (ConduitT () (GRpcReply ServerStatus) IO ()) }
+               , watch :: HealthCheckMsg -> IO (ConduitT () (GRpcReply ServerStatusMsg) IO ()) }
   deriving (Generic)
 
 main :: IO ()
@@ -41,7 +41,7 @@ main
 
 simple :: HealthCall -> String -> IO ()
 simple client who
-  = do let hc = HealthCheck (T.pack who)
+  = do let hc = HealthCheckMsg (T.pack who)
        putStrLn ("UNARY: Is there some server named " <> who <> "?")
        rknown <- check client hc
        putStrLn ("UNARY: Actually the status is " <> show rknown)
@@ -53,15 +53,15 @@ simple client who
 
 update :: HealthCall -> String -> String -> IO ()
 update client who newstatus
-  = do let hc = HealthCheck (T.pack who)
+  = do let hc = HealthCheckMsg (T.pack who)
        putStrLn ("UNARY: Setting " <> who <> " service to " <> newstatus)
-       r <- setStatus client (HealthStatus hc (ServerStatus (T.pack newstatus)))
+       r <- setStatus client (HealthStatusMsg hc (ServerStatusMsg (T.pack newstatus)))
        putStrLn ("UNARY: Was setting successful? " <> show r)
        rstatus <- check client hc
        putStrLn ("UNARY: Checked the status of " <> who <> ". Obtained: " <> show rstatus)
 
 watching :: HealthCall -> String -> IO ()
 watching client who
-  = do let hc = HealthCheck (T.pack who)
+  = do let hc = HealthCheckMsg (T.pack who)
        stream <- watch client hc
        runConduit $ stream .| C.mapM_ print

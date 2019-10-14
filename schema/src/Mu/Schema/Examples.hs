@@ -2,7 +2,8 @@
              TypeFamilies, TypeOperators,
              MultiParamTypeClasses, FlexibleInstances,
              TypeApplications,
-             DeriveGeneric, DerivingVia, DeriveAnyClass #-}
+             DeriveGeneric, DerivingVia, DeriveAnyClass,
+             TemplateHaskell #-}
 module Mu.Schema.Examples where
 
 import qualified Data.Aeson as J
@@ -16,6 +17,7 @@ import Mu.Schema.Adapter.ProtoBuf
 import Mu.Schema.Adapter.Json ()
 
 -- import Mu.Schema.FromTypes
+import Mu.Schema.TH
 
 import qualified Proto3.Wire.Encode as PBEnc
 import qualified Proto3.Wire.Decode as PBDec
@@ -75,6 +77,8 @@ type GenderFieldMapping
 -- we can give a custom field mapping via a custom instance
 instance HasSchema ExampleSchema "gender" Gender where
   type FieldMapping ExampleSchema "gender" Gender = GenderFieldMapping
+
+$(generateTypesFromSchema (++"Msg") ''ExampleSchema)
 
 {-
 type ExampleSchema2

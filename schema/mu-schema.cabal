@@ -30,7 +30,7 @@ library
                        Mu.Schema.Adapter.Avro,
                        Mu.Schema.Adapter.ProtoBuf,
                        Mu.Schema.Adapter.Json,
-                       Mu.Schema.TH.Internal
+                       Mu.Schema.TH
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.12 && <5, sop-core,
