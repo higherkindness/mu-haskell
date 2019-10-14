@@ -13,7 +13,8 @@ import qualified StmContainers.Map as M
 import Mu.Server
 import Mu.Server.GRpc
 
-import Common
+import Definition
+import Generated
 
 main :: IO ()
 main = do 

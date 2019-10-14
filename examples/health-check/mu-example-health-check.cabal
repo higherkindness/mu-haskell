@@ -16,17 +16,9 @@ maintainer:          alejandro.serrano@47deg.com
 category:            Network
 build-type:          Simple
 
-library
-  exposed-modules:     Common
-  build-depends:       base >=4.12 && <5, text,
-                       mu-schema, mu-rpc
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-
 executable health-server
   main-is:             Server.hs
-  other-modules:       Common
+  other-modules:       Definition, Generated
   build-depends:       base >=4.12 && <5, text,
                        mu-schema, mu-rpc, mu-grpc,
                        stm, stm-containers,
@@ -38,7 +30,7 @@ executable health-server
 
 executable health-client-tyapps
   main-is:             ClientTyApps.hs
-  other-modules:       Common
+  other-modules:       Definition, Generated
   build-depends:       base >=4.12 && <5, text,
                        mu-schema, mu-rpc, mu-grpc,
                        conduit
@@ -48,7 +40,7 @@ executable health-client-tyapps
 
 executable health-client-record
   main-is:             ClientRecord.hs
-  other-modules:       Common
+  other-modules:       Definition, Generated
   build-depends:       base >=4.12 && <5, text,
                        mu-schema, mu-rpc, mu-grpc,
                        conduit

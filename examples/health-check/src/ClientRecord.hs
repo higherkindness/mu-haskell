@@ -13,7 +13,8 @@ import System.Environment
 import Mu.Client.GRpc
 import Mu.Client.GRpc.Record
 
-import Common
+import Definition
+import Generated
 
 data HealthCall
   = HealthCall { setStatus :: HealthStatusMsg -> IO (GRpcReply ()) 

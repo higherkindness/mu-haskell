@@ -1,15 +1,12 @@
 {-# language PolyKinds, DataKinds, TypeOperators,
              MultiParamTypeClasses, TypeFamilies,
-             DeriveGeneric, DeriveAnyClass,
-             FlexibleInstances, FlexibleContexts,
-             TemplateHaskell #-}
-module Common where
+             FlexibleInstances, FlexibleContexts #-}
+module Definition where
 
 import Data.Text as T
 
 import Mu.Schema
 import Mu.Schema.Adapter.ProtoBuf
-import Mu.Schema.TH
 import Mu.Rpc
 
 -- Schema for data serialization
@@ -24,23 +21,6 @@ type HealthCheckSchema
      , 'DRecord "AllStatus" '[]
                 '[ 'FieldDef "all" '[ ProtoBufId 1 ] ('TList ('TSchematic "HealthStatus")) ]
      ]
-
--- Haskell types for serialization
-$(generateTypesFromSchema (++ "Msg") ''HealthCheckSchema)
-{-
-newtype HealthCheckMsg = HealthCheckMsg { healthCheckNameMsgService :: T.Text }
-  deriving (Show, Eq, Ord, Generic, HasSchema HealthCheckSchema "HealthCheck")
-
-newtype ServerStatusMsg = ServerStatusMsg { serverStatusMsgStatus :: T.Text }
-  deriving (Show, Eq, Ord, Generic, HasSchema HealthCheckSchema "ServerStatus")
-
-data HealthStatusMsg = HealthStatusMsg { healthStatusMsgHealthCheck  :: HealthCheckMsg,
-                                       , healthStatusMsgServerStatus :: ServerStatusMsg }
-  deriving (Show, Eq, Ord, Generic, HasSchema "HealthStatus")
-
-newtype AllStatusMsg = AllStatusMsg { allStatusMsgAll :: [HealthStatusMsg] }
-  deriving (Show, Eq, Ord, Generic, HasSchema HealthCheckSchema "AllStatus")
--}
 
 -- Service definition
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/service.scala

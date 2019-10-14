@@ -11,7 +11,8 @@ import System.Environment
 
 import Mu.Client.GRpc
 
-import Common
+import Definition
+import Generated
 
 main :: IO ()
 main 
