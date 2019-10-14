@@ -1,11 +1,13 @@
 {-# language PolyKinds, DataKinds,
              TypeFamilies, TypeOperators,
-             UndecidableInstances,
-             FlexibleInstances #-}
+             UndecidableInstances, FlexibleInstances,
+             ScopedTypeVariables, TypeApplications #-}
 -- | Schema definition
 module Mu.Schema.Definition where
 
 import Data.Kind
+import Data.Proxy
+import Data.Typeable
 import GHC.TypeLits
 
 -- | A set of type definitions,
@@ -104,3 +106,65 @@ type family MappingLeft (ms :: Mappings a b) (v :: b) :: a where
   MappingLeft '[] v             = TypeError ('Text "Cannot find value " ':<>: 'ShowType v)
   MappingLeft ((x ':-> y) ': rest) y = x
   MappingLeft (other      ': rest) y = MappingLeft rest y
+
+-- | Reflect a schema into term-level.
+class ReflectSchema (s :: Schema tn fn) where
+  reflectSchema :: Proxy s -> SchemaB TypeRep String String
+instance ReflectSchema '[] where
+  reflectSchema _ = []
+instance (ReflectFields fields, KnownName name, ReflectSchema s)
+         => ReflectSchema ('DRecord name anns fields ': s) where
+  reflectSchema _ = DRecord (nameVal (Proxy @name)) [] (reflectFields (Proxy @fields))
+                  : reflectSchema (Proxy @s)
+instance (ReflectChoices choices, KnownName name, ReflectSchema s)
+         => ReflectSchema ('DEnum name anns choices ': s) where
+  reflectSchema _ = DEnum (nameVal (Proxy @name)) [] (reflectChoices (Proxy @choices))
+                  : reflectSchema (Proxy @s)
+instance (ReflectFieldType ty, ReflectSchema s)
+         => ReflectSchema ('DSimple ty ': s) where
+  reflectSchema _ = DSimple (reflectFieldType (Proxy @ty))
+                  : reflectSchema (Proxy @s)
+
+class ReflectFields (fs :: [FieldDef tn fn]) where
+  reflectFields :: Proxy fs -> [FieldDefB TypeRep String String]
+instance ReflectFields '[] where
+  reflectFields _ = []
+instance (KnownName name, ReflectFieldType ty, ReflectFields fs)
+         => ReflectFields ('FieldDef name anns ty ': fs) where
+  reflectFields _ = FieldDef (nameVal (Proxy @name)) [] (reflectFieldType (Proxy @ty))
+                  : reflectFields (Proxy @fs)
+
+class ReflectChoices (cs :: [ChoiceDef fn]) where
+  reflectChoices :: Proxy cs -> [ChoiceDef String]
+instance ReflectChoices '[] where
+  reflectChoices _ = []
+instance (KnownName name, ReflectChoices cs)
+         => ReflectChoices ('ChoiceDef name anns ': cs) where
+  reflectChoices _ = ChoiceDef (nameVal (Proxy @name)) []
+                   : reflectChoices (Proxy @cs)
+
+class ReflectFieldType (ty :: FieldType tn) where
+  reflectFieldType :: Proxy ty -> FieldTypeB TypeRep String
+instance ReflectFieldType 'TNull where
+  reflectFieldType _ = TNull
+instance (Typeable ty) => ReflectFieldType ('TPrimitive ty) where
+  reflectFieldType _ = TPrimitive (typeRep (Proxy @ty))
+instance (KnownName nm) => ReflectFieldType ('TSchematic nm) where
+  reflectFieldType _ = TSchematic (nameVal (Proxy @nm))
+instance (ReflectFieldType t) => ReflectFieldType ('TOption t) where
+  reflectFieldType _ = TOption (reflectFieldType (Proxy @t))
+instance (ReflectFieldType t) => ReflectFieldType ('TList t) where
+  reflectFieldType _ = TList (reflectFieldType (Proxy @t))
+instance (ReflectFieldType k, ReflectFieldType v)
+         => ReflectFieldType ('TMap k v) where
+  reflectFieldType _ = TMap (reflectFieldType (Proxy @k)) (reflectFieldType (Proxy @v))
+instance (ReflectFieldTypes ts) => ReflectFieldType ('TUnion ts) where
+  reflectFieldType _ = TUnion (reflectFieldTypes (Proxy @ts))
+
+class ReflectFieldTypes (ts :: [FieldType tn]) where
+  reflectFieldTypes :: Proxy ts -> [FieldTypeB TypeRep String]
+instance ReflectFieldTypes '[] where
+  reflectFieldTypes _ = []
+instance (ReflectFieldType t, ReflectFieldTypes ts)
+         => ReflectFieldTypes (t ': ts) where
+  reflectFieldTypes _ = reflectFieldType (Proxy @t) : reflectFieldTypes (Proxy @ts)
