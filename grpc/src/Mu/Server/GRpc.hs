@@ -3,8 +3,7 @@
              FlexibleInstances, FlexibleContexts,
              UndecidableInstances,
              TypeApplications, TypeOperators,
-             ScopedTypeVariables,
-             TupleSections #-}
+             ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fprint-explicit-foralls -fprint-explicit-kinds #-}
 module Mu.Server.GRpc where
 
@@ -33,38 +32,42 @@ import Mu.Schema
 import Mu.GRpc.Shared
 
 runGRpcApp
-  :: (KnownName name, GRpcMethodHandlers methods handlers)
-  => Port -> ByteString -> ServerIO ('Service name methods) handlers
+  :: ( KnownName name, KnownName (FindPackageName anns)
+     , GRpcMethodHandlers methods handlers )
+  => Port -> ServerIO ('Service name anns methods) handlers
   -> IO ()
-runGRpcApp port pkgName svr = run port (gRpcApp pkgName svr)
+runGRpcApp port svr = run port (gRpcApp svr)
 
 runGRpcAppSettings
-  :: (KnownName name, GRpcMethodHandlers methods handlers)
-  => Settings -> ByteString -> ServerIO ('Service name methods) handlers
+  :: ( KnownName name, KnownName (FindPackageName anns)
+     , GRpcMethodHandlers methods handlers )
+  => Settings -> ServerIO ('Service name anns methods) handlers
   -> IO ()
-runGRpcAppSettings st pkgName svr = runSettings st (gRpcApp pkgName svr)
+runGRpcAppSettings st svr = runSettings st (gRpcApp svr)
 
 runGRpcAppTLS
-  :: (KnownName name, GRpcMethodHandlers methods handlers)
+  :: ( KnownName name, KnownName (FindPackageName anns)
+     , GRpcMethodHandlers methods handlers )
   => TLSSettings -> Settings
-  -> ByteString -> ServerIO ('Service name methods) handlers
+  -> ServerIO ('Service name anns methods) handlers
   -> IO ()
-runGRpcAppTLS tls st pkgName svr = runTLS tls st (gRpcApp pkgName svr)
+runGRpcAppTLS tls st svr = runTLS tls st (gRpcApp svr)
 
 gRpcApp
-  :: (KnownName name, GRpcMethodHandlers methods handlers)
-  => ByteString -> ServerIO ('Service name methods) handlers
+  :: (KnownName name, KnownName (FindPackageName anns), GRpcMethodHandlers methods handlers)
+  => ServerIO ('Service name anns methods) handlers
   -> Application
-gRpcApp p svr = Wai.grpcApp [uncompressed, gzip]
-                            (gRpcServiceHandlers p svr)
+gRpcApp svr = Wai.grpcApp [uncompressed, gzip]
+                          (gRpcServiceHandlers svr)
 
 gRpcServiceHandlers
-  :: forall name methods handlers.
-     (KnownName name, GRpcMethodHandlers methods handlers)
-  => ByteString -> ServerIO ('Service name methods) handlers
+  :: forall name anns methods handlers.
+     (KnownName name, KnownName (FindPackageName anns), GRpcMethodHandlers methods handlers)
+  => ServerIO ('Service name anns methods) handlers
   -> [ServiceHandler]
-gRpcServiceHandlers p (Server svr) = gRpcMethodHandlers p serviceName svr
-  where serviceName = BS.pack (nameVal (Proxy @name))
+gRpcServiceHandlers (Server svr) = gRpcMethodHandlers packageName serviceName svr
+  where packageName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
+        serviceName = BS.pack (nameVal (Proxy @name))
         
 class GRpcMethodHandlers (ms :: [Method mnm]) (hs :: [Type]) where
   gRpcMethodHandlers :: ByteString -> ByteString
@@ -73,7 +76,7 @@ class GRpcMethodHandlers (ms :: [Method mnm]) (hs :: [Type]) where
 instance GRpcMethodHandlers '[] '[] where
   gRpcMethodHandlers _ _ H0 = []
 instance (KnownName name, GRpcMethodHandler args r h, GRpcMethodHandlers rest hs)
-         => GRpcMethodHandlers ('Method name args r ': rest) (h ': hs) where
+         => GRpcMethodHandlers ('Method name anns args r ': rest) (h ': hs) where
   gRpcMethodHandlers p s (h :<|>: rest)
     = gRpcMethodHandler (Proxy @args) (Proxy @r) (RPC p s methodName) h
       : gRpcMethodHandlers p s rest

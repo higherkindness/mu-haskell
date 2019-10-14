@@ -7,4 +7,4 @@ import Mu.Rpc.Examples
 main :: IO ()
 main = do 
   putStrLn "running quickstart application"
-  runGRpcApp 8080 "helloworld" quickstartServer
+  runGRpcApp 8080 quickstartServer

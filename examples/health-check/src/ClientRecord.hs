@@ -29,7 +29,7 @@ main
   = do -- Setup the client
        let config = grpcClientConfigSimple "127.0.0.1" 8080 False
        Right grpcClient <- setupGrpcClient' config
-       let client = buildService @"healthcheck" @HealthCheckService grpcClient
+       let client = buildService @HealthCheckService grpcClient
        -- Execute command
        args <- getArgs
        case args of

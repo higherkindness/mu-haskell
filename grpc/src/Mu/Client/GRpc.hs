@@ -4,7 +4,7 @@
              ScopedTypeVariables, TypeApplications,
              TypeOperators, DeriveFunctor,
              AllowAmbiguousTypes,
-             TupleSections #-}
+             TupleSections, UndecidableInstances #-}
 module Mu.Client.GRpc (
   GrpcClient
 , GrpcClientConfig
@@ -29,7 +29,6 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Conduit
 import qualified Data.Conduit.Combinators as C
 import Data.Conduit.TMChan
-import GHC.TypeLits
 import Network.HTTP2 (ErrorCode)
 import Network.HTTP2.Client (ClientIO, TooMuchConcurrency, ClientError, runExceptT)
 import Network.GRPC.Proto3Wire.Client (RPC(..), RawReply, CompressMode(..), StreamDone(..),
@@ -47,18 +46,18 @@ setupGrpcClient' = runExceptT . setupGrpcClient
 -- | Call a method from a `mu-rpc` definition.
 --   This method is thought to be used with `TypeApplications`:
 --   > gRpcCall @"packageName" @ServiceDeclaration @"method" 
-gRpcCall :: forall (pkg :: Symbol) (s :: Service snm mnm) (methodName :: mnm) h.
-            (KnownName pkg, GRpcServiceMethodCall s (s :-->: methodName) h)
+gRpcCall :: forall s methodName h.
+            (GRpcServiceMethodCall s (s :-->: methodName) h)
          => GrpcClient -> h
-gRpcCall = gRpcServiceMethodCall pkgName (Proxy @s) (Proxy @(s :-->: methodName))
-  where pkgName = BS.pack (nameVal (Proxy @pkg))
+gRpcCall = gRpcServiceMethodCall (Proxy @s) (Proxy @(s :-->: methodName))
 
 class GRpcServiceMethodCall (s :: Service snm mnm) (m :: Method mnm) h where
-  gRpcServiceMethodCall :: ByteString -> Proxy s -> Proxy m -> GrpcClient -> h
-instance (KnownName serviceName, GRpcMethodCall m h)
-         => GRpcServiceMethodCall ('Service serviceName methods) m h where
-  gRpcServiceMethodCall pkgName _ = gRpcMethodCall pkgName svrName
-    where svrName = BS.pack (nameVal (Proxy @serviceName))
+  gRpcServiceMethodCall :: Proxy s -> Proxy m -> GrpcClient -> h
+instance (KnownName serviceName, KnownName (FindPackageName anns), GRpcMethodCall m h)
+         => GRpcServiceMethodCall ('Service serviceName anns methods) m h where
+  gRpcServiceMethodCall _ = gRpcMethodCall pkgName svrName
+    where pkgName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
+          svrName = BS.pack (nameVal (Proxy @serviceName))
 
 data GRpcReply a
   = GRpcTooMuchConcurrency TooMuchConcurrency
@@ -95,7 +94,7 @@ class GRpcMethodCall method h where
   gRpcMethodCall :: ByteString -> ByteString -> Proxy method -> GrpcClient -> h
 
 instance (KnownName name)
-         => GRpcMethodCall ('Method name '[ ] 'RetNothing)
+         => GRpcMethodCall ('Method name anns '[ ] 'RetNothing)
                            (IO (GRpcReply ())) where
   gRpcMethodCall pkgName srvName _ client
     = simplifyResponse $ 
@@ -106,7 +105,7 @@ instance (KnownName name)
           rpc = RPC pkgName srvName methodName
 
 instance (KnownName name, ProtoBufTypeRef rref r)
-         => GRpcMethodCall ('Method name '[ ] ('RetSingle rref))
+         => GRpcMethodCall ('Method name anns '[ ] ('RetSingle rref))
                            (IO (GRpcReply r)) where
   gRpcMethodCall pkgName srvName _ client
     = simplifyResponse $ 
@@ -117,7 +116,7 @@ instance (KnownName name, ProtoBufTypeRef rref r)
           rpc = RPC pkgName srvName methodName
 
 instance (KnownName name, ProtoBufTypeRef vref v)
-         => GRpcMethodCall ('Method name '[ 'ArgSingle vref ] 'RetNothing)
+         => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] 'RetNothing)
                            (v -> IO (GRpcReply ())) where
   gRpcMethodCall pkgName srvName _ client x
     = simplifyResponse $ 
@@ -128,7 +127,7 @@ instance (KnownName name, ProtoBufTypeRef vref v)
           rpc = RPC pkgName srvName methodName
 
 instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
-         => GRpcMethodCall ('Method name '[ 'ArgSingle vref ] ('RetSingle rref))
+         => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] ('RetSingle rref))
                            (v -> IO (GRpcReply r)) where
   gRpcMethodCall pkgName srvName _ client x
     = simplifyResponse $ 
@@ -139,7 +138,7 @@ instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
           rpc = RPC pkgName srvName methodName
 
 instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
-         => GRpcMethodCall ('Method name '[ 'ArgStream vref ] ('RetSingle rref))
+         => GRpcMethodCall ('Method name anns '[ 'ArgStream vref ] ('RetSingle rref))
                            (CompressMode -> IO (ConduitT v Void IO (GRpcReply r))) where
   gRpcMethodCall pkgName srvName _ client compress
     = do -- Create a new TMChan
@@ -166,7 +165,7 @@ instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
             rpc = RPC pkgName srvName methodName
 
 instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
-         => GRpcMethodCall ('Method name '[ 'ArgSingle vref ] ('RetStream rref))
+         => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] ('RetStream rref))
                            (v -> IO (ConduitT () (GRpcReply r) IO ())) where
   gRpcMethodCall pkgName srvName _ client x
     = do -- Create a new TMChan
@@ -195,7 +194,7 @@ instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
             rpc = RPC pkgName srvName methodName
 
 instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
-         => GRpcMethodCall ('Method name '[ 'ArgStream vref ] ('RetStream rref))
+         => GRpcMethodCall ('Method name anns '[ 'ArgStream vref ] ('RetStream rref))
                            (CompressMode -> IO (ConduitT v (GRpcReply r) IO ())) where
   gRpcMethodCall pkgName srvName _ client compress
     = do -- Create a new TMChan

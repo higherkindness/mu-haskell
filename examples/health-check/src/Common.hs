@@ -44,11 +44,11 @@ newtype AllStatus = AllStatus { all :: [HealthStatus] }
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/service.scala
 type HS = 'FromSchema HealthCheckSchema
 type HealthCheckService
-  = 'Service "HealthCheckService"
-      '[ 'Method "setStatus" '[ 'ArgSingle (HS "HealthStatus") ] 'RetNothing
-       , 'Method "check" '[ 'ArgSingle (HS "HealthCheck") ] ('RetSingle (HS "ServerStatus"))
-       , 'Method "clearStatus" '[ 'ArgSingle (HS "HealthCheck") ] 'RetNothing
-       , 'Method "checkAll" '[ ] ('RetSingle (HS "AllStatus"))
-       , 'Method "cleanAll" '[ ] 'RetNothing
-       , 'Method "watch" '[ 'ArgSingle (HS "HealthCheck") ] ('RetStream (HS "ServerStatus"))
+  = 'Service "HealthCheckService" '[Package "healthcheck"]
+      '[ 'Method "setStatus" '[] '[ 'ArgSingle (HS "HealthStatus") ] 'RetNothing
+       , 'Method "check" '[] '[ 'ArgSingle (HS "HealthCheck") ] ('RetSingle (HS "ServerStatus"))
+       , 'Method "clearStatus" '[] '[ 'ArgSingle (HS "HealthCheck") ] 'RetNothing
+       , 'Method "checkAll" '[] '[ ] ('RetSingle (HS "AllStatus"))
+       , 'Method "cleanAll" '[] '[ ] 'RetNothing
+       , 'Method "watch" '[] '[ 'ArgSingle (HS "HealthCheck") ] ('RetStream (HS "ServerStatus"))
        ]

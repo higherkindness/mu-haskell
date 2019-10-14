@@ -3,7 +3,12 @@
              TypeFamilies, ConstraintKinds,
              TypeOperators,
              UndecidableInstances #-}
-module Mu.Rpc where
+module Mu.Rpc (
+  Service', Service(..)
+, Annotation, Package, FindPackageName
+, Method(..), (:-->:)
+, TypeRef(..), Argument(..), Return(..)
+) where
 
 import Data.Kind
 import GHC.TypeLits
@@ -14,21 +19,30 @@ type Service' = Service Symbol Symbol
 
 -- | A service is a set of methods.
 data Service serviceName methodName
-  = Service serviceName [Method methodName]
+  = Service serviceName [Annotation] [Method methodName]
+
+-- | An annotation to define a package name.
+--   This is used by some handlers, like gRPC.
+data Package (s :: Symbol)
+
+type family FindPackageName (anns :: [Annotation]) :: Symbol where
+  FindPackageName '[] = TypeError ('Text "Cannot find package name for the service")
+  FindPackageName (Package s ': rest) = s
+  FindPackageName (other     ': rest) = FindPackageName rest
 
 -- | A method is defined by its name, arguments, and return type.
 data Method methodName
-  = Method methodName [Argument] Return
+  = Method methodName [Annotation] [Argument] Return
 
 -- | Look up a method in a service definition using its name.
 --   Useful to declare handlers like @HandlerIO (MyService :-->: "MyMethod")@.
 type family (:-->:) (s :: Service snm mnm) (m :: mnm) :: Method mnm where
-  'Service sname methods :-->: m = LookupMethod methods m
+  'Service sname anns methods :-->: m = LookupMethod methods m
 
 type family LookupMethod (s :: [Method mnm]) (m :: snm) :: Method snm where
   LookupMethod '[] m = TypeError ('Text "could not find method " ':<>: 'ShowType m)
-  LookupMethod ('Method m args r ': ms) m = 'Method m args r
-  LookupMethod (other            ': ms) m = LookupMethod ms m
+  LookupMethod ('Method m anns args r ': ms) m = 'Method m anns args r
+  LookupMethod (other                 ': ms) m = LookupMethod ms m
 
 -- | Defines how to handle the type
 data TypeRef where

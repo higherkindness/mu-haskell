@@ -16,7 +16,7 @@ sayHello' host port req
        fmap (\(HelloResponse r) -> r) <$> sayHello c (HelloRequest req)
 
 sayHello :: GrpcClient -> HelloRequest -> IO (GRpcReply HelloResponse)
-sayHello = gRpcCall @_ @_ @"helloworld" @QuickStartService @"SayHello"
+sayHello = gRpcCall @QuickStartService @"SayHello"
 
 sayHi' :: HostName -> PortNumber -> Int -> IO [GRpcReply T.Text]
 sayHi' host port n
@@ -25,4 +25,4 @@ sayHi' host port n
        runConduit $ cndt .| C.map (fmap (\(HelloResponse r) -> r)) .| consume
 
 sayHi :: GrpcClient -> HiRequest -> IO (ConduitT () (GRpcReply HelloResponse) IO ())
-sayHi = gRpcCall @_ @_ @"helloworld" @QuickStartService @"SayHi"
+sayHi = gRpcCall @QuickStartService @"SayHi"

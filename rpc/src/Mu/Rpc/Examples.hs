@@ -33,14 +33,14 @@ type QuickstartSchema
      ]
 
 type QuickStartService
-  = 'Service "Greeter"
-      '[ 'Method "SayHello"
+  = 'Service "Greeter" '[Package "helloworld"]
+      '[ 'Method "SayHello" '[]
                  '[ 'ArgSingle ('FromSchema QuickstartSchema "HelloRequest") ]
                  ('RetSingle ('FromSchema QuickstartSchema "HelloResponse"))
-       , 'Method "SayHi"
+       , 'Method "SayHi" '[]
                  '[ 'ArgSingle ('FromSchema QuickstartSchema "HiRequest")]
                  ('RetStream ('FromSchema QuickstartSchema "HelloResponse"))
-       , 'Method "SayManyHellos"
+       , 'Method "SayManyHellos" '[]
                  '[ 'ArgStream ('FromSchema QuickstartSchema "HelloRequest")]
                  ('RetStream ('FromSchema QuickstartSchema "HelloResponse")) ]
 

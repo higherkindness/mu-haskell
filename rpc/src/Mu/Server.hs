@@ -16,14 +16,14 @@ import Mu.Rpc
 import Mu.Schema
 
 data ServerT (s :: Service snm mnm) (m :: Type -> Type) (hs :: [Type]) where
-  Server :: HandlersT methods m hs -> ServerT ('Service sname methods) m hs
+  Server :: HandlersT methods m hs -> ServerT ('Service sname anns methods) m hs
 type ServerIO service = ServerT service IO
 
 infixr 5 :<|>:
 data HandlersT (methods :: [Method mnm]) (m :: Type -> Type) (hs :: [Type]) where
   H0 :: HandlersT '[] m '[]
   (:<|>:) :: Handles args ret m h => h -> HandlersT ms m hs
-          -> HandlersT ('Method name args ret ': ms) m (h ': hs)
+          -> HandlersT ('Method name anns args ret ': ms) m (h ': hs)
 type HandlersIO methods = HandlersT methods IO
 
 -- Define a relation for handling

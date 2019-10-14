@@ -1,4 +1,4 @@
-{-# language PolyKinds, DataKinds, KindSignatures,
+{-# language PolyKinds, DataKinds,
              MultiParamTypeClasses,
              ScopedTypeVariables, TypeApplications,
              FlexibleInstances, FlexibleContexts,
