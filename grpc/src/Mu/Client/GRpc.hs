@@ -31,9 +31,10 @@ import qualified Data.Conduit.Combinators as C
 import Data.Conduit.TMChan
 import Network.HTTP2 (ErrorCode)
 import Network.HTTP2.Client (ClientIO, TooMuchConcurrency, ClientError, runExceptT)
-import Network.GRPC.Proto3Wire.Client (RPC(..), RawReply, CompressMode(..), StreamDone(..),
-                                       IncomingEvent(..),OutgoingEvent(..))
-import Network.GRPC.Proto3Wire.Client.Helpers
+import Network.GRPC.HTTP2.Proto3Wire
+import Network.GRPC.Client (RawReply, CompressMode(..), StreamDone(..),
+                            IncomingEvent(..),OutgoingEvent(..))
+import Network.GRPC.Client.Helpers
 
 import Mu.Rpc
 import Mu.Schema
@@ -99,8 +100,7 @@ instance (KnownName name)
   gRpcMethodCall pkgName srvName _ client
     = simplifyResponse $ 
       buildGRpcReply1 <$>
-      rawUnary (unitToProtoBuf, unitFromProtoBuf)
-               rpc client ()
+      rawUnary rpc client ()
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
 
@@ -108,10 +108,10 @@ instance (KnownName name, ProtoBufTypeRef rref r)
          => GRpcMethodCall ('Method name anns '[ ] ('RetSingle rref))
                            (IO (GRpcReply r)) where
   gRpcMethodCall pkgName srvName _ client
-    = simplifyResponse $ 
+    = fmap (fmap unViaProtoBufTypeRef) $
+      simplifyResponse $ 
       buildGRpcReply1 <$>
-      rawUnary (unitToProtoBuf, fromProtoBufTypeRef (Proxy @rref))
-               rpc client ()
+      rawUnary @_ @_ @(ViaProtoBufTypeRef rref _)rpc client ()
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
 
@@ -121,8 +121,7 @@ instance (KnownName name, ProtoBufTypeRef vref v)
   gRpcMethodCall pkgName srvName _ client x
     = simplifyResponse $ 
       buildGRpcReply1 <$>
-      rawUnary (toProtoBufTypeRef (Proxy @vref), unitFromProtoBuf)
-               rpc client x
+      rawUnary @_ @(ViaProtoBufTypeRef vref _) rpc client (ViaProtoBufTypeRef x)
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
 
@@ -130,10 +129,11 @@ instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
          => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] ('RetSingle rref))
                            (v -> IO (GRpcReply r)) where
   gRpcMethodCall pkgName srvName _ client x
-    = simplifyResponse $ 
+    = fmap (fmap unViaProtoBufTypeRef) $
+      simplifyResponse $ 
       buildGRpcReply1 <$>
-      rawUnary (toProtoBufTypeRef (Proxy @vref), fromProtoBufTypeRef (Proxy @rref))
-               rpc client x
+      rawUnary @_ @(ViaProtoBufTypeRef vref _) @(ViaProtoBufTypeRef rref _)
+               rpc client (ViaProtoBufTypeRef x)
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
 
@@ -145,14 +145,14 @@ instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
          chan <- newTMChanIO :: IO (TMChan v)
          -- Start executing the client in another thread
          promise <- async $ 
+            fmap (fmap unViaProtoBufTypeRef) $
             simplifyResponse $ 
             buildGRpcReply2 <$>
-            rawStreamClient (toProtoBufTypeRef (Proxy @vref), fromProtoBufTypeRef (Proxy @rref))
-                            rpc client ()
+            rawStreamClient @_ @(ViaProtoBufTypeRef vref v) @(ViaProtoBufTypeRef rref r) rpc client ()
                             (\_ -> do nextVal <- liftIO $ atomically $ readTMChan chan
                                       case nextVal of
                                         Nothing -> return ((), Left StreamDone)
-                                        Just v  -> return ((), Right (compress, v)))
+                                        Just v  -> return ((), Right (compress, ViaProtoBufTypeRef v)))
          -- This conduit feeds information to the other thread
          let go = do x <- await
                      case x of
@@ -169,15 +169,15 @@ instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
                            (v -> IO (ConduitT () (GRpcReply r) IO ())) where
   gRpcMethodCall pkgName srvName _ client x
     = do -- Create a new TMChan
-         chan <- newTMChanIO
+         chan <- newTMChanIO :: IO (TMChan r)
          var  <- newEmptyTMVarIO  -- if full, this means an error
          -- Start executing the client in another thread
          _ <- async $ do
             v <- simplifyResponse $ 
                  buildGRpcReply3 <$>
-                 rawStreamServer (toProtoBufTypeRef (Proxy @vref), fromProtoBufTypeRef (Proxy @rref))
-                                 rpc client () x
-                                 (\_ _ newVal -> liftIO $ atomically $ 
+                 rawStreamServer @_ @(ViaProtoBufTypeRef vref v) @(ViaProtoBufTypeRef rref r)
+                                 rpc client () (ViaProtoBufTypeRef x)
+                                 (\_ _ (ViaProtoBufTypeRef newVal) -> liftIO $ atomically $ 
                                    -- on the first iteration, say that everything is OK
                                    tryPutTMVar var (GRpcOk ()) >> writeTMChan chan newVal)
             case v of
@@ -198,27 +198,27 @@ instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
                            (CompressMode -> IO (ConduitT v (GRpcReply r) IO ())) where
   gRpcMethodCall pkgName srvName _ client compress
     = do -- Create a new TMChan
-         inchan <- newTMChanIO
-         outchan <- newTMChanIO
+         inchan <- newTMChanIO :: IO (TMChan (GRpcReply r))
+         outchan <- newTMChanIO :: IO (TMChan v)
          var <- newEmptyTMVarIO  -- if full, this means an error
          -- Start executing the client in another thread
          _ <- async $ do
             v <- simplifyResponse $ 
                  buildGRpcReply3 <$>
                  rawGeneralStream
-                   (toProtoBufTypeRef (Proxy @vref), fromProtoBufTypeRef (Proxy @rref))
+                   @_ @(ViaProtoBufTypeRef vref v) @(ViaProtoBufTypeRef rref r)
                    rpc client
                    () (\_ ievent -> do -- on the first iteration, say that everything is OK
                         _ <- liftIO $ atomically $ tryPutTMVar var (GRpcOk ())
                         case ievent of
-                          RecvMessage o -> liftIO $ atomically $ writeTMChan inchan (GRpcOk o)
+                          RecvMessage o -> liftIO $ atomically $ writeTMChan inchan (GRpcOk $ unViaProtoBufTypeRef o)
                           Invalid e -> liftIO $ atomically $ writeTMChan inchan (GRpcErrorString (show e))
                           _ -> return () )
                    () (\_ -> do
                         nextVal <- liftIO $ atomically $ readTMChan outchan
                         case nextVal of
                           Nothing -> return ((), Finalize)
-                          Just v  -> return ((), SendMessage compress v))
+                          Just v  -> return ((), SendMessage compress (ViaProtoBufTypeRef v)))
             case v of
               GRpcOk () -> liftIO $ atomically $ closeTMChan inchan
               _ -> liftIO $ atomically $ putTMVar var v

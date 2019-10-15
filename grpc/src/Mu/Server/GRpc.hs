@@ -18,8 +18,9 @@ import Data.Conduit.TMChan
 import Data.Kind
 import Data.Proxy
 import Network.GRPC.HTTP2.Encoding (uncompressed, gzip)
+import Network.GRPC.HTTP2.Proto3Wire
 import Network.GRPC.Server.Wai (ServiceHandler)
-import Network.GRPC.Server.Handlers.NoLens
+import Network.GRPC.Server.Handlers
 import Network.GRPC.Server.Wai as Wai
 import Network.Wai (Application)
 import Network.Wai.Handler.Warp (Port, Settings, run, runSettings)
@@ -87,43 +88,42 @@ class GRpcMethodHandler args r h where
 
 instance GRpcMethodHandler '[ ] 'RetNothing (IO ()) where
   gRpcMethodHandler _ _ rpc h
-    = unary (unitFromProtoBuf, unitToProtoBuf)
-            rpc (\_ _ -> h)
+    = unary @_ @() @() rpc (\_ _ -> h)
 
 instance (ProtoBufTypeRef rref r)
          => GRpcMethodHandler '[ ] ('RetSingle rref) (IO r) where
   gRpcMethodHandler _ _ rpc h
-    = unary (unitFromProtoBuf, toProtoBufTypeRef (Proxy @rref))
-            rpc (\_ _ -> h)
+    = unary @_ @() @(ViaProtoBufTypeRef rref r)
+            rpc (\_ _ -> ViaProtoBufTypeRef <$> h)
 
 instance (ProtoBufTypeRef vref v)
          => GRpcMethodHandler '[ 'ArgSingle vref ] 'RetNothing (v -> IO ()) where
   gRpcMethodHandler _ _ rpc h
-    = unary (fromProtoBufTypeRef (Proxy @vref), unitToProtoBuf)
-            rpc (const h)
+    = unary @_ @(ViaProtoBufTypeRef vref v) @()
+            rpc (\_ -> h . unViaProtoBufTypeRef)
 
 instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
          => GRpcMethodHandler '[ 'ArgSingle vref ] ('RetSingle rref)
                               (v -> IO r) where
   gRpcMethodHandler _ _ rpc h
-    = unary (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
-            rpc (const h)
+    = unary @_ @(ViaProtoBufTypeRef vref v) @(ViaProtoBufTypeRef rref r)
+            rpc (\_ -> (ViaProtoBufTypeRef <$>) . h . unViaProtoBufTypeRef)
 
 instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
          => GRpcMethodHandler '[ 'ArgStream vref ] ('RetSingle rref)
                               (ConduitT () v IO () -> IO r) where
   gRpcMethodHandler _ _ rpc h
-    = clientStream (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
+    = clientStream @_ @(ViaProtoBufTypeRef vref v) @(ViaProtoBufTypeRef rref r)
                    rpc cstream
-    where cstream :: req -> IO ((), ClientStream v r ())
+    where cstream :: req -> IO ((), ClientStream (ViaProtoBufTypeRef vref v) (ViaProtoBufTypeRef rref r) ())
           cstream _ = do
             -- Create a new TMChan
-            chan <- newTMChanIO
+            chan <- newTMChanIO :: IO (TMChan v)
             let producer = sourceTMChan @IO chan
             -- Start executing the handler in another thread
-            promise <- async (h producer)
+            promise <- async (ViaProtoBufTypeRef <$> h producer)
             -- Build the actual handler
-            let cstreamHandler _ newInput
+            let cstreamHandler _ (ViaProtoBufTypeRef newInput)
                   = atomically (writeTMChan chan newInput)
                 cstreamFinalizer _
                   = atomically (closeTMChan chan) >> wait promise
@@ -134,19 +134,20 @@ instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
          => GRpcMethodHandler '[ 'ArgSingle vref ] ('RetStream rref)
                               (v -> ConduitT r Void IO () -> IO ()) where
   gRpcMethodHandler _ _ rpc h
-    = serverStream (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
+    = serverStream @_ @(ViaProtoBufTypeRef vref v) @(ViaProtoBufTypeRef rref r)
                    rpc sstream
-    where sstream :: req -> v -> IO ((), ServerStream r ())
-          sstream _ v = do
+    where sstream :: req -> ViaProtoBufTypeRef vref v
+                  -> IO ((), ServerStream (ViaProtoBufTypeRef rref r) ())
+          sstream _ (ViaProtoBufTypeRef v) = do
             -- Variable to connect input and output
-            var <- newEmptyTMVarIO
+            var <- newEmptyTMVarIO :: IO (TMVar (Maybe r))
             -- Start executing the handler
-            promise <- async (h v (toTMVarConduit var))
+            promise <- async (ViaProtoBufTypeRef <$> h v (toTMVarConduit var))
               -- Return the information
             let readNext _
                   = do nextOutput <- atomically $ takeTMVar var
                        case nextOutput of
-                         Just o  -> return $ Just ((), o)
+                         Just o  -> return $ Just ((), ViaProtoBufTypeRef o)
                          Nothing -> do cancel promise
                                        return Nothing
             return ((), ServerStream readNext)
@@ -155,18 +156,18 @@ instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
          => GRpcMethodHandler '[ 'ArgStream vref ] ('RetStream rref)
                               (ConduitT () v IO () -> ConduitT r Void IO () -> IO ()) where
   gRpcMethodHandler _ _ rpc h
-    = bidiStream (fromProtoBufTypeRef (Proxy @vref), toProtoBufTypeRef (Proxy @rref))
+    = bidiStream @_ @(ViaProtoBufTypeRef vref v) @(ViaProtoBufTypeRef rref r)
                  rpc bdstream
-    where bdstream :: req -> IO ((), BiDiStream v r ())
+    where bdstream :: req -> IO ((), BiDiStream (ViaProtoBufTypeRef vref v) (ViaProtoBufTypeRef rref r) ())
           bdstream _ = do
             -- Create a new TMChan and a new variable
-            chan <- newTMChanIO
+            chan <- newTMChanIO :: IO (TMChan v)
             let producer = sourceTMChan @IO chan
-            var <- newEmptyTMVarIO
+            var <- newEmptyTMVarIO :: IO (TMVar (Maybe r))
             -- Start executing the handler
             promise <- async (h producer (toTMVarConduit var))
             -- Build the actual handler
-            let cstreamHandler _ newInput
+            let cstreamHandler _ (ViaProtoBufTypeRef newInput)
                   = atomically (writeTMChan chan newInput)
                 cstreamFinalizer _
                   = atomically (closeTMChan chan) >> wait promise
@@ -174,7 +175,7 @@ instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
                   = do nextOutput <- atomically $ tryTakeTMVar var
                        case nextOutput of
                          Just (Just o) ->
-                           return $ WriteOutput () o
+                           return $ WriteOutput () (ViaProtoBufTypeRef o)
                          Just Nothing  -> do
                            cancel promise
                            return Abort
