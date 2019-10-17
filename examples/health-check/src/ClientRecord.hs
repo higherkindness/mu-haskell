@@ -1,36 +1,22 @@
 {-# language DataKinds, ScopedTypeVariables,
-             TypeApplications, TypeOperators,
-             FlexibleContexts, AllowAmbiguousTypes,
-             OverloadedStrings, DeriveGeneric #-}
+             TypeOperators, OverloadedStrings,
+             FlexibleContexts, AllowAmbiguousTypes #-}
 module Main where
 
 import Data.Conduit
 import qualified Data.Conduit.Combinators as C
 import qualified Data.Text as T
-import GHC.Generics
 import System.Environment
 
 import Mu.Client.GRpc
-import Mu.Client.GRpc.Record
-
-import Definition
 import Generated
-
-data HealthCall
-  = HealthCall { setStatus :: HealthStatusMsg -> IO (GRpcReply ()) 
-               , check :: HealthCheckMsg -> IO (GRpcReply ServerStatusMsg) 
-               , clearStatus :: HealthCheckMsg -> IO (GRpcReply ()) 
-               , checkAll :: IO (GRpcReply AllStatusMsg) 
-               , cleanAll :: IO (GRpcReply ()) 
-               , watch :: HealthCheckMsg -> IO (ConduitT () (GRpcReply ServerStatusMsg) IO ()) }
-  deriving (Generic)
 
 main :: IO ()
 main 
   = do -- Setup the client
        let config = grpcClientConfigSimple "127.0.0.1" 8080 False
        Right grpcClient <- setupGrpcClient' config
-       let client = buildService @HealthCheckService @"" grpcClient
+       let client = buildHealthCall grpcClient
        -- Execute command
        args <- getArgs
        case args of

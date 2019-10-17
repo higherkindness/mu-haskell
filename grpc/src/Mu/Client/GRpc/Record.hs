@@ -2,12 +2,22 @@
              MultiParamTypeClasses, TypeFamilies,
              FlexibleInstances, FlexibleContexts,
              UndecidableInstances, TypeApplications,
-             ScopedTypeVariables, AllowAmbiguousTypes #-}
-module Mu.Client.GRpc.Record where
+             ScopedTypeVariables, AllowAmbiguousTypes,
+             TemplateHaskell #-}
+module Mu.Client.GRpc.Record (
+  buildService
+, generateRecordFromService
+) where
 
+import Control.Applicative
+import Data.Char
+import Data.Conduit (ConduitT)
 import Data.Proxy
-import GHC.Generics
+import Data.Void
+import GHC.Generics hiding (NoSourceUnpackedness, NoSourceStrictness)
 import GHC.TypeLits
+import Language.Haskell.TH hiding (ppr)
+import Language.Haskell.TH.Datatype
 
 import Mu.Client.GRpc
 import Mu.Rpc
@@ -40,3 +50,169 @@ instance (m ~ AppendSymbol p x, GRpcServiceMethodCall s (s :-->: x) h)
          => BuildService s p ms (S1 ('MetaSel ('Just m) u ss ds) (K1 i h)) where
   buildService' ps _ _ client
     = M1 $ K1 $ gRpcServiceMethodCall ps (Proxy @(s :-->: x)) client
+
+-- TEMPLATE HASKELL
+-- ================
+
+generateRecordFromService :: String -> String -> Namer -> Name -> Q [Dec]
+generateRecordFromService newRecordName fieldsPrefix tNamer serviceTyName
+  = do let serviceTy = ConT serviceTyName
+       srvDef <- typeToServiceDef serviceTy
+       case srvDef of
+         Nothing -> fail "service definition cannot be parsed"
+         Just sd -> serviceDefToDecl serviceTyName newRecordName fieldsPrefix tNamer sd
+
+type Namer = String -> String
+
+serviceDefToDecl :: Name -> String -> String -> Namer -> Service String String -> Q [Dec]
+serviceDefToDecl serviceTyName complete fieldsPrefix tNamer (Service _ _ methods)
+  = do d <- dataD (pure [])
+                  (mkName complete)
+                  []
+                  Nothing
+                  [RecC (mkName complete) <$> mapM (methodToDecl fieldsPrefix tNamer) methods]
+                  [pure (DerivClause Nothing [ConT ''Generic])]
+       let buildName = mkName ("build" ++ complete)
+       s <- SigD buildName <$> [t|GrpcClient -> $(return (ConT (mkName complete)))|]
+       c <- Clause <$> pure []
+                   <*> (NormalB <$> [e|buildService @($(return $ ConT serviceTyName))
+                                                    @($(return $ LitT (StrTyLit fieldsPrefix)))|])
+                   <*> pure []
+       return [d, s, FunD buildName [c]]
+
+methodToDecl :: String -> Namer -> Method String -> Q (Name, Bang, Type)
+methodToDecl fieldsPrefix tNamer (Method mName _ args ret)
+  = do let nm = firstLower (fieldsPrefix ++ mName)
+       ty <- computeMethodType tNamer args ret
+       return ( mkName nm, Bang NoSourceUnpackedness NoSourceStrictness, ty )
+
+computeMethodType :: Namer -> [Argument] -> Return -> Q Type
+computeMethodType _ [] RetNothing
+  = [t|IO (GRpcReply ())|]
+computeMethodType n [] (RetSingle r)
+  = [t|IO (GRpcReply $(typeRefToType n r))|]
+computeMethodType n [ArgSingle v] RetNothing
+  = [t|$(typeRefToType n v) -> IO (GRpcReply ())|]
+computeMethodType n [ArgSingle v] (RetSingle r)
+  = [t|$(typeRefToType n v) -> IO (GRpcReply $(typeRefToType n r))|]
+computeMethodType n [ArgStream v] (RetSingle r)
+  = [t|CompressMode -> IO (ConduitT $(typeRefToType n v) Void IO (GRpcReply $(typeRefToType n r)))|]
+computeMethodType n [ArgSingle v] (RetStream r)
+  = [t|$(typeRefToType n v) -> IO (ConduitT () (GRpcReply $(typeRefToType n r)) IO ())|]
+computeMethodType n [ArgStream v] (RetStream r)
+  = [t|CompressMode -> IO (ConduitT $(typeRefToType n v) (GRpcReply $(typeRefToType n r)) IO ())|]
+computeMethodType _ _ _ = fail "method signature not supported"
+
+typeRefToType :: Namer -> TypeRef -> Q Type
+typeRefToType tNamer (FromTH (LitT (StrTyLit s)))
+  = return $ ConT (mkName $ completeName tNamer s)
+typeRefToType _tNamer (FromTH ty)
+  = return ty
+typeRefToType _ _ = error "this should never happen"
+
+completeName :: Namer -> String -> String
+completeName namer name = firstUpper (namer (firstUpper name))
+
+firstUpper :: String -> String
+firstUpper [] = error "Empty names are not allowed"
+firstUpper (x:rest) = toUpper x : rest
+
+firstLower :: String -> String
+firstLower [] = error "Empty names are not allowed"
+firstLower (x:rest) = toLower x : rest
+
+-- Parsing
+-- =======
+
+typeToServiceDef :: Type -> Q (Maybe (Service String String))
+typeToServiceDef toplevelty
+  = typeToServiceDef' <$> resolveTypeSynonyms toplevelty
+  where
+    typeToServiceDef' :: Type -> Maybe (Service String String)
+    typeToServiceDef' expanded
+      = do (sn, _, methods) <- tyD3 'Service expanded
+           methods' <- tyList methods
+           Service <$> tyString sn
+                   <*> pure []
+                   <*> mapM typeToMethodDef methods'
+    
+    typeToMethodDef :: Type -> Maybe (Method String)
+    typeToMethodDef ty
+      = do (mn, _, args, ret) <- tyD4 'Method ty
+           args' <- tyList args
+           Method <$> tyString mn
+                  <*> pure []
+                  <*> mapM typeToArgDef args'
+                  <*> typeToRetDef ret
+
+    typeToArgDef :: Type -> Maybe Argument
+    typeToArgDef ty
+      =   ArgSingle <$> (tyD1 'ArgSingle ty >>= typeToTypeRef)
+      <|> ArgStream <$> (tyD1 'ArgStream ty >>= typeToTypeRef)
+
+    typeToRetDef :: Type -> Maybe Return
+    typeToRetDef ty
+      =   RetNothing <$ tyD0 'RetNothing ty
+      <|> RetSingle <$> (tyD1 'RetSingle ty >>= typeToTypeRef)
+      <|> (do (e, v) <- tyD2 'RetThrows ty
+              RetThrows <$> typeToTypeRef e <*> typeToTypeRef v)
+      <|> RetStream <$> (tyD1 'RetStream ty >>= typeToTypeRef)
+
+    typeToTypeRef :: Type -> Maybe TypeRef
+    typeToTypeRef ty
+      =   (do (_,innerTy) <- tyD2 'FromSchema ty
+              return (FromTH innerTy))
+      <|> (do (_,innerTy,_) <- tyD3 'FromRegistry ty
+              return (FromTH innerTy))
+
+tyString :: Type -> Maybe String
+tyString (SigT t _)
+  = tyString t
+tyString (LitT (StrTyLit s))
+  = Just s
+tyString _
+  = Nothing
+
+tyList :: Type -> Maybe [Type]
+tyList (SigT t _)
+  = tyList t
+tyList PromotedNilT
+  = Just []
+tyList (AppT (AppT PromotedConsT ty) rest)
+  = (ty :) <$> tyList rest
+tyList _ = Nothing
+
+tyD0 :: Name -> Type -> Maybe ()
+tyD0 name (SigT t _) = tyD0 name t
+tyD0 name (PromotedT c)
+  | c == name = Just ()
+  | otherwise = Nothing
+tyD0 _ _ = Nothing
+
+tyD1 :: Name -> Type -> Maybe Type
+tyD1 name (SigT t _) = tyD1 name t
+tyD1 name (AppT (PromotedT c) x)
+  | c == name = Just x
+  | otherwise = Nothing
+tyD1 _ _ = Nothing
+
+tyD2 :: Name -> Type -> Maybe (Type, Type)
+tyD2 name (SigT t _) = tyD2 name t
+tyD2 name (AppT (AppT (PromotedT c) x) y)
+  | c == name = Just (x, y)
+  | otherwise = Nothing
+tyD2 _ _ = Nothing
+
+tyD3 :: Name -> Type -> Maybe (Type, Type, Type)
+tyD3 name (SigT t _) = tyD3 name t
+tyD3 name (AppT (AppT (AppT (PromotedT c) x) y) z)
+  | c == name = Just (x, y, z)
+  | otherwise = Nothing
+tyD3 _ _ = Nothing
+
+tyD4 :: Name -> Type -> Maybe (Type, Type, Type, Type)
+tyD4 name (SigT t _) = tyD4 name t
+tyD4 name (AppT (AppT (AppT (AppT (PromotedT c) x) y) z) u)
+  | c == name = Just (x, y, z, u)
+  | otherwise = Nothing
+tyD4 _ _ = Nothing

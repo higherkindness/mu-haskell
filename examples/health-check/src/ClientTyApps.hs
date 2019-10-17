@@ -22,7 +22,7 @@ main
        -- Execute command
        args <- getArgs
        case args of
-         ["watch" , who] -> watch client who
+         ["watch" , who] -> watching client who
          ["simple", who] -> simple client who
          ["update", who] -> update client who "SERVING"
          ["update", who, newstatus] -> update client who newstatus
@@ -55,8 +55,8 @@ update client who newstatus
          <- gRpcCall @HealthCheckService @"check" client hc
        putStrLn ("UNARY: Checked the status of " <> who <> ". Obtained: " <> show rstatus)
 
-watch :: GrpcClient -> String -> IO ()
-watch client who
+watching :: GrpcClient -> String -> IO ()
+watching client who
   = do let hc = HealthCheckMsg (T.pack who)
        replies :: ConduitT () (GRpcReply ServerStatusMsg) IO ()
          <- gRpcCall @HealthCheckService @"watch" client hc

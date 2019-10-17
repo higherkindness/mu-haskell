@@ -1,5 +1,7 @@
 {-# language TemplateHaskell, TypeOperators, DataKinds #-}
-module Mu.Schema.TH where
+module Mu.Schema.TH (
+  generateTypesFromSchema
+) where
 
 import Control.Applicative
 import Data.Char
@@ -248,10 +250,3 @@ tyD3 name (AppT (AppT (AppT (PromotedT c) x) y) z)
   | c == name = Just (x, y, z)
   | otherwise = Nothing
 tyD3 _ _ = Nothing
-
-tyD4 :: Name -> Type -> Maybe (Type, Type, Type, Type)
-tyD4 name (SigT t _) = tyD4 name t
-tyD4 name (AppT (AppT (AppT (AppT (PromotedT c) x) y) z) u)
-  | c == name = Just (x, y, z, u)
-  | otherwise = Nothing
-tyD4 _ _ = Nothing

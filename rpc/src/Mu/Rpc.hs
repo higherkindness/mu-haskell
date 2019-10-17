@@ -12,6 +12,7 @@ module Mu.Rpc (
 
 import Data.Kind
 import GHC.TypeLits
+import qualified Language.Haskell.TH as TH
 
 import Mu.Schema
 import Mu.Schema.Registry
@@ -50,6 +51,8 @@ data TypeRef where
   FromSchema   :: Schema typeName fieldName -> typeName -> TypeRef
   -- | Registry subject, type to convert to, and preferred serialization version
   FromRegistry :: Registry -> Type -> Nat -> TypeRef
+  -- | To be used only during TH generation!
+  FromTH       :: TH.Type -> TypeRef
 
 -- | Defines the way in which arguments are handled.
 data Argument where
