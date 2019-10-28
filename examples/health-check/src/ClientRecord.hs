@@ -45,14 +45,14 @@ main
 
 simple :: HealthCall -> String -> IO ()
 simple client who
-  = do let hc = HealthCheckMsg (T.pack who)
+  = do let hcm = HealthCheckMsg (T.pack who)
        putStrLn ("UNARY: Is there some server named " <> who <> "?")
-       rknown <- check client hc
+       rknown <- check client hcm
        putStrLn ("UNARY: Actually the status is " <> show rknown)
        update client who "SERVING"
-       r <- clearStatus client hc
+       r <- clearStatus client hcm
        putStrLn ("UNARY: Was clearing successful? " <> show r)
-       runknown <- check client hc
+       runknown <- check client hcm
        putStrLn ("UNARY: Current status of " <> who <> ": " <> show runknown)
 
 update :: HealthCall -> String -> String -> IO ()
@@ -67,5 +67,5 @@ update client who newstatus
 watching :: HealthCall -> String -> IO ()
 watching client who
   = do let hcm = HealthCheckMsg (T.pack who)
-       stream <- watch client hc
+       stream <- watch client hcm
        runConduit $ stream .| C.mapM_ print
