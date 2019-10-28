@@ -5,6 +5,7 @@ packages:
 - rpc
 - grpc
 - examples/health-check
+- examples/route-guide
 
 extra-deps:
 - proto3-wire-1.0.0
@@ -14,6 +15,7 @@ extra-deps:
 - primitive-unlifted-0.1.2.0
 - stm-hamt-1.2.0.4
 - stm-containers-1.1.0.4
+- AC-Angle-1.0
 - git: https://github.com/serras/avro.git
   commit: 7ba39ebb6b74c64fffb3d3a972b4000185579f19
 - git: https://github.com/higherkindness/http2-grpc-haskell.git
