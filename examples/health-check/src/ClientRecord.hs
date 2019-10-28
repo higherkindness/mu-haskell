@@ -1,15 +1,32 @@
 {-# language DataKinds, ScopedTypeVariables,
              TypeOperators, OverloadedStrings,
-             FlexibleContexts, AllowAmbiguousTypes #-}
+             FlexibleContexts, AllowAmbiguousTypes,
+             DeriveGeneric, TypeApplications #-}
 module Main where
 
 import Data.Conduit
 import qualified Data.Conduit.Combinators as C
 import qualified Data.Text as T
+import GHC.Generics (Generic)
 import System.Environment
 
 import Mu.Client.GRpc
-import Generated
+import Mu.Client.GRpc.Record
+
+import Definition
+
+data HealthCall
+  = HealthCall
+    { setStatus :: HealthStatusMsg -> IO (GRpcReply ()) 
+    , check :: HealthCheckMsg -> IO (GRpcReply ServerStatusMsg) 
+    , clearStatus :: HealthCheckMsg -> IO (GRpcReply ()) 
+    , checkAll :: IO (GRpcReply AllStatusMsg) 
+    , cleanAll :: IO (GRpcReply ()) 
+    , watch :: HealthCheckMsg -> IO (ConduitT () (GRpcReply ServerStatusMsg) IO ()) }
+  deriving (Generic)
+
+buildHealthCall :: GrpcClient -> HealthCall
+buildHealthCall = buildService @HealthCheckService @""
 
 main :: IO ()
 main 
@@ -40,15 +57,15 @@ simple client who
 
 update :: HealthCall -> String -> String -> IO ()
 update client who newstatus
-  = do let hc = HealthCheckMsg (T.pack who)
+  = do let hcm = HealthCheckMsg (T.pack who)
        putStrLn ("UNARY: Setting " <> who <> " service to " <> newstatus)
-       r <- setStatus client (HealthStatusMsg hc (ServerStatusMsg (T.pack newstatus)))
+       r <- setStatus client (HealthStatusMsg hcm (ServerStatusMsg (T.pack newstatus)))
        putStrLn ("UNARY: Was setting successful? " <> show r)
-       rstatus <- check client hc
+       rstatus <- check client hcm
        putStrLn ("UNARY: Checked the status of " <> who <> ". Obtained: " <> show rstatus)
 
 watching :: HealthCall -> String -> IO ()
 watching client who
-  = do let hc = HealthCheckMsg (T.pack who)
+  = do let hcm = HealthCheckMsg (T.pack who)
        stream <- watch client hc
        runConduit $ stream .| C.mapM_ print

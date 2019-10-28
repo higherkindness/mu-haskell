@@ -14,7 +14,6 @@ import Mu.Server
 import Mu.Server.GRpc
 
 import Definition
-import Generated
 
 main :: IO ()
 main = do 
@@ -69,9 +68,9 @@ cleanAll_ m
        atomically $ M.reset m
 
 watch_ :: StatusUpdates -> HealthCheckMsg -> ConduitT ServerStatusMsg Void IO () -> IO ()
-watch_ upd hc@(HealthCheckMsg nm) sink
+watch_ upd hcm@(HealthCheckMsg nm) sink
   = do putStr "watch: " >> print nm
        runConduit $ sourceTBMChan upd
-                 .| C.filter (\(HealthStatusMsg c _) -> hc == c)
+                 .| C.filter (\(HealthStatusMsg c _) -> hcm == c)
                  .| C.map (\(HealthStatusMsg _ s) -> s)
                  .| sink

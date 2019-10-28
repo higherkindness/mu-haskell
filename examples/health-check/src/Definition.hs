@@ -1,8 +1,11 @@
 {-# language PolyKinds, DataKinds, TypeOperators,
              MultiParamTypeClasses, TypeFamilies,
-             FlexibleInstances, FlexibleContexts #-}
+             FlexibleInstances, FlexibleContexts,
+             DeriveGeneric, DeriveAnyClass,
+             DuplicateRecordFields, OverloadedLabels #-}
 module Definition where
 
+import GHC.Generics
 import Data.Text as T
 
 import Mu.Schema
@@ -21,6 +24,19 @@ type HealthCheckSchema
      , 'DRecord "AllStatus" '[]
                 '[ 'FieldDef "all" '[ ProtoBufId 1 ] ('TList ('TSchematic "HealthStatus")) ]
      ]
+
+newtype HealthCheckMsg
+  = HealthCheckMsg { nameService :: T.Text }
+  deriving (Eq, Show, Ord, Generic, HasSchema HealthCheckSchema "HealthCheck")
+newtype ServerStatusMsg
+  = ServerStatusMsg { status :: T.Text }
+  deriving (Eq, Show, Ord, Generic, HasSchema HealthCheckSchema "ServerStatus")
+data HealthStatusMsg
+  = HealthStatusMsg { hc :: HealthCheckMsg, status :: ServerStatusMsg }
+  deriving (Eq, Show, Ord, Generic, HasSchema HealthCheckSchema "HealthStatus")
+newtype AllStatusMsg
+  = AllStatusMsg { all :: [HealthStatusMsg] }
+  deriving (Eq, Show, Ord, Generic, HasSchema HealthCheckSchema "AllStatus")
 
 -- Service definition
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/service.scala

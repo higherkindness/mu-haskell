@@ -12,7 +12,6 @@ import System.Environment
 import Mu.Client.GRpc
 
 import Definition
-import Generated
 
 main :: IO ()
 main 
@@ -30,34 +29,34 @@ main
 
 simple :: GrpcClient -> String -> IO ()
 simple client who
-  = do let hc = HealthCheckMsg (T.pack who)
+  = do let hcm = HealthCheckMsg (T.pack who)
        putStrLn ("UNARY: Is there some server named " <> who <> "?")
        rknown :: GRpcReply ServerStatusMsg
-         <- gRpcCall @HealthCheckService @"check" client hc
+         <- gRpcCall @HealthCheckService @"check" client hcm
        putStrLn ("UNARY: Actually the status is " <> show rknown)
        update client who "SERVING"
        r :: GRpcReply ()
-         <- gRpcCall @HealthCheckService @"clearStatus" client hc
+         <- gRpcCall @HealthCheckService @"clearStatus" client hcm
        putStrLn ("UNARY: Was clearing successful? " <> show r)
        runknown :: GRpcReply ServerStatusMsg
-         <- gRpcCall @HealthCheckService @"check" client hc
+         <- gRpcCall @HealthCheckService @"check" client hcm
        putStrLn ("UNARY: Current status of " <> who <> ": " <> show runknown)
 
 update :: GrpcClient -> String -> String -> IO ()
 update client who newstatus
-  = do let hc = HealthCheckMsg (T.pack who)
+  = do let hcm = HealthCheckMsg (T.pack who)
        putStrLn ("UNARY: Setting " <> who <> " service to " <> newstatus)
        r :: GRpcReply ()
          <- gRpcCall @HealthCheckService @"setStatus" client
-                     (HealthStatusMsg hc (ServerStatusMsg (T.pack newstatus)))
+                     (HealthStatusMsg hcm (ServerStatusMsg (T.pack newstatus)))
        putStrLn ("UNARY: Was setting successful? " <> show r)
        rstatus :: GRpcReply ServerStatusMsg
-         <- gRpcCall @HealthCheckService @"check" client hc
+         <- gRpcCall @HealthCheckService @"check" client hcm
        putStrLn ("UNARY: Checked the status of " <> who <> ". Obtained: " <> show rstatus)
 
 watching :: GrpcClient -> String -> IO ()
 watching client who
-  = do let hc = HealthCheckMsg (T.pack who)
+  = do let hcm = HealthCheckMsg (T.pack who)
        replies :: ConduitT () (GRpcReply ServerStatusMsg) IO ()
-         <- gRpcCall @HealthCheckService @"watch" client hc
+         <- gRpcCall @HealthCheckService @"watch" client hcm
        runConduit $ replies .| C.mapM_ print
