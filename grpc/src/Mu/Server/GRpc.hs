@@ -156,9 +156,10 @@ instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
          => GRpcMethodHandler '[ 'ArgStream vref ] ('RetStream rref)
                               (ConduitT () v IO () -> ConduitT r Void IO () -> IO ()) where
   gRpcMethodHandler _ _ rpc h
-    = bidiStream @_ @(ViaProtoBufTypeRef vref v) @(ViaProtoBufTypeRef rref r)
-                 rpc bdstream
-    where bdstream :: req -> IO ((), BiDiStream (ViaProtoBufTypeRef vref v) (ViaProtoBufTypeRef rref r) ())
+    = generalStream @_ @(ViaProtoBufTypeRef vref v) @(ViaProtoBufTypeRef rref r)
+                    rpc bdstream
+    where bdstream :: req -> IO ( (), IncomingStream (ViaProtoBufTypeRef vref v) ()
+                                , (), OutgoingStream (ViaProtoBufTypeRef rref r) () )
           bdstream _ = do
             -- Create a new TMChan and a new variable
             chan <- newTMChanIO :: IO (TMChan v)
@@ -175,13 +176,13 @@ instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
                   = do nextOutput <- atomically $ tryTakeTMVar var
                        case nextOutput of
                          Just (Just o) ->
-                           return $ WriteOutput () (ViaProtoBufTypeRef o)
+                           return $ Just ((), ViaProtoBufTypeRef o)
                          Just Nothing  -> do
                            cancel promise
-                           return Abort
+                           return Nothing
                          Nothing -> -- no new elements to output
-                           return $ WaitInput cstreamHandler cstreamFinalizer
-            return ((), BiDiStream readNext)
+                           readNext ()
+            return ((), IncomingStream cstreamHandler cstreamFinalizer, (), OutgoingStream readNext)
 
 toTMVarConduit :: TMVar (Maybe r) -> ConduitT r Void IO ()
 toTMVarConduit var = do x <- await
