@@ -94,9 +94,8 @@ simplifyResponse reply = do
 class GRpcMethodCall method h where
   gRpcMethodCall :: ByteString -> ByteString -> Proxy method -> GrpcClient -> h
 
-instance (KnownName name)
-         => GRpcMethodCall ('Method name anns '[ ] 'RetNothing)
-                           (IO (GRpcReply ())) where
+instance (KnownName name, handler ~ IO (GRpcReply ()))
+         => GRpcMethodCall ('Method name anns '[ ] 'RetNothing) handler where
   gRpcMethodCall pkgName srvName _ client
     = simplifyResponse $ 
       buildGRpcReply1 <$>
@@ -104,9 +103,9 @@ instance (KnownName name)
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
 
-instance (KnownName name, ProtoBufTypeRef rref r)
-         => GRpcMethodCall ('Method name anns '[ ] ('RetSingle rref))
-                           (IO (GRpcReply r)) where
+instance ( KnownName name, ProtoBufTypeRef rref r
+         , handler ~ IO (GRpcReply r) )
+         => GRpcMethodCall ('Method name anns '[ ] ('RetSingle rref)) handler where
   gRpcMethodCall pkgName srvName _ client
     = fmap (fmap unViaProtoBufTypeRef) $
       simplifyResponse $ 
@@ -115,9 +114,9 @@ instance (KnownName name, ProtoBufTypeRef rref r)
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
 
-instance (KnownName name, ProtoBufTypeRef vref v)
-         => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] 'RetNothing)
-                           (v -> IO (GRpcReply ())) where
+instance ( KnownName name, ProtoBufTypeRef vref v
+         , handler ~ (v -> IO (GRpcReply ())) )
+         => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] 'RetNothing) handler where
   gRpcMethodCall pkgName srvName _ client x
     = simplifyResponse $ 
       buildGRpcReply1 <$>
@@ -125,9 +124,9 @@ instance (KnownName name, ProtoBufTypeRef vref v)
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
 
-instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
-         => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] ('RetSingle rref))
-                           (v -> IO (GRpcReply r)) where
+instance ( KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r
+         , handler ~ (v -> IO (GRpcReply r)) )
+         => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] ('RetSingle rref)) handler where
   gRpcMethodCall pkgName srvName _ client x
     = fmap (fmap unViaProtoBufTypeRef) $
       simplifyResponse $ 
@@ -137,9 +136,9 @@ instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
 
-instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
-         => GRpcMethodCall ('Method name anns '[ 'ArgStream vref ] ('RetSingle rref))
-                           (CompressMode -> IO (ConduitT v Void IO (GRpcReply r))) where
+instance ( KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r
+         , handler ~ (CompressMode -> IO (ConduitT v Void IO (GRpcReply r))) )
+         => GRpcMethodCall ('Method name anns '[ 'ArgStream vref ] ('RetSingle rref)) handler where
   gRpcMethodCall pkgName srvName _ client compress
     = do -- Create a new TMChan
          chan <- newTMChanIO :: IO (TMChan v)
@@ -164,9 +163,9 @@ instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
       where methodName = BS.pack (nameVal (Proxy @name))
             rpc = RPC pkgName srvName methodName
 
-instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
-         => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] ('RetStream rref))
-                           (v -> IO (ConduitT () (GRpcReply r) IO ())) where
+instance ( KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r
+         , handler ~ (v -> IO (ConduitT () (GRpcReply r) IO ())) )
+         => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] ('RetStream rref)) handler where
   gRpcMethodCall pkgName srvName _ client x
     = do -- Create a new TMChan
          chan <- newTMChanIO :: IO (TMChan r)
@@ -193,9 +192,9 @@ instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
       where methodName = BS.pack (nameVal (Proxy @name))
             rpc = RPC pkgName srvName methodName
 
-instance (KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
-         => GRpcMethodCall ('Method name anns '[ 'ArgStream vref ] ('RetStream rref))
-                           (CompressMode -> IO (ConduitT v (GRpcReply r) IO ())) where
+instance ( KnownName name, ProtoBufTypeRef vref v, ProtoBufTypeRef rref r
+         , handler ~ (CompressMode -> IO (ConduitT v (GRpcReply r) IO ())) )
+         => GRpcMethodCall ('Method name anns '[ 'ArgStream vref ] ('RetStream rref)) handler where
   gRpcMethodCall pkgName srvName _ client compress
     = do -- Create a new TMChan
          inchan <- newTMChanIO :: IO (TMChan (GRpcReply r))

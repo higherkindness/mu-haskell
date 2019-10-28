@@ -36,18 +36,15 @@ instance HasSchema sch sty t => HandlesRef ('FromSchema sch sty) t
 instance HandlesRef ('FromRegistry subject t last) t
 
 -- Arguments
-instance (HandlesRef ref t, Handles args ret m h)
-         => Handles ('ArgSingle ref ': args) ret m
-                    (t -> h)
-instance (HandlesRef ref t, Handles args ret m h)
-         => Handles ('ArgStream ref ': args) ret m
-                    (ConduitT () t IO () -> h)
+instance (HandlesRef ref t, Handles args ret m h, handler ~ (t -> h))
+         => Handles ('ArgSingle ref ': args) ret m handler
+instance (HandlesRef ref t, Handles args ret m h, handler ~ (ConduitT () t IO () -> h))
+         => Handles ('ArgStream ref ': args) ret m handler
 -- Result with exception
-instance Handles '[] 'RetNothing m (m ())
-instance (HandlesRef eref e, HandlesRef vref v)
-         => Handles '[] ('RetThrows eref vref) m
-                    (m (Either e v))
-instance (HandlesRef ref v)
-         => Handles '[] ('RetSingle ref) m (m v)
-instance (HandlesRef ref v)
-         => Handles '[] ('RetStream ref) m (ConduitT v Void m () -> m ())
+instance handler ~ m () => Handles '[] 'RetNothing m handler
+instance (HandlesRef eref e, HandlesRef vref v, handler ~ m (Either e v))
+         => Handles '[] ('RetThrows eref vref) m handler
+instance (HandlesRef ref v, handler ~ m v)
+         => Handles '[] ('RetSingle ref) m handler
+instance (HandlesRef ref v, handler ~ (ConduitT v Void m () -> m ()))
+         => Handles '[] ('RetStream ref) m handler
