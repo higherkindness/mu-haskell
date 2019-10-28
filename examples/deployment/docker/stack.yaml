@@ -1,10 +1,11 @@
-resolver: lts-14.8
+resolver: lts-14.12
 
 packages:
 - .
 
 extra-deps:
 - proto3-wire-1.0.0
+- http2-client-0.9.0.0
 - git: https://github.com/serras/avro.git
   commit: 7ba39ebb6b74c64fffb3d3a972b4000185579f19
 - git: https://github.com/higherkindness/http2-grpc-haskell.git
@@ -15,7 +16,7 @@ extra-deps:
     - warp-grpc
     - http2-client-grpc
 - git: https://github.com/higherkindness/mu-haskell.git
-  commit: f399032c9ff63dae5d6553306b227b537a3659ae
+  commit: f61557f418b20ab0f4dae56b2b612d52a0efcca0
   subdirs:
     - schema
     - rpc
