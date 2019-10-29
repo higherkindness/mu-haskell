@@ -3,7 +3,7 @@
              MultiParamTypeClasses, FlexibleInstances,
              TypeApplications,
              DeriveGeneric, DerivingVia, DeriveAnyClass,
-             TemplateHaskell #-}
+             TemplateHaskell, QuasiQuotes #-}
 module Mu.Schema.Examples where
 
 import qualified Data.Aeson as J
@@ -18,6 +18,7 @@ import Mu.Schema.Adapter.Json ()
 
 -- import Mu.Schema.FromTypes
 import Mu.Schema.TH
+import Mu.Schema.Quasi
 
 import qualified Proto3.Wire.Encode as PBEnc
 import qualified Proto3.Wire.Decode as PBDec
@@ -104,3 +105,16 @@ type ExampleSchema2
 
 type ExampleRegistry
   = '[ 2 ':-> ExampleSchema2, 1 ':-> ExampleSchema]
+
+type ExampleSchema3 = [protobuf|
+enum gender {
+  male      = 1;
+  female    = 2;
+  nonbinary = 3;
+}
+message person {
+  repeated string names = 1;
+  int age = 2;
+  gender gender = 3;
+}
+|]

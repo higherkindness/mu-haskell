@@ -25,3 +25,5 @@ extra-deps:
     - http2-grpc-proto3-wire
     - warp-grpc
     - http2-client-grpc
+- git: https://github.com/higherkindness/protobuf-parser-haskell
+  commit: 547fe3c9e0f076b381d94837c676c9b5a2b6753e

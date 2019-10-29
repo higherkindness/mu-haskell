@@ -30,14 +30,16 @@ library
                        Mu.Schema.Adapter.Avro,
                        Mu.Schema.Adapter.ProtoBuf,
                        Mu.Schema.Adapter.Json,
-                       Mu.Schema.TH
+                       Mu.Schema.TH,
+                       Mu.Schema.Quasi
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.12 && <5, sop-core,
                        containers, unordered-containers, vector,
                        bytestring, text,
                        avro, tagged, proto3-wire, aeson,
-                       template-haskell >= 2.12, th-abstraction
+                       template-haskell >= 2.12, th-abstraction,
+                       protobuf-parser
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall -fprint-potential-instances
