@@ -2,28 +2,17 @@
              MultiParamTypeClasses, TypeFamilies,
              FlexibleInstances, FlexibleContexts,
              DeriveGeneric, DeriveAnyClass,
-             DuplicateRecordFields, OverloadedLabels #-}
+             DuplicateRecordFields, OverloadedLabels,
+             TemplateHaskell #-}
 module Definition where
 
 import GHC.Generics
 import Data.Text as T
 
 import Mu.Schema
-import Mu.Schema.Adapter.ProtoBuf
-import Mu.Rpc
+import Mu.Rpc.Quasi
 
--- Schema for data serialization
-type HealthCheckSchema
-  = '[ 'DRecord "HealthCheck" '[]
-                '[ 'FieldDef "nameService" '[ ProtoBufId 1] ('TPrimitive T.Text) ]
-     , 'DRecord "ServerStatus" '[]
-                '[ 'FieldDef "status" '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
-     , 'DRecord "HealthStatus" '[]
-                '[ 'FieldDef "hc" '[ ProtoBufId 1 ] ('TSchematic "HealthCheck")
-                 , 'FieldDef "status" '[ ProtoBufId 2 ] ('TSchematic "ServerStatus") ]
-     , 'DRecord "AllStatus" '[]
-                '[ 'FieldDef "all" '[ ProtoBufId 1 ] ('TList ('TSchematic "HealthStatus")) ]
-     ]
+$(grpc "HealthCheckSchema" id "healthcheck.proto")
 
 newtype HealthCheckMsg
   = HealthCheckMsg { nameService :: T.Text }
@@ -38,6 +27,20 @@ newtype AllStatusMsg
   = AllStatusMsg { all :: [HealthStatusMsg] }
   deriving (Eq, Show, Ord, Generic, HasSchema HealthCheckSchema "AllStatus")
 
+{-
+-- Schema for data serialization
+type HealthCheckSchema
+  = '[ 'DRecord "HealthCheck" '[]
+                '[ 'FieldDef "nameService" '[ ProtoBufId 1] ('TPrimitive T.Text) ]
+     , 'DRecord "ServerStatus" '[]
+                '[ 'FieldDef "status" '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
+     , 'DRecord "HealthStatus" '[]
+                '[ 'FieldDef "hc" '[ ProtoBufId 1 ] ('TSchematic "HealthCheck")
+                 , 'FieldDef "status" '[ ProtoBufId 2 ] ('TSchematic "ServerStatus") ]
+     , 'DRecord "AllStatus" '[]
+                '[ 'FieldDef "all" '[ ProtoBufId 1 ] ('TList ('TSchematic "HealthStatus")) ]
+     ]
+
 -- Service definition
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/service.scala
 type HS = 'FromSchema HealthCheckSchema
@@ -50,3 +53,4 @@ type HealthCheckService
        , 'Method "cleanAll" '[] '[ ] 'RetNothing
        , 'Method "watch" '[] '[ 'ArgSingle (HS "HealthCheck") ] ('RetStream (HS "ServerStatus"))
        ]
+-}

@@ -1,5 +1,9 @@
 {-# language TemplateHaskell, DataKinds #-}
-module Mu.Schema.Quasi where
+module Mu.Schema.Quasi (
+  protobuf
+, protobufFile
+, schemaFromProtoBuf
+) where
 
 import qualified Data.ByteString as B
 import Data.Int
@@ -26,9 +30,13 @@ schemaFromProtoBufString ts
   = case parseProtoBuf (T.pack ts) of
       Left e
         -> fail ("could not parse protocol buffers spec: " ++ show e)
-      Right P.ProtoBuf { P.types = tys }
-        -> let decls = flattenDecls tys
-            in typesToList <$> mapM pbTypeDeclToType decls
+      Right p
+        -> schemaFromProtoBuf p
+
+schemaFromProtoBuf :: P.ProtoBuf -> Q Type
+schemaFromProtoBuf P.ProtoBuf { P.types = tys }
+  = let decls = flattenDecls tys
+     in typesToList <$> mapM pbTypeDeclToType decls
 
 flattenDecls :: [P.TypeDeclaration] -> [P.TypeDeclaration]
 flattenDecls = concatMap flattenDecl
@@ -80,7 +88,6 @@ pbTypeDeclToType (P.DMessage name _ _ fields _)
 typesToList :: [Type] -> Type
 typesToList
   = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
-
 textToStrLit :: T.Text -> Q Type
 textToStrLit s
   = return $ LitT $ StrTyLit $ T.unpack s

@@ -2,7 +2,7 @@
              MultiParamTypeClasses, TypeFamilies,
              FlexibleInstances, FlexibleContexts,
              DeriveGeneric, DeriveAnyClass,
-             DuplicateRecordFields #-}
+             DuplicateRecordFields, TemplateHaskell #-}
 module Definition where
 
 import GHC.Generics
@@ -13,6 +13,39 @@ import Data.Text as T
 import Mu.Schema
 import Mu.Schema.Adapter.ProtoBuf
 import Mu.Rpc
+import Mu.Rpc.Quasi
+
+$(grpc "RouteGuideSchema" id "routeguide.proto")
+
+data Point
+  = Point { latitude, longitude :: Int32 }
+  deriving (Eq, Show, Ord, Generic, Hashable, HasSchema RouteGuideSchema "Point")
+data Rectangle
+  = Rectangle { lo, hi :: Point }
+  deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "Rectangle")
+data Feature
+  = Feature { name :: T.Text, location :: Point }
+  deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "Feature")
+-- Not used in the service
+-- newtype FeatureDb
+--   = FeatureDb { feature :: [Feature] }
+--   deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "FeatureDatabase")
+data RouteNote
+  = RouteNote { message :: T.Text, location :: Point }
+  deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "RouteNote")
+data RouteSummary
+  = RouteSummary { point_count, feature_count, distance, elapsed_time :: Int32 }
+  deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "RouteSummary")
+
+{-
+type RG = 'FromSchema RouteGuideSchema
+type RouteGuideService
+  = 'Service "RouteGuideService" '[Package "routeguide"]
+      '[ 'Method "GetFeature"   '[] '[ 'ArgSingle (RG "Point") ] ('RetSingle (RG "Feature"))
+       , 'Method "ListFeatures" '[] '[ 'ArgSingle (RG "Rectangle") ] ('RetStream (RG "Feature"))
+       , 'Method "RecordRoute"  '[] '[ 'ArgStream (RG "Point") ] ('RetSingle (RG "RouteSummary"))
+       , 'Method "RouteChat"    '[] '[ 'ArgStream (RG "RouteNote") ] ('RetStream (RG "RouteNote"))
+       ]
 
 type RouteGuideSchema
   = '[ 'DRecord "Point" '[]
@@ -35,32 +68,4 @@ type RouteGuideSchema
                  , 'FieldDef "distance"      '[ProtoBufId 3] ('TPrimitive Int32)
                  , 'FieldDef "elapsed_time"  '[ProtoBufId 4] ('TPrimitive Int32) ]
      ]
-
-data Point
-  = Point { latitude, longitude :: Int32 }
-  deriving (Eq, Show, Ord, Generic, Hashable, HasSchema RouteGuideSchema "Point")
-data Rectangle
-  = Rectangle { lo, hi :: Point }
-  deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "Rectangle")
-data Feature
-  = Feature { name :: T.Text, location :: Point }
-  deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "Feature")
--- Not used in the service
--- newtype FeatureDb
---   = FeatureDb { feature :: [Feature] }
---   deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "FeatureDatabase")
-data RouteNote
-  = RouteNote { message :: T.Text, location :: Point }
-  deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "RouteNote")
-data RouteSummary
-  = RouteSummary { point_count, feature_count, distance, elapsed_time :: Int32 }
-  deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "RouteSummary")
-
-type RG = 'FromSchema RouteGuideSchema
-type RouteGuideService
-  = 'Service "RouteGuideService" '[Package "routeguide"]
-      '[ 'Method "GetFeature"   '[] '[ 'ArgSingle (RG "Point") ] ('RetSingle (RG "Feature"))
-       , 'Method "ListFeatures" '[] '[ 'ArgSingle (RG "Rectangle") ] ('RetStream (RG "Feature"))
-       , 'Method "RecordRoute"  '[] '[ 'ArgStream (RG "Point") ] ('RetSingle (RG "RouteSummary"))
-       , 'Method "RouteChat"    '[] '[ 'ArgStream (RG "RouteNote") ] ('RetStream (RG "RouteNote"))
-       ]
+-}
