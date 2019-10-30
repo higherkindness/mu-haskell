@@ -1,8 +1,10 @@
 {-# language DataKinds #-}
 -- | Schemas for Mu microservices
 module Mu.Schema (
+  -- * Quasi-quoters for schemas
+  protobuf, protobufFile
   -- * Schema definition
-  Schema, Schema'
+, Schema, Schema'
 , Annotation, KnownName(..)
 , TypeDef, TypeDefB(..)
 , ChoiceDef(..)
@@ -22,3 +24,4 @@ module Mu.Schema (
 import Mu.Schema.Definition
 import Mu.Schema.Interpretation
 import Mu.Schema.Class
+import Mu.Schema.Quasi

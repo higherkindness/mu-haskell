@@ -4,8 +4,15 @@
              UndecidableInstances,
              TypeApplications, TypeOperators,
              ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fprint-explicit-foralls -fprint-explicit-kinds #-}
-module Mu.Server.GRpc where
+-- | Execute a Mu 'Server' using gRPC as transport layer
+module Mu.Server.GRpc (
+  -- * Run a 'Server' directly
+  runGRpcApp
+, runGRpcAppSettings, Settings
+, runGRpcAppTLS, TLSSettings
+  -- * Convert a 'Server' into a WAI application
+, gRpcApp
+) where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
@@ -32,6 +39,7 @@ import Mu.Schema
 
 import Mu.GRpc.Shared
 
+-- | Run a Mu 'Server' on the given port.
 runGRpcApp
   :: ( KnownName name, KnownName (FindPackageName anns)
      , GRpcMethodHandlers methods handlers )
@@ -39,6 +47,9 @@ runGRpcApp
   -> IO ()
 runGRpcApp port svr = run port (gRpcApp svr)
 
+-- | Run a Mu 'Server' using the given 'Settings'.
+--   
+--   Go to 'Network.Wai.Handler.Warp' to declare 'Settings'. 
 runGRpcAppSettings
   :: ( KnownName name, KnownName (FindPackageName anns)
      , GRpcMethodHandlers methods handlers )
@@ -46,6 +57,10 @@ runGRpcAppSettings
   -> IO ()
 runGRpcAppSettings st svr = runSettings st (gRpcApp svr)
 
+-- | Run a Mu 'Server' using the given 'TLSSettings' and 'Settings'.
+--
+--   Go to 'Network.Wai.Handler.WarpTLS' to declare 'TLSSettings'
+--   and to 'Network.Wai.Handler.Warp' to declare 'Settings'.
 runGRpcAppTLS
   :: ( KnownName name, KnownName (FindPackageName anns)
      , GRpcMethodHandlers methods handlers )
@@ -54,6 +69,11 @@ runGRpcAppTLS
   -> IO ()
 runGRpcAppTLS tls st svr = runTLS tls st (gRpcApp svr)
 
+-- | Turn a Mu 'Server' into a WAI 'Application'.
+--
+--   These 'Application's can be later combined using,
+--   for example, @wai-routes@, or you can add middleware
+--   from @wai-extra@, among others.
 gRpcApp
   :: (KnownName name, KnownName (FindPackageName anns), GRpcMethodHandlers methods handlers)
   => ServerIO ('Service name anns methods) handlers

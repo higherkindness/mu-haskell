@@ -1,6 +1,8 @@
 {-# language TemplateHaskell, TypeOperators, DataKinds #-}
-module Mu.Schema.TH (
+-- | Generate a set of Haskell types from a 'Schema'.
+module Mu.Schema.Conversion.SchemaToTypes (
   generateTypesFromSchema
+, Namer
 ) where
 
 import Control.Applicative
@@ -14,8 +16,17 @@ import Language.Haskell.TH.Datatype
 import Mu.Schema.Definition
 import Mu.Schema.Class
 
+-- | Generate the name from each new Haskell type
+--   from the name given in the schema.
 type Namer = String -> String
 
+-- | Generates types to represent each of the types
+--   in a given schema. You should call it as:
+--   > $(generateTypesFromSchema f 'Schema)
+--   where @f@ is a function @String -> String@
+--   which obtains the Haskell name for a type
+--   given the name in the schema. The second argument
+--   is simply the name of the schema.
 generateTypesFromSchema :: Namer -> Name -> Q [Dec]
 generateTypesFromSchema namer schemaTyName
   = do let schemaTy = ConT schemaTyName

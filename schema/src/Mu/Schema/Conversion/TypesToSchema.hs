@@ -1,10 +1,17 @@
 {-# language PolyKinds, DataKinds, TypeFamilies,
              TypeOperators,
              UndecidableInstances #-}
-module Mu.Schema.FromTypes (
-  FromTypes, FromType(..)
+-- | Obtains a 'Schema' from a set of Haskell types.
+-- 
+--   Unfortunately, GHC does not allow type families
+--   to appear in instances, so you cannot use the
+--   resulting type directly. Instead, evaluate it
+--   in an interpreter session using @:kind!@ and
+--   copy the result to the file.
+module Mu.Schema.Conversion.TypesToSchema (
+  SchemaFromTypes
 , AsRecord, AsEnum
-, SchemaFromTypes
+, FromTypes, FromType(..)
 ) where
 
 import Data.Kind
@@ -20,9 +27,12 @@ data FromType tn fn
   = AsRecord' Type tn (Mappings Symbol fn)
   | AsEnum'   Type tn (Mappings Symbol fn)
 
+-- | Declares that the type should become a record.
 type AsRecord t tn = 'AsRecord' t tn '[]
+-- | Declares that the type should become an enumeration.
 type AsEnum   t tn = 'AsEnum'   t tn '[]
 
+-- | Convert a set of types into a 'Schema'.
 type family SchemaFromTypes (f :: [FromType tn fn]) :: Schema tn fn where
   SchemaFromTypes f = SchemaFromTypes' f f
 

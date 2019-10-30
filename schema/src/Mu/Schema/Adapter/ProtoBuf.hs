@@ -34,8 +34,10 @@ import Proto3.Wire
 import qualified Proto3.Wire.Encode as PBEnc
 import qualified Proto3.Wire.Decode as PBDec
 
-import Mu.Schema
-import Mu.Schema.Registry as R
+import Mu.Schema.Definition
+import Mu.Schema.Interpretation
+import Mu.Schema.Class
+import qualified Mu.Schema.Registry as R
 
 -- ANNOTATION FOR CONVERSION
 

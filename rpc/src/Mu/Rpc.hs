@@ -3,6 +3,7 @@
              TypeFamilies, ConstraintKinds,
              TypeOperators,
              UndecidableInstances #-}
+-- | Protocol-independent declaration of services
 module Mu.Rpc (
   Service', Service(..)
 , Annotation, Package, FindPackageName

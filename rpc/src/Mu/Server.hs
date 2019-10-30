@@ -7,7 +7,27 @@
              TypeOperators,
              ConstraintKinds,
              RankNTypes #-}
-module Mu.Server where
+-- | Protocol-independent declaration of servers.
+--
+--   A server (represented by 'ServerIO' and in general
+--   by 'ServerT') is a sequence of handlers (represented
+--   by 'HandlersIO' and 'HandlersT'), one for each
+--   operation in the corresponding Mu service declaration.
+--
+--   In general, you should declare a server as:
+--
+--   > server :: ServerIO MyService _
+--   > server = Server (h1 :<|>: h2 :<|>: ... :<|>: H0)
+--
+--   where each of @h1@, @h2@, ... handles each method in
+--   @MyService@ /in the order they were declared/.
+--   The @_@ in the type allows GHC to fill in the boring
+--   and long type you would need to write there otherwise.
+module Mu.Server (
+  -- * Servers and handlers
+  ServerIO, ServerT(..)
+, HandlersIO, HandlersT(..)
+) where
 
 import Data.Conduit
 import Data.Kind

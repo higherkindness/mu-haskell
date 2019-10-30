@@ -4,8 +4,18 @@
              UndecidableInstances, TypeApplications,
              ScopedTypeVariables, AllowAmbiguousTypes,
              TemplateHaskell #-}
+-- | Client for gRPC services defined using Mu 'Service'
+--   using plain Haskell records of functions
 module Mu.Client.GRpc.Record (
-  buildService
+  -- * Initialization of the gRPC client
+  GrpcClient
+, GrpcClientConfig
+, grpcClientConfigSimple
+, setupGrpcClient'
+  -- * Fill and generate the Haskell record of functions
+, buildService
+, CompressMode(..)
+, GRpcReply(..)
 , generateRecordFromService
 ) where
 
@@ -19,9 +29,14 @@ import GHC.TypeLits
 import Language.Haskell.TH hiding (ppr)
 import Language.Haskell.TH.Datatype
 
-import Mu.Client.GRpc
+import Network.GRPC.Client (CompressMode(..))
+import Network.GRPC.Client.Helpers
+
+import Mu.Client.GRpc.Internal
 import Mu.Rpc
 
+-- | Fills in a Haskell record of functions with the corresponding
+--   calls to gRPC services from a Mu 'Service' declaration.
 buildService :: forall (s :: Service') (p :: Symbol) t
                 (nm :: Symbol) (anns :: [Annotation]) (ms :: [Method Symbol]).
                 (s ~ 'Service nm anns ms, Generic t, BuildService s p ms (Rep t))
@@ -54,6 +69,9 @@ instance (m ~ AppendSymbol p x, GRpcServiceMethodCall s (s :-->: x) h)
 -- TEMPLATE HASKELL
 -- ================
 
+-- | Generate the plain Haskell record corresponding to
+--   a Mu 'Service' definition, and a concrete implementation
+--   of 'buildService' for that record.
 generateRecordFromService :: String -> String -> Namer -> Name -> Q [Dec]
 generateRecordFromService newRecordName fieldsPrefix tNamer serviceTyName
   = do let serviceTy = ConT serviceTyName

@@ -1,7 +1,9 @@
 {-# language TemplateHaskell, DataKinds #-}
 module Mu.Schema.Quasi (
+  -- * Quasi-quoters for @.proto@ files
   protobuf
 , protobufFile
+  -- * Only for internal use
 , schemaFromProtoBuf
 ) where
 
@@ -16,12 +18,16 @@ import Network.ProtoBuf.Parser
 import Mu.Schema.Definition
 import Mu.Schema.Adapter.ProtoBuf
 
+-- | Imports a protocol buffer definition written
+--   in-line as a 'Schema'.
 protobuf :: QuasiQuoter
 protobuf = QuasiQuoter (const $ fail "cannot use as expression")
                        (const $ fail "cannot use as pattern")
                        schemaFromProtoBufString
                        (const $ fail "cannot use as declaration")
 
+-- | Imports a protocol buffer definition from a file
+--   as a 'Schema'.
 protobufFile :: QuasiQuoter
 protobufFile = quoteFile protobuf
 

@@ -1,4 +1,5 @@
 {-# language TemplateHaskell, DataKinds, OverloadedStrings #-}
+-- | Read a @.proto@ file as a 'Service'
 module Mu.Rpc.Quasi (
   grpc
 ) where
@@ -12,6 +13,12 @@ import Network.ProtoBuf.Parser
 import Mu.Schema.Quasi
 import Mu.Rpc
 
+-- | Reads a @.proto@ file and generates:
+--   * A 'Schema' with all the message types, using the
+--     name given as first argument.
+--   * A 'Service' declaration for each service in the file,
+--     where the name is obtained by applying the function
+--     given as second argument to the name in the file.
 grpc :: String -> (String -> String) -> FilePath -> Q [Dec]
 grpc schemaName servicePrefix fp
   = do r <- liftIO $ parseProtoBufFile fp

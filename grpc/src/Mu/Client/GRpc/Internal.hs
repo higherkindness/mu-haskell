@@ -5,19 +5,8 @@
              TypeOperators, DeriveFunctor,
              AllowAmbiguousTypes,
              TupleSections, UndecidableInstances #-}
-module Mu.Client.GRpc (
-  GrpcClient
-, GrpcClientConfig
-, grpcClientConfigSimple
-, setupGrpcClient'
-, GRpcMethodCall
-, (:-->:)
-, gRpcCall
-, GRpcServiceMethodCall
-, gRpcServiceMethodCall
-, CompressMode(..)
-, GRpcReply(..)
-) where
+-- | Client for gRPC services defined using Mu 'Service'
+module Mu.Client.GRpc.Internal where
 
 import Control.Monad.IO.Class
 import Control.Concurrent.Async
@@ -43,14 +32,6 @@ import Mu.GRpc.Shared
 
 setupGrpcClient' :: GrpcClientConfig -> IO (Either ClientError GrpcClient)
 setupGrpcClient' = runExceptT . setupGrpcClient
-
--- | Call a method from a `mu-rpc` definition.
---   This method is thought to be used with `TypeApplications`:
---   > gRpcCall @"packageName" @ServiceDeclaration @"method" 
-gRpcCall :: forall s methodName h.
-            (GRpcServiceMethodCall s (s :-->: methodName) h)
-         => GrpcClient -> h
-gRpcCall = gRpcServiceMethodCall (Proxy @s) (Proxy @(s :-->: methodName))
 
 class GRpcServiceMethodCall (s :: Service snm mnm) (m :: Method mnm) h where
   gRpcServiceMethodCall :: Proxy s -> Proxy m -> GrpcClient -> h

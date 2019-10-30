@@ -24,14 +24,14 @@ library
                        Mu.Schema.Interpretation.Schemaless,
                        Mu.Schema.Interpretation.Anonymous,
                        Mu.Schema.Class,
-                       Mu.Schema.FromTypes,
-                       Mu.Schema.Examples,
                        Mu.Schema.Registry,
                        Mu.Schema.Adapter.Avro,
                        Mu.Schema.Adapter.ProtoBuf,
                        Mu.Schema.Adapter.Json,
-                       Mu.Schema.TH,
-                       Mu.Schema.Quasi
+                       Mu.Schema.Quasi,
+                       Mu.Schema.Conversion.TypesToSchema,
+                       Mu.Schema.Conversion.SchemaToTypes,
+                       Mu.Schema.Examples
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.12 && <5, sop-core,

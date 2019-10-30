@@ -7,7 +7,7 @@ import Data.Conduit.List (consume)
 import qualified Data.Text as T
 import Network.HTTP2.Client (HostName, PortNumber)
 
-import Mu.Client.GRpc
+import Mu.Client.GRpc.TyApps
 import Mu.Rpc.Examples
 
 sayHello' :: HostName -> PortNumber -> T.Text -> IO (GRpcReply T.Text)

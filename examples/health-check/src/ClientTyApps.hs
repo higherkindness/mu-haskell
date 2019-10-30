@@ -9,7 +9,7 @@ import qualified Data.Conduit.Combinators as C
 import qualified Data.Text as T
 import System.Environment
 
-import Mu.Client.GRpc
+import Mu.Client.GRpc.TyApps
 
 import Definition
 

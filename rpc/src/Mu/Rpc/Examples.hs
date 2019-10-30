@@ -1,12 +1,8 @@
 {-# language PolyKinds, DataKinds, GADTs,
              MultiParamTypeClasses,
-             TypeSynonymInstances,
-             FlexibleInstances,
-             OverloadedStrings,
-             DeriveGeneric, DeriveAnyClass,
-             TypeApplications, TypeOperators,
-             PartialTypeSignatures,
-             TypeFamilies #-}
+             FlexibleInstances, OverloadedStrings,
+             DeriveGeneric, DeriveAnyClass, TypeOperators,
+             PartialTypeSignatures, TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Rpc.Examples where
 

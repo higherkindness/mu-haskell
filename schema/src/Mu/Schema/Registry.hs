@@ -7,14 +7,16 @@ module Mu.Schema.Registry (
   -- * Registry of schemas
   Registry, fromRegistry
   -- * Terms without an associated schema
-, Term(..), Field(..), FieldValue(..)
+, SLess.Term(..), SLess.Field(..), SLess.FieldValue(..)
 ) where
 
+import Data.Proxy
 import Data.Kind
 import Control.Applicative
 import GHC.TypeLits
 
-import Mu.Schema
+import Mu.Schema.Definition
+import Mu.Schema.Class
 import qualified Mu.Schema.Interpretation.Schemaless as SLess
 
 type Registry = Mappings Nat Schema'

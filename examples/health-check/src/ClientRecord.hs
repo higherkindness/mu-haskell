@@ -10,7 +10,6 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import System.Environment
 
-import Mu.Client.GRpc
 import Mu.Client.GRpc.Record
 
 import Definition
