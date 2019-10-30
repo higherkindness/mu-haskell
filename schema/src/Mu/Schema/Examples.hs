@@ -4,6 +4,7 @@
              TypeApplications,
              DeriveGeneric, DerivingVia, DeriveAnyClass,
              TemplateHaskell, QuasiQuotes #-}
+-- | Look at my source code!
 module Mu.Schema.Examples where
 
 import qualified Data.Aeson as J
