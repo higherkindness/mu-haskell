@@ -6,10 +6,10 @@ packages:
 extra-deps:
 - proto3-wire-1.0.0
 - http2-client-0.9.0.0
-- git: https://github.com/serras/avro.git
-  commit: 7ba39ebb6b74c64fffb3d3a972b4000185579f19
-- git: https://github.com/higherkindness/http2-grpc-haskell.git
-  commit: 2be0f0675d52db8e7142aa80176a35eed8b4ca14
+- avro-0.4.5.4
+- language-protobuf-1.0
+- git: https://github.com/haskell-grpc-native/http2-grpc-haskell.git
+  commit: 15f73333b0146847095aeee6fe26bc8fa8eaf47f
   subdirs:
     - http2-grpc-types
     - http2-grpc-proto3-wire

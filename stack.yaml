@@ -17,6 +17,7 @@ extra-deps:
 - stm-containers-1.1.0.4
 - AC-Angle-1.0
 - avro-0.4.5.4
+- language-protobuf-1.0
 - git: https://github.com/haskell-grpc-native/http2-grpc-haskell.git
   commit: 15f73333b0146847095aeee6fe26bc8fa8eaf47f
   subdirs:
@@ -24,5 +25,3 @@ extra-deps:
     - http2-grpc-proto3-wire
     - warp-grpc
     - http2-client-grpc
-- git: https://github.com/higherkindness/protobuf-parser-haskell
-  commit: 547fe3c9e0f076b381d94837c676c9b5a2b6753e

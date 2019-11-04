@@ -12,8 +12,8 @@ import Data.Int
 import qualified Data.Text as T
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
-import qualified Network.ProtoBuf.Types as P
-import Network.ProtoBuf.Parser
+import qualified Language.ProtocolBuffers.Types as P
+import Language.ProtocolBuffers.Parser
 
 import Mu.Schema.Definition
 import Mu.Schema.Adapter.ProtoBuf

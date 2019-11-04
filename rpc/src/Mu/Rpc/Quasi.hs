@@ -7,8 +7,8 @@ module Mu.Rpc.Quasi (
 import Control.Monad.IO.Class
 import qualified Data.Text as T
 import Language.Haskell.TH
-import qualified Network.ProtoBuf.Types as P
-import Network.ProtoBuf.Parser
+import qualified Language.ProtocolBuffers.Types as P
+import Language.ProtocolBuffers.Parser
 
 import Mu.Schema.Quasi
 import Mu.Rpc
