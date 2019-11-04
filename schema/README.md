@@ -44,39 +44,42 @@ As you can see, a *schema* is just a list of schema types. Each of these types h
 
 Note that GHC requires all of `DEnum`, `DRecord`, `FieldDef`, and so forth to be prefixed by a quote sign `'`. This declares that we are working with [promoted types](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#datatype-promotion) (you do not have to understand what a promoted type is, but you need to remember to use the quote sign).
 
-### Creating an initial schema
+### Defining a schema using Protocol Buffers
 
-Writing the schema can be quite tiring, especially if most of the field names coincide between schema and Haskell type. As part of the library we offer you a facility to generate the initial schema using the GHC interpeter.
+As discussed in the introduction, `mu-schema` has been developed with some common schema formats in mind. Instead of writing the type-level schemas by hand, you can also import your [Protocol Buffers](https://developers.google.com/protocol-buffers/) schemas.
 
-In order to use it, you need to create a Stack project with `mu-schema` as dependency. You then have to enter into an interpreter session and load the `Mu.Schema.FromTypes` module. Finally, you can ask for the schema of a list of types using `kind!`:
+The most common case is that your schema lives in an external file, maybe shared with other components of your system. To declare that we want the file to be pre-processed before compilation, we use a GHC feature called a *quasi-quote*. Be careful with the ending of the quasi-quote, which is a weird combination `|]`.
 
 ```haskell
-> import Data.Text as T
-> import Mu.Schema.FromTypes
-> :set -XDataKinds -XKindSignatures
-> :kind! (SchemaFromTypes '[ AsRecord Person "person", AsRecord Address "address", AsEnum Gender "gender" ] :: Schema')
-(SchemaFromTypes '[ AsRecord Person "person", AsRecord Address "address", AsEnum Gender "gender" ] :: Schema') :: [TypeDef Symbol Symbol]
-= '[ 'DRecord
-       "person"
-       '[]
-       '[ 'FieldDef "firstName" '[] ('TPrimitive Text),
-          'FieldDef "lastName" '[] ('TPrimitive Text),
-          'FieldDef "age" '[] ('TOption ('TPrimitive Int)),
-          'FieldDef "gender" '[] ('TOption ('TSchematic "gender")),
-          'FieldDef "address" '[] ('TSchematic "address")],
-     'DRecord
-       "address"
-       '[]
-       '[ 'FieldDef "postcode" '[] ('TPrimitive Text),
-          'FieldDef "country" '[] ('TPrimitive Text)],
-     'DEnum
-       "gender"
-       '[]
-       '[ 'ChoiceDef "Male" '[], 'ChoiceDef "Female" '[],
-          'ChoiceDef "NonBinary" '[]]
+{-# language QuasiQuotes #-}
+
+type ExampleSchema = [protobufFile|path/to/file.proto|]
 ```
 
-The result of the last operation can be copied as-is in your source file, provided that you import all the required modules.
+One possibility is to write them in-line. In that case you replace `protobufFile` with `protobuf` and write the schema directly between the `|` symbols.
+
+```haskell
+{-# language QuasiQuotes #-}
+
+type ExampleSchema = [protobuf|
+enum gender {
+  male   = 1;
+  female = 2;
+  nb     = 3;
+}
+message address {
+  string postcode = 1;
+  string country  = 2;
+}
+message person {
+  string  firstName = 1;
+  string  lastName  = 2;
+  int     age       = 3;
+  gender  gender    = 4;
+  address address   = 5;
+}
+|]
+```
 
 ## Mapping Haskell types
 
@@ -103,10 +106,12 @@ Once again, you need to enable some extensions in the compiler (but do not worry
 
 ## Customizing the mapping
 
-Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our `gender` enumeration above the values are `Male`, `Female`, and `NonBinary`; but in the schema type you use `male`, `female`, and `nb`. By using a stand-along `HasSchema` instance you can declare this custom mapping:
+Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our schema above we use `male`, `female`, and `nb`, but in a Haskell enumeration the name of each constructor must begin with a capital letter. By using a stand-along `HasSchema` instance you can declare a custom mapping from Haskell fields or constructors to schema fields or enum choices, respectively:
 
 ```haskell
 {-# language TypeFamilies #-}
+
+data Gender = Male | Female | NonBinary
 
 instance HasSchema ExampleSchema "gender" Gender where
   type FieldMapping ExampleSchema "gender" Gender
@@ -130,6 +135,8 @@ type ExampleSchema
      , ... ]
 ```
 
+If you use the `protobuf` or `protobufFile` quasi-quoters to import your Protocol Buffers schemas, this is done automatically for you.
+
 ## Registry
 
 Schemas evolve over time. It is a good practice to keep an inventory of all the schemas you can work with, in the form of a *registry*. Using `mu-schema` you can declare one such registry by giving an instance of the `Registry` type family:
@@ -142,7 +149,3 @@ type instance Registry "example"
 ```
 
 The argument to registry is a tag which identifies that set of schemas. Here we use a type-level string, but you can use any other kind. We then indicate to which type-level schema each version corresponds to. Once we have done that you can use functions like `fromRegistry` to try to parse a term into a Haskell type by trying each of the schemas.
-
-## In the future
-
-Unfortunately, in the current version you have to write all these mappings by hand. In the future, we intend to provide a quasiquoter which reads an Avro or Protocol Buffers schema definition and writes the schema type for you.

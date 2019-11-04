@@ -4,7 +4,7 @@ There are several formats in the wild used to declare service APIs, including [A
 
 In addition, this package provides a generic notion of *server* of a service. One such server defines one behavior for each method in the service, but does not bother with (de)serialization mechanisms. This generic server can then be used by other packages, such as `mu-grpc`, to provide a concrete implementation using a specific wire format.
 
-## Defining the schema and the service
+## Importing the schema and the service
 
 Let us begin with an example taken from the [gRPC Quickstart Guide](https://grpc.io/docs/quickstart/):
 
@@ -19,7 +19,25 @@ message HelloRequest { string name = 1; }
 message HelloReply { string message = 1; }
 ```
 
-The first step is to declare the schema for the message types. We do so using our sibling library `mu-schema`.
+As with our sibling `mu-schema` library, we use type-level techniques to represent the messages and services. Since the mapping from such a Protocol Buffers file into the require types is quite direct, you can just import them using one line (in addition to enabling the `TemplateHaskell` extension):
+
+```haskell
+{-# language TemplateHaskell #-}
+
+$(grpc "QuickstartSchema" (const "QuickstartService") "quickstart.proto")
+```
+
+The `grpc` function takes three arguments:
+
+* The first one defines the name of the schema type which is going to be generated, and which includes the declaration of all the messages in the file.
+* The second one declares how to map the name of *each* service in the file (since more than one may appear) to the name of a Haskell type. In this case, we declare a constant name "QuickstartService". But we could also use `(++ "Service")`, which would then give `GreeterService` as name for the only service in the file.
+* The third argument is the route to the file *with respect to the project root*.
+
+This is everything you need to start using gRPC services and clients in Haskell!
+
+### Looking at the resulting code
+
+In order to use the library proficiently, we should look a bit at the code generated in the previous code. A type-level description of the messages is put into the type `QuickstartSchema`. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using `mu-schema` facilities, this amounts to declaring a bunch of data types and including `deriving (Generic, HasSchema Schema "type")` at the end of each of them.
 
 ```haskell
 {-# language PolyKinds, DataKinds #-}
@@ -30,6 +48,7 @@ import qualified Data.Text as T
 import GHC.Generics
 import Mu.Schema
 
+-- GENERATED
 type QuickstartSchema
   = '[ 'DRecord "HelloRequest"  '[]
                 '[ 'FieldDef "name"    '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
@@ -37,6 +56,7 @@ type QuickstartSchema
                 '[ 'FieldDef "message" '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
      ]
 
+-- TO BE WRITTEN
 newtype HelloRequest = HelloRequest { name :: T.Text }
   deriving (Generic, HasSchema QuickstartSchema "HelloRequest")
 newtype HelloResponse = HelloResponse { message :: T.Text }
@@ -48,7 +68,8 @@ The service declaration looks very similar to an schema declaration, but instead
 ```haskell
 import Mu.Rpc
 
-type QuickStartService
+-- GENERATED
+type QuickstartService
   = 'Service "Greeter"
       '[ 'Method "SayHello"
                  '[ 'ArgSingle ('FromSchema QuickstartSchema "HelloRequest") ]
@@ -58,7 +79,7 @@ type QuickStartService
 In order to support both [Avro IDL](https://avro.apache.org/docs/current/idl.html) and [gRPC](https://grpc.io/), the declaration of the method arguments and returns in a bit fancier that you might expect:
 
 * Each *argument* declares the schema type used for serialization. Furthermore, the argument can be declared as `ArgSingle` (only one value is provided by the client) or `ArgStream` (a stream of values is provided).
-* The *return types* gives the same two choices under the names `RetSingle` or `RetStream`, and additionally supports the declaration of methods which may raise exceptions using `RetThrows`.
+* The *return types* gives the same two choices under the names `RetSingle` or `RetStream`, and additionally supports the declaration of methods which may raise exceptions using `RetThrows`, or methods which do not retun any useful information using `RetNothing`.
 
 Note that depending on the concrete implementation you use to run the server, one or more of these choices may not be available. For example, gRPC only supports one argument and return value, either single or streaming, but not exceptions.
 
@@ -76,7 +97,7 @@ Since you can declare more than once method in a service, you need to join then 
 ```haskell
 {-# language PartialTypeSignatures #-}
 
-quickstartServer :: ServerIO QuickStartService _
+quickstartServer :: ServerIO QuickstartService _
 quickstartServer = Server (sayHello :<|>: H0)
 ```
 
@@ -90,10 +111,10 @@ service Greeter {
 }
 ```
 
-Adding this method to the service definition should be easy, we just need to use `ArgStream` and `RetStream` to declare that behavior:
+Adding this method to the service definition should be easy, we just need to use `ArgStream` and `RetStream` to declare that behavior (of course, this is done automatically if you import the service from a file):
 
 ```haskell
-type QuickStartService
+type QuickstartService
   = 'Service "Greeter"
       '[ 'Method "SayHello" ...
        , 'Method "SayManyHellos"
@@ -140,7 +161,7 @@ type instance Registry "helloworld"
 Now you can use the name of the subject in the registry to accomodate for different schemas. In this case, apart from that name, we need to specify the *Haskell* type to use during (de)serialization, and the *version number* to use for serialization.
 
 ```haskell
-type QuickStartService
+type QuickstartService
   = 'Service "Greeter"
       '[ 'Method "SayHello"
                  '[ 'ArgSingle ('FromRegistry "helloworld" HelloRequest 2) ]
