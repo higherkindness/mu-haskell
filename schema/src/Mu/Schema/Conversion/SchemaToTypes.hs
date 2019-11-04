@@ -99,7 +99,7 @@ generateHasSchemaInstance schemaTy schemaName complete mapping
                           (ConT (mkName complete)))
 #if MIN_VERSION_template_haskell(2,15,0)
               [TySynInstD (TySynEqn []
-                                    (AppT (AppT (AppT (CoT ''FieldMapping)
+                                    (AppT (AppT (AppT (ConT ''FieldMapping)
                                                       schemaTy )
                                                       (LitT (StrTyLit schemaName)) )
                                                       (ConT (mkName complete)) )
