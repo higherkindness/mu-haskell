@@ -75,8 +75,8 @@ type family ChooseFieldType (all :: [FromType tn fn]) (t :: Type)
 
 type family ChooseFieldUnion (all :: [FromType tn fn]) (t :: [Type])
   :: [FieldType tn] where
-  ChooseFieldType all '[] = '[]
-  ChooseFieldType all (t ': ts) = ChooseFieldType all t ': ChooseFieldUnion all ts
+  ChooseFieldUnion all '[] = '[]
+  ChooseFieldUnion all (t ': ts) = ChooseFieldType all t ': ChooseFieldUnion all ts
 
 type family FindTypeName (all :: [FromType tn fn]) (t :: Type)
   :: Maybe tn where
