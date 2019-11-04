@@ -1,4 +1,5 @@
-resolver: lts-14.13
+resolver: nightly-2019-11-04
+allow-newer: true
 
 packages:
 - schema
@@ -10,12 +11,6 @@ packages:
 extra-deps:
 - proto3-wire-1.0.0
 - http2-client-0.9.0.0
-- primitive-0.7.0.0
-- primitive-extras-0.8
-- primitive-unlifted-0.1.2.0
-- stm-hamt-1.2.0.4
-- stm-containers-1.1.0.4
-- AC-Angle-1.0
 - avro-0.4.5.4
 - git: https://github.com/haskell-grpc-native/http2-grpc-haskell.git
   commit: 15f73333b0146847095aeee6fe26bc8fa8eaf47f

@@ -1,4 +1,4 @@
-stack.yaml.lock
+stack*.yaml.lock
 .*
 *~
 dist
