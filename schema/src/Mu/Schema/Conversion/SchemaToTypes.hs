@@ -1,4 +1,4 @@
-{-# language TemplateHaskell, TypeOperators, DataKinds #-}
+{-# language CPP, TemplateHaskell, TypeOperators, DataKinds #-}
 -- | Generate a set of Haskell types from a 'Schema'.
 module Mu.Schema.Conversion.SchemaToTypes (
   generateTypesFromSchema
@@ -97,9 +97,18 @@ generateHasSchemaInstance schemaTy schemaName complete mapping
               (AppT (AppT (AppT (ConT ''HasSchema) schemaTy)
                           (LitT (StrTyLit schemaName)))
                           (ConT (mkName complete)))
+#if MIN_VERSION_template_haskell(2,15,0)
+              [TySynInstD (TySynEqn []
+                                    (AppT (AppT (AppT (CoT ''FieldMapping)
+                                                      schemaTy )
+                                                      (LitT (StrTyLit schemaName)) )
+                                                      (ConT (mkName complete)) )
+                                    mapping) ]
+#else
               [TySynInstD ''FieldMapping
                           (TySynEqn [schemaTy, LitT (StrTyLit schemaName), ConT (mkName complete)]
                                      mapping) ]
+#endif
 
 fieldMapping :: String -> [FieldDefB Type String String] -> Type
 fieldMapping _complete [] = PromotedNilT
