@@ -6,6 +6,7 @@ packages:
 - grpc
 - examples/health-check
 - examples/route-guide
+- compendium-client
 
 extra-deps:
 - proto3-wire-1.0.0
