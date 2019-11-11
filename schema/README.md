@@ -2,7 +2,7 @@
 
 Using `mu-schema` you can describe a schema for your data using type-level techniques. You can then automatically generate:
 
-* conversion between you Haskell data types and the values as expected by the schema,
+* conversion between your Haskell data types and the values as expected by the schema,
 * generalization to [Avro](https://avro.apache.org/), [Protocol Buffers](https://developers.google.com/protocol-buffers/), and [JSON](https://www.json.org/).
 
 Since `mu-schema` makes heavy use of type-level techniques, you need to open up the Pandora's box by enabling (at least) the following extensions: `PolyKinds` and `DataKinds`.
@@ -38,7 +38,7 @@ As you can see, a *schema* is just a list of schema types. Each of these types h
 
 * An *enumeration* defines a set of values that the type can take,
 * A *record* contains a list of *fields*, each of them with a name and a *field type*. The allowed types for the fields are:
-  * `TPrimitive` for primitive types such as `Int` and `Bool`. Note that if you want to have a string yoiu should *not* use the `String` from `Prelude`, but rather `Text` from `Data.Text`.
+  * `TPrimitive` for primitive types such as `Int` and `Bool`. Note that if you want to have a string you should *not* use the `String` from `Prelude`, but rather `Text` from `Data.Text`.
   * `TSchematic` to reference another type *in the same schema* by name.
   * `TOption`, `TList`, `TMap`, and `TUnion` are combinators for the field types.
 
@@ -56,7 +56,7 @@ The most common case is that your schema lives in an external file, maybe shared
 type ExampleSchema = [protobufFile|path/to/file.proto|]
 ```
 
-One possibility is to write them in-line. In that case you replace `protobufFile` with `protobuf` and write the schema directly between the `|` symbols.
+Another possibility is to write them in-line. In that case you replace `protobufFile` with `protobuf` and write the schema directly between the `|` symbols.
 
 ```haskell
 {-# language QuasiQuotes #-}
