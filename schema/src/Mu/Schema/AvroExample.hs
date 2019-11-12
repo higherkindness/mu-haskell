@@ -1,6 +1,8 @@
-{-# language QuasiQuotes #-}
+{-# language DataKinds         #-}
+{-# language QuasiQuotes       #-}
+{-# OPTIONS_GHC -ddump-splices #-}
 
-module AvroExample where
+module Mu.Schema.AvroExample where
 
 import Mu.Schema.Quasi (avro, avroFile)
 
@@ -29,4 +31,4 @@ type Example = [avro|
 ]
 |]
 
-type ExampleFromFile = [avroFile|../../../test/avro/example.avsc|]
+type ExampleFromFile = [avroFile|schema/test/avro/example.avsc|]

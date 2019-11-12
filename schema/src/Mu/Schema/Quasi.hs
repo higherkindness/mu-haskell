@@ -13,9 +13,10 @@ module Mu.Schema.Quasi (
   , schemaFromProtoBuf
   ) where
 
-import           Data.Aeson                      (decode, encode)
+import           Data.Aeson                      (decode)
 import qualified Data.Avro.Schema                as A
 import qualified Data.ByteString                 as B
+import           Data.ByteString.Lazy.Char8      (pack)
 import           Data.Int
 import qualified Data.Text                       as T
 import           Data.Vector                     (toList)
@@ -57,7 +58,7 @@ protobufFile = quoteFile protobuf
 
 schemaFromAvroString :: String -> Q Type
 schemaFromAvroString s =
-  case decode (encode s) of
+  case decode (pack s) of
     Nothing -> fail "could not parse avro spec!"
     Just p  -> schemaFromAvroType p
 
