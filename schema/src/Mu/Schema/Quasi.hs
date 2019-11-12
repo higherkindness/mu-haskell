@@ -1,9 +1,9 @@
 {-# LANGUAGE DataKinds       #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Mu.Schema.Quasi
+module Mu.Schema.Quasi (
   -- * Quasi-quoters for @.avsc@ files
-  ( avro
+    avro
   , avroFile
   -- * Quasi-quoters for @.proto@ files
   , protobuf
@@ -73,23 +73,16 @@ schemaFromAvroType sch =
     A.Bytes -> [t|'TPrimitive B.ByteString|]
     A.String -> [t|'TPrimitive T.Text|]
     A.Array item -> [t|'TList $(schemaFromAvroType item)|]
-    A.Map values -> [t|'TMap $(schemaFromAvroType values)|]
-    A.NamedType _ -> fail "named types are not currently supported"
+    A.Map values -> [t|'TMap T.Text $(schemaFromAvroType values)|]
+    A.NamedType typeName ->
+      [t|'TSchematic $(textToStrLit (A.baseName typeName))|]
     A.Record name _ _ _ fields ->
-      [t|'DRecord $(textToStrLit $ A.baseName name) '[] $(typesToList <$>
-                                                          mapM
-                                                            avroFieldToType
-                                                            fields)|]
+      [t|'DRecord $(textToStrLit $ A.baseName name) '[] $(typesToList <$> mapM avroFieldToType fields)|]
       where avroFieldToType :: A.Field -> Q Type
             avroFieldToType field =
-              [t|'FieldDef $(textToStrLit $ A.fldName field) '[] $(schemaFromAvroType $
-                                                                   A.fldType
-                                                                     field)|]
+              [t|'FieldDef $(textToStrLit $ A.fldName field) '[] $(schemaFromAvroType $ A.fldType field)|]
     A.Enum name _ _ symbols ->
-      [t|'DEnum $(textToStrLit $ A.baseName name) '[] $(typesToList <$>
-                                                        mapM
-                                                          avChoiceToType
-                                                          (toList symbols))|]
+      [t|'DEnum $(textToStrLit $ A.baseName name) '[] $(typesToList <$> mapM avChoiceToType (toList symbols))|]
       where avChoiceToType :: T.Text -> Q Type
             avChoiceToType c = [t|'ChoiceDef $(textToStrLit c) '[]|]
     A.Union _ -> fail "unions are not currently supported"
@@ -115,27 +108,21 @@ flattenDecls = concatMap flattenDecl
 
 pbTypeDeclToType :: P.TypeDeclaration -> Q Type
 pbTypeDeclToType (P.DEnum name _ fields) =
-  [t|'DEnum $(textToStrLit name) '[] $(typesToList <$>
-                                       mapM pbChoiceToType fields)|]
+  [t|'DEnum $(textToStrLit name) '[] $(typesToList <$> mapM pbChoiceToType fields)|]
   where
     pbChoiceToType :: P.EnumField -> Q Type
     pbChoiceToType (P.EnumField nm number _) =
       [t|'ChoiceDef $(textToStrLit nm) '[ ProtoBufId $(intToLit number)]|]
 pbTypeDeclToType (P.DMessage name _ _ fields _) =
-  [t|'DRecord $(textToStrLit name) '[] $(typesToList <$>
-                                         mapM pbMsgFieldToType fields)|]
+  [t|'DRecord $(textToStrLit name) '[] $(typesToList <$> mapM pbMsgFieldToType fields)|]
   where
     pbMsgFieldToType :: P.MessageField -> Q Type
     pbMsgFieldToType (P.NormalField P.Single ty nm n _) =
-      [t|'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n)] $(pbFieldTypeToType
-                                                                       ty)|]
+      [t|'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n)] $(pbFieldTypeToType ty)|]
     pbMsgFieldToType (P.NormalField P.Repeated ty nm n _) =
-      [t|'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n)] ('TList $(pbFieldTypeToType
-                                                                               ty))|]
+      [t|'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n)] ('TList $(pbFieldTypeToType ty))|]
     pbMsgFieldToType (P.MapField k v nm n _) =
-      [t|'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n)] ('TMap $(pbFieldTypeToType
-                                                                              k) $(pbFieldTypeToType
-                                                                                     v))|]
+      [t|'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n)] ('TMap $(pbFieldTypeToType k) $(pbFieldTypeToType v))|]
     pbMsgFieldToType P.OneOfField {} =
       fail "oneof fields are not currently supported"
     pbFieldTypeToType :: P.FieldType -> Q Type
