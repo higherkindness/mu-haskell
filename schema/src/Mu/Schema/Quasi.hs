@@ -2,13 +2,19 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Mu.Schema.Quasi
+  -- * Quasi-quoters for @.avsc@ files
+  ( avro
+  , avroFile
   -- * Quasi-quoters for @.proto@ files
-  ( protobuf
+  , protobuf
   , protobufFile
   -- * Only for internal use
+  , schemaFromAvroType
   , schemaFromProtoBuf
   ) where
 
+import           Data.Aeson                      (decode, encode)
+import qualified Data.Avro.Schema                as A
 import qualified Data.ByteString                 as B
 import           Data.Int
 import qualified Data.Text                       as T
@@ -20,6 +26,15 @@ import qualified Language.ProtocolBuffers.Types  as P
 import           Mu.Schema.Adapter.ProtoBuf
 import           Mu.Schema.Definition
 
+-- | Imports an avro definition written in-line as a 'Schema'.
+avro :: QuasiQuoter
+avro =
+  QuasiQuoter
+    (const $ fail "cannot use as expression")
+    (const $ fail "cannot use as pattern")
+    schemaFromAvroString
+    (const $ fail "cannot use as declaration")
+
 -- | Imports a protocol buffer definition written
 --   in-line as a 'Schema'.
 protobuf :: QuasiQuoter
@@ -30,10 +45,23 @@ protobuf =
     schemaFromProtoBufString
     (const $ fail "cannot use as declaration")
 
+-- | Imports an avro definition from a file as a 'Schema'.
+avroFile :: QuasiQuoter
+avroFile = quoteFile avro
+
 -- | Imports a protocol buffer definition from a file
 --   as a 'Schema'.
 protobufFile :: QuasiQuoter
 protobufFile = quoteFile protobuf
+
+schemaFromAvroString :: String -> Q Type
+schemaFromAvroString s =
+  case decode (encode s) of
+    Nothing -> fail "could not parse avro spec!"
+    Just p  -> schemaFromAvroType p
+
+schemaFromAvroType :: A.Type -> Q Type
+schemaFromAvroType = undefined -- TODO: here goes the magic
 
 schemaFromProtoBufString :: String -> Q Type
 schemaFromProtoBufString ts =
