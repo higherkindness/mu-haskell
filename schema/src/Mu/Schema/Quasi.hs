@@ -18,6 +18,7 @@ import qualified Data.Avro.Schema                as A
 import qualified Data.ByteString                 as B
 import           Data.Int
 import qualified Data.Text                       as T
+import           Data.Vector                     (toList)
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
 import           Language.ProtocolBuffers.Parser
@@ -61,7 +62,38 @@ schemaFromAvroString s =
     Just p  -> schemaFromAvroType p
 
 schemaFromAvroType :: A.Type -> Q Type
-schemaFromAvroType = undefined -- TODO: here goes the magic
+schemaFromAvroType sch =
+  case sch of
+    A.Null -> [t|'TPrimitive 'TNull|]
+    A.Boolean -> [t|'TPrimitive Bool|]
+    A.Int -> [t|'TPrimitive Int32|]
+    A.Long -> [t|'TPrimitive Int64|]
+    A.Float -> [t|'TPrimitive Float|]
+    A.Double -> [t|'TPrimitive Double|]
+    A.Bytes -> [t|'TPrimitive B.ByteString|]
+    A.String -> [t|'TPrimitive T.Text|]
+    A.Array item -> [t|'TList $(schemaFromAvroType item)|]
+    A.Map values -> [t|'TMap $(schemaFromAvroType values)|]
+    A.NamedType _ -> fail "named types are not currently supported"
+    A.Record name _ _ _ fields ->
+      [t|'DRecord $(textToStrLit $ A.baseName name) '[] $(typesToList <$>
+                                                          mapM
+                                                            avroFieldToType
+                                                            fields)|]
+      where avroFieldToType :: A.Field -> Q Type
+            avroFieldToType field =
+              [t|'FieldDef $(textToStrLit $ A.fldName field) '[] $(schemaFromAvroType $
+                                                                   A.fldType
+                                                                     field)|]
+    A.Enum name _ _ symbols ->
+      [t|'DEnum $(textToStrLit $ A.baseName name) '[] $(typesToList <$>
+                                                        mapM
+                                                          avChoiceToType
+                                                          (toList symbols))|]
+      where avChoiceToType :: T.Text -> Q Type
+            avChoiceToType c = [t|'ChoiceDef $(textToStrLit c) '[]|]
+    A.Union _ -> fail "unions are not currently supported"
+    A.Fixed {} -> fail "fixed integers are not currently supported"
 
 schemaFromProtoBufString :: String -> Q Type
 schemaFromProtoBufString ts =
