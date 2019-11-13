@@ -86,7 +86,12 @@ schemaFromAvroType sch =
       [t|'DEnum $(textToStrLit $ A.baseName name) '[] $(typesToList <$> mapM avChoiceToType (toList symbols))|]
       where avChoiceToType :: T.Text -> Q Type
             avChoiceToType c = [t|'ChoiceDef $(textToStrLit c) '[]|]
-    A.Union options -> [t|'TUnion $(typesToList <$> mapM schemaFromAvroType (toList options))|]
+    A.Union options ->
+      case toList options of
+        [A.Null, x] -> toOption x
+        [x, A.Null] -> toOption x
+        _ -> [t|'TUnion $(typesToList <$> mapM schemaFromAvroType (toList options))|]
+      where toOption x = [t|'TOption $(schemaFromAvroType x)|]
     A.Fixed {} -> fail "fixed integers are not currently supported"
 
 schemaFromProtoBufString :: String -> Q Type
