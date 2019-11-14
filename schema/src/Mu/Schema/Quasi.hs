@@ -1,5 +1,6 @@
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language DataKinds       #-}
+{-# language LambdaCase      #-}
+{-# language TemplateHaskell #-}
 
 module Mu.Schema.Quasi (
   -- * Quasi-quoters for @.avsc@ files
@@ -60,46 +61,53 @@ schemaFromAvroString :: String -> Q Type
 schemaFromAvroString s =
   case decode (pack s) of
     Nothing -> fail "could not parse avro spec!"
-    Just p  -> schemaFromAvroType p
+    Just (A.Union options) -> typesToList <$> mapM schemaDecFromAvroType (toList options)
+    Just t                 -> singletonList <$> schemaDecFromAvroType t
+
+schemaDecFromAvroType :: A.Type -> Q Type
+schemaDecFromAvroType (A.Record name _ _ _ fields) =
+  [t|'DRecord $(textToStrLit $ A.baseName name) '[] $(typesToList <$> mapM avroFieldToType fields)|]
+  where 
+    avroFieldToType :: A.Field -> Q Type
+    avroFieldToType field =
+      [t|'FieldDef $(textToStrLit $ A.fldName field) '[] $(schemaFromAvroType $ A.fldType field)|]
+schemaDecFromAvroType (A.Enum name _ _ symbols) =
+  [t|'DEnum $(textToStrLit $ A.baseName name) '[] $(typesToList <$> mapM avChoiceToType (toList symbols))|]
+  where
+    avChoiceToType :: T.Text -> Q Type
+    avChoiceToType c = [t|'ChoiceDef $(textToStrLit c) '[]|]
+schemaDecFromAvroType t = [t| 'DSimple $(schemaFromAvroType t) |]
 
 schemaFromAvroType :: A.Type -> Q Type
-schemaFromAvroType sch =
-  case sch of
-    A.Null -> [t|'TPrimitive 'TNull|]
-    A.Boolean -> [t|'TPrimitive Bool|]
-    A.Int -> [t|'TPrimitive Int32|]
-    A.Long -> [t|'TPrimitive Int64|]
-    A.Float -> [t|'TPrimitive Float|]
-    A.Double -> [t|'TPrimitive Double|]
-    A.Bytes -> [t|'TPrimitive B.ByteString|]
-    A.String -> [t|'TPrimitive T.Text|]
-    A.Array item -> [t|'TList $(schemaFromAvroType item)|]
-    A.Map values -> [t|'TMap T.Text $(schemaFromAvroType values)|]
-    A.NamedType typeName ->
-      [t|'TSchematic $(textToStrLit (A.baseName typeName))|]
-    A.Record name _ _ _ fields ->
-      [t|'DRecord $(textToStrLit $ A.baseName name) '[] $(typesToList <$> mapM avroFieldToType fields)|]
-      where avroFieldToType :: A.Field -> Q Type
-            avroFieldToType field =
-              [t|'FieldDef $(textToStrLit $ A.fldName field) '[] $(schemaFromAvroType $ A.fldType field)|]
-    A.Enum name _ _ symbols ->
-      [t|'DEnum $(textToStrLit $ A.baseName name) '[] $(typesToList <$> mapM avChoiceToType (toList symbols))|]
-      where avChoiceToType :: T.Text -> Q Type
-            avChoiceToType c = [t|'ChoiceDef $(textToStrLit c) '[]|]
-    A.Union options ->
-      case toList options of
-        [A.Null, x] -> toOption x
-        [x, A.Null] -> toOption x
-        _ -> [t|'TUnion $(typesToList <$> mapM schemaFromAvroType (toList options))|]
-      where toOption x = [t|'TOption $(schemaFromAvroType x)|]
-    A.Fixed {} -> fail "fixed integers are not currently supported"
+schemaFromAvroType = \case
+  A.Null -> [t|'TPrimitive 'TNull|]
+  A.Boolean -> [t|'TPrimitive Bool|]
+  A.Int -> [t|'TPrimitive Int32|]
+  A.Long -> [t|'TPrimitive Int64|]
+  A.Float -> [t|'TPrimitive Float|]
+  A.Double -> [t|'TPrimitive Double|]
+  A.Bytes -> [t|'TPrimitive B.ByteString|]
+  A.String -> [t|'TPrimitive T.Text|]
+  A.Array item -> [t|'TList $(schemaFromAvroType item)|]
+  A.Map values -> [t|'TMap T.Text $(schemaFromAvroType values)|]
+  A.NamedType typeName ->
+    [t|'TSchematic $(textToStrLit (A.baseName typeName))|]
+  A.Enum {} -> fail "this should never happen"
+  A.Record {} -> fail "this should never happen"
+  A.Union options ->
+    case toList options of
+      [A.Null, x] -> toOption x
+      [x, A.Null] -> toOption x
+      _ -> [t|'TUnion $(typesToList <$> mapM schemaFromAvroType (toList options))|]
+    where toOption x = [t|'TOption $(schemaFromAvroType x)|]
+  A.Fixed {} -> fail "fixed integers are not currently supported"
 
 schemaFromProtoBufString :: String -> Q Type
 schemaFromProtoBufString ts =
   case parseProtoBuf (T.pack ts) of
     Left e  -> fail ("could not parse protocol buffers spec: " ++ show e)
     Right p -> schemaFromProtoBuf p
-
+-- 👀
 schemaFromProtoBuf :: P.ProtoBuf -> Q Type
 schemaFromProtoBuf P.ProtoBuf {P.types = tys} =
   let decls = flattenDecls tys
@@ -111,7 +119,7 @@ flattenDecls = concatMap flattenDecl
     flattenDecl d@P.DEnum {} = [d]
     flattenDecl (P.DMessage name o r fs decls) =
       P.DMessage name o r fs [] : flattenDecls decls
-
+-- 👀
 pbTypeDeclToType :: P.TypeDeclaration -> Q Type
 pbTypeDeclToType (P.DEnum name _ fields) =
   [t|'DEnum $(textToStrLit name) '[] $(typesToList <$> mapM pbChoiceToType fields)|]
@@ -162,3 +170,6 @@ textToStrLit s = return $ LitT $ StrTyLit $ T.unpack s
 
 intToLit :: Int -> Q Type
 intToLit n = return $ LitT $ NumTyLit $ toInteger n
+
+singletonList :: Type -> Type
+singletonList = typesToList . pure
