@@ -158,7 +158,7 @@ instance (FromJSONUnion sch us)
 class FromJSONUnion sch us where
   unionFromJSON :: Value -> Parser (NS (FieldValue sch) us)
 instance FromJSONUnion sch '[] where
-  unionFromJSON = fail "value does not match any of the types of the union"
+  unionFromJSON _ = fail "value does not match any of the types of the union"
 instance (FromJSON (FieldValue sch u), FromJSONUnion sch us)
          => FromJSONUnion sch (u ': us) where
   unionFromJSON v = Z <$> parseJSON v <|> S <$> unionFromJSON v
