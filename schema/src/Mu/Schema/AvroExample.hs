@@ -36,4 +36,4 @@ type Example = [avro|
 }
 |]
 
-type ExampleFromFile = [avroFile|schema/test/avro/example.avsc|]
+type ExampleFromFile = [avroFile|test/avro/example.avsc|]
