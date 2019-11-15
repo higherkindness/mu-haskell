@@ -32,7 +32,7 @@ library
                      , Mu.Schema.Conversion.TypesToSchema
                      , Mu.Schema.Conversion.SchemaToTypes
                      , Mu.Schema.Examples
-                    --  , Mu.Schema.AvroExample
+                     , Mu.Schema.AvroExample
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.12 && <5

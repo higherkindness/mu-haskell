@@ -1,6 +1,8 @@
 {-# language DataKinds       #-}
 {-# language LambdaCase      #-}
+{-# language NamedFieldPuns  #-}
 {-# language TemplateHaskell #-}
+{-# language ViewPatterns    #-}
 
 module Mu.Schema.Quasi (
   -- * Quasi-quoters for @.avsc@ files
@@ -20,7 +22,7 @@ import qualified Data.ByteString                 as B
 import           Data.ByteString.Lazy.Char8      (pack)
 import           Data.Int
 import qualified Data.Text                       as T
-import           Data.Vector                     (toList)
+import           Data.Vector                     (fromList, toList)
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
 import           Language.ProtocolBuffers.Parser
@@ -93,8 +95,8 @@ schemaFromAvroType = \case
   A.Map values -> [t|'TMap T.Text $(schemaFromAvroType values)|]
   A.NamedType typeName ->
     [t|'TSchematic $(textToStrLit (A.baseName typeName))|]
-  A.Enum {} -> fail "this should never happen"
-  A.Record {} -> fail "this should never happen"
+  A.Enum {} -> fail "should never happen, please, file an issue"
+  A.Record {} -> fail "should never happen, please, file an issue"
   A.Union options ->
     case toList options of
       [A.Null, x] -> toOption x
@@ -109,14 +111,30 @@ schemaFromProtoBufString ts =
     Left e  -> fail ("could not parse protocol buffers spec: " ++ show e)
     Right p -> schemaFromProtoBuf p
 
--- TODO: A.Type -> (A.Type, [A.Type])
 flattenAvroDecls :: [A.Type] -> [A.Type]
-flattenAvroDecls = concatMap flattenDecl
+flattenAvroDecls = concatMap (uncurry (:) . flattenDecl)
   where
-    flattenDecl (A.Union ts) = toList ts
-    flattenDecl (A.Record name a d o fields) =
-      A.Record name a d o [] : flattenAvroDecls (A.fldType <$> fields)
-    flattenDecl t = [t]
+    flattenDecl :: A.Type -> (A.Type, [A.Type])
+    flattenDecl (A.Record name a d o fields) = 
+      let (flds, tts) = unzip (flattenAvroField <$> fields)
+      in (A.Record name a d o flds, concat tts)
+    flattenDecl (A.Union _) = error "should never happen, please, file an issue" 
+    flattenDecl t = (t, [])
+
+    flattenAvroType :: A.Type -> (A.Type, [A.Type])
+    flattenAvroType (A.Record name a d o fields) = 
+      let (flds, tts) = unzip (flattenAvroField <$> fields)
+      in (A.NamedType name, A.Record name a d o flds : concat tts)
+    flattenAvroType (A.Union (toList -> ts)) = 
+      let (us, tts) = unzip (map flattenAvroType ts)
+      in (A.Union $ fromList us, concat tts)
+    flattenAvroType e@A.Enum {A.name} = (A.NamedType name, [e])
+    flattenAvroType t = (t, [])
+
+    flattenAvroField :: A.Field -> (A.Field, [A.Type])
+    flattenAvroField f =
+      let (t, decs) = flattenAvroType (A.fldType f)
+       in (f {A.fldType = t}, decs)
 
 schemaFromProtoBuf :: P.ProtoBuf -> Q Type
 schemaFromProtoBuf P.ProtoBuf {P.types = tys} =
