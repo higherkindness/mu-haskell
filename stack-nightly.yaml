@@ -13,14 +13,11 @@ packages:
 - compendium-client
 
 extra-deps:
-- proto3-wire-1.0.0
 - http2-client-0.9.0.0
+- http2-grpc-types-0.5.0.0
+- proto3-wire-1.0.0
+- http2-grpc-proto3-wire-0.1.0.0
+- warp-grpc-0.2.0.0
+- http2-client-grpc-0.8.0.0
 - avro-0.4.5.4
 - language-protobuf-1.0
-- git: https://github.com/haskell-grpc-native/http2-grpc-haskell.git
-  commit: 15f73333b0146847095aeee6fe26bc8fa8eaf47f
-  subdirs:
-    - http2-grpc-types
-    - http2-grpc-proto3-wire
-    - warp-grpc
-    - http2-client-grpc
