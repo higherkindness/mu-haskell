@@ -2,6 +2,7 @@
 -- | Read a @.proto@ file as a 'Service'
 module Mu.Rpc.Quasi (
   grpc
+, compendium
 ) where
 
 import Control.Monad.IO.Class
@@ -9,9 +10,12 @@ import qualified Data.Text as T
 import Language.Haskell.TH
 import qualified Language.ProtocolBuffers.Types as P
 import Language.ProtocolBuffers.Parser
+import Network.HTTP.Client
+import Servant.Client.Core.BaseUrl
 
 import Mu.Schema.Quasi
 import Mu.Rpc
+import Compendium.Client
 
 -- | Reads a @.proto@ file and generates:
 --   * A 'Schema' with all the message types, using the
@@ -25,11 +29,29 @@ grpc schemaName servicePrefix fp
        case r of
          Left e
            -> fail ("could not parse protocol buffers spec: " ++ show e)
-         Right p@P.ProtoBuf { P.package = pkg, P.services = srvs }
-           -> do let schemaName' = mkName schemaName
-                 schemaDec <- tySynD schemaName' [] (schemaFromProtoBuf p)
-                 serviceTy <- mapM (pbServiceDeclToDec servicePrefix pkg schemaName') srvs
-                 return (schemaDec : serviceTy)
+         Right p
+           -> protobufToDecls schemaName servicePrefix p
+
+-- | Obtains a schema and service definition from Compendium,
+--   and generates the declarations from 'grpc'.
+compendium :: String -> (String -> String)
+           -> String -> String -> Q [Dec]
+compendium schemaTypeName servicePrefix baseUrl identifier
+  = do m <- liftIO $ newManager defaultManagerSettings
+       u <- liftIO $ parseBaseUrl baseUrl
+       r <- liftIO $ obtainProtoBuf m u (T.pack identifier)
+       case r of
+         Left e
+           -> fail ("could not parse protocol buffers spec: " ++ show e)
+         Right p
+           -> protobufToDecls schemaTypeName servicePrefix p
+
+protobufToDecls :: String -> (String -> String) -> P.ProtoBuf -> Q [Dec]
+protobufToDecls schemaName servicePrefix p@P.ProtoBuf { P.package = pkg, P.services = srvs }
+  = do let schemaName' = mkName schemaName
+       schemaDec <- tySynD schemaName' [] (schemaFromProtoBuf p)
+       serviceTy <- mapM (pbServiceDeclToDec servicePrefix pkg schemaName') srvs
+       return (schemaDec : serviceTy)
 
 pbServiceDeclToDec :: (String -> String) -> Maybe [T.Text] -> Name -> P.ServiceDeclaration -> Q Dec
 pbServiceDeclToDec servicePrefix pkg schema srv@(P.Service nm _ _)
