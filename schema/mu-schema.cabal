@@ -18,44 +18,60 @@ build-type:          Simple
 extra-source-files:  README.md, CHANGELOG.md
 
 library
-  exposed-modules:     Mu.Schema,
-                       Mu.Schema.Definition,
-                       Mu.Schema.Interpretation,
-                       Mu.Schema.Interpretation.Schemaless,
-                       Mu.Schema.Interpretation.Anonymous,
-                       Mu.Schema.Class,
-                       Mu.Schema.Registry,
-                       Mu.Schema.Adapter.Avro,
-                       Mu.Schema.Adapter.ProtoBuf,
-                       Mu.Schema.Adapter.Json,
-                       Mu.Schema.Quasi,
-                       Mu.Schema.Conversion.TypesToSchema,
-                       Mu.Schema.Conversion.SchemaToTypes,
-                       Mu.Schema.Examples
+  exposed-modules:     Mu.Schema
+                     , Mu.Schema.Definition
+                     , Mu.Schema.Interpretation
+                     , Mu.Schema.Interpretation.Schemaless
+                     , Mu.Schema.Interpretation.Anonymous
+                     , Mu.Schema.Class
+                     , Mu.Schema.Registry
+                     , Mu.Schema.Adapter.Avro
+                     , Mu.Schema.Adapter.ProtoBuf
+                     , Mu.Schema.Adapter.Json
+                     , Mu.Schema.Quasi
+                     , Mu.Schema.Conversion.TypesToSchema
+                     , Mu.Schema.Conversion.SchemaToTypes
+                     , Mu.Schema.Examples
+                     , Mu.Schema.AvroExample
   -- other-modules:
   -- other-extensions:
-  build-depends:       base >=4.12 && <5, sop-core,
-                       containers, unordered-containers, vector,
-                       bytestring, text,
-                       avro, tagged, proto3-wire, aeson,
-                       template-haskell >= 2.12, th-abstraction,
-                       language-protobuf
+  build-depends:       base >=4.12 && <5
+                     , sop-core
+                     , containers
+                     , unordered-containers
+                     , vector
+                     , bytestring
+                     , text
+                     , avro
+                     , tagged
+                     , proto3-wire
+                     , aeson
+                     , template-haskell >= 2.12
+                     , th-abstraction
+                     , language-protobuf
   hs-source-dirs:      src
   default-language:    Haskell2010
-  ghc-options:         -Wall -fprint-potential-instances
+  ghc-options:         -Wall
+                       -fprint-potential-instances
 
 executable test-avro
   main-is:             Avro.hs
-  build-depends:       base >=4.12 && <5, sop-core,
-                       mu-schema, avro, bytestring
+  build-depends:       base >=4.12 && <5
+                     , sop-core
+                     , mu-schema
+                     , avro
+                     , bytestring
   hs-source-dirs:      test
   default-language:    Haskell2010
   ghc-options:         -Wall
 
 executable test-protobuf
   main-is:             ProtoBuf.hs
-  build-depends:       base >=4.12 && <5, sop-core,
-                       mu-schema, proto3-wire, bytestring
+  build-depends:       base >=4.12 && <5
+                     , sop-core
+                     , mu-schema
+                     , proto3-wire
+                     , bytestring
   hs-source-dirs:      test
   default-language:    Haskell2010
   ghc-options:         -Wall
