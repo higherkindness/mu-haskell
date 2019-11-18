@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package todolist;
+
+message Entity {
+    optional int32 id = 1;
+}
+
+message Tag {
+    extend Entity {
+        optional int32 id = 1;
+    }
+    string name = 2;
+}
+
+message TodoItem {
+    extend Entity {
+        optional int32 id = 1;
+    }
+    string item = 2;
+    optional int32 todoListId = 3;
+    bool completed = 4;    
+}
+
+message TodoList {
+    extend Entity {
+        optional int32 id = 1;
+    }
+    string title = 2;
+    int32 tagId = 3;
+}
+
+message TodoForm {
+    TodoList list = 1;
+    Tag tag = 2;
+    repeated TodoItem items = 3;
+}
+
+service TodoListService {
+    // TODO: fill services
+}
