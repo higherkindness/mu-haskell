@@ -11,9 +11,7 @@ import Data.Int
 import Data.Text as T
 
 import Mu.Schema
-import Mu.Schema.Adapter.ProtoBuf
-import Mu.Rpc
-import Mu.Rpc.Quasi
+import Mu.Quasi.GRpc
 
 $(grpc "RouteGuideSchema" id "routeguide.proto")
 

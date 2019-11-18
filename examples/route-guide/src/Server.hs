@@ -17,7 +17,7 @@ import Data.Maybe
 import Data.Time.Clock
 
 import Mu.Server
-import Mu.Server.GRpc
+import Mu.GRpc.Server
 
 import Definition
 

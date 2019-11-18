@@ -1,9 +1,12 @@
-resolver: lts-14.13
+resolver: lts-14.14
 
 packages:
-- schema
-- rpc
-- grpc
+- core/schema
+- core/rpc
+- adapter/avro
+- adapter/protobuf
+- grpc/client
+- grpc/server
 - examples/health-check
 - examples/route-guide
 - compendium-client
