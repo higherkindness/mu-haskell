@@ -92,7 +92,7 @@ sayHello :: HelloRequest -> IO HelloResponse
 sayHello (HelloRequest nm) = return (HelloResponse ("hi, " <> nm))
 ```
 
-Since you can declare more than once method in a service, you need to join then into a `Server`. You do so by using `(:<|>:)` between each handler and ending the sequence with `H0`. In addition to the name of the service, `Server` has an additional parameter which records the types of the handlers. Since that list may become quite long, we can ask GHC to write it for us by using the `PartialTypeSignatures` extension and writing an underscore `_` in that position. One final observation is that in the code below we are using `ServerIO`, which is an instance of `Server` which allows running `IO` operations.
+Since you can declare more than one method in a service, you need to join then into a `Server`. You do so by using `(:<|>:)` between each handler and ending the sequence with `H0`. In addition to the name of the service, `Server` has an additional parameter which records the types of the handlers. Since that list may become quite long, we can ask GHC to write it for us by using the `PartialTypeSignatures` extension and writing an underscore `_` in that position. One final observation is that in the code below we are using `ServerIO`, which is an instance of `Server` which allows running `IO` operations.
 
 ```haskell
 {-# language PartialTypeSignatures #-}
@@ -143,7 +143,7 @@ quickstartServer = Server (sayHello :<|>: sayManyHellos :<|>: H0)
 
 ## Running the server with `mu-grpc`
 
-The combination of the declaration of a service API and a corresponding implementation as a `Server` may may served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library `mu-grpc`. The following line starts a server at port 8080, where the service can be found under the package name `helloworld`:
+The combination of the declaration of a service API and a corresponding implementation as a `Server` may served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library `mu-grpc`. The following line starts a server at port `8080`, where the service can be found under the package name `helloworld`:
 
 ```haskell
 main = runGRpcApp 8080 "helloworld" quickstartServer
