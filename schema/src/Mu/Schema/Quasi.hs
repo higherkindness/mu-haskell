@@ -159,13 +159,23 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) =
   [t|'DRecord $(textToStrLit name) '[] $(typesToList <$> mapM pbMsgFieldToType fields)|]
   where
     pbMsgFieldToType :: P.MessageField -> Q Type
-    pbMsgFieldToType (P.NormalField P.Single ty nm n _) =
-      [t|'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n)] $(pbFieldTypeToType ty)|]
-    pbMsgFieldToType (P.NormalField P.Repeated ty nm n _) =
-      [t|'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n)] ('TList $(pbFieldTypeToType ty))|]
-    pbMsgFieldToType (P.MapField k v nm n _) =
-      [t|'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n)] ('TMap $(pbFieldTypeToType k) $(pbFieldTypeToType v))|]
-    pbMsgFieldToType P.OneOfField {} = fail "oneof fields are not currently supported"
+    pbMsgFieldToType (P.NormalField P.Single ty nm n _)
+      = [t| 'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n) ]
+                      $(pbFieldTypeToType ty) |]
+    pbMsgFieldToType (P.NormalField P.Repeated ty nm n _)
+      = [t| 'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n) ]
+                      ('TList $(pbFieldTypeToType ty)) |]
+    pbMsgFieldToType (P.MapField k v nm n _)
+      = [t| 'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n) ]
+                      ('TMap $(pbFieldTypeToType k) $(pbFieldTypeToType v)) |]
+    pbMsgFieldToType (P.OneOfField nm vs)
+      | any (not . hasFieldNumber) vs
+      = fail "nested oneof fields are not supported"
+      | otherwise
+      = [t| 'FieldDef $(textToStrLit nm)
+                      '[ ProtoBufOneOfIds $(typesToList <$> mapM (intToLit . getFieldNumber) vs ) ]
+                      $(typesToList <$> mapM pbOneOfFieldToType vs ) |]
+      
     pbFieldTypeToType :: P.FieldType -> Q Type
     pbFieldTypeToType P.TInt32 = [t|'TPrimitive Int32|]
     pbFieldTypeToType P.TUInt32 = fail "unsigned integers are not currently supported"
@@ -182,6 +192,22 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) =
     pbFieldTypeToType P.TString = [t|'TPrimitive T.Text|]
     pbFieldTypeToType P.TBytes = [t|'TPrimitive B.ByteString|]
     pbFieldTypeToType (P.TOther t) = [t|'TSchematic $(textToStrLit (last t))|]
+
+    hasFieldNumber P.NormalField {} = True
+    hasFieldNumber P.MapField {}    = True
+    hasFieldNumber _                = False
+
+    getFieldNumber (P.NormalField _ _ _ n _) = n
+    getFieldNumber (P.MapField    _ _ _ n _) = n
+    getFieldNumber _                         = error "this should never happen"
+
+    pbOneOfFieldToType (P.NormalField P.Single ty _ _ _)
+      = pbFieldTypeToType ty
+    pbOneOfFieldToType (P.NormalField P.Repeated ty _ _ _)
+      = [t| 'TList $(pbFieldTypeToType ty) |]
+    pbOneOfFieldToType (P.MapField k v _ _ _)
+      = [t| 'TMap $(pbFieldTypeToType k) $(pbFieldTypeToType v) |]
+    pbOneOfFieldToType _ = error "this should never happen"
 
 typesToList :: [Type] -> Type
 typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
