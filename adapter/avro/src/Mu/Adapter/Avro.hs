@@ -5,7 +5,7 @@
              MultiParamTypeClasses,
              UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Mu.Schema.Adapter.Avro where
+module Mu.Adapter.Avro where
 
 import Control.Arrow ((***))
 import qualified Data.Avro as A

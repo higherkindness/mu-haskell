@@ -1,6 +1,6 @@
 {-# language TemplateHaskell, DataKinds, OverloadedStrings #-}
 -- | Read a @.proto@ file as a 'Service'
-module Mu.Rpc.Quasi (
+module Mu.GRpc.Quasi (
   grpc
 , compendium
 ) where
@@ -13,7 +13,7 @@ import Language.ProtocolBuffers.Parser
 import Network.HTTP.Client
 import Servant.Client.Core.BaseUrl
 
-import Mu.Schema.Quasi
+import Mu.Quasi.ProtoBuf
 import Mu.Rpc
 import Compendium.Client
 

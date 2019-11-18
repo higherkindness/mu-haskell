@@ -14,7 +14,6 @@ import GHC.Generics
 import Mu.Schema
 import Mu.Rpc
 import Mu.Server
-import Mu.Schema.Adapter.ProtoBuf
 
 -- Defines the service from gRPC Quickstart
 -- https://grpc.io/docs/quickstart/python/

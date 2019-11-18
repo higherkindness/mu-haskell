@@ -12,8 +12,7 @@ import qualified Proto3.Wire.Decode as PBDec
 
 import Mu.Rpc
 import Mu.Schema
-
-import Mu.Schema.Adapter.ProtoBuf
+import Mu.Adapter.ProtoBuf
 
 newtype ViaProtoBufTypeRef (ref :: TypeRef) t 
   = ViaProtoBufTypeRef { unViaProtoBufTypeRef :: t }
@@ -33,11 +32,11 @@ class ProtoBufTypeRef (ref :: TypeRef) t where
 
 instance (HasProtoSchema sch sty t)
          => ProtoBufTypeRef ('FromSchema sch sty) t where
-  fromProtoBufTypeRef _ = fromProtoViaSchema @sch
-  toProtoBufTypeRef   _ = toProtoViaSchema @sch
+  fromProtoBufTypeRef _ = fromProtoViaSchema @_ @_ @sch
+  toProtoBufTypeRef   _ = toProtoViaSchema @_ @_ @sch
 
 instance ( FromProtoBufRegistry r t
          , HasProtoSchema (MappingRight r last) sty t)
          => ProtoBufTypeRef ('FromRegistry r t last) t where
   fromProtoBufTypeRef _ = fromProtoBufWithRegistry @r
-  toProtoBufTypeRef   _ = toProtoViaSchema @(MappingRight r last)
+  toProtoBufTypeRef   _ = toProtoViaSchema @_ @_ @(MappingRight r last)

@@ -11,7 +11,7 @@ import DeferredFolds.UnfoldlM
 import qualified StmContainers.Map as M
 
 import Mu.Server
-import Mu.Server.GRpc
+import Mu.GRpc.Server
 
 import Definition
 

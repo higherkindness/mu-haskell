@@ -1,7 +1,7 @@
 {-# language OverloadedStrings #-}
 module Main where
 
-import Mu.Server.GRpc
+import Mu.GRpc.Server
 import Mu.Rpc.Examples
 
 main :: IO ()

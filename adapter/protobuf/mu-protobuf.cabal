@@ -1,0 +1,43 @@
+cabal-version:       >=1.10
+name:                mu-protobuf
+version:             0.1.0.0
+synopsis:            Protocol Buffers serialization support for Mu microservices
+-- description:
+-- bug-reports:
+license:             Apache-2.0
+license-file:        LICENSE
+author:              Alejandro Serrano
+maintainer:          alejandro.serrano@47deg.com
+-- copyright:
+category:            Network
+build-type:          Simple
+
+library
+  exposed-modules:     Mu.Adapter.ProtoBuf
+                     , Mu.Adapter.ProtoBuf.Example
+                     , Mu.Quasi.ProtoBuf
+  -- other-modules:
+  -- other-extensions:
+  build-depends:       base >=4.12 && <5
+                     , mu-schema
+                     , text
+                     , sop-core
+                     , proto3-wire
+                     , bytestring
+                     , template-haskell >= 2.12
+                     , language-protobuf
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -fprint-potential-instances
+
+executable test-protobuf
+  main-is:             ProtoBuf.hs
+  build-depends:       base >=4.12 && <5
+                     , mu-schema
+                     , mu-protobuf
+                     , bytestring
+                     , proto3-wire
+  hs-source-dirs:      test
+  default-language:    Haskell2010
+  ghc-options:         -Wall -fprint-explicit-foralls

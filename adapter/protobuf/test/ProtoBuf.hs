@@ -1,13 +1,14 @@
-{-# language OverloadedStrings, TypeApplications,
-             NamedFieldPuns #-}
+{-# language OverloadedStrings, TypeApplications, ScopedTypeVariables #-}
 module Main where
 
-import Data.Avro
-import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import qualified Proto3.Wire.Decode as PBDec
+import qualified Proto3.Wire.Encode as PBEnc
 import System.Environment
 
 import Mu.Schema ()
-import Mu.Schema.Adapter.Avro ()
+import Mu.Adapter.ProtoBuf
 import Mu.Schema.Examples
 
 exampleAddress :: Address
@@ -23,10 +24,10 @@ main = do -- Obtain the filenames
           -- Read the file produced by Python
           putStrLn "haskell/consume"
           cbs <- BS.readFile conFile
-          let [people] = decodeContainer @Person cbs
-          print people
+          let Right people = PBDec.parse (fromProtoViaSchema @_ @_ @ExampleSchema) cbs
+          print (people :: Person)
           -- Encode a couple of values
           putStrLn "haskell/generate"
-          print [examplePerson1, examplePerson2]
-          gbs <- encodeContainer [[examplePerson1, examplePerson2]]
-          BS.writeFile genFile gbs
+          print examplePerson1
+          let gbs = PBEnc.toLazyByteString (toProtoViaSchema @_ @_ @ExampleSchema examplePerson1)
+          LBS.writeFile genFile gbs

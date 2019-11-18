@@ -7,7 +7,7 @@
              OverloadedStrings, ConstraintKinds,
              AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Mu.Schema.Adapter.ProtoBuf (
+module Mu.Adapter.ProtoBuf (
   -- * Custom annotations
   ProtoBufId
 , ProtoBufOneOfIds
@@ -35,15 +35,11 @@ import Proto3.Wire
 import qualified Proto3.Wire.Encode as PBEnc
 import qualified Proto3.Wire.Decode as PBDec
 
+import Mu.Schema.Annotations
 import Mu.Schema.Definition
 import Mu.Schema.Interpretation
 import Mu.Schema.Class
 import qualified Mu.Schema.Registry as R
-
--- ANNOTATION FOR CONVERSION
-
-data ProtoBufId (n :: Nat)
-data ProtoBufOneOfIds (ns :: [Nat])
 
 type family FindProtoBufId (f :: fn) (xs :: [Type]) :: Nat where
   FindProtoBufId f '[]
@@ -64,12 +60,12 @@ instance ProtoBridgeTerm sch (sch :/: sty) => IsProtoSchema sch sty
 
 type HasProtoSchema sch sty a = (HasSchema sch sty a, IsProtoSchema sch sty)
 
-toProtoViaSchema :: forall sch a sty.
+toProtoViaSchema :: forall t f (sch :: Schema t f) a sty.
                     (HasProtoSchema sch sty a)
                  => a -> PBEnc.MessageBuilder
 toProtoViaSchema = termToProto . toSchema' @sch
 
-fromProtoViaSchema :: forall sch a sty.
+fromProtoViaSchema :: forall t f (sch :: Schema t f) a sty.
                       (HasProtoSchema sch sty a)
                    => PBDec.Parser PBDec.RawMessage a
 fromProtoViaSchema = fromSchema' @sch <$> protoToTerm
@@ -77,7 +73,7 @@ fromProtoViaSchema = fromSchema' @sch <$> protoToTerm
 parseProtoViaSchema :: forall sch a sty.
                        (HasProtoSchema sch sty a)
                     => BS.ByteString -> Either PBDec.ParseError a
-parseProtoViaSchema = PBDec.parse (fromProtoViaSchema @sch)
+parseProtoViaSchema = PBDec.parse (fromProtoViaSchema @_ @_ @sch)
 
 -- CONVERSION USING REGISTRY
 
@@ -100,7 +96,7 @@ instance FromProtoBufRegistry '[] t where
   fromProtoBufRegistry' _ = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "no schema found in registry"))
 instance (HasProtoSchema s sty t, FromProtoBufRegistry ms t)
          => FromProtoBufRegistry ( (n ':-> s) ': ms) t where
-  fromProtoBufRegistry' _ = fromProtoViaSchema @s <|> fromProtoBufRegistry' (Proxy @ms)
+  fromProtoBufRegistry' _ = fromProtoViaSchema @_ @_ @s <|> fromProtoBufRegistry' (Proxy @ms)
 
 
 -- =======================================

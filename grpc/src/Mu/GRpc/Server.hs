@@ -5,7 +5,7 @@
              TypeApplications, TypeOperators,
              ScopedTypeVariables #-}
 -- | Execute a Mu 'Server' using gRPC as transport layer
-module Mu.Server.GRpc (
+module Mu.GRpc.Server (
   -- * Run a 'Server' directly
   runGRpcApp
 , runGRpcAppSettings, Settings

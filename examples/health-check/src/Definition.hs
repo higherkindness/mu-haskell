@@ -10,7 +10,7 @@ import GHC.Generics
 import Data.Text as T
 
 import Mu.Schema
-import Mu.Rpc.Quasi
+import Mu.GRpc.Quasi
 
 $(grpc "HealthCheckSchema" id "healthcheck.proto")
 

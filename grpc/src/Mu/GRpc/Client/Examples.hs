@@ -1,5 +1,5 @@
 {-# language DataKinds, TypeApplications #-}
-module Mu.Client.GRpc.Examples where
+module Mu.GRpc.Client.Examples where
 
 import Data.Conduit
 import Data.Conduit.Combinators as C
@@ -7,7 +7,7 @@ import Data.Conduit.List (consume)
 import qualified Data.Text as T
 import Network.HTTP2.Client (HostName, PortNumber)
 
-import Mu.Client.GRpc.TyApps
+import Mu.GRpc.Client.TyApps
 import Mu.Rpc.Examples
 
 sayHello' :: HostName -> PortNumber -> T.Text -> IO (GRpcReply T.Text)

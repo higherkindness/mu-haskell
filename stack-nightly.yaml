@@ -1,8 +1,10 @@
-resolver: nightly-2019-11-04
+resolver: nightly-2019-11-17
 allow-newer: true
 
 packages:
 - schema
+- adapter/avro
+- adapter/protobuf
 - rpc
 - grpc
 - examples/health-check

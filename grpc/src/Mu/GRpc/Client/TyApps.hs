@@ -4,7 +4,7 @@
              TypeOperators, AllowAmbiguousTypes #-}
 -- | Client for gRPC services defined using Mu 'Service'
 --   using 'TypeApplications'
-module Mu.Client.GRpc.TyApps (
+module Mu.GRpc.Client.TyApps (
   -- * Initialization of the gRPC client
   GrpcClient
 , GrpcClientConfig
@@ -22,7 +22,7 @@ import Network.GRPC.Client.Helpers
 import Mu.Rpc
 import Mu.Schema
 
-import Mu.Client.GRpc.Internal
+import Mu.GRpc.Client.Internal
 
 -- | Call a method from a Mu definition.
 --   This method is thought to be used with @TypeApplications@:

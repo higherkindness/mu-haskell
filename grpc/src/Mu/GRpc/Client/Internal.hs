@@ -6,7 +6,7 @@
              AllowAmbiguousTypes,
              TupleSections, UndecidableInstances #-}
 -- | Client for gRPC services defined using Mu 'Service'
-module Mu.Client.GRpc.Internal where
+module Mu.GRpc.Client.Internal where
 
 import Control.Monad.IO.Class
 import Control.Concurrent.Async

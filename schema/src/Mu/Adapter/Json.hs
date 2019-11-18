@@ -5,7 +5,7 @@
              TypeApplications,
              UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Mu.Schema.Adapter.Json where
+module Mu.Adapter.Json where
 
 import Control.Applicative ((<|>))
 import Data.Aeson

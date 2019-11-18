@@ -6,7 +6,7 @@
              TemplateHaskell #-}
 -- | Client for gRPC services defined using Mu 'Service'
 --   using plain Haskell records of functions
-module Mu.Client.GRpc.Record (
+module Mu.GRpc.Client.Record (
   -- * Initialization of the gRPC client
   GrpcClient
 , GrpcClientConfig
@@ -32,7 +32,7 @@ import Language.Haskell.TH.Datatype
 import Network.GRPC.Client (CompressMode(..))
 import Network.GRPC.Client.Helpers
 
-import Mu.Client.GRpc.Internal
+import Mu.GRpc.Client.Internal
 import Mu.Rpc
 
 -- | Fills in a Haskell record of functions with the corresponding
