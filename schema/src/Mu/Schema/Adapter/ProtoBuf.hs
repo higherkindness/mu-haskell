@@ -10,6 +10,7 @@
 module Mu.Schema.Adapter.ProtoBuf (
   -- * Custom annotations
   ProtoBufId
+, ProtoBufOneOfIds
   -- * Conversion using schemas
 , IsProtoSchema
 , HasProtoSchema
@@ -42,12 +43,19 @@ import qualified Mu.Schema.Registry as R
 -- ANNOTATION FOR CONVERSION
 
 data ProtoBufId (n :: Nat)
+data ProtoBufOneOfIds (ns :: [Nat])
 
 type family FindProtoBufId (f :: fn) (xs :: [Type]) :: Nat where
   FindProtoBufId f '[]
     = TypeError ('Text "protocol buffers id not available for field " ':<>: 'ShowType f)
   FindProtoBufId f (ProtoBufId n ': rest) = n
-  FindProtoBufId f (other        ': rest) = FindProtoBufId f rest  
+  FindProtoBufId f (other        ': rest) = FindProtoBufId f rest
+
+type family FindProtoBufOneOfIds (f :: fn) (xs :: [Type]) :: [Nat] where
+  FindProtoBufOneOfIds f '[]
+    = TypeError ('Text "protocol buffers ids not available for oneof field " ':<>: 'ShowType f)
+  FindProtoBufOneOfIds f (ProtoBufOneOfIds n ': rest) = n
+  FindProtoBufOneOfIds f (other              ': rest) = FindProtoBufOneOfIds f rest 
 
 -- CONVERSION USING SCHEMAS
 
@@ -128,6 +136,10 @@ class ProtoBridgeFieldValue (sch :: Schema tn fn) (t :: FieldType tn) where
 class ProtoBridgeOneFieldValue (sch :: Schema tn fn) (t :: FieldType tn) where
   protoToOneFieldValue :: PBDec.Parser PBDec.RawPrimitive (FieldValue sch t)
 
+class ProtoBridgeUnionFieldValue (ids :: [Nat]) (sch :: Schema tn fn) (ts :: [FieldType tn]) where
+  unionFieldValueToProto :: NS (FieldValue sch) ts -> PBEnc.MessageBuilder
+  protoToUnionFieldValue :: PBDec.Parser PBDec.RawMessage (NS (FieldValue sch) ts)
+
 -- --------
 -- TERMS --
 -- --------
@@ -206,12 +218,19 @@ instance TypeError ('Text "protobuf requires wrapping primitives in a message")
 -- FIELDS --
 -- ---------
 
-instance (ProtoBridgeFieldValue sch t, KnownNat (FindProtoBufId name anns))
+instance {-# OVERLAPPABLE #-}
+         (ProtoBridgeFieldValue sch t, KnownNat (FindProtoBufId name anns))
          => ProtoBridgeField sch ('FieldDef name anns t) where
   fieldToProto (Field v) = fieldValueToProto fieldId v
     where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId name anns))
   protoToField = Field <$> protoToFieldValue `at` fieldId
     where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId name anns))
+
+instance {-# OVERLAPS #-}
+         (ProtoBridgeUnionFieldValue (FindProtoBufOneOfIds name anns) sch ts)
+         => ProtoBridgeField sch ('FieldDef name anns ('TUnion ts)) where
+  fieldToProto (Field (FUnion v)) = unionFieldValueToProto @_ @_ @(FindProtoBufOneOfIds name anns) v
+  protoToField = Field . FUnion <$> protoToUnionFieldValue @_ @_ @(FindProtoBufOneOfIds name anns)
 
 -- ------------------
 -- TYPES OF FIELDS --
@@ -326,4 +345,24 @@ instance TypeError ('Text "maps are not currently supported")
   fieldValueToProto = error "maps are not currently supported"
   protoToFieldValue = error "maps are not currently supported"
 
--- TODO: Missing unions!!
+instance TypeError ('Text "nested unions are not currently supported")
+         => ProtoBridgeFieldValue sch ('TUnion choices) where
+  fieldValueToProto = error "nested unions are not currently supported"
+  protoToFieldValue = error "nested unions are not currently supported"
+
+-- UNIONS
+-- ------
+
+instance ProtoBridgeUnionFieldValue ids sch '[] where
+  unionFieldValueToProto = error "empty list of unions"
+  protoToUnionFieldValue = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "unknown type in an union"))
+
+instance ( ProtoBridgeFieldValue sch t, KnownNat thisId
+         , ProtoBridgeUnionFieldValue restIds sch ts )
+         => ProtoBridgeUnionFieldValue (thisId ': restIds) sch (t ': ts) where
+  unionFieldValueToProto (Z v) = fieldValueToProto fieldId v
+    where fieldId = fromInteger $ natVal (Proxy @thisId)
+  unionFieldValueToProto (S v) = unionFieldValueToProto @_ @_ @restIds v
+  protoToUnionFieldValue
+    = Z <$> protoToFieldValue `at` fieldId <|> S <$> protoToUnionFieldValue @_ @_ @restIds
+    where fieldId = fromInteger $ natVal (Proxy @thisId)

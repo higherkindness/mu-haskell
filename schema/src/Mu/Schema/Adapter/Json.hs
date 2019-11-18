@@ -7,6 +7,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Schema.Adapter.Json where
 
+import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Functor.Contravariant
@@ -116,11 +117,22 @@ instance ToJSON (FieldValue sch t)
 instance (ToJSONKey (FieldValue sch k), ToJSON (FieldValue sch v))
          => ToJSON (FieldValue sch ('TMap k v)) where
   toJSON (FMap v) = toJSON v
--- TODO: missing unions!!
+instance (ToJSONUnion sch us)
+         => ToJSON (FieldValue sch ('TUnion us)) where
+  toJSON (FUnion v) = unionToJSON v
+
+class ToJSONUnion sch us where
+  unionToJSON :: NS (FieldValue sch) us -> Value
+instance ToJSONUnion sch '[] where
+  unionToJSON = error "this should never happen"
+instance (ToJSON (FieldValue sch u), ToJSONUnion sch us)
+         => ToJSONUnion sch (u ': us) where
+  unionToJSON (Z v) = toJSON v
+  unionToJSON (S r) = unionToJSON r
 
 instance FromJSON (FieldValue sch 'TNull) where
   parseJSON Null = return FNull
-  parseJSON _ = fail "expected nul"
+  parseJSON _ = fail "expected null"
 instance FromJSON t => FromJSON (FieldValue sch ('TPrimitive t)) where
   parseJSON v = FPrimitive <$> parseJSON v
 instance FromJSONKey t => FromJSONKey (FieldValue sch ('TPrimitive t)) where
@@ -139,3 +151,14 @@ instance ( FromJSONKey (FieldValue sch k), FromJSON (FieldValue sch v)
          , Ord (FieldValue sch k) )
          => FromJSON (FieldValue sch ('TMap k v)) where
   parseJSON v = FMap <$> parseJSON v
+instance (FromJSONUnion sch us)
+         => FromJSON (FieldValue sch ('TUnion us)) where
+  parseJSON v = FUnion <$> unionFromJSON v
+
+class FromJSONUnion sch us where
+  unionFromJSON :: Value -> Parser (NS (FieldValue sch) us)
+instance FromJSONUnion sch '[] where
+  unionFromJSON _ = fail "value does not match any of the types of the union"
+instance (FromJSON (FieldValue sch u), FromJSONUnion sch us)
+         => FromJSONUnion sch (u ': us) where
+  unionFromJSON v = Z <$> parseJSON v <|> S <$> unionFromJSON v
