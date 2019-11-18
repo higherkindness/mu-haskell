@@ -1,6 +1,6 @@
 {-# language TemplateHaskell, DataKinds, OverloadedStrings #-}
 -- | Read a @.proto@ file as a 'Service'
-module Mu.GRpc.Quasi (
+module Mu.Quasi.GRpc (
   grpc
 , compendium
 ) where

@@ -27,8 +27,7 @@ import Network.GRPC.Client.Helpers
 
 import Mu.Rpc
 import Mu.Schema
-
-import Mu.GRpc.Shared
+import Mu.Adapter.ProtoBuf.Via
 
 setupGrpcClient' :: GrpcClientConfig -> IO (Either ClientError GrpcClient)
 setupGrpcClient' = runExceptT . setupGrpcClient

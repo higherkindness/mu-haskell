@@ -4,7 +4,7 @@
              FlexibleInstances, FlexibleContexts,
              UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-simplifiable-class-constraints -fno-warn-orphans #-}
-module Mu.GRpc.Shared where
+module Mu.Adapter.ProtoBuf.Via where
 
 import Network.GRPC.HTTP2.Proto3Wire
 import qualified Proto3.Wire.Encode as PBEnc

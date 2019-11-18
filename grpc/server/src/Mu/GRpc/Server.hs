@@ -36,8 +36,7 @@ import Network.Wai.Handler.WarpTLS (TLSSettings, runTLS)
 import Mu.Rpc
 import Mu.Server
 import Mu.Schema
-
-import Mu.GRpc.Shared
+import Mu.Adapter.ProtoBuf.Via
 
 -- | Run a Mu 'Server' on the given port.
 runGRpcApp

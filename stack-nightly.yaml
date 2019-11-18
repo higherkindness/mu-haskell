@@ -2,11 +2,12 @@ resolver: nightly-2019-11-17
 allow-newer: true
 
 packages:
-- schema
+- core/schema
+- core/rpc
 - adapter/avro
 - adapter/protobuf
-- rpc
-- grpc
+- grpc/client
+- grpc/server
 - examples/health-check
 - examples/route-guide
 - compendium-client
