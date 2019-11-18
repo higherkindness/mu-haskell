@@ -19,7 +19,7 @@ build-type:          Simple
 library
   exposed-modules:     Definition
   build-depends:       base >=4.12 && <5, text,
-                       mu-schema, mu-rpc, mu-grpc,
+                       mu-schema, mu-rpc, mu-protobuf,
                        stm, stm-containers,
                        conduit, stm-conduit,
                        deferred-folds
@@ -31,7 +31,8 @@ executable health-server
   main-is:             Server.hs
   other-modules:       Definition
   build-depends:       base >=4.12 && <5, text,
-                       mu-schema, mu-rpc, mu-grpc,
+                       mu-schema, mu-rpc, mu-protobuf,
+                       mu-grpc-server,
                        stm, stm-containers,
                        conduit, stm-conduit,
                        deferred-folds
@@ -43,8 +44,8 @@ executable health-client-tyapps
   main-is:             ClientTyApps.hs
   other-modules:       Definition
   build-depends:       base >=4.12 && <5, text,
-                       mu-schema, mu-rpc, mu-grpc,
-                       conduit
+                       mu-schema, mu-rpc, mu-protobuf,
+                       mu-grpc-client, conduit
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall
@@ -53,8 +54,8 @@ executable health-client-record
   main-is:             ClientRecord.hs
   other-modules:       Definition
   build-depends:       base >=4.12 && <5, text,
-                       mu-schema, mu-rpc, mu-grpc,
-                       conduit
+                       mu-schema, mu-rpc, mu-protobuf,
+                       mu-grpc-client, conduit
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall

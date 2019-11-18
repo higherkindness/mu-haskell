@@ -19,7 +19,7 @@ build-type:          Simple
 library
   exposed-modules:     Definition
   build-depends:       base >=4.12 && <5, text,
-                       mu-schema, mu-rpc, mu-grpc,
+                       mu-schema, mu-rpc, mu-protobuf,
                        hashable
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -29,7 +29,8 @@ executable route-guide-server
   main-is:             Server.hs
   other-modules:       Definition
   build-depends:       base >=4.12 && <5, text,
-                       mu-schema, mu-rpc, mu-grpc,
+                       mu-schema, mu-rpc, mu-protobuf,
+                       mu-grpc-server,
                        stm, stm-chans, hashable,
                        conduit, AC-Angle, time, async
   hs-source-dirs:      src
