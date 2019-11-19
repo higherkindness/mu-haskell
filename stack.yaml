@@ -9,6 +9,7 @@ packages:
 - grpc/server
 - examples/health-check
 - examples/route-guide
+- examples/todolist
 - compendium-client
 
 extra-deps:
