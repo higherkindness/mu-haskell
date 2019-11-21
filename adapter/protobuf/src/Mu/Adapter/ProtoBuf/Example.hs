@@ -1,7 +1,8 @@
-{-# language QuasiQuotes, DataKinds #-}
+{-# language DataKinds   #-}
+{-# language QuasiQuotes #-}
 module Mu.Adapter.ProtoBuf.Example where
 
-import Mu.Quasi.ProtoBuf
+import           Mu.Quasi.ProtoBuf
 
 type ExampleProtoBufSchema = [protobuf|
 enum gender {

@@ -1,19 +1,25 @@
-{-# language PolyKinds, DataKinds, GADTs,
-             MultiParamTypeClasses,
-             FlexibleInstances, OverloadedStrings,
-             DeriveGeneric, DeriveAnyClass, TypeOperators,
-             PartialTypeSignatures, TypeFamilies #-}
+{-# language DataKinds             #-}
+{-# language DeriveAnyClass        #-}
+{-# language DeriveGeneric         #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language OverloadedStrings     #-}
+{-# language PartialTypeSignatures #-}
+{-# language PolyKinds             #-}
+{-# language TypeFamilies          #-}
+{-# language TypeOperators         #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Rpc.Examples where
 
-import Data.Conduit
-import Data.Conduit.Combinators as C
-import qualified Data.Text as T
-import GHC.Generics
+import           Data.Conduit
+import           Data.Conduit.Combinators as C
+import qualified Data.Text                as T
+import           GHC.Generics
 
-import Mu.Schema
-import Mu.Rpc
-import Mu.Server
+import           Mu.Rpc
+import           Mu.Schema
+import           Mu.Server
 
 -- Defines the service from gRPC Quickstart
 -- https://grpc.io/docs/quickstart/python/

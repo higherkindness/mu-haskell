@@ -1,9 +1,15 @@
-{-# language PolyKinds, DataKinds, TypeOperators,
-             MultiParamTypeClasses, TypeFamilies,
-             FlexibleInstances, FlexibleContexts,
-             UndecidableInstances, TypeApplications,
-             ScopedTypeVariables, AllowAmbiguousTypes,
-             TemplateHaskell #-}
+{-# language AllowAmbiguousTypes   #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TemplateHaskell       #-}
+{-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
 -- | Client for gRPC services defined using Mu 'Service'
 --   using plain Haskell records of functions
 module Mu.GRpc.Client.Record (
@@ -19,21 +25,21 @@ module Mu.GRpc.Client.Record (
 , generateRecordFromService
 ) where
 
-import Control.Applicative
-import Data.Char
-import Data.Conduit (ConduitT)
-import Data.Proxy
-import Data.Void
-import GHC.Generics hiding (NoSourceUnpackedness, NoSourceStrictness)
-import GHC.TypeLits
-import Language.Haskell.TH hiding (ppr)
-import Language.Haskell.TH.Datatype
+import           Control.Applicative
+import           Data.Char
+import           Data.Conduit                 (ConduitT)
+import           Data.Proxy
+import           Data.Void
+import           GHC.Generics                 hiding (NoSourceStrictness, NoSourceUnpackedness)
+import           GHC.TypeLits
+import           Language.Haskell.TH          hiding (ppr)
+import           Language.Haskell.TH.Datatype
 
-import Network.GRPC.Client (CompressMode(..))
-import Network.GRPC.Client.Helpers
+import           Network.GRPC.Client          (CompressMode (..))
+import           Network.GRPC.Client.Helpers
 
-import Mu.GRpc.Client.Internal
-import Mu.Rpc
+import           Mu.GRpc.Client.Internal
+import           Mu.Rpc
 
 -- | Fills in a Haskell record of functions with the corresponding
 --   calls to gRPC services from a Mu 'Service' declaration.
@@ -132,11 +138,11 @@ completeName :: Namer -> String -> String
 completeName namer name = firstUpper (namer (firstUpper name))
 
 firstUpper :: String -> String
-firstUpper [] = error "Empty names are not allowed"
+firstUpper []       = error "Empty names are not allowed"
 firstUpper (x:rest) = toUpper x : rest
 
 firstLower :: String -> String
-firstLower [] = error "Empty names are not allowed"
+firstLower []       = error "Empty names are not allowed"
 firstLower (x:rest) = toLower x : rest
 
 -- Parsing
@@ -153,7 +159,7 @@ typeToServiceDef toplevelty
            Service <$> tyString sn
                    <*> pure []
                    <*> mapM typeToMethodDef methods'
-    
+
     typeToMethodDef :: Type -> Maybe (Method String)
     typeToMethodDef ty
       = do (mn, _, args, ret) <- tyD4 'Method ty

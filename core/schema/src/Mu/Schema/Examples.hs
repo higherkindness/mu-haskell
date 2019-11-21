@@ -1,23 +1,30 @@
-{-# language PolyKinds, DataKinds, GADTs,
-             TypeFamilies, TypeOperators,
-             MultiParamTypeClasses, FlexibleInstances,
-             TypeApplications,
-             DeriveGeneric, DerivingVia, DeriveAnyClass,
-             TemplateHaskell, QuasiQuotes #-}
+{-# language DataKinds             #-}
+{-# language DeriveAnyClass        #-}
+{-# language DeriveGeneric         #-}
+{-# language DerivingVia           #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language QuasiQuotes           #-}
+{-# language TemplateHaskell       #-}
+{-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
+{-# language TypeOperators         #-}
 -- | Look at my source code!
 module Mu.Schema.Examples where
 
-import qualified Data.Aeson as J
-import qualified Data.Text as T
-import GHC.Generics
+import qualified Data.Aeson                         as J
+import qualified Data.Text                          as T
+import           GHC.Generics
 
-import Mu.Schema
-import Mu.Schema.Conversion.SchemaToTypes
-import Mu.Adapter.Json ()
+import           Mu.Adapter.Json                    ()
+import           Mu.Schema
+import           Mu.Schema.Conversion.SchemaToTypes
 
 data Person
   = Person { firstName :: T.Text
-           , lastName  :: T.Text 
+           , lastName  :: T.Text
            , age       :: Maybe Int
            , gender    :: Maybe Gender
            , address   :: Address }

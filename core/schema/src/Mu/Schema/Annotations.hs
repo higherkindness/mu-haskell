@@ -1,7 +1,8 @@
-{-# language DataKinds, KindSignatures #-}
+{-# language DataKinds      #-}
+{-# language KindSignatures #-}
 module Mu.Schema.Annotations where
 
-import GHC.TypeLits
+import           GHC.TypeLits
 
 -- ANNOTATION FOR CONVERSION
 

@@ -3,7 +3,7 @@
 
 module Mu.Adapter.Avro.Example where
 
-import Mu.Quasi.Avro (avro, avroFile)
+import           Mu.Quasi.Avro (avro, avroFile)
 
 type Example = [avro|
 {

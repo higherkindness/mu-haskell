@@ -1,20 +1,23 @@
-{-# language PolyKinds, DataKinds,
-             MultiParamTypeClasses,
-             ScopedTypeVariables, TypeApplications,
-             FlexibleInstances, FlexibleContexts,
-             UndecidableInstances #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fno-warn-simplifiable-class-constraints -fno-warn-orphans #-}
 module Mu.Adapter.ProtoBuf.Via where
 
-import Network.GRPC.HTTP2.Proto3Wire
-import qualified Proto3.Wire.Encode as PBEnc
-import qualified Proto3.Wire.Decode as PBDec
+import           Network.GRPC.HTTP2.Proto3Wire
+import qualified Proto3.Wire.Decode            as PBDec
+import qualified Proto3.Wire.Encode            as PBEnc
 
-import Mu.Rpc
-import Mu.Schema
-import Mu.Adapter.ProtoBuf
+import           Mu.Adapter.ProtoBuf
+import           Mu.Rpc
+import           Mu.Schema
 
-newtype ViaProtoBufTypeRef (ref :: TypeRef) t 
+newtype ViaProtoBufTypeRef (ref :: TypeRef) t
   = ViaProtoBufTypeRef { unViaProtoBufTypeRef :: t }
 
 instance ProtoBufTypeRef ref t

@@ -1,20 +1,23 @@
-{-# language CPP, TemplateHaskell, TypeOperators, DataKinds #-}
+{-# language CPP             #-}
+{-# language DataKinds       #-}
+{-# language TemplateHaskell #-}
+{-# language TypeOperators   #-}
 -- | Generate a set of Haskell types from a 'Schema'.
 module Mu.Schema.Conversion.SchemaToTypes (
   generateTypesFromSchema
 , Namer
 ) where
 
-import Control.Applicative
-import Data.Char
-import qualified Data.Map as M
-import Data.SOP
-import GHC.Generics (Generic)
-import Language.Haskell.TH
-import Language.Haskell.TH.Datatype
+import           Control.Applicative
+import           Data.Char
+import qualified Data.Map                     as M
+import           Data.SOP
+import           GHC.Generics                 (Generic)
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Datatype
 
-import Mu.Schema.Definition
-import Mu.Schema.Class
+import           Mu.Schema.Class
+import           Mu.Schema.Definition
 
 -- | Generate the name from each new Haskell type
 --   from the name given in the schema.
@@ -141,11 +144,11 @@ fieldName :: String -> String -> String
 fieldName complete fname = firstLower (complete ++ firstUpper fname)
 
 firstUpper :: String -> String
-firstUpper [] = error "Empty names are not allowed"
+firstUpper []       = error "Empty names are not allowed"
 firstUpper (x:rest) = toUpper x : rest
 
 firstLower :: String -> String
-firstLower [] = error "Empty names are not allowed"
+firstLower []       = error "Empty names are not allowed"
 firstLower (x:rest) = toLower x : rest
 
 fieldTypeToDecl :: Namer -> FieldTypeB Type String -> Type
@@ -180,8 +183,8 @@ typeToSchemaDef toplevelty
     typeToSchemaDef' expanded
       = do types <- tyList expanded
            mapM typeToTypeDef types
-    
-    typeToTypeDef, typeToRecordDef, typeToEnumDef, typeToSimpleType 
+
+    typeToTypeDef, typeToRecordDef, typeToEnumDef, typeToSimpleType
       :: Type -> Maybe (TypeDefB Type String String)
     typeToTypeDef t
       = typeToRecordDef t <|> typeToEnumDef t <|> typeToSimpleType t

@@ -1,30 +1,35 @@
-{-# language PolyKinds, DataKinds, GADTs, 
-             FlexibleInstances, FlexibleContexts,
-             TypeApplications, TypeOperators,
-             ScopedTypeVariables, RankNTypes,
-             MultiParamTypeClasses,
-             UndecidableInstances #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language RankNTypes            #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Adapter.Avro where
 
-import Control.Arrow ((***))
-import qualified Data.Avro as A
-import qualified Data.Avro.Schema as ASch
-import qualified Data.Avro.Types.Value as AVal
+import           Control.Arrow                       ((***))
+import qualified Data.Avro                           as A
+import qualified Data.Avro.Schema                    as ASch
+import qualified Data.Avro.Types.Value               as AVal
 -- 'Tagged . unTagged' can be replaced by 'coerce'
 -- eliminating some run-time overhead
-import Data.Coerce (coerce)
-import qualified Data.HashMap.Strict as HM
-import Data.List.NonEmpty (NonEmpty(..))
-import qualified Data.List.NonEmpty as NonEmptyList
-import qualified Data.Map as M
-import Data.SOP (NP(..), NS(..))
-import Data.Tagged
-import qualified Data.Text as T
-import qualified Data.Vector as V
-import GHC.TypeLits
+import           Data.Coerce                         (coerce)
+import qualified Data.HashMap.Strict                 as HM
+import           Data.List.NonEmpty                  (NonEmpty (..))
+import qualified Data.List.NonEmpty                  as NonEmptyList
+import qualified Data.Map                            as M
+import           Data.SOP                            (NP (..), NS (..))
+import           Data.Tagged
+import qualified Data.Text                           as T
+import qualified Data.Vector                         as V
+import           GHC.TypeLits
 
-import Mu.Schema
+import           Mu.Schema
 import qualified Mu.Schema.Interpretation.Schemaless as SLess
 
 instance SLess.ToSchemalessTerm (AVal.Value t) where
@@ -69,7 +74,7 @@ instance HasAvroSchemas sch sch
 instance (HasSchema sch sty t, HasAvroSchemas sch sch, A.FromAvro (Term sch (sch :/: sty)))
          => A.FromAvro (WithSchema sch sty t) where
   fromAvro (AVal.Union _ _ v) = WithSchema . fromSchema' @sch <$> A.fromAvro v
-  fromAvro v = ASch.badValue v "top-level"
+  fromAvro v                  = ASch.badValue v "top-level"
 instance (HasSchema sch sty t, HasAvroSchemas sch sch, A.ToAvro (Term sch (sch :/: sty)))
          => A.ToAvro (WithSchema sch sty t) where
   toAvro (WithSchema v) = AVal.Union (schemas (Proxy @sch) (Proxy @sch))
@@ -164,11 +169,11 @@ instance (KnownName name, HasAvroSchemaEnum fs)
 instance (KnownName name, HasAvroSchemaFields sch args, FromAvroFields sch args)
          => A.FromAvro (Term sch ('DRecord name anns args)) where
   fromAvro (AVal.Record _ fields) = TRecord <$> fromAvroF fields
-  fromAvro v = A.badValue v "record"
+  fromAvro v                      = A.badValue v "record"
 instance (KnownName name, HasAvroSchemaEnum choices, FromAvroEnum choices)
           => A.FromAvro (Term sch ('DEnum name anns choices)) where
   fromAvro v@(AVal.Enum _ n _) = TEnum <$> fromAvroEnum v n
-  fromAvro v = A.badValue v "enum"
+  fromAvro v                   = A.badValue v "enum"
 instance A.FromAvro (FieldValue sch t)
          => A.FromAvro (Term sch ('DSimple t)) where
   fromAvro v = TSimple <$> A.fromAvro v
@@ -184,7 +189,7 @@ instance (KnownName t, A.FromAvro (Term sch (sch :/: t)))
 instance (HasAvroSchemaUnion (FieldValue sch) choices, FromAvroUnion sch choices)
          => A.FromAvro (FieldValue sch ('TUnion choices)) where
   fromAvro (AVal.Union _ branch v) = FUnion <$> fromAvroU branch v
-  fromAvro v = A.badValue v "union"
+  fromAvro v                       = A.badValue v "union"
 instance A.FromAvro (FieldValue sch t)
          => A.FromAvro (FieldValue sch ('TOption t)) where
   fromAvro v = FOption <$> A.fromAvro v
@@ -258,7 +263,7 @@ instance forall sch choices.
   toAvro (FUnion v) = AVal.Union wholeSchema' chosenTy chosenVal
     where wholeSchema = schemaU (Proxy @(FieldValue sch)) (Proxy @choices)
           wholeSchema' = V.fromList (NonEmptyList.toList wholeSchema)
-          (chosenTy, chosenVal) = toAvroU v 
+          (chosenTy, chosenVal) = toAvroU v
 instance A.ToAvro (FieldValue sch t)
          => A.ToAvro (FieldValue sch ('TOption t)) where
   toAvro (FOption v) = A.toAvro v

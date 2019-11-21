@@ -1,22 +1,26 @@
-{-# language PolyKinds, DataKinds, GADTs,
-             TypeOperators, ScopedTypeVariables,
-             MultiParamTypeClasses,
-             FlexibleInstances, FlexibleContexts,
-             TypeApplications,
-             UndecidableInstances #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Adapter.Json where
 
-import Control.Applicative ((<|>))
-import Data.Aeson
-import Data.Aeson.Types
-import Data.Functor.Contravariant
-import qualified Data.HashMap.Strict as HM
-import Data.SOP (NS(..), NP(..))
-import qualified Data.Text as T
-import qualified Data.Vector as V
+import           Control.Applicative                 ((<|>))
+import           Data.Aeson
+import           Data.Aeson.Types
+import           Data.Functor.Contravariant
+import qualified Data.HashMap.Strict                 as HM
+import           Data.SOP                            (NP (..), NS (..))
+import qualified Data.Text                           as T
+import qualified Data.Vector                         as V
 
-import Mu.Schema
+import           Mu.Schema
 import qualified Mu.Schema.Interpretation.Schemaless as SLess
 
 instance SLess.ToSchemalessTerm Value where
@@ -46,7 +50,7 @@ instance ToJSONFields sch args => ToJSON (Term sch ('DRecord name anns args)) wh
   toJSON (TRecord fields) = Object (toJSONFields fields)
 instance FromJSONFields sch args => FromJSON (Term sch ('DRecord name anns args)) where
   parseJSON (Object v) = TRecord <$> parseJSONFields v
-  parseJSON _ = fail "expected object"
+  parseJSON _          = fail "expected object"
 
 class ToJSONFields sch fields where
   toJSONFields :: NP (Field sch) fields -> Object
@@ -71,7 +75,7 @@ instance ToJSONEnum choices => ToJSON (Term sch ('DEnum name anns choices)) wher
   toJSON (TEnum choice) = String (toJSONEnum choice)
 instance FromJSONEnum choices => FromJSON (Term sch ('DEnum name anns choices)) where
   parseJSON (String s) = TEnum <$> parseJSONEnum s
-  parseJSON _ = fail "expected string"
+  parseJSON _          = fail "expected string"
 
 class ToJSONEnum choices where
   toJSONEnum :: NS Proxy choices -> T.Text
@@ -132,7 +136,7 @@ instance (ToJSON (FieldValue sch u), ToJSONUnion sch us)
 
 instance FromJSON (FieldValue sch 'TNull) where
   parseJSON Null = return FNull
-  parseJSON _ = fail "expected null"
+  parseJSON _    = fail "expected null"
 instance FromJSON t => FromJSON (FieldValue sch ('TPrimitive t)) where
   parseJSON v = FPrimitive <$> parseJSON v
 instance FromJSONKey t => FromJSONKey (FieldValue sch ('TPrimitive t)) where
