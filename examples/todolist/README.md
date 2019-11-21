@@ -5,13 +5,7 @@
 Running the server:
 
 ```bash
-stack run example-todolist-server
-```
-
-Running the client:
-
-```bash
-stack run example-todolist-client
+stack run todolist-server
 ```
 
 [comment]: # (Start Copyright)

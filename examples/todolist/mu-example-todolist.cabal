@@ -39,6 +39,7 @@ executable todolist-server
                      , mu-grpc-server
                      , stm
                      , stm-chans
+                     , stm-containers
                      , hashable
                      , conduit
                      , AC-Angle
