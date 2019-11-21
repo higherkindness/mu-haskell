@@ -1,7 +1,12 @@
-{-# language PolyKinds, DataKinds, GADTs,
-             MultiParamTypeClasses, FlexibleContexts,
-             ScopedTypeVariables, TypeApplications,
-             TypeOperators, AllowAmbiguousTypes #-}
+{-# language AllowAmbiguousTypes   #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language TypeOperators         #-}
 -- | Client for gRPC services defined using Mu 'Service'
 --   using 'TypeApplications'
 module Mu.GRpc.Client.TyApps (
@@ -16,18 +21,18 @@ module Mu.GRpc.Client.TyApps (
 , GRpcReply(..)
 ) where
 
-import Network.GRPC.Client (CompressMode(..))
-import Network.GRPC.Client.Helpers
+import           Network.GRPC.Client         (CompressMode (..))
+import           Network.GRPC.Client.Helpers
 
-import Mu.Rpc
-import Mu.Schema
+import           Mu.Rpc
+import           Mu.Schema
 
-import Mu.GRpc.Client.Internal
+import           Mu.GRpc.Client.Internal
 
 -- | Call a method from a Mu definition.
 --   This method is thought to be used with @TypeApplications@:
---   > gRpcCall @"packageName" @ServiceDeclaration @"method" 
---  
+--   > gRpcCall @"packageName" @ServiceDeclaration @"method"
+--
 --   The additional arguments you must provide to 'grpcCall'
 --   depend on the signature of the method itself:
 --   * The resulting value is always wrapped in 'GRpcReply'.

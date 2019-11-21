@@ -1,14 +1,17 @@
-{-# language PolyKinds, DataKinds, GADTs,
-             TypeOperators,
-             MultiParamTypeClasses,
-             FlexibleInstances, FlexibleContexts,
-             UndecidableInstances,
-             StandaloneDeriving #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language StandaloneDeriving    #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
 module Mu.Schema.Interpretation.Anonymous where
 
-import Data.SOP
+import           Data.SOP
 
-import Mu.Schema
+import           Mu.Schema
 
 data V0 sch sty where
   V0 :: (sch :/: sty ~ 'DRecord nm anns '[])

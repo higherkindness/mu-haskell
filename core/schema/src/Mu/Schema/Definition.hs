@@ -1,14 +1,18 @@
-{-# language PolyKinds, DataKinds,
-             TypeFamilies, TypeOperators,
-             UndecidableInstances, FlexibleInstances,
-             ScopedTypeVariables, TypeApplications #-}
+{-# language DataKinds            #-}
+{-# language FlexibleInstances    #-}
+{-# language PolyKinds            #-}
+{-# language ScopedTypeVariables  #-}
+{-# language TypeApplications     #-}
+{-# language TypeFamilies         #-}
+{-# language TypeOperators        #-}
+{-# language UndecidableInstances #-}
 -- | Schema definition
 module Mu.Schema.Definition where
 
-import Data.Kind
-import Data.Proxy
-import Data.Typeable
-import GHC.TypeLits
+import           Data.Kind
+import           Data.Proxy
+import           Data.Typeable
+import           GHC.TypeLits
 
 -- | A set of type definitions,
 --   where the names of types and fields are
@@ -40,7 +44,7 @@ type SchemaB builtin typeName fieldName
   = [TypeDefB builtin typeName fieldName]
 
 -- | Libraries can define custom annotations
---   to indicate additional information. 
+--   to indicate additional information.
 type Annotation = Type
 
 -- | Defines a type in a schema.

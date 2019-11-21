@@ -1,30 +1,33 @@
-{-# language DataKinds, TypeOperators,
-             DeriveGeneric, DeriveAnyClass,
-             ViewPatterns, TypeApplications #-}
+{-# language DataKinds        #-}
+{-# language DeriveAnyClass   #-}
+{-# language DeriveGeneric    #-}
+{-# language TypeApplications #-}
+{-# language TypeOperators    #-}
+{-# language ViewPatterns     #-}
 module Compendium.Client where
 
-import Data.Aeson
-import Data.Char
-import Data.Proxy
-import Data.Text
-import Language.ProtocolBuffers.Types
-import Language.ProtocolBuffers.Parser
-import Network.HTTP.Client (Manager)
-import Servant.API
-import Servant.Client
-import Text.Megaparsec
+import           Data.Aeson
+import           Data.Char
+import           Data.Proxy
+import           Data.Text
+import           Language.ProtocolBuffers.Parser
+import           Language.ProtocolBuffers.Types
+import           Network.HTTP.Client             (Manager)
+import           Servant.API
+import           Servant.Client
+import           Text.Megaparsec
 
-import GHC.Generics
+import           GHC.Generics
 
 newtype Protocol
   = Protocol { raw :: Text }
   deriving (Eq, Show, Generic, FromJSON)
-  
+
 data IdlName
   = Avro | Protobuf | Mu | OpenApi | Scala
   deriving (Eq, Show, Generic)
 instance ToHttpApiData IdlName where
-  toQueryParam (show -> x:xs) 
+  toQueryParam (show -> x:xs)
     = pack $ Data.Char.toLower x : xs
   toQueryParam _ = error "this should never happen"
 
@@ -50,12 +53,12 @@ data ObtainProtoBufError
 
 obtainProtoBuf :: Manager -> BaseUrl
                -> Text -> IO (Either ObtainProtoBufError ProtoBuf)
-obtainProtoBuf m url ident
-  = do r <- transformation m url ident Protobuf
-       case r of
-         Left e
-           -> return $ Left (OPEClient e)
-         Right (Protocol p)
-           -> case parseProtoBuf p of
-                Left e   -> return $ Left (OPEParse e)
-                Right pb -> return $ Right pb
+obtainProtoBuf m url ident = do
+  r <- transformation m url ident Protobuf
+  case r of
+    Left e
+      -> return $ Left (OPEClient e)
+    Right (Protocol p)
+      -> case parseProtoBuf p of
+          Left e   -> return $ Left (OPEParse e)
+          Right pb -> return $ Right pb

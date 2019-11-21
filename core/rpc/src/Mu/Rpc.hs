@@ -1,8 +1,11 @@
-{-# language DataKinds, PolyKinds,
-             GADTs, ExistentialQuantification,
-             TypeFamilies, ConstraintKinds,
-             TypeOperators,
-             UndecidableInstances #-}
+{-# language ConstraintKinds           #-}
+{-# language DataKinds                 #-}
+{-# language ExistentialQuantification #-}
+{-# language GADTs                     #-}
+{-# language PolyKinds                 #-}
+{-# language TypeFamilies              #-}
+{-# language TypeOperators             #-}
+{-# language UndecidableInstances      #-}
 -- | Protocol-independent declaration of services
 module Mu.Rpc (
   Service', Service(..)
@@ -11,12 +14,12 @@ module Mu.Rpc (
 , TypeRef(..), Argument(..), Return(..)
 ) where
 
-import Data.Kind
-import GHC.TypeLits
+import           Data.Kind
+import           GHC.TypeLits
 import qualified Language.Haskell.TH as TH
 
-import Mu.Schema
-import Mu.Schema.Registry
+import           Mu.Schema
+import           Mu.Schema.Registry
 
 type Service' = Service Symbol Symbol
 

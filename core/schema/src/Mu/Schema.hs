@@ -1,4 +1,4 @@
-{-# language DataKinds #-}
+{-# language DataKinds #-}
 -- | Schemas for Mu microservices
 module Mu.Schema (
   -- * Schema definition
@@ -21,7 +21,7 @@ module Mu.Schema (
 , ProtoBufId, ProtoBufOneOfIds
 ) where
 
-import Mu.Schema.Annotations
-import Mu.Schema.Definition
-import Mu.Schema.Interpretation
-import Mu.Schema.Class
+import           Mu.Schema.Annotations
+import           Mu.Schema.Class
+import           Mu.Schema.Definition
+import           Mu.Schema.Interpretation

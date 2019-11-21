@@ -2,7 +2,6 @@
 {-# language LambdaCase      #-}
 {-# language NamedFieldPuns  #-}
 {-# language TemplateHaskell #-}
-{-# language ViewPatterns    #-}
 
 module Mu.Quasi.ProtoBuf (
   -- * Quasi-quoters for @.proto@ files
@@ -83,22 +82,22 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) =
       = [t| 'FieldDef $(textToStrLit nm)
                       '[ ProtoBufOneOfIds $(typesToList <$> mapM (intToLit . getFieldNumber) vs ) ]
                       $(typesToList <$> mapM pbOneOfFieldToType vs ) |]
-      
+
     pbFieldTypeToType :: P.FieldType -> Q Type
-    pbFieldTypeToType P.TInt32 = [t|'TPrimitive Int32|]
-    pbFieldTypeToType P.TUInt32 = fail "unsigned integers are not currently supported"
-    pbFieldTypeToType P.TSInt32 = [t|'TPrimitive Int32|]
-    pbFieldTypeToType P.TInt64 = [t|'TPrimitive Int64|]
-    pbFieldTypeToType P.TUInt64 = fail "unsigned integers are not currently supported"
-    pbFieldTypeToType P.TSInt64 = [t|'TPrimitive Int64|]
-    pbFieldTypeToType P.TFixed32 = fail "fixed integers are not currently supported"
-    pbFieldTypeToType P.TFixed64 = fail "fixed integers are not currently supported"
-    pbFieldTypeToType P.TSFixed32 = fail "fixed integers are not currently supported"
-    pbFieldTypeToType P.TSFixed64 = fail "fixed integers are not currently supported"
-    pbFieldTypeToType P.TDouble = [t|'TPrimitive Double|]
-    pbFieldTypeToType P.TBool = [t|'TPrimitive Bool|]
-    pbFieldTypeToType P.TString = [t|'TPrimitive T.Text|]
-    pbFieldTypeToType P.TBytes = [t|'TPrimitive B.ByteString|]
+    pbFieldTypeToType P.TInt32     = [t|'TPrimitive Int32|]
+    pbFieldTypeToType P.TUInt32    = fail "unsigned integers are not currently supported"
+    pbFieldTypeToType P.TSInt32    = [t|'TPrimitive Int32|]
+    pbFieldTypeToType P.TInt64     = [t|'TPrimitive Int64|]
+    pbFieldTypeToType P.TUInt64    = fail "unsigned integers are not currently supported"
+    pbFieldTypeToType P.TSInt64    = [t|'TPrimitive Int64|]
+    pbFieldTypeToType P.TFixed32   = fail "fixed integers are not currently supported"
+    pbFieldTypeToType P.TFixed64   = fail "fixed integers are not currently supported"
+    pbFieldTypeToType P.TSFixed32  = fail "fixed integers are not currently supported"
+    pbFieldTypeToType P.TSFixed64  = fail "fixed integers are not currently supported"
+    pbFieldTypeToType P.TDouble    = [t|'TPrimitive Double|]
+    pbFieldTypeToType P.TBool      = [t|'TPrimitive Bool|]
+    pbFieldTypeToType P.TString    = [t|'TPrimitive T.Text|]
+    pbFieldTypeToType P.TBytes     = [t|'TPrimitive B.ByteString|]
     pbFieldTypeToType (P.TOther t) = [t|'TSchematic $(textToStrLit (last t))|]
 
     hasFieldNumber P.NormalField {} = True
