@@ -1,12 +1,14 @@
-{-# language DataKinds, PolyKinds,
-             GADTs, TypeFamilies,
-             ExistentialQuantification,
-             MultiParamTypeClasses,
-             FlexibleInstances,
-             UndecidableInstances,
-             TypeOperators,
-             ConstraintKinds,
-             RankNTypes #-}
+{-# language ConstraintKinds           #-}
+{-# language DataKinds                 #-}
+{-# language ExistentialQuantification #-}
+{-# language FlexibleInstances         #-}
+{-# language GADTs                     #-}
+{-# language MultiParamTypeClasses     #-}
+{-# language PolyKinds                 #-}
+{-# language RankNTypes                #-}
+{-# language TypeFamilies              #-}
+{-# language TypeOperators             #-}
+{-# language UndecidableInstances      #-}
 -- | Protocol-independent declaration of servers.
 --
 --   A server (represented by 'ServerIO' and in general
@@ -29,11 +31,11 @@ module Mu.Server (
 , HandlersIO, HandlersT(..)
 ) where
 
-import Data.Conduit
-import Data.Kind
+import           Data.Conduit
+import           Data.Kind
 
-import Mu.Rpc
-import Mu.Schema
+import           Mu.Rpc
+import           Mu.Schema
 
 data ServerT (s :: Service snm mnm) (m :: Type -> Type) (hs :: [Type]) where
   Server :: HandlersT methods m hs -> ServerT ('Service sname anns methods) m hs

@@ -1,8 +1,10 @@
-{-# language PolyKinds, DataKinds, TypeFamilies,
-             TypeOperators,
-             UndecidableInstances #-}
+{-# language DataKinds            #-}
+{-# language PolyKinds            #-}
+{-# language TypeFamilies         #-}
+{-# language TypeOperators        #-}
+{-# language UndecidableInstances #-}
 -- | Obtains a 'Schema' from a set of Haskell types.
--- 
+--
 --   Unfortunately, GHC does not allow type families
 --   to appear in instances, so you cannot use the
 --   resulting type directly. Instead, evaluate it
@@ -14,13 +16,13 @@ module Mu.Schema.Conversion.TypesToSchema (
 , FromTypes, FromType(..)
 ) where
 
-import Data.Kind
-import Data.Map as M
-import Data.SOP
-import GHC.Generics
-import GHC.TypeLits
+import           Data.Kind
+import           Data.Map             as M
+import           Data.SOP
+import           GHC.Generics
+import           GHC.TypeLits
 
-import Mu.Schema.Definition
+import           Mu.Schema.Definition
 
 type FromTypes = [FromType Symbol Symbol]
 data FromType tn fn

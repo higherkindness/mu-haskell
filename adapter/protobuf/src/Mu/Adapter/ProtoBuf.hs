@@ -1,11 +1,17 @@
-{-# language PolyKinds, DataKinds, GADTs,
-             TypeFamilies, TypeOperators,
-             MultiParamTypeClasses,
-             FlexibleInstances, FlexibleContexts,
-             ScopedTypeVariables, TypeApplications,
-             UndecidableInstances,
-             OverloadedStrings, ConstraintKinds,
-             AllowAmbiguousTypes #-}
+{-# language AllowAmbiguousTypes   #-}
+{-# language ConstraintKinds       #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language OverloadedStrings     #-}
+{-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Adapter.ProtoBuf (
   -- * Custom annotations
@@ -23,23 +29,23 @@ module Mu.Adapter.ProtoBuf (
 , parseProtoBufWithRegistry
 ) where
 
-import Control.Applicative
-import qualified Data.ByteString as BS
-import Data.Int
-import Data.Kind
-import Data.SOP (All)
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
-import GHC.TypeLits
-import Proto3.Wire
-import qualified Proto3.Wire.Encode as PBEnc
-import qualified Proto3.Wire.Decode as PBDec
+import           Control.Applicative
+import qualified Data.ByteString          as BS
+import           Data.Int
+import           Data.Kind
+import           Data.SOP                 (All)
+import qualified Data.Text                as T
+import qualified Data.Text.Lazy           as LT
+import           GHC.TypeLits
+import           Proto3.Wire
+import qualified Proto3.Wire.Decode       as PBDec
+import qualified Proto3.Wire.Encode       as PBEnc
 
-import Mu.Schema.Annotations
-import Mu.Schema.Definition
-import Mu.Schema.Interpretation
-import Mu.Schema.Class
-import qualified Mu.Schema.Registry as R
+import           Mu.Schema.Annotations
+import           Mu.Schema.Class
+import           Mu.Schema.Definition
+import           Mu.Schema.Interpretation
+import qualified Mu.Schema.Registry       as R
 
 type family FindProtoBufId (f :: fn) (xs :: [Type]) :: Nat where
   FindProtoBufId f '[]
@@ -51,7 +57,7 @@ type family FindProtoBufOneOfIds (f :: fn) (xs :: [Type]) :: [Nat] where
   FindProtoBufOneOfIds f '[]
     = TypeError ('Text "protocol buffers ids not available for oneof field " ':<>: 'ShowType f)
   FindProtoBufOneOfIds f (ProtoBufOneOfIds n ': rest) = n
-  FindProtoBufOneOfIds f (other              ': rest) = FindProtoBufOneOfIds f rest 
+  FindProtoBufOneOfIds f (other              ': rest) = FindProtoBufOneOfIds f rest
 
 -- CONVERSION USING SCHEMAS
 
@@ -78,13 +84,13 @@ parseProtoViaSchema = PBDec.parse (fromProtoViaSchema @_ @_ @sch)
 -- CONVERSION USING REGISTRY
 
 fromProtoBufWithRegistry
-  :: forall (r :: R.Registry) t. 
+  :: forall (r :: R.Registry) t.
      FromProtoBufRegistry r t
   => PBDec.Parser PBDec.RawMessage t
 fromProtoBufWithRegistry = fromProtoBufRegistry' (Proxy @r)
 
 parseProtoBufWithRegistry
-  :: forall (r :: R.Registry) t. 
+  :: forall (r :: R.Registry) t.
      FromProtoBufRegistry r t
   => BS.ByteString -> Either PBDec.ParseError t
 parseProtoBufWithRegistry = PBDec.parse (fromProtoBufWithRegistry @r)
@@ -148,7 +154,7 @@ instance (All (ProtoBridgeField sch) args, ProtoBridgeFields sch args)
   termToProto (TRecord fields) = go fields
     where go :: forall fs. All (ProtoBridgeField sch) fs
              => NP (Field sch) fs -> PBEnc.MessageBuilder
-          go Nil = mempty
+          go Nil       = mempty
           go (f :* fs) = fieldToProto f <> go fs
   protoToTerm = TRecord <$> protoToFields
 

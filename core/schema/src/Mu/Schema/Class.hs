@@ -1,24 +1,30 @@
-{-# language PolyKinds, DataKinds, GADTs,
-             TypeFamilies, TypeOperators,
-             FunctionalDependencies,
-             FlexibleInstances, FlexibleContexts,
-             TypeApplications, ScopedTypeVariables,
-             UndecidableInstances,
-             DefaultSignatures #-}
+{-# language DataKinds              #-}
+{-# language DefaultSignatures      #-}
+{-# language FlexibleContexts       #-}
+{-# language FlexibleInstances      #-}
+{-# language FunctionalDependencies #-}
+{-# language GADTs                  #-}
+{-# language MultiParamTypeClasses  #-}
+{-# language PolyKinds              #-}
+{-# language ScopedTypeVariables    #-}
+{-# language TypeApplications       #-}
+{-# language TypeFamilies           #-}
+{-# language TypeOperators          #-}
+{-# language UndecidableInstances   #-}
 -- | Conversion from types to schemas
 module Mu.Schema.Class (
   WithSchema(..), HasSchema(..), fromSchema', toSchema'
 , Mapping(..), Mappings, MappingRight, MappingLeft
 ) where
 
-import Data.Kind
-import Data.Map as M
-import Data.SOP
-import GHC.Generics
-import GHC.TypeLits
+import           Data.Kind
+import           Data.Map                 as M
+import           Data.SOP
+import           GHC.Generics
+import           GHC.TypeLits
 
-import Mu.Schema.Definition
-import Mu.Schema.Interpretation
+import           Mu.Schema.Definition
+import           Mu.Schema.Interpretation
 
 -- | Tags a value with its schema.
 --   For usage with @deriving via@.
@@ -126,7 +132,7 @@ instance {-# OVERLAPPABLE #-}
 -- This instance removes unneeded metadata from the
 -- top of the type.
 instance {-# OVERLAPS #-}
-         GSchemaTypeDef sch fmap ('DSimple t) f 
+         GSchemaTypeDef sch fmap ('DSimple t) f
          => GSchemaTypeDef sch fmap ('DSimple t) (D1 meta f) where
   toSchemaTypeDef p (M1 x) = toSchemaTypeDef p x
   fromSchemaTypeDef p x = M1 (fromSchemaTypeDef p x)
@@ -160,7 +166,7 @@ instance (GSchemaFieldType sch sk hk, GSchemaFieldType sch sv hv,
           Ord (FieldValue sch sk), Ord hk)  -- Ord is required to build a map
          => GSchemaFieldType sch ('TMap sk sv) (M.Map hk hv) where
   toSchemaFieldType x = FMap (M.mapKeys toSchemaFieldType (M.map toSchemaFieldType x))
-  fromSchemaFieldType (FMap x) = M.mapKeys fromSchemaFieldType (M.map fromSchemaFieldType x) 
+  fromSchemaFieldType (FMap x) = M.mapKeys fromSchemaFieldType (M.map fromSchemaFieldType x)
 -- This assumes that a union is represented by
 -- a value of type 'NS', where types are in
 -- the same order.
@@ -173,7 +179,7 @@ instance AllZip (GSchemaFieldType sch) ts vs
           go (S n)     = S (go n)
   fromSchemaFieldType (FUnion t) = go t
     where go :: AllZip (GSchemaFieldType sch) tss vss
-             => NS (FieldValue sch) tss -> NS I vss 
+             => NS (FieldValue sch) tss -> NS I vss
           go (Z x) = Z (I (fromSchemaFieldType x))
           go (S n) = S (go n)
 
@@ -189,7 +195,7 @@ instance {-# OVERLAPPABLE #-}
 -- This instance removes unneeded metadata from the
 -- top of the type.
 instance {-# OVERLAPS #-}
-         GSchemaTypeDef sch fmap ('DEnum name anns choices) f 
+         GSchemaTypeDef sch fmap ('DEnum name anns choices) f
          => GSchemaTypeDef sch fmap ('DEnum name anns choices) (D1 meta f) where
   toSchemaTypeDef p (M1 x) = toSchemaTypeDef p x
   fromSchemaTypeDef p x = M1 (fromSchemaTypeDef p x)
@@ -261,12 +267,12 @@ instance {-# OVERLAPPABLE #-}
 -- This instance removes unneeded metadata from the
 -- top of the type.
 instance {-# OVERLAPS #-}
-         GSchemaTypeDef sch fmap ('DRecord name anns args) f 
+         GSchemaTypeDef sch fmap ('DRecord name anns args) f
          => GSchemaTypeDef sch fmap ('DRecord name anns args) (D1 meta f) where
   toSchemaTypeDef p (M1 x) = toSchemaTypeDef p x
   fromSchemaTypeDef p x = M1 (fromSchemaTypeDef p x)
 instance {-# OVERLAPS #-}
-         GSchemaTypeDef sch fmap ('DRecord name anns args) f 
+         GSchemaTypeDef sch fmap ('DRecord name anns args) f
          => GSchemaTypeDef sch fmap ('DRecord name anns args) (C1 meta f) where
   toSchemaTypeDef p (M1 x) = toSchemaTypeDef p x
   fromSchemaTypeDef p x = M1 (fromSchemaTypeDef p x)
@@ -297,7 +303,7 @@ instance ( GToSchemaRecord sch fmap cs f
 
 class GToSchemaRecordSearch (sch :: Schema ts fs) (t :: FieldType ts) (f :: * -> *) (w :: Where) where
   toSchemaRecordSearch :: Proxy w -> f a -> FieldValue sch t
-instance GSchemaFieldType sch t v 
+instance GSchemaFieldType sch t v
          => GToSchemaRecordSearch sch t (S1 m (K1 i v)) 'Here where
   toSchemaRecordSearch _ (M1 (K1 x)) = toSchemaFieldType x
 instance GSchemaFieldType sch t v

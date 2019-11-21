@@ -1,9 +1,15 @@
-{-# language PolyKinds, DataKinds, GADTs,
-             ScopedTypeVariables,
-             TypeApplications, TypeOperators,
-             FlexibleContexts, MultiParamTypeClasses,
-             AllowAmbiguousTypes, StandaloneDeriving,
-             FlexibleInstances, UndecidableInstances #-}
+{-# language AllowAmbiguousTypes   #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language StandaloneDeriving    #-}
+{-# language TypeApplications      #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
 module Mu.Schema.Interpretation.Schemaless (
   -- * Terms without an associated schema
   Term(..), Field(..), FieldValue(..)
@@ -13,16 +19,16 @@ module Mu.Schema.Interpretation.Schemaless (
 , ToSchemalessTerm(..), ToSchemalessValue(..)
 ) where
 
-import Control.Applicative ((<|>))
-import Data.List (find)
-import qualified Data.Map as M
-import Data.Proxy
-import Data.SOP
-import qualified Data.Text as T
-import Data.Typeable
+import           Control.Applicative      ((<|>))
+import           Data.List                (find)
+import qualified Data.Map                 as M
+import           Data.Proxy
+import           Data.SOP
+import qualified Data.Text                as T
+import           Data.Typeable
 
-import Mu.Schema.Class
-import Mu.Schema.Definition
+import           Mu.Schema.Class
+import           Mu.Schema.Definition
 import qualified Mu.Schema.Interpretation as S
 
 -- | Interpretation of a type in a schema.
@@ -77,7 +83,7 @@ class CheckSchemaUnion (s :: Schema tn fn) (ts :: [FieldType tn]) where
 
 instance CheckSchemaFields s fields => CheckSchema s ('DRecord nm anns fields) where
   checkSchema' (TRecord fields) = S.TRecord <$> checkSchemaFields fields
-  checkSchema' _ = Nothing
+  checkSchema' _                = Nothing
 instance CheckSchemaFields s '[] where
   checkSchemaFields _ = pure Nil
 instance (KnownName nm, CheckSchemaValue s ty, CheckSchemaFields s rest)
@@ -96,7 +102,7 @@ instance CheckSchemaEnum choices => CheckSchema s ('DEnum nm anns choices) where
         (Just Refl, _, _) -> S.TEnum <$> checkSchemaEnumInt n
         (_, Just Refl, _) -> S.TEnum <$> checkSchemaEnumText n
         (_, _, Just Refl) -> S.TEnum <$> checkSchemaEnumText (T.pack n)
-        _ -> Nothing
+        _                 -> Nothing
   checkSchema' _ = Nothing
 instance CheckSchemaEnum '[] where
   checkSchemaEnumInt  _ = Nothing
@@ -125,7 +131,7 @@ instance Typeable t => CheckSchemaValue s ('TPrimitive t) where
 instance (CheckSchema s (s :/: t))
          => CheckSchemaValue s ('TSchematic t) where
   checkSchemaValue (FSchematic t) = S.FSchematic <$> checkSchema' t
-  checkSchemaValue _ = Nothing
+  checkSchemaValue _              = Nothing
 instance CheckSchemaValue s t => CheckSchemaValue s ('TOption t) where
   checkSchemaValue (FOption x) = S.FOption <$> traverse checkSchemaValue x
   checkSchemaValue _           = Nothing

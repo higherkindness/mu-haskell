@@ -1,19 +1,24 @@
-{-# language PolyKinds, DataKinds, GADTs,
-             TypeFamilies, TypeOperators,
-             FlexibleInstances, FlexibleContexts,
-             TypeApplications, ScopedTypeVariables,
-             UndecidableInstances #-}
+{-# language DataKinds            #-}
+{-# language FlexibleContexts     #-}
+{-# language FlexibleInstances    #-}
+{-# language GADTs                #-}
+{-# language PolyKinds            #-}
+{-# language ScopedTypeVariables  #-}
+{-# language TypeApplications     #-}
+{-# language TypeFamilies         #-}
+{-# language TypeOperators        #-}
+{-# language UndecidableInstances #-}
 -- | Interpretation of schemas
 module Mu.Schema.Interpretation (
   Term(..), Field(..), FieldValue(..)
 , NS(..), NP(..), Proxy(..)
 ) where
 
-import Data.Map
-import Data.Proxy
-import Data.SOP
-  
-import Mu.Schema.Definition
+import           Data.Map
+import           Data.Proxy
+import           Data.SOP
+
+import           Mu.Schema.Definition
 
 -- | Interpretation of a type in a schema.
 data Term (sch :: Schema typeName fieldName) (t :: TypeDef typeName fieldName) where

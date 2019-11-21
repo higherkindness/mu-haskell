@@ -1,21 +1,23 @@
-{-# language TemplateHaskell, DataKinds, OverloadedStrings #-}
+{-# language DataKinds         #-}
+{-# language OverloadedStrings #-}
+{-# language TemplateHaskell   #-}
 -- | Read a @.proto@ file as a 'Service'
 module Mu.Quasi.GRpc (
   grpc
 , compendium
 ) where
 
-import Control.Monad.IO.Class
-import qualified Data.Text as T
-import Language.Haskell.TH
-import qualified Language.ProtocolBuffers.Types as P
-import Language.ProtocolBuffers.Parser
-import Network.HTTP.Client
-import Servant.Client.Core.BaseUrl
+import           Control.Monad.IO.Class
+import qualified Data.Text                       as T
+import           Language.Haskell.TH
+import           Language.ProtocolBuffers.Parser
+import qualified Language.ProtocolBuffers.Types  as P
+import           Network.HTTP.Client
+import           Servant.Client.Core.BaseUrl
 
-import Mu.Quasi.ProtoBuf
-import Mu.Rpc
-import Compendium.Client
+import           Compendium.Client
+import           Mu.Quasi.ProtoBuf
+import           Mu.Rpc
 
 -- | Reads a @.proto@ file and generates:
 --   * A 'Schema' with all the message types, using the
@@ -88,7 +90,7 @@ pbMethodToType s (P.Method nm vr v rr r _)
       = [t| 'RetStream ('FromSchema $(schemaTy s) $(textToStrLit (last a))) |]
     retToType _ _
       = fail "only message types may be used as results"
-              
+
 schemaTy :: Name -> Q Type
 schemaTy schema = return $ ConT schema
 

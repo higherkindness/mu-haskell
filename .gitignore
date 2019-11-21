@@ -1,5 +1,5 @@
 stack*.yaml.lock
-.*
+.stack-work
 *~
 dist
 *.pyc

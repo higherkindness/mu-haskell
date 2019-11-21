@@ -1,17 +1,23 @@
-{-# language PolyKinds, DataKinds, TypeOperators,
-             MultiParamTypeClasses, TypeFamilies,
-             FlexibleInstances, FlexibleContexts,
-             DeriveGeneric, DeriveAnyClass,
-             DuplicateRecordFields, TemplateHaskell #-}
+{-# language DataKinds             #-}
+{-# language DeriveAnyClass        #-}
+{-# language DeriveGeneric         #-}
+{-# language DuplicateRecordFields #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language TemplateHaskell       #-}
+{-# language TypeFamilies          #-}
+{-# language TypeOperators         #-}
 module Definition where
 
-import GHC.Generics
-import Data.Hashable
-import Data.Int
-import Data.Text as T
+import           Data.Hashable
+import           Data.Int
+import           Data.Text     as T
+import           GHC.Generics
 
-import Mu.Schema
-import Mu.Quasi.GRpc
+import           Mu.Quasi.GRpc
+import           Mu.Schema
 
 $(grpc "RouteGuideSchema" id "routeguide.proto")
 

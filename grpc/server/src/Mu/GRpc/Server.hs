@@ -1,9 +1,13 @@
-{-# language PolyKinds, DataKinds, GADTs,
-             MultiParamTypeClasses,
-             FlexibleInstances, FlexibleContexts,
-             UndecidableInstances,
-             TypeApplications, TypeOperators,
-             ScopedTypeVariables #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
 -- | Execute a Mu 'Server' using gRPC as transport layer
 module Mu.GRpc.Server (
   -- * Run a 'Server' directly
@@ -14,29 +18,29 @@ module Mu.GRpc.Server (
 , gRpcApp
 ) where
 
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as BS
-import Control.Concurrent.Async
-import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TMVar
-import Control.Monad.IO.Class
-import Data.Conduit
-import Data.Conduit.TMChan
-import Data.Kind
-import Data.Proxy
-import Network.GRPC.HTTP2.Encoding (uncompressed, gzip)
-import Network.GRPC.HTTP2.Proto3Wire
-import Network.GRPC.Server.Wai (ServiceHandler)
-import Network.GRPC.Server.Handlers
-import Network.GRPC.Server.Wai as Wai
-import Network.Wai (Application)
-import Network.Wai.Handler.Warp (Port, Settings, run, runSettings)
-import Network.Wai.Handler.WarpTLS (TLSSettings, runTLS)
+import           Control.Concurrent.Async
+import           Control.Concurrent.STM        (atomically)
+import           Control.Concurrent.STM.TMVar
+import           Control.Monad.IO.Class
+import           Data.ByteString               (ByteString)
+import qualified Data.ByteString.Char8         as BS
+import           Data.Conduit
+import           Data.Conduit.TMChan
+import           Data.Kind
+import           Data.Proxy
+import           Network.GRPC.HTTP2.Encoding   (gzip, uncompressed)
+import           Network.GRPC.HTTP2.Proto3Wire
+import           Network.GRPC.Server.Handlers
+import           Network.GRPC.Server.Wai       (ServiceHandler)
+import           Network.GRPC.Server.Wai       as Wai
+import           Network.Wai                   (Application)
+import           Network.Wai.Handler.Warp      (Port, Settings, run, runSettings)
+import           Network.Wai.Handler.WarpTLS   (TLSSettings, runTLS)
 
-import Mu.Rpc
-import Mu.Server
-import Mu.Schema
-import Mu.Adapter.ProtoBuf.Via
+import           Mu.Adapter.ProtoBuf.Via
+import           Mu.Rpc
+import           Mu.Schema
+import           Mu.Server
 
 -- | Run a Mu 'Server' on the given port.
 runGRpcApp
@@ -47,8 +51,8 @@ runGRpcApp
 runGRpcApp port svr = run port (gRpcApp svr)
 
 -- | Run a Mu 'Server' using the given 'Settings'.
---   
---   Go to 'Network.Wai.Handler.Warp' to declare 'Settings'. 
+--
+--   Go to 'Network.Wai.Handler.Warp' to declare 'Settings'.
 runGRpcAppSettings
   :: ( KnownName name, KnownName (FindPackageName anns)
      , GRpcMethodHandlers methods handlers )
@@ -88,7 +92,7 @@ gRpcServiceHandlers
 gRpcServiceHandlers (Server svr) = gRpcMethodHandlers packageName serviceName svr
   where packageName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
         serviceName = BS.pack (nameVal (Proxy @name))
-        
+
 class GRpcMethodHandlers (ms :: [Method mnm]) (hs :: [Type]) where
   gRpcMethodHandlers :: ByteString -> ByteString
                      -> HandlersIO ms hs -> [ServiceHandler]
@@ -204,6 +208,7 @@ instance (ProtoBufTypeRef vref v, ProtoBufTypeRef rref r)
             return ((), IncomingStream cstreamHandler cstreamFinalizer, (), OutgoingStream readNext)
 
 toTMVarConduit :: TMVar (Maybe r) -> ConduitT r Void IO ()
-toTMVarConduit var = do x <- await
-                        liftIO $ atomically $ putTMVar var x
-                        toTMVarConduit var
+toTMVarConduit var = do
+  x <- await
+  liftIO $ atomically $ putTMVar var x
+  toTMVarConduit var
