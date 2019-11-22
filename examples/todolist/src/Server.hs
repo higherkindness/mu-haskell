@@ -1,13 +1,14 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE PartialTypeSignatures #-}
+{-# language DataKinds             #-}
+{-# language OverloadedStrings     #-}
+{-# language PartialTypeSignatures #-}
 
 module Main where
 
 import           Control.Concurrent.STM
 import           Data.Int
-import           Data.Maybe
+import           Data.List              (find)
+import           Data.Maybe             (fromMaybe)
 import qualified Data.Text              as T
-import qualified StmContainers.Map      as M
 
 import           Mu.GRpc.Server
 import           Mu.Server
@@ -17,44 +18,65 @@ import           Definition
 main :: IO ()
 main = do
   putStrLn "running todolist application"
-  m <- M.newIO
-  todolist <- newEmptyTMVarIO
-  runGRpcApp 8080 (server m todolist)
+  todoId <- newTVarIO 0
+  todolist <- newTVarIO []
+  pure ()
+  -- runGRpcApp 8080 (server m todolist)
 
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/todolist/server/src/main/scala/handlers/TodoListRpcServiceHandler.scala
-type TodoListMap = M.Map Int32 T.Text
+type Ids = TVar Int32
+type TodoList = TVar [TodoListMessage]
 
-server :: TodoListMap -> TVar TodoListResponse -> ServerIO TodoListService _
-server m t =
-  Server
-    (reset m :<|>: insert m _ :<|>: retrieve m _ :<|>: list_ m :<|>: update m _ :<|>:
-     destroy _ :<|>:
-     H0)
+-- server :: TodoList -> ServerIO TodoListService _
+-- server i t = Server
+--   (reset t :<|>: insert i t :<|>: retrieve m _ :<|>: list_ m :<|>: update m _ :<|>: destroy _ :<|>: H0)
 
-reset :: TodoListMap -> IO MessageId
-reset m = do
+reset :: TodoList -> IO MessageId
+reset t = do
   putStrLn "reset"
-  atomically $ M.reset m
-  return $ MessageId 0
+  atomically $ writeTVar t []
+  pure $ MessageId 0 -- this means nothing
 
-insert :: TodoListMap -> TodoListRequest -> IO TodoListResponse
-insert m upd r@(TodoListRequest title tagId) = do
-  putStr "insert: " >> print (title, tagId)
+insert :: Ids -> TodoList -> TodoListRequest -> IO TodoListResponse
+insert oldId t (TodoListRequest titl tgId) = do
+  putStr "insert: " >> print (titl, tgId)
   atomically $ do
-    M.insert tagId title m
-    putTMVar $ TodoListResponse "Todo inserted correctly."
+    modifyTVar oldId (+1)
+    newId <- readTVar oldId
+    let newTodo = TodoListMessage newId tgId titl
+    modifyTVar t (newTodo:)
+    pure $ TodoListResponse newTodo
 
-retrieve :: TodoListMap -> MessageId -> IO TodoListResponse
-retrieve = undefined -- TODO: no idea
+retrieve :: TodoList -> MessageId -> IO (Maybe TodoListResponse)
+retrieve t (MessageId idMsg) = do
+  putStr "retrieve: " >> print idMsg
+  atomically $ do
+    todos <- readTVar t
+    pure $ TodoListResponse <$> find (\(TodoListMessage idM _ _) -> idM == idMsg) todos
 
-list_ :: TodoListMap -> IO TodoListList
-list_ = undefined -- TODO: no idea
+list_ :: TodoList -> IO TodoListList
+list_ t = do
+  putStrLn "list"
+  atomically $ do
+    todos <- readTVar t
+    pure $ TodoListList todos
 
-update :: TodoListMap -> TodoListMessage -> IO TodoListResponse
-update = undefined -- TODO: no idea
+update :: TodoList -> TodoListMessage -> IO TodoListResponse
+update t msg@(TodoListMessage idM titM tgM) = do
+  putStr "update: " >> print (idM, titM, tgM)
+  atomically $ do
+    todos <- readTVar t
+    modifyTVar t (fmap (\ms@(TodoListMessage idMsg _ _) -> if idM == idMsg then msg else ms))
+    pure $ TodoListResponse msg
 
-destroy :: TodoListMap -> MessageId -> IO MessageId
-destroy m (MessageId msg) = do
-  putStr "destroy: " >> print msg
-  atomically $ M.delete msg m
+destroy :: TodoList -> MessageId -> IO MessageId
+destroy t (MessageId idMsg) = do
+  putStr "destroy: " >> print idMsg
+  atomically $ do
+    todos <- readTVar t
+    case find (\(TodoListMessage idM _ _) -> idM == idMsg) todos of
+      Just todo -> do
+        modifyTVar t (filter (/=todo))
+        pure $ MessageId idMsg -- OK ✅
+      Nothing   -> pure $ MessageId 0 -- did nothing
