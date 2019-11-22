@@ -19,7 +19,7 @@ import           GHC.Generics
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
-$(grpc "TodoListSchema" id "todolist.proto")
+grpc "TodoListSchema" id "todolist.proto"
 
 newtype MessageId = MessageId
   { value :: Int32
@@ -28,6 +28,7 @@ newtype MessageId = MessageId
 data TodoListMessage = TodoListMessage
   { id, tagId :: Int32
   , title     :: Text
+  , completed :: Bool
   } deriving (Eq, Show, Ord, Generic, HasSchema TodoListSchema "TodoListMessage")
 
 data TodoListRequest = TodoListRequest

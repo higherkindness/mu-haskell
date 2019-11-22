@@ -14,7 +14,7 @@ service TodoListService {
 }
 
 message MessageId { int32 value = 1; }
-message TodoListMessage { int32 id = 1; string title = 2; int32 tagId = 3; }
+message TodoListMessage { int32 id = 1; string title = 2; int32 tagId = 3; bool completed = 4; }
 message TodoListRequest { string title = 1; int32 tagId = 2; }  
 message TodoListList { repeated TodoListMessage list = 1; }
 message TodoListResponse { TodoListMessage msg = 1; }

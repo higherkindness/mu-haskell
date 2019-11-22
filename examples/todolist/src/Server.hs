@@ -1,4 +1,5 @@
 {-# language DataKinds             #-}
+{-# language NamedFieldPuns        #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
 
@@ -13,6 +14,7 @@ import           Mu.GRpc.Server
 import           Mu.Server
 
 import           Definition
+import           Prelude                hiding (id)
 
 main :: IO ()
 main = do
@@ -29,12 +31,14 @@ type TodoList = TVar [TodoListMessage]
 
 server :: Id -> TodoList -> ServerIO TodoListService _
 server i t = Server
-  (reset t :<|>: insert i t :<|>: retrieve t :<|>: list_ t :<|>: update t :<|>: destroy t :<|>: H0)
+  (reset i t :<|>: insert i t :<|>: retrieve t :<|>: list_ t :<|>: update t :<|>: destroy t :<|>: H0)
 
-reset :: TodoList -> IO MessageId
-reset t = do
+reset :: Id -> TodoList -> IO MessageId
+reset i t = do
   putStrLn "reset"
-  atomically $ writeTVar t []
+  atomically $ do
+    writeTVar i 0
+    writeTVar t []
   pure $ MessageId 0 -- returns nothing
 
 insert :: Id -> TodoList -> TodoListRequest -> IO TodoListResponse
@@ -43,21 +47,19 @@ insert oldId t (TodoListRequest titl tgId) = do
   atomically $ do
     modifyTVar oldId (+1)
     newId <- readTVar oldId
-    let newTodo = TodoListMessage newId tgId titl
+    let newTodo = TodoListMessage newId tgId titl False
     modifyTVar t (newTodo:)
     pure $ TodoListResponse newTodo
 
 getMsg :: Int32 -> TodoListMessage -> Bool
-getMsg val (TodoListMessage idM _ _) = idM == val
+getMsg x TodoListMessage {id} = id == x
 
 retrieve :: TodoList -> MessageId -> IO TodoListResponse
 retrieve t (MessageId idMsg) = do
   putStr "retrieve: " >> print idMsg
-  atomically $ do
-    todos <- readTVar t
-    pure $ TodoListResponse $ fromMaybe
-      (TodoListMessage 0 0 "I don't know") -- FIXME: we should do something better here!
-      (find (getMsg idMsg) todos)
+  todos <- readTVarIO t
+  let todo = fromMaybe (TodoListMessage 0 0 "I don't know" False) (find (getMsg idMsg) todos)
+  pure $ TodoListResponse todo
 
 list_ :: TodoList -> IO TodoListList
 list_ t = do
@@ -67,19 +69,17 @@ list_ t = do
     pure $ TodoListList todos
 
 update :: TodoList -> TodoListMessage -> IO TodoListResponse
-update t mg@(TodoListMessage idM titM tgM) = do
-  putStr "update: " >> print (idM, titM, tgM)
-  atomically $ do
-    modifyTVar t (fmap (\m -> if getMsg idM m then mg else m))
-    pure $ TodoListResponse mg
+update t mg@(TodoListMessage idM titM tgM compl) = do
+  putStr "update: " >> print (idM, titM, tgM, compl)
+  atomically $ modifyTVar t (fmap (\m -> if getMsg idM m then mg else m))
+  pure $ TodoListResponse mg
 
 destroy :: TodoList -> MessageId -> IO MessageId
 destroy t (MessageId idMsg) = do
   putStr "destroy: " >> print idMsg
-  atomically $ do
-    todos <- readTVar t
-    case find (getMsg idMsg) todos of
-      Just todo -> do
-        modifyTVar t (filter (/=todo))
-        pure $ MessageId idMsg -- OK ✅
-      Nothing   -> pure $ MessageId 0 -- did nothing
+  todos <- readTVarIO t
+  case find (getMsg idMsg) todos of
+    Just todo -> do
+      atomically $ modifyTVar t (filter (/=todo))
+      pure $ MessageId idMsg -- OK ✅
+    Nothing   -> pure $ MessageId 0 -- did nothing
