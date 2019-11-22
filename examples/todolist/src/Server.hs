@@ -77,9 +77,10 @@ update t mg@(TodoListMessage idM titM tgM compl) = do
 destroy :: TodoList -> MessageId -> IO MessageId
 destroy t (MessageId idMsg) = do
   putStr "destroy: " >> print idMsg
-  todos <- readTVarIO t
-  case find (getMsg idMsg) todos of
-    Just todo -> do
-      atomically $ modifyTVar t (filter (/=todo))
-      pure $ MessageId idMsg -- OK ✅
-    Nothing   -> pure $ MessageId 0 -- did nothing
+  atomically $ do
+    todos <- readTVar t
+    case find (getMsg idMsg) todos of
+      Just todo -> do
+        modifyTVar t (filter (/=todo))
+        pure $ MessageId idMsg -- OK ✅
+      Nothing   -> pure $ MessageId 0 -- did nothing
