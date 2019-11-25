@@ -12,7 +12,7 @@ license:             Apache-2.0
 license-file:        LICENSE
 author:              Alejandro Serrano
 maintainer:          alejandro.serrano@47deg.com
--- copyright:
+copyright:           Copyright © 2019-2020 47 Degrees. <http://47deg.com>
 category:            Network
 build-type:          Simple
 
