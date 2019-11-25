@@ -84,9 +84,11 @@ instance HasSchema sch sty t => HandlesRef ('FromSchema sch sty) t
 instance HandlesRef ('FromRegistry subject t last) t
 
 -- Arguments
-instance (HandlesRef ref t, Handles args ret m h, handler ~ (t -> h))
+instance (HandlesRef ref t, Handles args ret m h,
+          handler ~ (t -> h))
          => Handles ('ArgSingle ref ': args) ret m handler
-instance (HandlesRef ref t, Handles args ret m h, handler ~ (ConduitT () t m () -> h))
+instance (MonadError ServerError m, HandlesRef ref t, Handles args ret m h,
+          handler ~ (ConduitT () t m () -> h))
          => Handles ('ArgStream ref ': args) ret m handler
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
