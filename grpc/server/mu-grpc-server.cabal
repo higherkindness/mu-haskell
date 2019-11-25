@@ -21,7 +21,7 @@ library
   exposed-modules:     Mu.GRpc.Server
   -- other-extensions:
   build-depends:       base >=4.12 && <5, sop-core,
-                       bytestring, async,
+                       bytestring, async, mtl,
                        mu-schema, mu-rpc, mu-protobuf,
                        warp, warp-grpc, wai, warp-tls,
                        http2-grpc-types, http2-grpc-proto3-wire,
@@ -34,7 +34,7 @@ executable grpc-example-server
   main-is:             ExampleServer.hs
   other-modules:       Mu.GRpc.Server
   build-depends:       base >=4.12 && <5, sop-core,
-                       bytestring, async,
+                       bytestring, async, mtl,
                        mu-schema, mu-rpc, mu-protobuf,
                        warp, warp-grpc, wai, warp-tls,
                        http2-grpc-types, http2-grpc-proto3-wire,
