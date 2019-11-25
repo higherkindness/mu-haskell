@@ -33,26 +33,26 @@ server :: StatusMap -> StatusUpdates -> ServerIO HealthCheckService _
 server m upd = Server (setStatus_ m upd :<|>: checkH_ m :<|>: clearStatus_ m :<|>:
   checkAll_ m :<|>: cleanAll_ m :<|>: watch_ upd :<|>: H0)
 
-setStatus_ :: StatusMap -> StatusUpdates -> HealthStatusMsg -> IO ()
-setStatus_ m upd s@(HealthStatusMsg (HealthCheckMsg nm) (ServerStatusMsg ss)) = do
+setStatus_ :: StatusMap -> StatusUpdates -> HealthStatusMsg -> ServerErrorIO ()
+setStatus_ m upd s@(HealthStatusMsg (HealthCheckMsg nm) (ServerStatusMsg ss)) = alwaysOk $ do
   putStr "setStatus: " >> print (nm, ss)
   atomically $ do
     M.insert ss nm m
     writeTBMChan upd s
 
-checkH_ :: StatusMap -> HealthCheckMsg -> IO ServerStatusMsg
-checkH_ m (HealthCheckMsg nm) = do
+checkH_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ServerStatusMsg
+checkH_ m (HealthCheckMsg nm) = alwaysOk $ do
   putStr "check: " >> print nm
   ss <- atomically $ M.lookup nm m
   return $ ServerStatusMsg (fromMaybe "UNKNOWN" ss)
 
-clearStatus_ :: StatusMap -> HealthCheckMsg -> IO ()
-clearStatus_ m (HealthCheckMsg nm) = do
+clearStatus_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ()
+clearStatus_ m (HealthCheckMsg nm) = alwaysOk $ do
   putStr "clearStatus: " >> print nm
   atomically $ M.delete nm m
 
-checkAll_ :: StatusMap -> IO AllStatusMsg
-checkAll_ m = do
+checkAll_ :: StatusMap -> ServerErrorIO AllStatusMsg
+checkAll_ m = alwaysOk $ do
     putStrLn "checkAll"
     AllStatusMsg <$> atomically (consumeValues kvToStatus (M.unfoldlM m))
   where
@@ -60,14 +60,17 @@ checkAll_ m = do
     consumeValues f = foldlM' (\xs (x,y) -> pure (f x y:xs)) []
     kvToStatus k v = HealthStatusMsg (HealthCheckMsg k) (ServerStatusMsg v)
 
-cleanAll_ :: StatusMap -> IO ()
-cleanAll_ m = do
+cleanAll_ :: StatusMap -> ServerErrorIO ()
+cleanAll_ m = alwaysOk $ do
   putStrLn "cleanAll"
   atomically $ M.reset m
 
-watch_ :: StatusUpdates -> HealthCheckMsg -> ConduitT ServerStatusMsg Void IO () -> IO ()
+watch_ :: StatusUpdates
+       -> HealthCheckMsg
+       -> ConduitT ServerStatusMsg Void ServerErrorIO ()
+       -> ServerErrorIO ()
 watch_ upd hcm@(HealthCheckMsg nm) sink = do
-  putStr "watch: " >> print nm
+  alwaysOk (putStr "watch: " >> print nm)
   runConduit $ sourceTBMChan upd
             .| C.filter (\(HealthStatusMsg c _) -> hcm == c)
             .| C.map (\(HealthStatusMsg _ s) -> s)
