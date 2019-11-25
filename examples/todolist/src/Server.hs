@@ -59,7 +59,7 @@ retrieve t (MessageId idMsg) = do
   putStr "retrieve: " >> print idMsg
   todos <- readTVarIO t
   let todo = fromMaybe (TodoListMessage 0 0 "I don't know" False) (find (getMsg idMsg) todos)
-  pure $ TodoListResponse todo
+  pure $ TodoListResponse todo -- FIXME: what if it's not found?
 
 list_ :: TodoList -> IO TodoListList
 list_ t = do
@@ -71,7 +71,7 @@ list_ t = do
 update :: TodoList -> TodoListMessage -> IO TodoListResponse
 update t mg@(TodoListMessage idM titM tgM compl) = do
   putStr "update: " >> print (idM, titM, tgM, compl)
-  atomically $ modifyTVar t (fmap (\m -> if getMsg idM m then mg else m))
+  atomically $ modifyTVar t $ fmap (\m -> if getMsg idM m then mg else m)
   pure $ TodoListResponse mg
 
 destroy :: TodoList -> MessageId -> IO MessageId
@@ -81,6 +81,6 @@ destroy t (MessageId idMsg) = do
     todos <- readTVar t
     case find (getMsg idMsg) todos of
       Just todo -> do
-        modifyTVar t (filter (/=todo))
+        modifyTVar t $ filter (/=todo)
         pure $ MessageId idMsg -- OK ✅
       Nothing   -> pure $ MessageId 0 -- did nothing

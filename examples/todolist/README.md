@@ -13,6 +13,6 @@ stack run todolist-server
 
 Mu is designed and developed by 47 Degrees
 
-Copyright (C) 2017-2019 47 Degrees. <http://47deg.com>
+Copyright (C) 2019-2020 47 Degrees. <http://47deg.com>
 
 [comment]: # (End Copyright)
