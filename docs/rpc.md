@@ -1,4 +1,4 @@
-# `mu-rpc`: protocol-independent declaration of services and servers
+# Service and server definition
 
 There are several formats in the wild used to declare service APIs, including [Avro IDL](https://avro.apache.org/docs/current/idl.html), [gRPC](https://grpc.io/), and [OpenAPI](https://swagger.io/specification/). `mu-rpc` abstract the commonalities into a single type-level format for declaring these services, building on the format-independent schema facilities of `mu-schema`.
 

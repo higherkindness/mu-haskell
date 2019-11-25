@@ -1,4 +1,4 @@
-# `mu-schema`: format-independent schemas for serialization
+# Schema definition
 
 Using `mu-schema` you can describe a schema for your data using type-level techniques. You can then automatically generate:
 
