@@ -6,9 +6,9 @@
 module Main where
 
 import           Control.Concurrent.STM
+import           Control.Monad.IO.Class (liftIO)
 import           Data.Int
 import           Data.List              (find)
-import           Data.Maybe             (fromMaybe)
 
 import           Mu.GRpc.Server
 import           Mu.Server
@@ -33,16 +33,16 @@ server :: Id -> TodoList -> ServerIO TodoListService _
 server i t = Server
   (reset i t :<|>: insert i t :<|>: retrieve t :<|>: list_ t :<|>: update t :<|>: destroy t :<|>: H0)
 
-reset :: Id -> TodoList -> IO MessageId
-reset i t = do
+reset :: Id -> TodoList -> ServerErrorIO MessageId
+reset i t = alwaysOk $ do
   putStrLn "reset"
   atomically $ do
     writeTVar i 0
     writeTVar t []
   pure $ MessageId 0 -- returns nothing
 
-insert :: Id -> TodoList -> TodoListRequest -> IO TodoListResponse
-insert oldId t (TodoListRequest titl tgId) = do
+insert :: Id -> TodoList -> TodoListRequest -> ServerErrorIO TodoListResponse
+insert oldId t (TodoListRequest titl tgId) = alwaysOk $ do
   putStr "insert: " >> print (titl, tgId)
   atomically $ do
     modifyTVar oldId (+1)
@@ -54,28 +54,29 @@ insert oldId t (TodoListRequest titl tgId) = do
 getMsg :: Int32 -> TodoListMessage -> Bool
 getMsg x TodoListMessage {id} = id == x
 
-retrieve :: TodoList -> MessageId -> IO TodoListResponse
+retrieve :: TodoList -> MessageId -> ServerErrorIO TodoListResponse
 retrieve t (MessageId idMsg) = do
-  putStr "retrieve: " >> print idMsg
-  todos <- readTVarIO t
-  let todo = fromMaybe (TodoListMessage 0 0 "I don't know" False) (find (getMsg idMsg) todos)
-  pure $ TodoListResponse todo -- FIXME: what if it's not found?
+  liftIO (putStr "retrieve: " >> print idMsg)
+  todos <- liftIO $ readTVarIO t
+  case find (getMsg idMsg) todos of
+    Just todo -> pure $ TodoListResponse todo
+    Nothing   -> serverError $ ServerError NotFound "unknown todolist id"
 
-list_ :: TodoList -> IO TodoListList
-list_ t = do
+list_ :: TodoList -> ServerErrorIO TodoListList
+list_ t = alwaysOk $ do
   putStrLn "list"
   atomically $ do
     todos <- readTVar t
     pure $ TodoListList todos
 
-update :: TodoList -> TodoListMessage -> IO TodoListResponse
-update t mg@(TodoListMessage idM titM tgM compl) = do
+update :: TodoList -> TodoListMessage -> ServerErrorIO TodoListResponse
+update t mg@(TodoListMessage idM titM tgM compl) = alwaysOk $ do
   putStr "update: " >> print (idM, titM, tgM, compl)
   atomically $ modifyTVar t $ fmap (\m -> if getMsg idM m then mg else m)
   pure $ TodoListResponse mg
 
-destroy :: TodoList -> MessageId -> IO MessageId
-destroy t (MessageId idMsg) = do
+destroy :: TodoList -> MessageId -> ServerErrorIO MessageId
+destroy t (MessageId idMsg) = alwaysOk $ do
   putStr "destroy: " >> print idMsg
   atomically $ do
     todos <- readTVar t

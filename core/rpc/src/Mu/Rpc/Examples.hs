@@ -55,14 +55,16 @@ newtype HiRequest = HiRequest { number :: Int }
 quickstartServer :: ServerIO QuickStartService _
 quickstartServer
   = Server (sayHello :<|>: sayHi :<|>: sayManyHellos :<|>: H0)
-  where sayHello :: HelloRequest -> IO HelloResponse
+  where sayHello :: HelloRequest -> ServerErrorIO HelloResponse
         sayHello (HelloRequest nm)
           = return (HelloResponse ("hi, " <> nm))
-        sayHi :: HiRequest -> ConduitT HelloResponse Void IO () -> IO ()
+        sayHi :: HiRequest
+              -> ConduitT HelloResponse Void ServerErrorIO ()
+              -> ServerErrorIO ()
         sayHi (HiRequest n) sink
           = runConduit $ C.replicate n (HelloResponse "hi!") .| sink
-        sayManyHellos :: ConduitT () HelloRequest IO ()
-                      -> ConduitT HelloResponse Void IO ()
-                      -> IO ()
+        sayManyHellos :: ConduitT () HelloRequest ServerErrorIO ()
+                      -> ConduitT HelloResponse Void ServerErrorIO ()
+                      -> ServerErrorIO ()
         sayManyHellos source sink
           = runConduit $ source .| C.mapM sayHello .| sink
