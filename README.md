@@ -2,7 +2,7 @@
 
 This repo defines a set of libraries to write microservices in a format- and protocol-independent way. It shares the same goals as [Mu for Scala](http://higherkindness.io/mu/), but using idiomatic Haskell and more type-level techniques.
 
-## [Documentation](docs)
+## [Documentation](docs)
 
 ## Building
 
