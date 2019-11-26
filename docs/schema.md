@@ -1,9 +1,9 @@
-# Schema definition
+# Schemas
 
 Using `mu-schema` you can describe a schema for your data using type-level techniques. You can then automatically generate:
 
 * conversion between your Haskell data types and the values as expected by the schema,
-* generalization to [Avro](https://avro.apache.org/), [Protocol Buffers](https://developers.google.com/protocol-buffers/), and [JSON](https://www.json.org/).
+* serialization to [Avro](https://avro.apache.org/), [Protocol Buffers](https://developers.google.com/protocol-buffers/), and [JSON](https://www.json.org/).
 
 Since `mu-schema` makes heavy use of type-level techniques, you need to open up the Pandora's box by enabling (at least) the following extensions: `PolyKinds` and `DataKinds`.
 
@@ -81,6 +81,13 @@ message person {
 |]
 ```
 
+### Schemas part of services
+
+If you use the `grpc` function to import a gRPC `.proto` file in the type-level, that function already takes care of creating an appropiate schema for *all* the messages. If you prefer to have different schemas for different subsets of messages (for example, aggregated by services), you can either:
+
+* Write the schemas by hand,
+* Split the definition file into several ones, and import each of them in its own `[protobufFile||]` block.
+
 ## Mapping Haskell types
 
 These schemas become more useful once you can map your Haskell types to them. `mu-schema` uses the generics mechanism built in GHC to automatically derive these mappings, asuming that you declare your data types using field names.
@@ -125,8 +132,6 @@ instance HasSchema ExampleSchema "gender" Gender where
 If you want to use (de)serialization to Protocol Buffers, you need to declare one more piece of information. A Protocol Buffer record or enumeration assigns both names and *numeric identifiers* to each field or value, respectively. This is done via an *annotation* in each field:
 
 ```haskell
-import Mu.Schema.Adapter.ProtoBuf
-
 type ExampleSchema
   = '[ ...
      , 'DRecord "address"
@@ -136,16 +141,3 @@ type ExampleSchema
 ```
 
 If you use the `protobuf` or `protobufFile` quasi-quoters to import your Protocol Buffers schemas, this is done automatically for you.
-
-## Registry
-
-Schemas evolve over time. It is a good practice to keep an inventory of all the schemas you can work with, in the form of a *registry*. Using `mu-schema` you can declare one such registry by giving an instance of the `Registry` type family:
-
-```haskell
-{-# language TypeFamilies #-}
-
-type instance Registry "example"
-  = '[ 2 ':-> ExampleSchemaV2, 1 ':-> ExampleSchema ]
-```
-
-The argument to registry is a tag which identifies that set of schemas. Here we use a type-level string, but you can use any other kind. We then indicate to which type-level schema each version corresponds to. Once we have done that you can use functions like `fromRegistry` to try to parse a term into a Haskell type by trying each of the schemas.

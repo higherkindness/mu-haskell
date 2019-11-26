@@ -4,8 +4,8 @@ Mu-Haskell is a set of packages that help you build both servers and clients for
 
 * [Introduction](intro.md)
 * [Schemas](schema.md)
-  * [Registry](registry.md)
-* [Services](rpc.md)
-  * [gRPC](grpc.md)
+* [Services and servers](rpc.md)
+  * [gRPC servers and clients](grpc.md)
   * [Streams](stream.md)
   * [WAI Middleware](middleware.md)
+* [Registry](registry.md)
