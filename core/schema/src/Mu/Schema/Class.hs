@@ -4,7 +4,6 @@
 {-# language FlexibleInstances      #-}
 {-# language FunctionalDependencies #-}
 {-# language GADTs                  #-}
-{-# language MultiParamTypeClasses  #-}
 {-# language PolyKinds              #-}
 {-# language ScopedTypeVariables    #-}
 {-# language TypeApplications       #-}
@@ -141,6 +140,10 @@ class GSchemaFieldType (sch :: Schema ts fs) (t :: FieldType ts) (f :: *) where
   toSchemaFieldType   :: f -> FieldValue sch t
   fromSchemaFieldType :: FieldValue sch t -> f
 
+class GSchemaFieldTypeUnion (sch :: Schema ts fs) (t :: [FieldType ts]) (f :: * -> *) where
+  toSchemaFieldTypeUnion   :: f a -> NS (FieldValue sch) t
+  fromSchemaFieldTypeUnion :: NS (FieldValue sch) t -> f a
+
 -- These instances are straightforward,
 -- just turn the "real types" into their
 -- schema correspondants.
@@ -170,7 +173,8 @@ instance (GSchemaFieldType sch sk hk, GSchemaFieldType sch sv hv,
 -- This assumes that a union is represented by
 -- a value of type 'NS', where types are in
 -- the same order.
-instance AllZip (GSchemaFieldType sch) ts vs
+instance {-# OVERLAPS #-}
+         AllZip (GSchemaFieldType sch) ts vs
          => GSchemaFieldType sch ('TUnion ts) (NS I vs) where
   toSchemaFieldType t = FUnion (go t)
     where go :: AllZip (GSchemaFieldType sch) tss vss
@@ -182,6 +186,43 @@ instance AllZip (GSchemaFieldType sch) ts vs
              => NS (FieldValue sch) tss -> NS I vss
           go (Z x) = Z (I (fromSchemaFieldType x))
           go (S n) = S (go n)
+-- But we can also use any other if it has
+-- the right structure
+instance {-# OVERLAPPABLE #-}
+         (Generic f, GSchemaFieldTypeUnion sch ts (Rep f))
+         => GSchemaFieldType sch ('TUnion ts) f where
+  toSchemaFieldType x = FUnion (toSchemaFieldTypeUnion (from x))
+  fromSchemaFieldType (FUnion x) = to (fromSchemaFieldTypeUnion x)
+
+-- This is not 100% correct, we could have
+--   GSchemaFieldTypeUnion sch '[] U1
+-- But we would need overlappable instances for that matter
+-- and also: who is going to define an empty union?
+instance TypeError ('Text "the type does not match the union")
+         => GSchemaFieldTypeUnion sch '[] f where
+  toSchemaFieldTypeUnion = error "this should never happen"
+  fromSchemaFieldTypeUnion = error "this should never happen"
+
+instance (GSchemaFieldType sch t v)
+         => GSchemaFieldTypeUnion sch '[t] (K1 i v) where
+  toSchemaFieldTypeUnion   (K1 x) = Z (toSchemaFieldType x)
+  fromSchemaFieldTypeUnion (Z x)  = K1 (fromSchemaFieldType x)
+instance (GSchemaFieldType sch t v, GSchemaFieldTypeUnion sch ts vs)
+         => GSchemaFieldTypeUnion sch (t ': ts) (K1 i v :+: vs) where
+  toSchemaFieldTypeUnion (L1 (K1 x)) = Z (toSchemaFieldType x)
+  toSchemaFieldTypeUnion (R1 r)      = S (toSchemaFieldTypeUnion r)
+  fromSchemaFieldTypeUnion (Z x) = L1 (K1 (fromSchemaFieldType x))
+  fromSchemaFieldTypeUnion (S r) = R1 (fromSchemaFieldTypeUnion r)
+-- Weird nested instance produced by GHC
+instance (GSchemaFieldType sch t1 v1, GSchemaFieldType sch t2 v2, GSchemaFieldTypeUnion sch ts vs)
+         => GSchemaFieldTypeUnion sch (t1 ': t2 ': ts) ((K1 i v1 :+: K1 i v2) :+: vs) where
+  toSchemaFieldTypeUnion (L1 (L1 (K1 x))) = Z (toSchemaFieldType x)
+  toSchemaFieldTypeUnion (L1 (R1 (K1 x))) = S (Z (toSchemaFieldType x))
+  toSchemaFieldTypeUnion (R1 r)           = S (S (toSchemaFieldTypeUnion r))
+  fromSchemaFieldTypeUnion (Z x)     = L1 (L1 (K1 (fromSchemaFieldType x)))
+  fromSchemaFieldTypeUnion (S (Z x)) = L1 (R1 (K1 (fromSchemaFieldType x)))
+  fromSchemaFieldTypeUnion (S (S r)) = R1 (fromSchemaFieldTypeUnion r)
+
 
 -- ---------------
 -- ENUMERATIONS --
