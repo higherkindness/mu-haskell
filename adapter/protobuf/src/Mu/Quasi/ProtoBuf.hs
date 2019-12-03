@@ -1,3 +1,4 @@
+{-# language CPP             #-}
 {-# language DataKinds       #-}
 {-# language LambdaCase      #-}
 {-# language NamedFieldPuns  #-}
@@ -39,8 +40,14 @@ protobufToDecls schemaName p
   = do let schemaName' = mkName schemaName
        (schTy, annTy) <- schemaFromProtoBuf p
        schemaDec <- tySynD schemaName' [] (return schTy)
+#if MIN_VERSION_template_haskell(2,15,0)
+       annDec <- tySynInstD (tySynEqn Nothing
+                               [t| AnnotatedSchema ProtoBufAnnotation $(conT schemaName') |]
+                               (return annTy))
+#else
        annDec <- tySynInstD ''AnnotatedSchema
                    (tySynEqn [ [t| ProtoBufAnnotation |], conT schemaName' ] (return annTy))
+#endif
        return [schemaDec, annDec]
 
 schemaFromProtoBuf :: P.ProtoBuf -> Q (Type, Type)

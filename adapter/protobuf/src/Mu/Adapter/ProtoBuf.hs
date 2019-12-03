@@ -165,16 +165,16 @@ instance (All (ProtoBridgeField sch name) args, ProtoBridgeFields sch name args)
     where go :: forall fs. All (ProtoBridgeField sch name) fs
              => NP (Field sch) fs -> PBEnc.MessageBuilder
           go Nil       = mempty
-          go (f :* fs) = fieldToProto @_ @_ @_ @name f <> go fs
-  protoToTerm = TRecord <$> protoToFields @_ @name
+          go (f :* fs) = fieldToProto @_ @_ @sch @name f <> go fs
+  protoToTerm = TRecord <$> protoToFields @_ @_ @sch @name
 
-class ProtoBridgeFields sch ty fields where
+class ProtoBridgeFields (sch :: Schema tn fn) (ty :: tn) (fields :: [FieldDef tn fn]) where
   protoToFields :: PBDec.Parser PBDec.RawMessage (NP (Field sch) fields)
 instance ProtoBridgeFields sch ty '[] where
   protoToFields = pure Nil
 instance (ProtoBridgeField sch ty f, ProtoBridgeFields sch ty fs)
          => ProtoBridgeFields sch ty (f ': fs) where
-  protoToFields = (:*) <$> protoToField @_ @_ @_ @ty <*> protoToFields @_ @ty
+  protoToFields = (:*) <$> protoToField @_ @_ @sch @ty <*> protoToFields @_ @_ @sch @ty
 
 instance ProtoBridgeTerm sch ('DRecord name args)
          => ProtoBridgeEmbedTerm sch ('DRecord name args) where
@@ -196,13 +196,13 @@ instance TypeError ('Text "protobuf requires wrapping enums in a message")
 
 instance ProtoBridgeEnum sch name choices
          => ProtoBridgeEmbedTerm sch ('DEnum name choices) where
-  termToEmbedProto fid (TEnum v) = enumToProto @sch @name fid v
+  termToEmbedProto fid (TEnum v) = enumToProto @_ @_ @sch @name fid v
   embedProtoToFieldValue    = do n <- PBDec.one PBDec.int32 0
-                                 TEnum <$> protoToEnum @sch @name n
+                                 TEnum <$> protoToEnum @_ @_ @sch @name n
   embedProtoToOneFieldValue = do n <- PBDec.int32
-                                 TEnum <$> protoToEnum @sch @name n
+                                 TEnum <$> protoToEnum @_ @_ @sch @name n
 
-class ProtoBridgeEnum sch ty (choices :: [ChoiceDef fn]) where
+class ProtoBridgeEnum (sch :: Schema tn fn) (ty :: tn) (choices :: [ChoiceDef fn]) where
   enumToProto :: FieldNumber -> NS Proxy choices -> PBEnc.MessageBuilder
   protoToEnum :: Int32 -> PBDec.Parser a (NS Proxy choices)
 instance ProtoBridgeEnum sch ty '[] where
@@ -212,10 +212,10 @@ instance (KnownNat (FindProtoBufId sch ty c), ProtoBridgeEnum sch ty cs)
          => ProtoBridgeEnum sch ty ('ChoiceDef c ': cs) where
   enumToProto fid (Z _) = PBEnc.int32 fid enumValue
     where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId sch ty c)))
-  enumToProto fid (S v) = enumToProto @sch @ty fid v
+  enumToProto fid (S v) = enumToProto @_ @_ @sch @ty fid v
   protoToEnum n
     | n == enumValue = return (Z Proxy)
-    | otherwise      = S <$> protoToEnum @sch @ty n
+    | otherwise      = S <$> protoToEnum @_ @_ @sch @ty n
     where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId sch ty c)))
 
 -- SIMPLE
