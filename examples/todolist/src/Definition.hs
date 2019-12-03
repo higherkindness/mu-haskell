@@ -9,7 +9,6 @@
 {-# language TemplateHaskell       #-}
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
-
 module Definition where
 
 import           Data.Int
@@ -19,7 +18,7 @@ import           GHC.Generics
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
-grpc "TodoListSchema" id "todolist.proto"
+$(grpc "TodoListSchema" id "todolist.proto")
 
 newtype MessageId = MessageId
   { value :: Int32
