@@ -15,7 +15,7 @@ maintainer:          alejandro.serrano@47deg.com
 -- copyright:
 category:            Network
 build-type:          Simple
-extra-source-files:  README.md, CHANGELOG.md
+extra-source-files:  CHANGELOG.md
 
 library
   exposed-modules:     Mu.Rpc,
