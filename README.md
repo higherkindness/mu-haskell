@@ -6,8 +6,6 @@ This repo defines a set of libraries to write microservices in a format- and pro
 
 ## [Documentation](docs)
 
-## Contributing
-
 This set of libraries are thought to be built using [Stack](https://docs.haskellstack.org). Just jump into the folder and run `stack build`! The top-level `stack.yaml` defines a common resolver and set of dependencies for all the packages.
 
 ## Contributing
