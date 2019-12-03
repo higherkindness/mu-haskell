@@ -7,7 +7,6 @@
 {-# language MultiParamTypeClasses #-}
 {-# language PolyKinds             #-}
 {-# language TemplateHaskell       #-}
-{-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 
 module Definition where
