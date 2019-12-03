@@ -9,7 +9,7 @@
 -- | Protocol-independent declaration of services
 module Mu.Rpc (
   Service', Service(..)
-, Annotation, Package, FindPackageName
+, ServiceAnnotation, Package, FindPackageName
 , Method(..), (:-->:)
 , TypeRef(..), Argument(..), Return(..)
 ) where
@@ -22,23 +22,24 @@ import           Mu.Schema
 import           Mu.Schema.Registry
 
 type Service' = Service Symbol Symbol
+type ServiceAnnotation = Type
 
 -- | A service is a set of methods.
 data Service serviceName methodName
-  = Service serviceName [Annotation] [Method methodName]
+  = Service serviceName [ServiceAnnotation] [Method methodName]
 
 -- | An annotation to define a package name.
 --   This is used by some handlers, like gRPC.
 data Package (s :: Symbol)
 
-type family FindPackageName (anns :: [Annotation]) :: Symbol where
+type family FindPackageName (anns :: [ServiceAnnotation]) :: Symbol where
   FindPackageName '[] = TypeError ('Text "Cannot find package name for the service")
   FindPackageName (Package s ': rest) = s
   FindPackageName (other     ': rest) = FindPackageName rest
 
 -- | A method is defined by its name, arguments, and return type.
 data Method methodName
-  = Method methodName [Annotation] [Argument] Return
+  = Method methodName [ServiceAnnotation] [Argument] Return
 
 -- | Look up a method in a service definition using its name.
 --   Useful to declare handlers like @HandlerIO (MyService :-->: "MyMethod")@.

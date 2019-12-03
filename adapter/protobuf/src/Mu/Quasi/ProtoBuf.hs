@@ -6,47 +6,48 @@
 module Mu.Quasi.ProtoBuf (
   -- * Quasi-quoters for @.proto@ files
     protobuf
-  , protobufFile
   -- * Only for internal use
-  , schemaFromProtoBuf
+  , protobufToDecls
   ) where
 
+import           Control.Monad.IO.Class
 import qualified Data.ByteString                 as B
 import           Data.Int
 import qualified Data.Text                       as T
 import           Language.Haskell.TH
-import           Language.Haskell.TH.Quote
 import           Language.ProtocolBuffers.Parser
 import qualified Language.ProtocolBuffers.Types  as P
 
 import           Mu.Adapter.ProtoBuf
 import           Mu.Schema.Definition
+import           Mu.Schema.Annotations
 
--- | Imports a protocol buffer definition written
---   in-line as a 'Schema'.
-protobuf :: QuasiQuoter
-protobuf =
-  QuasiQuoter
-    (const $ fail "cannot use as expression")
-    (const $ fail "cannot use as pattern")
-    schemaFromProtoBufString
-    (const $ fail "cannot use as declaration")
+-- | Reads a @.proto@ file and generates a 'Schema'
+--   with all the message types, using the name given
+--   as first argument.
+protobuf :: String -> FilePath -> Q [Dec]
+protobuf schemaName fp
+  = do r <- liftIO $ parseProtoBufFile fp
+       case r of
+         Left e
+           -> fail ("could not parse protocol buffers spec: " ++ show e)
+         Right p
+           -> protobufToDecls schemaName p
 
--- | Imports a protocol buffer definition from a file
---   as a 'Schema'.
-protobufFile :: QuasiQuoter
-protobufFile = quoteFile protobuf
+protobufToDecls :: String -> P.ProtoBuf -> Q [Dec]
+protobufToDecls schemaName p
+  = do let schemaName' = mkName schemaName
+       (schTy, annTy) <- schemaFromProtoBuf p
+       schemaDec <- tySynD schemaName' [] (return schTy)
+       annDec <- tySynInstD ''AnnotatedSchema
+                   (tySynEqn [ [t| ProtoBufAnnotation |], conT schemaName' ] (return annTy))
+       return [schemaDec, annDec]
 
-schemaFromProtoBufString :: String -> Q Type
-schemaFromProtoBufString ts =
-  case parseProtoBuf (T.pack ts) of
-    Left e  -> fail ("could not parse protocol buffers spec: " ++ show e)
-    Right p -> schemaFromProtoBuf p
-
-schemaFromProtoBuf :: P.ProtoBuf -> Q Type
-schemaFromProtoBuf P.ProtoBuf {P.types = tys} =
+schemaFromProtoBuf :: P.ProtoBuf -> Q (Type, Type)
+schemaFromProtoBuf P.ProtoBuf {P.types = tys} = do
   let decls = flattenDecls tys
-   in typesToList <$> mapM pbTypeDeclToType decls
+  (schTys, anns) <- unzip <$> mapM pbTypeDeclToType decls
+  return (typesToList schTys, typesToList (concat anns))
 
 flattenDecls :: [P.TypeDeclaration] -> [P.TypeDeclaration]
 flattenDecls = concatMap flattenDecl
@@ -55,33 +56,36 @@ flattenDecls = concatMap flattenDecl
     flattenDecl (P.DMessage name o r fs decls) =
       P.DMessage name o r fs [] : flattenDecls decls
 
-pbTypeDeclToType :: P.TypeDeclaration -> Q Type
-pbTypeDeclToType (P.DEnum name _ fields) =
-  [t|'DEnum $(textToStrLit name) '[] $(typesToList <$> mapM pbChoiceToType fields)|]
+pbTypeDeclToType :: P.TypeDeclaration -> Q (Type, [Type])
+pbTypeDeclToType (P.DEnum name _ fields) = do
+  (tys, anns) <- unzip <$> mapM pbChoiceToType fields
+  (,) <$> [t|'DEnum $(textToStrLit name) $(return $ typesToList tys)|] <*> pure anns
   where
-    pbChoiceToType :: P.EnumField -> Q Type
-    pbChoiceToType (P.EnumField nm number _) =
-      [t|'ChoiceDef $(textToStrLit nm) '[ ProtoBufId $(intToLit number)]|]
-pbTypeDeclToType (P.DMessage name _ _ fields _) =
-  [t|'DRecord $(textToStrLit name) '[] $(typesToList <$> mapM pbMsgFieldToType fields)|]
+    pbChoiceToType :: P.EnumField -> Q (Type, Type)
+    pbChoiceToType (P.EnumField nm number _)
+      = (,) <$> [t|'ChoiceDef $(textToStrLit nm) |]
+            <*> [t|'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit number)) |]
+pbTypeDeclToType (P.DMessage name _ _ fields _) = do
+  (tys, anns) <- unzip <$> mapM pbMsgFieldToType fields
+  (,) <$> [t|'DRecord $(textToStrLit name) $(pure $ typesToList tys)|] <*> pure anns
   where
-    pbMsgFieldToType :: P.MessageField -> Q Type
+    pbMsgFieldToType :: P.MessageField -> Q (Type, Type)
     pbMsgFieldToType (P.NormalField P.Single ty nm n _)
-      = [t| 'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n) ]
-                      $(pbFieldTypeToType ty) |]
+      = (,) <$> [t| 'FieldDef $(textToStrLit nm) $(pbFieldTypeToType ty) |]
+            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n)) |]
     pbMsgFieldToType (P.NormalField P.Repeated ty nm n _)
-      = [t| 'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n) ]
-                      ('TList $(pbFieldTypeToType ty)) |]
+      = (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TList $(pbFieldTypeToType ty)) |]
+            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n)) |]
     pbMsgFieldToType (P.MapField k v nm n _)
-      = [t| 'FieldDef $(textToStrLit nm) '[ ProtoBufId $(intToLit n) ]
-                      ('TMap $(pbFieldTypeToType k) $(pbFieldTypeToType v)) |]
+      = (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TMap $(pbFieldTypeToType k) $(pbFieldTypeToType v)) |]
+            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n)) |]
     pbMsgFieldToType (P.OneOfField nm vs)
       | any (not . hasFieldNumber) vs
       = fail "nested oneof fields are not supported"
       | otherwise
-      = [t| 'FieldDef $(textToStrLit nm)
-                      '[ ProtoBufOneOfIds $(typesToList <$> mapM (intToLit . getFieldNumber) vs ) ]
-                      $(typesToList <$> mapM pbOneOfFieldToType vs ) |]
+      = (,) <$> [t| 'FieldDef $(textToStrLit nm) $(typesToList <$> mapM pbOneOfFieldToType vs ) |]
+            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm)
+                       ('ProtoBufOneOfIds $(typesToList <$> mapM (intToLit . getFieldNumber) vs )) |]
 
     pbFieldTypeToType :: P.FieldType -> Q Type
     pbFieldTypeToType P.TInt32     = [t|'TPrimitive Int32|]

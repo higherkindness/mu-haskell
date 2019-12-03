@@ -43,7 +43,7 @@ generateTypesFromSchema namer schemaTyName
 
 typeDefToDecl :: Type -> Namer -> TypeDefB Type String String -> Q [Dec]
 -- Records with one field
-typeDefToDecl schemaTy namer (DRecord name _ [f])
+typeDefToDecl schemaTy namer (DRecord name [f])
   = do let complete = completeName namer name
        d <- newtypeD (pure [])
                      (mkName complete)
@@ -54,7 +54,7 @@ typeDefToDecl schemaTy namer (DRecord name _ [f])
        let hsi = generateHasSchemaInstance schemaTy name complete (fieldMapping complete [f])
        return [d, hsi]
 -- Records with more than one field
-typeDefToDecl schemaTy namer (DRecord name _ fields)
+typeDefToDecl schemaTy namer (DRecord name fields)
   = do let complete = completeName namer name
        d <- dataD (pure [])
                   (mkName complete)
@@ -65,14 +65,14 @@ typeDefToDecl schemaTy namer (DRecord name _ fields)
        let hsi = generateHasSchemaInstance schemaTy name complete (fieldMapping complete fields)
        return [d, hsi]
 -- Enumerations
-typeDefToDecl schemaTy namer (DEnum name _ choices)
+typeDefToDecl schemaTy namer (DEnum name choices)
   = do let complete = completeName namer name
        d <- dataD (pure [])
                   (mkName complete)
                   []
                   Nothing
                   [ pure (RecC (mkName (choiceName complete choicename)) [])
-                    | ChoiceDef choicename _ <- choices]
+                    | ChoiceDef choicename <- choices]
                   deriveClauses
        let hsi = generateHasSchemaInstance schemaTy name complete (choiceMapping complete choices)
        return [d, hsi]
@@ -89,7 +89,7 @@ deriveClauses
 -}
 
 fieldDefToDecl :: Namer -> String -> FieldDefB Type String String -> (Name, Bang, Type)
-fieldDefToDecl namer complete (FieldDef name _ ty)
+fieldDefToDecl namer complete (FieldDef name ty)
   = ( mkName (fieldName complete name)
     , Bang NoSourceUnpackedness NoSourceStrictness
     , fieldTypeToDecl namer ty )
@@ -115,7 +115,7 @@ generateHasSchemaInstance schemaTy schemaName complete mapping
 
 fieldMapping :: String -> [FieldDefB Type String String] -> Type
 fieldMapping _complete [] = PromotedNilT
-fieldMapping complete (FieldDef name _ _ : rest)
+fieldMapping complete (FieldDef name _ : rest)
   = AppT (AppT PromotedConsT thisMapping) (fieldMapping complete rest)
   where thisMapping
           = AppT (AppT (PromotedT '(:->))
@@ -124,7 +124,7 @@ fieldMapping complete (FieldDef name _ _ : rest)
 
 choiceMapping :: String -> [ChoiceDef String] -> Type
 choiceMapping _complete [] = PromotedNilT
-choiceMapping complete (ChoiceDef name _ : rest)
+choiceMapping complete (ChoiceDef name : rest)
   = AppT (AppT PromotedConsT thisMapping) (choiceMapping complete rest)
   where thisMapping
           = AppT (AppT (PromotedT '(:->))
@@ -189,14 +189,12 @@ typeToSchemaDef toplevelty
     typeToTypeDef t
       = typeToRecordDef t <|> typeToEnumDef t <|> typeToSimpleType t
     typeToRecordDef t
-      = do (nm, _anns, fields) <- tyD3 'DRecord t
+      = do (nm, fields) <- tyD2 'DRecord t
            DRecord <$> tyString nm
-                   <*> pure []
                    <*> (mapM typeToFieldDef =<< tyList fields)
     typeToEnumDef t
-      = do (nm, _anns, choices) <- tyD3 'DEnum t
+      = do (nm, choices) <- tyD2 'DEnum t
            DEnum <$> tyString nm
-                 <*> pure []
                  <*> (mapM typeToChoiceDef =<< tyList choices)
     typeToSimpleType t
       = do innerT <- tyD1 'DSimple t
@@ -204,15 +202,14 @@ typeToSchemaDef toplevelty
 
     typeToFieldDef :: Type -> Maybe (FieldDefB Type String String)
     typeToFieldDef t
-      = do (nm, _anns, innerTy) <- tyD3 'FieldDef t
+      = do (nm, innerTy) <- tyD2 'FieldDef t
            FieldDef <$> tyString nm
-                    <*> pure []
                     <*> typeToFieldType innerTy
 
     typeToChoiceDef :: Type -> Maybe (ChoiceDef String)
     typeToChoiceDef t
-      = do (nm, _anns) <- tyD2 'ChoiceDef t
-           ChoiceDef <$> tyString nm <*> pure []
+      = do nm <- tyD1 'ChoiceDef t
+           ChoiceDef <$> tyString nm
 
     typeToFieldType :: Type -> Maybe (FieldTypeB Type String)
     typeToFieldType t
@@ -267,9 +264,11 @@ tyD2 name (AppT (AppT (PromotedT c) x) y)
   | otherwise = Nothing
 tyD2 _ _ = Nothing
 
+{-
 tyD3 :: Name -> Type -> Maybe (Type, Type, Type)
 tyD3 name (SigT t _) = tyD3 name t
 tyD3 name (AppT (AppT (AppT (PromotedT c) x) y) z)
   | c == name = Just (x, y, z)
   | otherwise = Nothing
 tyD3 _ _ = Nothing
+-}

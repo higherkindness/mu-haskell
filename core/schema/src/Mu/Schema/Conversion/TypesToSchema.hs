@@ -44,8 +44,8 @@ type family SchemaFromTypes' (all :: [FromType tn fn]) (f :: [FromType tn fn]) :
 
 type family TypeDefFromType (all :: [FromType tn fn]) (info :: FromType tn fn)
   :: TypeDef tn fn where
-  TypeDefFromType all ('AsRecord' t name mp) = 'DRecord name '[] (FieldsFromType  all mp (Rep t))
-  TypeDefFromType all ('AsEnum'   t name mp) = 'DEnum   name '[] (ChoicesFromType all mp (Rep t))
+  TypeDefFromType all ('AsRecord' t name mp) = 'DRecord name (FieldsFromType  all mp (Rep t))
+  TypeDefFromType all ('AsEnum'   t name mp) = 'DEnum   name (ChoicesFromType all mp (Rep t))
 
 type family FieldsFromType (all :: [FromType tn fn]) (mp :: Mappings Symbol fn) (f :: * -> *)
   :: [FieldDef tn fn] where
@@ -58,7 +58,7 @@ type family FieldsFromType (all :: [FromType tn fn]) (mp :: Mappings Symbol fn) 
   FieldsFromType all mp (x :*: y)
     = ConcatList (FieldsFromType all mp x) (FieldsFromType all mp y)
   FieldsFromType all mp (S1 ('MetaSel ('Just x) u ss ds) (K1 i t))
-    = '[ 'FieldDef (MappingRight mp x) '[] (ChooseFieldType all t) ]
+    = '[ 'FieldDef (MappingRight mp x) (ChooseFieldType all t) ]
   FieldsFromType all mp v
     = TypeError ('Text "unsupported conversion from " ':<>: 'ShowType v ':<>: 'Text " to record schema")
 
@@ -99,7 +99,7 @@ type family ChoicesFromType (all :: [FromType tn fn]) (mp :: Mappings Symbol fn)
   ChoicesFromType all mp (x :+: y)
     = ConcatList (ChoicesFromType all mp x) (ChoicesFromType all mp y)
   ChoicesFromType all mp (C1 ('MetaCons cname p s) U1)
-    = '[ 'ChoiceDef (MappingRight mp cname) '[] ]  -- go through constructor info
+    = '[ 'ChoiceDef (MappingRight mp cname) ]  -- go through constructor info
   ChoicesFromType all mp (C1 ('MetaCons cname p s) f)
     = TypeError ('Text "constructor " ':<>: 'ShowType cname ':<>: 'Text "has fields and cannot be turned into an enumeration schema")
   ChoicesFromType all mp v
