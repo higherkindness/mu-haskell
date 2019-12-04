@@ -32,7 +32,7 @@ grpc schemaName servicePrefix fp
          Left e
            -> fail ("could not parse protocol buffers spec: " ++ show e)
          Right p
-           -> protobufToDecls schemaName servicePrefix p
+           -> grpcToDecls schemaName servicePrefix p
 
 -- | Obtains a schema and service definition from Compendium,
 --   and generates the declarations from 'grpc'.
@@ -46,14 +46,14 @@ compendium schemaTypeName servicePrefix baseUrl identifier
          Left e
            -> fail ("could not parse protocol buffers spec: " ++ show e)
          Right p
-           -> protobufToDecls schemaTypeName servicePrefix p
+           -> grpcToDecls schemaTypeName servicePrefix p
 
-protobufToDecls :: String -> (String -> String) -> P.ProtoBuf -> Q [Dec]
-protobufToDecls schemaName servicePrefix p@P.ProtoBuf { P.package = pkg, P.services = srvs }
+grpcToDecls :: String -> (String -> String) -> P.ProtoBuf -> Q [Dec]
+grpcToDecls schemaName servicePrefix p@P.ProtoBuf { P.package = pkg, P.services = srvs }
   = do let schemaName' = mkName schemaName
-       schemaDec <- tySynD schemaName' [] (schemaFromProtoBuf p)
+       schemaDec <- protobufToDecls schemaName p
        serviceTy <- mapM (pbServiceDeclToDec servicePrefix pkg schemaName') srvs
-       return (schemaDec : serviceTy)
+       return (schemaDec ++ serviceTy)
 
 pbServiceDeclToDec :: (String -> String) -> Maybe [T.Text] -> Name -> P.ServiceDeclaration -> Q Dec
 pbServiceDeclToDec servicePrefix pkg schema srv@(P.Service nm _ _)

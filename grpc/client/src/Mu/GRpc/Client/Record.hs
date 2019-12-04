@@ -44,7 +44,7 @@ import           Mu.Rpc
 -- | Fills in a Haskell record of functions with the corresponding
 --   calls to gRPC services from a Mu 'Service' declaration.
 buildService :: forall (s :: Service') (p :: Symbol) t
-                (nm :: Symbol) (anns :: [Annotation]) (ms :: [Method Symbol]).
+                (nm :: Symbol) (anns :: [ServiceAnnotation]) (ms :: [Method Symbol]).
                 (s ~ 'Service nm anns ms, Generic t, BuildService s p ms (Rep t))
              => GrpcClient -> t
 buildService client = to (buildService' (Proxy @s) (Proxy @p) (Proxy @ms) client)

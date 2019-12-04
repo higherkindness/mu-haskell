@@ -15,8 +15,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Adapter.ProtoBuf (
   -- * Custom annotations
-  ProtoBufId
-, ProtoBufOneOfIds
+  ProtoBufAnnotation(..)
   -- * Conversion using schemas
 , IsProtoSchema
 , HasProtoSchema
@@ -32,7 +31,6 @@ module Mu.Adapter.ProtoBuf (
 import           Control.Applicative
 import qualified Data.ByteString          as BS
 import           Data.Int
-import           Data.Kind
 import           Data.SOP                 (All)
 import qualified Data.Text                as T
 import qualified Data.Text.Lazy           as LT
@@ -47,17 +45,29 @@ import           Mu.Schema.Definition
 import           Mu.Schema.Interpretation
 import qualified Mu.Schema.Registry       as R
 
-type family FindProtoBufId (f :: fn) (xs :: [Type]) :: Nat where
-  FindProtoBufId f '[]
-    = TypeError ('Text "protocol buffers id not available for field " ':<>: 'ShowType f)
-  FindProtoBufId f (ProtoBufId n ': rest) = n
-  FindProtoBufId f (other        ': rest) = FindProtoBufId f rest
+data ProtoBufAnnotation
+  = ProtoBufId Nat
+  | ProtoBufOneOfIds [Nat]
 
-type family FindProtoBufOneOfIds (f :: fn) (xs :: [Type]) :: [Nat] where
-  FindProtoBufOneOfIds f '[]
-    = TypeError ('Text "protocol buffers ids not available for oneof field " ':<>: 'ShowType f)
-  FindProtoBufOneOfIds f (ProtoBufOneOfIds n ': rest) = n
-  FindProtoBufOneOfIds f (other              ': rest) = FindProtoBufOneOfIds f rest
+type family FindProtoBufId (sch :: Schema tn fn) (t :: tn) (f :: fn) where
+  FindProtoBufId sch t f
+    = FindProtoBufId' t f (GetFieldAnnotation (AnnotatedSchema ProtoBufAnnotation sch) t f)
+
+type family FindProtoBufId' (t :: tn) (f :: fn) (p :: ProtoBufAnnotation) :: Nat where
+  FindProtoBufId' t f ('ProtoBufId n) = n
+  FindProtoBufId' t f other
+    = TypeError ('Text "protocol buffers id not available for field "
+                 ':<>: 'ShowType t ':<>: 'Text "/" ':<>: 'ShowType f)
+
+type family FindProtoBufOneOfIds (sch :: Schema tn fn) (t :: tn) (f :: fn) where
+  FindProtoBufOneOfIds sch t f
+    = FindProtoBufOneOfIds' t f (GetFieldAnnotation (AnnotatedSchema ProtoBufAnnotation sch) t f)
+
+type family FindProtoBufOneOfIds' (t :: tn) (f :: fn) (p :: ProtoBufAnnotation) :: [Nat] where
+  FindProtoBufOneOfIds' t f ('ProtoBufOneOfIds ns) = ns
+  FindProtoBufOneOfIds' t f other
+    = TypeError ('Text "protocol buffers id not available for oneof field "
+                 ':<>: 'ShowType t ':<>: 'Text "/" ':<>: 'ShowType f)
 
 -- CONVERSION USING SCHEMAS
 
@@ -127,7 +137,7 @@ class ProtoBridgeEmbedTerm (sch :: Schema tn fn) (t :: TypeDef tn fn) where
   embedProtoToFieldValue :: PBDec.Parser PBDec.RawField (Term sch t)
   embedProtoToOneFieldValue :: PBDec.Parser PBDec.RawPrimitive (Term sch t)
 
-class ProtoBridgeField (sch :: Schema tn fn) (f :: FieldDef tn fn) where
+class ProtoBridgeField (sch :: Schema tn fn) (ty :: tn) (f :: FieldDef tn fn) where
   fieldToProto :: Field sch f -> PBEnc.MessageBuilder
   protoToField :: PBDec.Parser PBDec.RawMessage (Field sch f)
 
@@ -149,64 +159,64 @@ class ProtoBridgeUnionFieldValue (ids :: [Nat]) (sch :: Schema tn fn) (ts :: [Fi
 -- RECORDS
 -- -------
 
-instance (All (ProtoBridgeField sch) args, ProtoBridgeFields sch args)
-         => ProtoBridgeTerm sch ('DRecord name anns args) where
+instance (All (ProtoBridgeField sch name) args, ProtoBridgeFields sch name args)
+         => ProtoBridgeTerm sch ('DRecord name args) where
   termToProto (TRecord fields) = go fields
-    where go :: forall fs. All (ProtoBridgeField sch) fs
+    where go :: forall fs. All (ProtoBridgeField sch name) fs
              => NP (Field sch) fs -> PBEnc.MessageBuilder
           go Nil       = mempty
-          go (f :* fs) = fieldToProto f <> go fs
-  protoToTerm = TRecord <$> protoToFields
+          go (f :* fs) = fieldToProto @_ @_ @sch @name f <> go fs
+  protoToTerm = TRecord <$> protoToFields @_ @_ @sch @name
 
-class ProtoBridgeFields sch fields where
+class ProtoBridgeFields (sch :: Schema tn fn) (ty :: tn) (fields :: [FieldDef tn fn]) where
   protoToFields :: PBDec.Parser PBDec.RawMessage (NP (Field sch) fields)
-instance ProtoBridgeFields sch '[] where
+instance ProtoBridgeFields sch ty '[] where
   protoToFields = pure Nil
-instance (ProtoBridgeField sch f, ProtoBridgeFields sch fs)
-         => ProtoBridgeFields sch (f ': fs) where
-  protoToFields = (:*) <$> protoToField <*> protoToFields
+instance (ProtoBridgeField sch ty f, ProtoBridgeFields sch ty fs)
+         => ProtoBridgeFields sch ty (f ': fs) where
+  protoToFields = (:*) <$> protoToField @_ @_ @sch @ty <*> protoToFields @_ @_ @sch @ty
 
-instance ProtoBridgeTerm sch ('DRecord name anns args)
-         => ProtoBridgeEmbedTerm sch ('DRecord name anns args) where
+instance ProtoBridgeTerm sch ('DRecord name args)
+         => ProtoBridgeEmbedTerm sch ('DRecord name args) where
   termToEmbedProto fid v = PBEnc.embedded fid (termToProto v)
   embedProtoToFieldValue = do
-    t <- PBDec.embedded (protoToTerm @_ @_ @sch @('DRecord name anns args))
+    t <- PBDec.embedded (protoToTerm @_ @_ @sch @('DRecord name args))
     case t of
       Nothing -> PBDec.Parser (\_ -> Left (PBDec.WireTypeError "expected message"))
       Just v  -> return v
-  embedProtoToOneFieldValue = PBDec.embedded' (protoToTerm @_ @_ @sch @('DRecord name anns args))
+  embedProtoToOneFieldValue = PBDec.embedded' (protoToTerm @_ @_ @sch @('DRecord name args))
 
 -- ENUMERATIONS
 -- ------------
 
 instance TypeError ('Text "protobuf requires wrapping enums in a message")
-         => ProtoBridgeTerm sch ('DEnum name anns choices) where
+         => ProtoBridgeTerm sch ('DEnum name choices) where
   termToProto = error "protobuf requires wrapping enums in a message"
   protoToTerm = error "protobuf requires wrapping enums in a message"
 
-instance ProtoBridgeEnum choices
-         => ProtoBridgeEmbedTerm sch ('DEnum name anns choices) where
-  termToEmbedProto fid (TEnum v) = enumToProto fid v
+instance ProtoBridgeEnum sch name choices
+         => ProtoBridgeEmbedTerm sch ('DEnum name choices) where
+  termToEmbedProto fid (TEnum v) = enumToProto @_ @_ @sch @name fid v
   embedProtoToFieldValue    = do n <- PBDec.one PBDec.int32 0
-                                 TEnum <$> protoToEnum n
+                                 TEnum <$> protoToEnum @_ @_ @sch @name n
   embedProtoToOneFieldValue = do n <- PBDec.int32
-                                 TEnum <$> protoToEnum n
+                                 TEnum <$> protoToEnum @_ @_ @sch @name n
 
-class ProtoBridgeEnum (choices :: [ChoiceDef fn]) where
+class ProtoBridgeEnum (sch :: Schema tn fn) (ty :: tn) (choices :: [ChoiceDef fn]) where
   enumToProto :: FieldNumber -> NS Proxy choices -> PBEnc.MessageBuilder
   protoToEnum :: Int32 -> PBDec.Parser a (NS Proxy choices)
-instance ProtoBridgeEnum '[] where
+instance ProtoBridgeEnum sch ty '[] where
   enumToProto = error "empty enum"
   protoToEnum _ = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "unknown enum type"))
-instance (KnownNat (FindProtoBufId c anns), ProtoBridgeEnum cs)
-         => ProtoBridgeEnum ('ChoiceDef c anns ': cs) where
+instance (KnownNat (FindProtoBufId sch ty c), ProtoBridgeEnum sch ty cs)
+         => ProtoBridgeEnum sch ty ('ChoiceDef c ': cs) where
   enumToProto fid (Z _) = PBEnc.int32 fid enumValue
-    where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId c anns)))
-  enumToProto fid (S v) = enumToProto fid v
+    where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId sch ty c)))
+  enumToProto fid (S v) = enumToProto @_ @_ @sch @ty fid v
   protoToEnum n
     | n == enumValue = return (Z Proxy)
-    | otherwise      = S <$> protoToEnum n
-    where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId c anns)))
+    | otherwise      = S <$> protoToEnum @_ @_ @sch @ty n
+    where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId sch ty c)))
 
 -- SIMPLE
 -- ------
@@ -221,18 +231,18 @@ instance TypeError ('Text "protobuf requires wrapping primitives in a message")
 -- ---------
 
 instance {-# OVERLAPPABLE #-}
-         (ProtoBridgeFieldValue sch t, KnownNat (FindProtoBufId name anns))
-         => ProtoBridgeField sch ('FieldDef name anns t) where
+         (ProtoBridgeFieldValue sch t, KnownNat (FindProtoBufId sch ty name))
+         => ProtoBridgeField sch ty ('FieldDef name t) where
   fieldToProto (Field v) = fieldValueToProto fieldId v
-    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId name anns))
+    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
   protoToField = Field <$> protoToFieldValue `at` fieldId
-    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId name anns))
+    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
 
 instance {-# OVERLAPS #-}
-         (ProtoBridgeUnionFieldValue (FindProtoBufOneOfIds name anns) sch ts)
-         => ProtoBridgeField sch ('FieldDef name anns ('TUnion ts)) where
-  fieldToProto (Field (FUnion v)) = unionFieldValueToProto @_ @_ @(FindProtoBufOneOfIds name anns) v
-  protoToField = Field . FUnion <$> protoToUnionFieldValue @_ @_ @(FindProtoBufOneOfIds name anns)
+         (ProtoBridgeUnionFieldValue (FindProtoBufOneOfIds sch ty name) sch ts)
+         => ProtoBridgeField sch ty ('FieldDef name ('TUnion ts)) where
+  fieldToProto (Field (FUnion v)) = unionFieldValueToProto @_ @_ @(FindProtoBufOneOfIds sch ty name) v
+  protoToField = Field . FUnion <$> protoToUnionFieldValue @_ @_ @(FindProtoBufOneOfIds sch ty name)
 
 -- ------------------
 -- TYPES OF FIELDS --
