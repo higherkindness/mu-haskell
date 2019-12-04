@@ -22,13 +22,13 @@ import           Mu.Schema.Definition
 
 -- | Interpretation of a type in a schema.
 data Term (sch :: Schema typeName fieldName) (t :: TypeDef typeName fieldName) where
-  TRecord :: NP (Field sch) args -> Term sch ('DRecord name anns args)
-  TEnum   :: NS Proxy choices    -> Term sch ('DEnum name anns choices)
+  TRecord :: NP (Field sch) args -> Term sch ('DRecord name args)
+  TEnum   :: NS Proxy choices    -> Term sch ('DEnum name choices)
   TSimple :: FieldValue sch t    -> Term sch ('DSimple t)
 
 -- | Interpretation of a field.
 data Field (sch :: Schema typeName fieldName) (f :: FieldDef typeName fieldName) where
-  Field :: FieldValue sch t -> Field sch ('FieldDef name anns t)
+  Field :: FieldValue sch t -> Field sch ('FieldDef name t)
 
 -- | Interpretation of a field type, by giving a value of that type.
 data FieldValue (sch :: Schema typeName fieldName) (t :: FieldType typeName) where
@@ -50,20 +50,20 @@ data FieldValue (sch :: Schema typeName fieldName) (t :: FieldType typeName) whe
 -- ===========================
 
 instance All (Eq `Compose` Field sch) args
-         => Eq (Term sch ('DRecord name anns args)) where
+         => Eq (Term sch ('DRecord name args)) where
   TRecord xs == TRecord ys = xs == ys
 instance (KnownName name, All (Show `Compose` Field sch) args)
-         => Show (Term sch ('DRecord name anns args)) where
+         => Show (Term sch ('DRecord name args)) where
   show (TRecord xs) = "record " ++ nameVal (Proxy @name) ++ " { " ++ printFields xs ++ " }"
     where printFields :: forall fs. All (Show `Compose` Field sch) fs
                       => NP (Field sch) fs -> String
           printFields Nil         = ""
           printFields (x :* Nil)  = show x
           printFields (x :* rest) = show x ++ ", " ++ printFields rest
-instance All (Eq `Compose` Proxy) choices => Eq (Term sch ('DEnum name anns choices)) where
+instance All (Eq `Compose` Proxy) choices => Eq (Term sch ('DEnum name choices)) where
   TEnum x == TEnum y = x == y
 instance (KnownName name, All KnownName choices, All (Show `Compose` Proxy) choices)
-         => Show (Term sch ('DEnum name anns choices)) where
+         => Show (Term sch ('DEnum name choices)) where
   show (TEnum choice) = "enum " ++ nameVal (Proxy @name) ++ " { " ++ printChoice choice ++ " }"
     where printChoice :: forall cs. All KnownName cs => NS Proxy cs -> String
           printChoice (Z p) = nameVal p
@@ -73,10 +73,10 @@ instance Eq (FieldValue sch t) => Eq (Term sch ('DSimple t)) where
 instance Show (FieldValue sch t) => Show (Term sch ('DSimple t)) where
   show (TSimple x) = show x
 
-instance Eq (FieldValue sch t) => Eq (Field sch ('FieldDef name anns t)) where
+instance Eq (FieldValue sch t) => Eq (Field sch ('FieldDef name t)) where
   Field x == Field y = x == y
 instance (KnownName name, Show (FieldValue sch t))
-         => Show (Field sch ('FieldDef name anns t)) where
+         => Show (Field sch ('FieldDef name t)) where
   show (Field x) = nameVal (Proxy @name) ++ ": " ++ show x
 
 instance Eq (FieldValue sch 'TNull) where

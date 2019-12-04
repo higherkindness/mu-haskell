@@ -46,9 +46,9 @@ instance (HasSchema sch sty a, FromJSON (Term sch (sch :/: sty)))
          => FromJSON (WithSchema sch sty a) where
   parseJSON v = WithSchema . fromSchema' @sch <$> parseJSON v
 
-instance ToJSONFields sch args => ToJSON (Term sch ('DRecord name anns args)) where
+instance ToJSONFields sch args => ToJSON (Term sch ('DRecord name args)) where
   toJSON (TRecord fields) = Object (toJSONFields fields)
-instance FromJSONFields sch args => FromJSON (Term sch ('DRecord name anns args)) where
+instance FromJSONFields sch args => FromJSON (Term sch ('DRecord name args)) where
   parseJSON (Object v) = TRecord <$> parseJSONFields v
   parseJSON _          = fail "expected object"
 
@@ -57,7 +57,7 @@ class ToJSONFields sch fields where
 instance ToJSONFields sch '[] where
   toJSONFields _ = HM.empty
 instance (KnownName name, ToJSON (FieldValue sch t), ToJSONFields sch fs)
-         => ToJSONFields sch ('FieldDef name anns t ': fs) where
+         => ToJSONFields sch ('FieldDef name t ': fs) where
   toJSONFields (Field v :* rest) = HM.insert key value (toJSONFields rest)
     where key = T.pack (nameVal (Proxy @name))
           value = toJSON v
@@ -67,13 +67,13 @@ class FromJSONFields sch fields where
 instance FromJSONFields sch '[] where
   parseJSONFields _ = return Nil
 instance (KnownName name, FromJSON (FieldValue sch t), FromJSONFields sch fs)
-         => FromJSONFields sch ('FieldDef name anns t ': fs) where
+         => FromJSONFields sch ('FieldDef name t ': fs) where
   parseJSONFields v = (:*) <$> (Field <$> v .: key) <*> parseJSONFields v
     where key = T.pack (nameVal (Proxy @name))
 
-instance ToJSONEnum choices => ToJSON (Term sch ('DEnum name anns choices)) where
+instance ToJSONEnum choices => ToJSON (Term sch ('DEnum name choices)) where
   toJSON (TEnum choice) = String (toJSONEnum choice)
-instance FromJSONEnum choices => FromJSON (Term sch ('DEnum name anns choices)) where
+instance FromJSONEnum choices => FromJSON (Term sch ('DEnum name choices)) where
   parseJSON (String s) = TEnum <$> parseJSONEnum s
   parseJSON _          = fail "expected string"
 
@@ -82,7 +82,7 @@ class ToJSONEnum choices where
 instance ToJSONEnum '[] where
   toJSONEnum = error "empty enum"
 instance (KnownName c, ToJSONEnum cs)
-         => ToJSONEnum ('ChoiceDef c anns ': cs) where
+         => ToJSONEnum ('ChoiceDef c ': cs) where
   toJSONEnum (Z _) = T.pack (nameVal (Proxy @c))
   toJSONEnum (S v) = toJSONEnum v
 
@@ -91,7 +91,7 @@ class FromJSONEnum choices where
 instance FromJSONEnum '[] where
   parseJSONEnum _ = fail "unknown enum value"
 instance (KnownName c, FromJSONEnum cs)
-         => FromJSONEnum ('ChoiceDef c anns ': cs) where
+         => FromJSONEnum ('ChoiceDef c ': cs) where
   parseJSONEnum v
     | v == key  = return (Z Proxy)
     | otherwise = S <$> parseJSONEnum v

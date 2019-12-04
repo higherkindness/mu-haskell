@@ -1,4 +1,4 @@
-resolver: nightly-2019-11-17
+resolver: nightly-2019-11-29
 allow-newer: true
 
 packages:
