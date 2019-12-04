@@ -1,8 +1,6 @@
-# `mu-rpc`: protocol-independent declaration of services and servers
+# Services and servers
 
-There are several formats in the wild used to declare service APIs, including [Avro IDL](https://avro.apache.org/docs/current/idl.html), [gRPC](https://grpc.io/), and [OpenAPI](https://swagger.io/specification/). `mu-rpc` abstract the commonalities into a single type-level format for declaring these services, building on the format-independent schema facilities of `mu-schema`.
-
-In addition, this package provides a generic notion of *server* of a service. One such server defines one behavior for each method in the service, but does not bother with (de)serialization mechanisms. This generic server can then be used by other packages, such as `mu-grpc`, to provide a concrete implementation using a specific wire format.
+There are several formats in the wild used to declare service APIs, including [Avro IDL](https://avro.apache.org/docs/current/idl.html), [gRPC](https://grpc.io/), and [OpenAPI](https://swagger.io/specification/). `mu-rpc` abstract the commonalities into a single type-level format for declaring these services, building on the format-independent schema facilities of `mu-schema`. In addition, this package provides a generic notion of *server* of a service. One such server defines one behavior for each method in the service, but does not bother with (de)serialization mechanisms.
 
 ## Importing the schema and the service
 
@@ -88,7 +86,7 @@ Note that depending on the concrete implementation you use to run the server, on
 In order to implement the service, you have to define the behavior of each method by means of a *handler*. You can use Haskell types for your handlers, given that you had previously declared that they can be mapped back and forth the schema types using `HasSchema`. For example, the following is a handler for the `SayHello` method in `Greeter`:
 
 ```haskell
-sayHello :: HelloRequest -> IO HelloResponse
+sayHello :: HelloRequest -> ServerErrorIO HelloResponse
 sayHello (HelloRequest nm) = return (HelloResponse ("hi, " <> nm))
 ```
 
@@ -99,71 +97,4 @@ Since you can declare more than one method in a service, you need to join then i
 
 quickstartServer :: ServerIO QuickstartService _
 quickstartServer = Server (sayHello :<|>: H0)
-```
-
-## Streaming methods
-
-The `SayHello` method above has a straightforward signature: it takes one value and produces one value. However, we can also declare methods which perform streaming, such as:
-
-```java
-service Greeter {
-  rpc SayManyHellos (stream HelloRequest) returns (stream HelloReply) {}
-}
-```
-
-Adding this method to the service definition should be easy, we just need to use `ArgStream` and `RetStream` to declare that behavior (of course, this is done automatically if you import the service from a file):
-
-```haskell
-type QuickstartService
-  = 'Service "Greeter"
-      '[ 'Method "SayHello" ...
-       , 'Method "SayManyHellos"
-                 '[ 'ArgStream ('FromSchema QuickstartSchema "HelloRequest")]
-                 ('RetStream ('FromSchema QuickstartSchema "HelloResponse")) ]
-```
-
-To define the implementation of this method we build upon the great [Conduit](https://github.com/snoyberg/conduit) library. Your input is now a producer of values, as defined by that library, and you must write the results to the provided sink. Better said with an example:
-
-```haskell
-sayManyHellos
-  :: ConduitT () HelloRequest IO ()
-  -> ConduitT HelloResponse Void IO ()
-  -> IO ()
-sayManyHellos source sink
-  = runConduit $ source .| C.mapM sayHello .| sink
-```
-
-In this case we are connecting the `source` to the `sink`, transforming in between each value using the `sayHello` function. More complicated pipelines can be built in this form.
-
-Since now the service has more than one method, we need to update our server declaration to bring together this new handler:
-
-```haskell
-quickstartServer = Server (sayHello :<|>: sayManyHellos :<|>: H0)
-```
-
-## Running the server with `mu-grpc`
-
-The combination of the declaration of a service API and a corresponding implementation as a `Server` may served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library `mu-grpc`. The following line starts a server at port `8080`, where the service can be found under the package name `helloworld`:
-
-```haskell
-main = runGRpcApp 8080 "helloworld" quickstartServer
-```
-
-## Using the Registry
-
-In this example we have used `FromSchema` to declare a specific schema the arguments must adhere to. However, schemas evolve over time, and you might want to handle all those versions. To do so, you first need to register your schemas using `mu-rpc`'s registry:
-
-```haskell
-type instance Registry "helloworld"
-  = '[ 2 ':-> QuickstartSchemaV2, 1 ':-> QuickstartSchema ]
-```
-
-Now you can use the name of the subject in the registry to accomodate for different schemas. In this case, apart from that name, we need to specify the *Haskell* type to use during (de)serialization, and the *version number* to use for serialization.
-
-```haskell
-type QuickstartService
-  = 'Service "Greeter"
-      '[ 'Method "SayHello"
-                 '[ 'ArgSingle ('FromRegistry "helloworld" HelloRequest 2) ]
-                 ('RetSingle ('FromRegistry "helloworld" HelloResponse 1)) ]
 ```

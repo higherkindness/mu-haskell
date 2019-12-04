@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package seed;
+
+message Person { string name = 1; int32 age = 2; }
+message PeopleRequest { string name = 1; }
+message PeopleResponse { Person person = 1; }
+
+service PeopleService {
+  rpc getPerson (PeopleRequest) returns (PeopleResponse);
+  rpc getPersonStream (stream PeopleRequest) returns (stream PeopleResponse);
+}
