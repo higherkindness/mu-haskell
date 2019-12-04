@@ -79,8 +79,8 @@ module Schema where
 import Data.Text as T
 import GHC.Generics
 
-import Mu.Schema
 import Mu.Quasi.GRpc
+import Mu.Schema
 
 grpc "Schema" id "{{name}}.proto"
 
