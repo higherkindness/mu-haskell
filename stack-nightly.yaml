@@ -10,6 +10,7 @@ packages:
 - grpc/server
 - examples/health-check
 - examples/route-guide
+- examples/seed
 - examples/todolist
 - compendium-client
 
