@@ -25,12 +25,12 @@ import           Mu.Server
 -- https://grpc.io/docs/quickstart/python/
 
 type QuickstartSchema
-  = '[ 'DRecord "HelloRequest" '[]
-               '[ 'FieldDef "name" '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
-     , 'DRecord "HelloResponse" '[]
-                '[ 'FieldDef "message" '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
-     , 'DRecord "HiRequest" '[]
-               '[ 'FieldDef "number" '[ ProtoBufId 1 ] ('TPrimitive Int) ]
+  = '[ 'DRecord "HelloRequest"
+               '[ 'FieldDef "name" ('TPrimitive T.Text) ]
+     , 'DRecord "HelloResponse"
+                '[ 'FieldDef "message" ('TPrimitive T.Text) ]
+     , 'DRecord "HiRequest"
+               '[ 'FieldDef "number" ('TPrimitive Int) ]
      ]
 
 type QuickStartService

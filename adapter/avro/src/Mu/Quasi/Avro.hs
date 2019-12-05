@@ -49,23 +49,19 @@ schemaFromAvroString s =
 
 schemaDecFromAvroType :: A.Type -> Q Type
 schemaDecFromAvroType (A.Record name _ _ _ fields) =
-  [t|'DRecord $(textToStrLit $ A.baseName name) '[] $(typesToList <$>
-                                                      mapM
-                                                        avroFieldToType
-                                                        fields)|]
+  [t|'DRecord $(textToStrLit $ A.baseName name)
+              $(typesToList <$> mapM avroFieldToType fields)|]
   where
     avroFieldToType :: A.Field -> Q Type
     avroFieldToType field =
-      [t|'FieldDef $(textToStrLit $ A.fldName field) '[] $(schemaFromAvroType $
-                                                           A.fldType field)|]
+      [t|'FieldDef $(textToStrLit $ A.fldName field)
+                   $(schemaFromAvroType $ A.fldType field)|]
 schemaDecFromAvroType (A.Enum name _ _ symbols) =
-  [t|'DEnum $(textToStrLit $ A.baseName name) '[] $(typesToList <$>
-                                                    mapM
-                                                      avChoiceToType
-                                                      (toList symbols))|]
+  [t|'DEnum $(textToStrLit $ A.baseName name)
+            $(typesToList <$> mapM avChoiceToType (toList symbols))|]
   where
     avChoiceToType :: T.Text -> Q Type
-    avChoiceToType c = [t|'ChoiceDef $(textToStrLit c) '[]|]
+    avChoiceToType c = [t|'ChoiceDef $(textToStrLit c)|]
 schemaDecFromAvroType t = [t|'DSimple $(schemaFromAvroType t)|]
 
 schemaFromAvroType :: A.Type -> Q Type

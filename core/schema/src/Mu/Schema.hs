@@ -3,7 +3,7 @@
 module Mu.Schema (
   -- * Schema definition
   Schema, Schema'
-, Annotation, KnownName(..)
+, KnownName(..)
 , TypeDef, TypeDefB(..)
 , ChoiceDef(..)
 , FieldDef, FieldDefB(..)
@@ -18,7 +18,7 @@ module Mu.Schema (
   -- ** Mappings between fields
 , Mapping(..), Mappings, MappingRight, MappingLeft
   -- ** Field annotations
-, ProtoBufId, ProtoBufOneOfIds
+, AnnotatedSchema, AnnotationDomain, Annotation(..)
 ) where
 
 import           Mu.Schema.Annotations

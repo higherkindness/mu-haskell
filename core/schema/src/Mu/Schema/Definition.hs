@@ -43,10 +43,6 @@ type Schema typeName fieldName
 type SchemaB builtin typeName fieldName
   = [TypeDefB builtin typeName fieldName]
 
--- | Libraries can define custom annotations
---   to indicate additional information.
-type Annotation = Type
-
 -- | Defines a type in a schema.
 --   Each type can be:
 --   * a record: a list of key-value pairs,
@@ -54,19 +50,19 @@ type Annotation = Type
 --   * a reference to a primitive type.
 type TypeDef = TypeDefB Type
 data TypeDefB builtin typeName fieldName
-  = DRecord typeName [Annotation] [FieldDefB builtin typeName fieldName]
-  | DEnum   typeName [Annotation] [ChoiceDef fieldName]
+  = DRecord typeName [FieldDefB builtin typeName fieldName]
+  | DEnum   typeName [ChoiceDef fieldName]
   | DSimple (FieldTypeB builtin typeName)
 
 -- | Defines each of the choices in an enumeration.
-data ChoiceDef fieldName
-  = ChoiceDef fieldName [Annotation]
+newtype ChoiceDef fieldName
+  = ChoiceDef fieldName
 
 -- | Defines a field in a record
 --   by a name and the corresponding type.
 type FieldDef = FieldDefB Type
 data FieldDefB builtin typeName fieldName
-  = FieldDef fieldName [Annotation] (FieldTypeB builtin typeName)
+  = FieldDef fieldName (FieldTypeB builtin typeName)
 
 -- | Types of fields of a record.
 --   References to other types in the same schema
@@ -84,9 +80,9 @@ data FieldTypeB builtin typeName
 -- | Lookup a type in a schema by its name.
 type family (sch :: Schema t f) :/: (name :: t) :: TypeDef t f where
   '[] :/: name = TypeError ('Text "Cannot find type " ':<>: 'ShowType name ':<>: 'Text " in the schema")
-  ('DRecord name ann fields  ': rest) :/: name = 'DRecord name ann fields
-  ('DEnum   name ann choices ': rest) :/: name = 'DEnum   name ann choices
-  (other                     ': rest) :/: name = rest :/: name
+  ('DRecord name fields  ': rest) :/: name = 'DRecord name fields
+  ('DEnum   name choices ': rest) :/: name = 'DEnum   name choices
+  (other                 ': rest) :/: name = rest :/: name
 
 -- | Defines a mapping between two elements.
 data Mapping  a b = a :-> b
@@ -117,12 +113,12 @@ class ReflectSchema (s :: Schema tn fn) where
 instance ReflectSchema '[] where
   reflectSchema _ = []
 instance (ReflectFields fields, KnownName name, ReflectSchema s)
-         => ReflectSchema ('DRecord name anns fields ': s) where
-  reflectSchema _ = DRecord (nameVal (Proxy @name)) [] (reflectFields (Proxy @fields))
+         => ReflectSchema ('DRecord name fields ': s) where
+  reflectSchema _ = DRecord (nameVal (Proxy @name)) (reflectFields (Proxy @fields))
                   : reflectSchema (Proxy @s)
 instance (ReflectChoices choices, KnownName name, ReflectSchema s)
-         => ReflectSchema ('DEnum name anns choices ': s) where
-  reflectSchema _ = DEnum (nameVal (Proxy @name)) [] (reflectChoices (Proxy @choices))
+         => ReflectSchema ('DEnum name choices ': s) where
+  reflectSchema _ = DEnum (nameVal (Proxy @name)) (reflectChoices (Proxy @choices))
                   : reflectSchema (Proxy @s)
 instance (ReflectFieldType ty, ReflectSchema s)
          => ReflectSchema ('DSimple ty ': s) where
@@ -134,8 +130,8 @@ class ReflectFields (fs :: [FieldDef tn fn]) where
 instance ReflectFields '[] where
   reflectFields _ = []
 instance (KnownName name, ReflectFieldType ty, ReflectFields fs)
-         => ReflectFields ('FieldDef name anns ty ': fs) where
-  reflectFields _ = FieldDef (nameVal (Proxy @name)) [] (reflectFieldType (Proxy @ty))
+         => ReflectFields ('FieldDef name ty ': fs) where
+  reflectFields _ = FieldDef (nameVal (Proxy @name)) (reflectFieldType (Proxy @ty))
                   : reflectFields (Proxy @fs)
 
 class ReflectChoices (cs :: [ChoiceDef fn]) where
@@ -143,8 +139,8 @@ class ReflectChoices (cs :: [ChoiceDef fn]) where
 instance ReflectChoices '[] where
   reflectChoices _ = []
 instance (KnownName name, ReflectChoices cs)
-         => ReflectChoices ('ChoiceDef name anns ': cs) where
-  reflectChoices _ = ChoiceDef (nameVal (Proxy @name)) []
+         => ReflectChoices ('ChoiceDef name ': cs) where
+  reflectChoices _ = ChoiceDef (nameVal (Proxy @name))
                    : reflectChoices (Proxy @cs)
 
 class ReflectFieldType (ty :: FieldType tn) where

@@ -94,12 +94,12 @@ instance forall r d ds.
 -- HasAvroSchema instances
 
 instance (KnownName name, HasAvroSchemaFields sch args)
-         => A.HasAvroSchema (Term sch ('DRecord name anns args)) where
+         => A.HasAvroSchema (Term sch ('DRecord name args)) where
   schema = Tagged $ ASch.Record recordName [] Nothing Nothing fields
     where recordName = nameTypeName (Proxy @name)
           fields = schemaF (Proxy @sch) (Proxy @args)
 instance (KnownName name, HasAvroSchemaEnum choices)
-          => A.HasAvroSchema (Term sch ('DEnum name anns choices)) where
+          => A.HasAvroSchema (Term sch ('DEnum name choices)) where
   schema = Tagged $ ASch.mkEnum enumName [] Nothing choicesNames
     where enumName = nameTypeName (Proxy @name)
           choicesNames = schemaE (Proxy @choices)
@@ -150,7 +150,7 @@ class HasAvroSchemaFields sch (fs :: [FieldDef tn fn]) where
 instance HasAvroSchemaFields sch '[] where
   schemaF _ _ = []
 instance (KnownName name, A.HasAvroSchema (FieldValue sch t), HasAvroSchemaFields sch fs)
-         => HasAvroSchemaFields sch ('FieldDef name anns t ': fs) where
+         => HasAvroSchemaFields sch ('FieldDef name t ': fs) where
   schemaF psch _ = schemaThis : schemaF psch (Proxy @fs)
     where fieldName = nameText (Proxy @name)
           schemaT = unTagged $ A.schema @(FieldValue sch t)
@@ -161,17 +161,17 @@ class HasAvroSchemaEnum (fs :: [ChoiceDef fn]) where
 instance HasAvroSchemaEnum '[] where
   schemaE _ = []
 instance (KnownName name, HasAvroSchemaEnum fs)
-         => HasAvroSchemaEnum ('ChoiceDef name anns ': fs) where
+         => HasAvroSchemaEnum ('ChoiceDef name ': fs) where
   schemaE _ = nameText (Proxy @name) : schemaE (Proxy @fs)
 
 -- FromAvro instances
 
 instance (KnownName name, HasAvroSchemaFields sch args, FromAvroFields sch args)
-         => A.FromAvro (Term sch ('DRecord name anns args)) where
+         => A.FromAvro (Term sch ('DRecord name args)) where
   fromAvro (AVal.Record _ fields) = TRecord <$> fromAvroF fields
   fromAvro v                      = A.badValue v "record"
 instance (KnownName name, HasAvroSchemaEnum choices, FromAvroEnum choices)
-          => A.FromAvro (Term sch ('DEnum name anns choices)) where
+          => A.FromAvro (Term sch ('DEnum name choices)) where
   fromAvro v@(AVal.Enum _ n _) = TEnum <$> fromAvroEnum v n
   fromAvro v                   = A.badValue v "enum"
 instance A.FromAvro (FieldValue sch t)
@@ -229,7 +229,7 @@ class FromAvroFields sch (fs :: [FieldDef Symbol Symbol]) where
 instance FromAvroFields sch '[] where
   fromAvroF _ = return Nil
 instance (KnownName name, A.FromAvro (FieldValue sch t), FromAvroFields sch fs)
-         => FromAvroFields sch ('FieldDef name anns t ': fs) where
+         => FromAvroFields sch ('FieldDef name t ': fs) where
   fromAvroF v = case HM.lookup fieldName v of
                   Nothing -> A.badValue v "field not found"
                   Just f  -> (:*) <$> (Field <$> A.fromAvro f) <*> fromAvroF v
@@ -238,13 +238,13 @@ instance (KnownName name, A.FromAvro (FieldValue sch t), FromAvroFields sch fs)
 -- ToAvro instances
 
 instance (KnownName name, HasAvroSchemaFields sch args, ToAvroFields sch args)
-         => A.ToAvro (Term sch ('DRecord name anns args)) where
+         => A.ToAvro (Term sch ('DRecord name args)) where
   toAvro (TRecord fields) = AVal.Record wholeSchema (toAvroF fields)
-    where wholeSchema = unTagged (A.schema @(Term sch ('DRecord name anns args)))
+    where wholeSchema = unTagged (A.schema @(Term sch ('DRecord name args)))
 instance (KnownName name, HasAvroSchemaEnum choices, ToAvroEnum choices)
-          => A.ToAvro (Term sch ('DEnum name anns choices)) where
+          => A.ToAvro (Term sch ('DEnum name choices)) where
   toAvro (TEnum n) = AVal.Enum wholeSchema choice text
-    where wholeSchema = unTagged (A.schema @(Term sch ('DEnum name anns choices)))
+    where wholeSchema = unTagged (A.schema @(Term sch ('DEnum name choices)))
           (choice, text) = toAvroE n
 instance A.ToAvro (FieldValue sch t)
          => A.ToAvro (Term sch ('DSimple t)) where
@@ -293,7 +293,7 @@ class ToAvroEnum choices where
 instance ToAvroEnum '[] where
   toAvroE = error "ToAvro in an empty enum"
 instance (KnownName u, ToAvroEnum us)
-         => ToAvroEnum ('ChoiceDef u anns ': us) where
+         => ToAvroEnum ('ChoiceDef u ': us) where
   toAvroE (Z _) = (0, nameText (Proxy @u))
   toAvroE (S v) = let (n, t) = toAvroE v in (n + 1, t)
 
@@ -302,7 +302,7 @@ class ToAvroFields sch (fs :: [FieldDef Symbol Symbol]) where
 instance ToAvroFields sch '[] where
   toAvroF _ = HM.empty
 instance (KnownName name, A.ToAvro (FieldValue sch t), ToAvroFields sch fs)
-         => ToAvroFields sch ('FieldDef name anns t ': fs) where
+         => ToAvroFields sch ('FieldDef name t ': fs) where
   toAvroF (Field v :* rest) = HM.insert fieldName fieldValue (toAvroF rest)
     where fieldName  = nameText (Proxy @name)
           fieldValue = A.toAvro v

@@ -48,19 +48,19 @@ data Gender = Male | Female | NonBinary
 
 -- Schema for these data types
 type ExampleSchema
-  = '[ 'DEnum   "gender" '[]
-               '[ 'ChoiceDef "male"   '[ ProtoBufId 1 ]
-                , 'ChoiceDef "female" '[ ProtoBufId 2 ]
-                , 'ChoiceDef "nb"     '[ ProtoBufId 3 ] ]
-     , 'DRecord "address" '[]
-               '[ 'FieldDef "postcode" '[ ProtoBufId 1 ] ('TPrimitive T.Text)
-                , 'FieldDef "country"  '[ ProtoBufId 2 ] ('TPrimitive T.Text) ]
-     , 'DRecord "person" '[]
-                '[ 'FieldDef "firstName" '[ ProtoBufId 1 ] ('TPrimitive T.Text)
-                 , 'FieldDef "lastName"  '[ ProtoBufId 2 ] ('TPrimitive T.Text)
-                 , 'FieldDef "age"       '[ ProtoBufId 3 ] ('TOption ('TPrimitive Int))
-                 , 'FieldDef "gender"    '[ ProtoBufId 4 ] ('TOption ('TSchematic "gender"))
-                 , 'FieldDef "address"   '[ ProtoBufId 5 ] ('TSchematic "address") ]
+  = '[ 'DEnum   "gender"
+               '[ 'ChoiceDef "male"
+                , 'ChoiceDef "female"
+                , 'ChoiceDef "nb" ]
+     , 'DRecord "address"
+               '[ 'FieldDef "postcode" ('TPrimitive T.Text)
+                , 'FieldDef "country"  ('TPrimitive T.Text) ]
+     , 'DRecord "person"
+                '[ 'FieldDef "firstName" ('TPrimitive T.Text)
+                 , 'FieldDef "lastName"  ('TPrimitive T.Text)
+                 , 'FieldDef "age"       ('TOption ('TPrimitive Int))
+                 , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
+                 , 'FieldDef "address"   ('TSchematic "address") ]
      ]
 
 type GenderFieldMapping
@@ -81,19 +81,19 @@ type ExampleSchema2
                      , AsEnum Gender "gender" ]
 -}
 type ExampleSchema2
-  = '[ 'DEnum   "gender" '[]
-               '[ 'ChoiceDef "Male"      '[ ProtoBufId 1 ]
-                , 'ChoiceDef "Female"    '[ ProtoBufId 2 ]
-                , 'ChoiceDef "NonBinary" '[ ProtoBufId 3 ] ]
-     , 'DRecord "address" '[]
-               '[ 'FieldDef "postcode" '[ ProtoBufId 1 ] ('TPrimitive T.Text)
-                , 'FieldDef "country"  '[ ProtoBufId 2 ] ('TPrimitive T.Text) ]
-     , 'DRecord "person" '[]
-                '[ 'FieldDef "firstName" '[ ProtoBufId 1 ] ('TPrimitive T.Text)
-                 , 'FieldDef "lastName"  '[ ProtoBufId 2 ] ('TPrimitive T.Text)
-                 , 'FieldDef "age"       '[ ProtoBufId 3 ] ('TOption ('TPrimitive Int))
-                 , 'FieldDef "gender"    '[ ProtoBufId 4 ] ('TOption ('TSchematic "gender"))
-                 , 'FieldDef "address"   '[ ProtoBufId 5 ] ('TSchematic "address") ]
+  = '[ 'DEnum   "gender"
+               '[ 'ChoiceDef "Male"
+                , 'ChoiceDef "Female"
+                , 'ChoiceDef "NonBinary" ]
+     , 'DRecord "address"
+               '[ 'FieldDef "postcode" ('TPrimitive T.Text)
+                , 'FieldDef "country"  ('TPrimitive T.Text) ]
+     , 'DRecord "person"
+                '[ 'FieldDef "firstName" ('TPrimitive T.Text)
+                 , 'FieldDef "lastName"  ('TPrimitive T.Text)
+                 , 'FieldDef "age"       ('TOption ('TPrimitive Int))
+                 , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
+                 , 'FieldDef "address"   ('TSchematic "address") ]
      ]
 
 type ExampleRegistry
