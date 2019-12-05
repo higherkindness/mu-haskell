@@ -1,6 +1,7 @@
 {-# language ConstraintKinds           #-}
 {-# language DataKinds                 #-}
 {-# language ExistentialQuantification #-}
+{-# language FlexibleContexts          #-}
 {-# language FlexibleInstances         #-}
 {-# language GADTs                     #-}
 {-# language MultiParamTypeClasses     #-}
@@ -27,10 +28,11 @@
 --   and long type you would need to write there otherwise.
 module Mu.Server (
   -- * Servers and handlers
-  ServerIO, ServerT(..)
-, HandlersIO, HandlersT(..)
+  MonadServer, ServerT(..), HandlersT(..)
+  -- ** Simple servers using only IO
+, ServerErrorIO, ServerIO
   -- * Errors which might be raised
-, serverError, ServerErrorIO, ServerError(..), ServerErrorCode(..)
+, serverError, ServerError(..), ServerErrorCode(..)
   -- ** Useful when you do not want to deal with errors
 , alwaysOk
 ) where
@@ -42,10 +44,17 @@ import           Data.Kind
 import           Mu.Rpc
 import           Mu.Schema
 
-serverError :: ServerError -> ServerErrorIO a
+-- | Constraint for monads that can be used as servers
+type MonadServer m = (MonadError ServerError m, MonadIO m)
+type ServerErrorIO = ExceptT ServerError IO
+type ServerIO srv = ServerT srv ServerErrorIO
+
+serverError :: (MonadError ServerError m)
+            => ServerError -> m a
 serverError = throwError
 
-alwaysOk :: IO a -> ServerErrorIO a
+alwaysOk :: (MonadIO m)
+         => IO a -> m a
 alwaysOk = liftIO
 
 data ServerError
@@ -61,18 +70,14 @@ data ServerErrorCode
   | NotFound
   deriving (Eq, Show)
 
-type ServerErrorIO = ExceptT ServerError IO
-
 data ServerT (s :: Service snm mnm) (m :: Type -> Type) (hs :: [Type]) where
   Server :: HandlersT methods m hs -> ServerT ('Service sname anns methods) m hs
-type ServerIO service = ServerT service ServerErrorIO
 
 infixr 5 :<|>:
 data HandlersT (methods :: [Method mnm]) (m :: Type -> Type) (hs :: [Type]) where
   H0 :: HandlersT '[] m '[]
   (:<|>:) :: Handles args ret m h => h -> HandlersT ms m hs
           -> HandlersT ('Method name anns args ret ': ms) m (h ': hs)
-type HandlersIO methods = HandlersT methods ServerErrorIO
 
 -- Define a relation for handling
 class Handles (args :: [Argument]) (ret :: Return)

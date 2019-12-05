@@ -2,6 +2,8 @@
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
 {-# language ScopedTypeVariables   #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+
 module Main where
 
 import           Control.Concurrent.Async

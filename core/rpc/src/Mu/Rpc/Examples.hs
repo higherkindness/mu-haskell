@@ -1,6 +1,7 @@
 {-# language DataKinds             #-}
 {-# language DeriveAnyClass        #-}
 {-# language DeriveGeneric         #-}
+{-# language FlexibleContexts      #-}
 {-# language FlexibleInstances     #-}
 {-# language GADTs                 #-}
 {-# language MultiParamTypeClasses #-}
@@ -9,7 +10,7 @@
 {-# language PolyKinds             #-}
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 module Mu.Rpc.Examples where
 
 import           Data.Conduit
@@ -52,19 +53,21 @@ newtype HelloResponse = HelloResponse { message :: T.Text }
 newtype HiRequest = HiRequest { number :: Int }
   deriving (Generic, HasSchema QuickstartSchema "HiRequest")
 
-quickstartServer :: ServerIO QuickStartService _
+quickstartServer :: (MonadServer m) => ServerT QuickStartService m _
 quickstartServer
   = Server (sayHello :<|>: sayHi :<|>: sayManyHellos :<|>: H0)
-  where sayHello :: HelloRequest -> ServerErrorIO HelloResponse
+  where sayHello :: (Monad m) => HelloRequest -> m HelloResponse
         sayHello (HelloRequest nm)
           = return (HelloResponse ("hi, " <> nm))
-        sayHi :: HiRequest
-              -> ConduitT HelloResponse Void ServerErrorIO ()
-              -> ServerErrorIO ()
+        sayHi :: (MonadServer m)
+              => HiRequest
+              -> ConduitT HelloResponse Void m ()
+              -> m ()
         sayHi (HiRequest n) sink
           = runConduit $ C.replicate n (HelloResponse "hi!") .| sink
-        sayManyHellos :: ConduitT () HelloRequest ServerErrorIO ()
-                      -> ConduitT HelloResponse Void ServerErrorIO ()
-                      -> ServerErrorIO ()
+        sayManyHellos :: (MonadServer m)
+                      => ConduitT () HelloRequest m ()
+                      -> ConduitT HelloResponse Void m ()
+                      -> m ()
         sayManyHellos source sink
           = runConduit $ source .| C.mapM sayHello .| sink

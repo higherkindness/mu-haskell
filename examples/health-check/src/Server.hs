@@ -1,5 +1,7 @@
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+
 module Main where
 
 import           Control.Concurrent.STM
