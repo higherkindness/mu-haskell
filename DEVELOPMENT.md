@@ -3,6 +3,7 @@
 Before continuing, make sure you've read:
 
 - [Alejandro's post on setting up a Haskell development environment](https://www.47deg.com/blog/setting-up-haskell/).
+- [Kowainik's Haskell Style Guide](https://kowainik.github.io/posts/2019-02-06-style-guide).
 
 ## VSCode extensions
 
@@ -21,6 +22,16 @@ Regarding the formatter, we use the `master` version of [stylish-haskell](https:
 $ git clone https://github.com/jaspervdj/stylish-haskell
 $ ...
 $ cd stylish-haskell && stack install
+```
+
+We don't provide any git hook or tool that enforces our style. However, before you propose any PR please make sure to run `stylish-haskell` yourself, and to follow our style guide mentioned above to the extent possible. 😊
+
+If you wan't to automate this for your VSCode, add the following to your `.vscode/settings.json`:
+
+```json
+{
+  "editor.formatOnSave": true
+}
 ```
 
 Happy hacking! 👏🏼
