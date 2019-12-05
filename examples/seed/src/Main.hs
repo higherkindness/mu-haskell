@@ -31,7 +31,7 @@ evolvePerson :: PeopleRequest -> PeopleResponse
 evolvePerson (PeopleRequest n) = PeopleResponse $ Person n 18
 
 getPerson :: Monad m => PeopleRequest -> m PeopleResponse
-getPerson = return . evolvePerson
+getPerson = pure . evolvePerson
 
 getPersonStream :: (MonadServer m, MonadLogger m)
                 => ConduitT () PeopleRequest m ()
@@ -41,5 +41,5 @@ getPersonStream source sink = runConduit $ source .| C.mapM reStream .| sink
   where
     reStream req = do
       liftIO $ threadDelay (2 * 1000 * 1000) -- 2 sec
-      logDebugN $ T.pack ("stream request: " ++ show req)
-      return $ evolvePerson req
+      logDebugN $ T.pack $ "stream request: " ++ show req
+      pure $ evolvePerson req
