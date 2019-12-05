@@ -123,18 +123,21 @@ class GSchemaTypeDef (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
 -- TYPES OF FIELDS --
 -- ------------------
 
-instance {-# OVERLAPPABLE #-}
-         GSchemaFieldType sch t f
-         => GSchemaTypeDef sch fmap ('DSimple t) (K1 i f) where
-  toSchemaTypeDef _ (K1 x) = TSimple (toSchemaFieldType x)
-  fromSchemaTypeDef _ (TSimple x) = K1 (fromSchemaFieldType x)
--- This instance removes unneeded metadata from the
--- top of the type.
-instance {-# OVERLAPS #-}
-         GSchemaTypeDef sch fmap ('DSimple t) f
-         => GSchemaTypeDef sch fmap ('DSimple t) (D1 meta f) where
-  toSchemaTypeDef p (M1 x) = toSchemaTypeDef p x
-  fromSchemaTypeDef p x = M1 (fromSchemaTypeDef p x)
+instance GSchemaFieldTypeWrap sch t f
+         => GSchemaTypeDef sch fmap ('DSimple t) f where
+  toSchemaTypeDef _ x = TSimple (toSchemaFieldTypeW x)
+  fromSchemaTypeDef _ (TSimple x) = fromSchemaFieldTypeW x
+
+class GSchemaFieldTypeWrap (sch :: Schema ts fs) (t :: FieldType ts) (f :: * -> *) where
+  toSchemaFieldTypeW   :: f a -> FieldValue sch t
+  fromSchemaFieldTypeW :: FieldValue sch t -> f a
+
+instance GSchemaFieldType sch t f => GSchemaFieldTypeWrap sch t (K1 i f) where
+  toSchemaFieldTypeW (K1 x) = toSchemaFieldType x
+  fromSchemaFieldTypeW x = K1 (fromSchemaFieldType x)
+instance GSchemaFieldTypeWrap sch t f => GSchemaFieldTypeWrap sch t (M1 s m f) where
+  toSchemaFieldTypeW (M1 x) = toSchemaFieldTypeW x
+  fromSchemaFieldTypeW x = M1 (fromSchemaFieldTypeW x)
 
 class GSchemaFieldType (sch :: Schema ts fs) (t :: FieldType ts) (f :: *) where
   toSchemaFieldType   :: f -> FieldValue sch t
@@ -194,34 +197,35 @@ instance {-# OVERLAPPABLE #-}
   toSchemaFieldType x = FUnion (toSchemaFieldTypeUnion (from x))
   fromSchemaFieldType (FUnion x) = to (fromSchemaFieldTypeUnion x)
 
--- This is not 100% correct, we could have
---   GSchemaFieldTypeUnion sch '[] U1
--- But we would need overlappable instances for that matter
--- and also: who is going to define an empty union?
-instance TypeError ('Text "the type does not match the union")
+instance {-# OVERLAPS #-} GSchemaFieldTypeUnion sch '[] U1 where
+  toSchemaFieldTypeUnion U1 = error "this should never happen"
+  fromSchemaFieldTypeUnion _ = U1
+instance {-# OVERLAPPABLE #-}
+         TypeError ('Text "the type does not match the union")
          => GSchemaFieldTypeUnion sch '[] f where
   toSchemaFieldTypeUnion = error "this should never happen"
   fromSchemaFieldTypeUnion = error "this should never happen"
 
-instance (GSchemaFieldType sch t v)
-         => GSchemaFieldTypeUnion sch '[t] (K1 i v) where
-  toSchemaFieldTypeUnion   (K1 x) = Z (toSchemaFieldType x)
-  fromSchemaFieldTypeUnion (Z x)  = K1 (fromSchemaFieldType x)
-  fromSchemaFieldTypeUnion (S _)  = error "this should never happen"
-instance (GSchemaFieldType sch t v, GSchemaFieldTypeUnion sch ts vs)
-         => GSchemaFieldTypeUnion sch (t ': ts) (K1 i v :+: vs) where
-  toSchemaFieldTypeUnion (L1 (K1 x)) = Z (toSchemaFieldType x)
-  toSchemaFieldTypeUnion (R1 r)      = S (toSchemaFieldTypeUnion r)
-  fromSchemaFieldTypeUnion (Z x) = L1 (K1 (fromSchemaFieldType x))
+instance (GSchemaFieldTypeWrap sch t v)
+         => GSchemaFieldTypeUnion sch '[t] v where
+  toSchemaFieldTypeUnion   x     = Z (toSchemaFieldTypeW x)
+  fromSchemaFieldTypeUnion (Z x) = fromSchemaFieldTypeW x
+  fromSchemaFieldTypeUnion (S _) = error "this should never happen"
+instance (GSchemaFieldTypeWrap sch t v, GSchemaFieldTypeUnion sch ts vs)
+         => GSchemaFieldTypeUnion sch (t ': ts) (v :+: vs) where
+  toSchemaFieldTypeUnion (L1 x) = Z (toSchemaFieldTypeW x)
+  toSchemaFieldTypeUnion (R1 r) = S (toSchemaFieldTypeUnion r)
+  fromSchemaFieldTypeUnion (Z x) = L1 (fromSchemaFieldTypeW x)
   fromSchemaFieldTypeUnion (S r) = R1 (fromSchemaFieldTypeUnion r)
 -- Weird nested instance produced by GHC
-instance (GSchemaFieldType sch t1 v1, GSchemaFieldType sch t2 v2, GSchemaFieldTypeUnion sch ts vs)
-         => GSchemaFieldTypeUnion sch (t1 ': t2 ': ts) ((K1 i v1 :+: K1 i v2) :+: vs) where
-  toSchemaFieldTypeUnion (L1 (L1 (K1 x))) = Z (toSchemaFieldType x)
-  toSchemaFieldTypeUnion (L1 (R1 (K1 x))) = S (Z (toSchemaFieldType x))
-  toSchemaFieldTypeUnion (R1 r)           = S (S (toSchemaFieldTypeUnion r))
-  fromSchemaFieldTypeUnion (Z x)     = L1 (L1 (K1 (fromSchemaFieldType x)))
-  fromSchemaFieldTypeUnion (S (Z x)) = L1 (R1 (K1 (fromSchemaFieldType x)))
+instance ( GSchemaFieldTypeWrap sch t1 v1, GSchemaFieldTypeWrap sch t2 v2
+         , GSchemaFieldTypeUnion sch ts vs )
+         => GSchemaFieldTypeUnion sch (t1 ': t2 ': ts) ((v1 :+: v2) :+: vs) where
+  toSchemaFieldTypeUnion (L1 (L1 x)) = Z (toSchemaFieldTypeW x)
+  toSchemaFieldTypeUnion (L1 (R1 x)) = S (Z (toSchemaFieldTypeW x))
+  toSchemaFieldTypeUnion (R1 r)      = S (S (toSchemaFieldTypeUnion r))
+  fromSchemaFieldTypeUnion (Z x)     = L1 (L1 (fromSchemaFieldTypeW x))
+  fromSchemaFieldTypeUnion (S (Z x)) = L1 (R1 (fromSchemaFieldTypeW x))
   fromSchemaFieldTypeUnion (S (S r)) = R1 (fromSchemaFieldTypeUnion r)
 
 
