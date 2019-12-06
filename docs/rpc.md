@@ -22,7 +22,9 @@ As with our sibling `mu-schema` library, we use type-level techniques to represe
 ```haskell
 {-# language TemplateHaskell #-}
 
-$(grpc "QuickstartSchema" (const "QuickstartService") "quickstart.proto")
+import Mu.Quasi.GRpc
+
+grpc "QuickstartSchema" (const "QuickstartService") "quickstart.proto"
 ```
 
 The `grpc` function takes three arguments:
@@ -38,21 +40,24 @@ This is everything you need to start using gRPC services and clients in Haskell!
 In order to use the library proficiently, we should look a bit at the code generated in the previous code. A type-level description of the messages is put into the type `QuickstartSchema`. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using `mu-schema` facilities, this amounts to declaring a bunch of data types and including `deriving (Generic, HasSchema Schema "type")` at the end of each of them.
 
 ```haskell
-{-# language PolyKinds, DataKinds #-}
+{-# language PolyKinds, DataKinds, TypeFamilies #-}
 {-# language MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances #-}
 {-# language DeriveGeneric, DeriveAnyClass #-}
 
 import qualified Data.Text as T
 import GHC.Generics
+
+import Mu.Adapter.ProtoBuf
 import Mu.Schema
 
 -- GENERATED
 type QuickstartSchema
-  = '[ 'DRecord "HelloRequest"  '[]
-                '[ 'FieldDef "name"    '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
-     , 'DRecord "HelloResponse" '[]
-                '[ 'FieldDef "message" '[ ProtoBufId 1 ] ('TPrimitive T.Text) ]
-     ]
+  = '[ 'DRecord "HelloRequest"  '[ 'FieldDef "name"    ('TPrimitive T.Text) ]
+     , 'DRecord "HelloResponse" '[ 'FieldDef "message" ('TPrimitive T.Text) ] ]
+
+type instance AnnotatedSchema ProtoBufAnnotation QuickstartSchema
+  = '[ 'AnnField "HelloRequest"  "name"    ('ProtoBufId 1)
+     , 'AnnField "HelloResponse" "message" ('ProtoBufId 1) ]
 
 -- TO BE WRITTEN
 newtype HelloRequest = HelloRequest { name :: T.Text }
@@ -86,15 +91,22 @@ Note that depending on the concrete implementation you use to run the server, on
 In order to implement the service, you have to define the behavior of each method by means of a *handler*. You can use Haskell types for your handlers, given that you had previously declared that they can be mapped back and forth the schema types using `HasSchema`. For example, the following is a handler for the `SayHello` method in `Greeter`:
 
 ```haskell
-sayHello :: HelloRequest -> ServerErrorIO HelloResponse
+sayHello :: (MonadServer m) => HelloRequest -> m HelloResponse
 sayHello (HelloRequest nm) = return (HelloResponse ("hi, " <> nm))
 ```
 
-Since you can declare more than one method in a service, you need to join then into a `Server`. You do so by using `(:<|>:)` between each handler and ending the sequence with `H0`. In addition to the name of the service, `Server` has an additional parameter which records the types of the handlers. Since that list may become quite long, we can ask GHC to write it for us by using the `PartialTypeSignatures` extension and writing an underscore `_` in that position. One final observation is that in the code below we are using `ServerIO`, which is an instance of `Server` which allows running `IO` operations.
+Notice the use of `MonadServer` in this case. This gives us the ability to:
+
+* Run arbitrary `IO` actions by using `liftIO`,
+* Return an error code by calling `serverError`.
+
+Being polymorphic here allows us to run the same server in multiple back-ends. Furthermore, by enlargint the set of abilities required for our monad `m`, we can [integrate with other libraries](transformer.md), including logging and resource pools.
+
+Since you can declare more than one method in a service, you need to join then into a `Server`. You do so by using `(:<|>:)` between each handler and ending the sequence with `H0`. In addition to the name of the service, `Server` has an additional parameter which records the types of the handlers. Since that list may become quite long, we can ask GHC to write it for us by using the `PartialTypeSignatures` extension and writing an underscore `_` in that position.
 
 ```haskell
 {-# language PartialTypeSignatures #-}
 
-quickstartServer :: ServerIO QuickstartService _
+quickstartServer :: (MonadServer m) => ServerT QuickstartService m _
 quickstartServer = Server (sayHello :<|>: H0)
 ```
