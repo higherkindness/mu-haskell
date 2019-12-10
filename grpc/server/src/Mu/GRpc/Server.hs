@@ -61,7 +61,7 @@ runGRpcAppTrans
   -> (forall a. m a -> ServerErrorIO a)
   -> ServerT ('Service name anns methods) m handlers
   -> IO ()
-runGRpcAppTrans port f svr = run port (gRpcApp f svr)
+runGRpcAppTrans port f svr = run port (gRpcAppTrans f svr)
 
 -- | Run a Mu 'Server' using the given 'Settings'.
 --
@@ -73,7 +73,7 @@ runGRpcAppSettings
   -> (forall a. m a -> ServerErrorIO a)
   -> ServerT ('Service name anns methods) m handlers
   -> IO ()
-runGRpcAppSettings st f svr = runSettings st (gRpcApp f svr)
+runGRpcAppSettings st f svr = runSettings st (gRpcAppTrans f svr)
 
 -- | Run a Mu 'Server' using the given 'TLSSettings' and 'Settings'.
 --
@@ -86,7 +86,7 @@ runGRpcAppTLS
   -> (forall a. m a -> ServerErrorIO a)
   -> ServerT ('Service name anns methods) m handlers
   -> IO ()
-runGRpcAppTLS tls st f svr = runTLS tls st (gRpcApp f svr)
+runGRpcAppTLS tls st f svr = runTLS tls st (gRpcAppTrans f svr)
 
 -- | Turn a Mu 'Server' into a WAI 'Application'.
 --
@@ -94,12 +94,25 @@ runGRpcAppTLS tls st f svr = runTLS tls st (gRpcApp f svr)
 --   for example, @wai-routes@, or you can add middleware
 --   from @wai-extra@, among others.
 gRpcApp
-  :: (KnownName name, KnownName (FindPackageName anns), GRpcMethodHandlers m methods handlers)
+  :: ( KnownName name, KnownName (FindPackageName anns)
+     , GRpcMethodHandlers ServerErrorIO methods handlers )
+  => ServerT ('Service name anns methods) ServerErrorIO handlers
+  -> Application
+gRpcApp = gRpcAppTrans id
+
+-- | Turn a Mu 'Server' into a WAI 'Application'.
+--
+--   These 'Application's can be later combined using,
+--   for example, @wai-routes@, or you can add middleware
+--   from @wai-extra@, among others.
+gRpcAppTrans
+  :: ( KnownName name, KnownName (FindPackageName anns)
+     , GRpcMethodHandlers m methods handlers )
   => (forall a. m a -> ServerErrorIO a)
   -> ServerT ('Service name anns methods) m handlers
   -> Application
-gRpcApp f svr = Wai.grpcApp [uncompressed, gzip]
-                            (gRpcServiceHandlers f svr)
+gRpcAppTrans f svr = Wai.grpcApp [uncompressed, gzip]
+                                 (gRpcServiceHandlers f svr)
 
 gRpcServiceHandlers
   :: forall name anns methods handlers m.

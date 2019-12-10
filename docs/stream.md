@@ -24,9 +24,10 @@ To define the implementation of this method we build upon the great [Conduit](ht
 
 ```haskell
 sayManyHellos
-  :: ConduitT () HelloRequest ServerErrorIO ()
-  -> ConduitT HelloResponse ServerErrorVoid IO ()
-  -> IO ()
+  :: (MonadServer m)
+  => ConduitT () HelloRequest m ()
+  -> ConduitT HelloResponse Void m ()
+  -> m ()
 sayManyHellos source sink
   = runConduit $ source .| C.mapM sayHello .| sink
 ```

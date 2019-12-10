@@ -1,5 +1,9 @@
 # Introduction to Mu-Haskell
 
+Many companies have embraced microservices architectures as the best way to scale up their internal software systems, separate work across different company divisions and development teams. Microservices architectures also allow teams to turn an idea or bug report into a working feature of fix in production more quickly, in accordance to the agile principles.
+
+However, microservices are not without costs. Every connection between microservices becomes now a boundary that requires one to act as a server, and the other to act as the client. Each part implementation needs to add the protocol, the codification of the data for transmission, etc. Also, business logic of the application starts to spread around several code bases, making it difficult to maintain.
+
 ## What is Mu-Haskell?
 
 The main goal of Mu-Haskell is to make you focus on your domain logic, instead of worrying about format and protocol issues. To achieve this goal, Mu-Haskell provides two sets of packages:
@@ -71,19 +75,19 @@ Open the `src/Main.hs` file. The contents are quite small right now: a `main` fu
 main :: IO ()
 main = runGRpcApp 8080 server
 
-server :: ServerIO Service _
+server :: (MonadServer m) => ServerT Service m _
 server = Server H0
 ```
 
 The simplest way to provide an implementation for a service is to define one function for each method. You define those functions completely in terms of Haskell data types; in our case `HelloRequestMessage` and `HelloReplyMessage`. Here is a simple definition:
 
 ```haskell
-sayHello :: HelloRequestMessage -> ServerErrorIO HelloReplyMessage
+sayHello :: (MonadServer m) => HelloRequestMessage -> m HelloReplyMessage
 sayHello (HelloRequestMessage nm)
   = return $ HelloReplyMessage ("hello, " ++ nm)
 ```
 
-The `ServerErrorIO` portion in the type is mandated by `mu-grpc-server`; it tells us that in a method we can perform any `IO` actions and additionally throw server errors (for conditions such as *not found*). We do not make use of any of those here, so we simply use `return` with a value.
+The `MonadServer` portion in the type is mandated by `mu-rpc`; it tells us that in a method we can perform any `IO` actions and additionally throw server errors (for conditions such as *not found*). We do not make use of any of those here, so we simply use `return` with a value. We could even make the definition a bit more polymorphic by replacing `MonadServer` by `Monad`.
 
 How does `server` know that `sayHello` is part of the implementation of the service? We have to tell it, by adding `sayHello` to the list of methods. Unfortunately, we cannot use a simple lists, so we use `(:<|>:)` to join them, and `H0` to finish it.
 
