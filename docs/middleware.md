@@ -52,7 +52,7 @@ main = do
   run 8080 $ metrics waiMetrics (gRpcApp server)
 ```
 
-Another possibility is to expose [Prometheus](https://prometheus.io/) metrics. In this case, a specific monitoring process scrapes your servers from time to time. The gathered data can later be analyzed and visualized. Luckily, there's some [middlaware](https://github.com/fimad/prometheus-haskell) exposing the require endpoints automatically.
+Another possibility is to expose [Prometheus](https://prometheus.io/) metrics. In this case, a specific monitoring process scrapes your servers from time to time. The gathered data can later be analyzed and visualized. Luckily, there's some [middleware](https://github.com/fimad/prometheus-haskell) exposing the require endpoints automatically.
 
 ```haskell
 import Network.Wai.Handler.Warp (run)
