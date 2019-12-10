@@ -101,5 +101,5 @@ import Schema
 main :: IO ()
 main = runGRpcApp 8080 server
 
-server :: ServerIO Service _
+server :: (MonadServer m) => ServerT Service m _
 server = Server H0

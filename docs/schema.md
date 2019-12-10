@@ -18,19 +18,19 @@ import Mu.Schema
 import qualified Data.Text as T
 
 type ExampleSchema
-  = '[ 'DEnum   "gender" '[]
-                '[ 'ChoiceDef "male"   '[]
-                 , 'ChoiceDef "female" '[]
-                 , 'ChoiceDef "nb"     '[] ]
+  = '[ 'DEnum   "gender"
+                '[ 'ChoiceDef "male"
+                 , 'ChoiceDef "female"
+                 , 'ChoiceDef "nb" ]
      , 'DRecord "address"
-               '[ 'FieldDef "postcode" '[] ('TPrimitive T.Text)
-                , 'FieldDef "country"  '[] ('TPrimitive T.Text) ]
+               '[ 'FieldDef "postcode" ('TPrimitive T.Text)
+                , 'FieldDef "country"  ('TPrimitive T.Text) ]
      , 'DRecord "person"
-                '[ 'FieldDef "firstName" '[] ('TPrimitive T.Text)
-                 , 'FieldDef "lastName"  '[] ('TPrimitive T.Text)
-                 , 'FieldDef "age"       '[] ('TOption ('TPrimitive Int))
-                 , 'FieldDef "gender"    '[] ('TOption ('TSchematic "gender"))
-                 , 'FieldDef "address"   '[] ('TSchematic "address") ]
+                '[ 'FieldDef "firstName" ('TPrimitive T.Text)
+                 , 'FieldDef "lastName"  ('TPrimitive T.Text)
+                 , 'FieldDef "age"       ('TOption ('TPrimitive Int))
+                 , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
+                 , 'FieldDef "address"   ('TSchematic "address") ]
      ]
 ```
 
@@ -48,45 +48,26 @@ Note that GHC requires all of `DEnum`, `DRecord`, `FieldDef`, and so forth to be
 
 As discussed in the introduction, `mu-schema` has been developed with some common schema formats in mind. Instead of writing the type-level schemas by hand, you can also import your [Protocol Buffers](https://developers.google.com/protocol-buffers/) schemas.
 
-The most common case is that your schema lives in an external file, maybe shared with other components of your system. To declare that we want the file to be pre-processed before compilation, we use a GHC feature called a *quasi-quote*. Be careful with the ending of the quasi-quote, which is a weird combination `|]`.
+The idea is that your schema lives in an external file, so you can share it with other components of your system. To declare that we want the file to be pre-processed before compilation, we use a GHC feature called `TemplateHaskell`, hence the initial line starting with `language`.
 
 ```haskell
-{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
 
-type ExampleSchema = [protobufFile|path/to/file.proto|]
+import Mu.Quasi.ProtoBuf
+
+protobuf "ExampleSchema" "path/to/file.proto"
 ```
 
-Another possibility is to write them in-line. In that case you replace `protobufFile` with `protobuf` and write the schema directly between the `|` symbols.
+That single line asks the compiler to generate a `ExampleSchema` type which represents the schema from the given file. In addition, it also generates a mapping from fields to identifiers, as described below.
 
-```haskell
-{-# language QuasiQuotes #-}
-
-type ExampleSchema = [protobuf|
-enum gender {
-  male   = 1;
-  female = 2;
-  nb     = 3;
-}
-message address {
-  string postcode = 1;
-  string country  = 2;
-}
-message person {
-  string  firstName = 1;
-  string  lastName  = 2;
-  int     age       = 3;
-  gender  gender    = 4;
-  address address   = 5;
-}
-|]
-```
+One word of warning: GHC reads the contents of the file *in order*, resolving `TemplateHaskell` blocks when found. Only then the results are visible to the rest of the file. In particular, the `protobuf` line should appear *before* any other code mentioning the `ExampleSchema` type.
 
 ### Schemas part of services
 
 If you use the `grpc` function to import a gRPC `.proto` file in the type-level, that function already takes care of creating an appropiate schema for *all* the messages. If you prefer to have different schemas for different subsets of messages (for example, aggregated by services), you can either:
 
 * Write the schemas by hand,
-* Split the definition file into several ones, and import each of them in its own `[protobufFile||]` block.
+* Split the definition file into several ones, and import each of them in its own `protobuf` block.
 
 ## Mapping Haskell types
 
@@ -129,15 +110,18 @@ instance HasSchema ExampleSchema "gender" Gender where
 
 ### Protocol Buffers field identifiers
 
-If you want to use (de)serialization to Protocol Buffers, you need to declare one more piece of information. A Protocol Buffer record or enumeration assigns both names and *numeric identifiers* to each field or value, respectively. This is done via an *annotation* in each field:
+If you want to use (de)serialization to Protocol Buffers, you need to declare one more piece of information. A Protocol Buffer record or enumeration assigns both names and *numeric identifiers* to each field or value, respectively. If you use `protobuf` or `grpc` to import your Protocol Buffers schemas, this is done automatically for you.
+
+`mu-schema` supports extending the information of a schema by means of *annotations*. Annotations are linked to both a certain format (`ProtoBufAnnotation` in this case) and a certain schema. Furthermore, annotations may range over the whole schema, a specific record or enumeration, or a specific field or choice. In the case of Protocol Buffers, we only need the latter:
 
 ```haskell
-type ExampleSchema
+{-# language TypeFamilies #-}
+
+import Mu.Adapter.ProtoBuf
+
+type instance AnnotatedSchema ProtoBufAnnotation ExampleSchema
   = '[ ...
-     , 'DRecord "address"
-               '[ 'FieldDef "postcode" '[ ProtoBufId 1 ] ('TPrimitive T.Text)
-                , 'FieldDef "country"  '[ ProtoBufId 2 ] ('TPrimitive T.Text) ]
+     , 'AnnField "address" "postcode" ('ProtoBufId 1)
+     , 'AnnField "address" "country " ('ProtoBufId 2)
      , ... ]
 ```
-
-If you use the `protobuf` or `protobufFile` quasi-quoters to import your Protocol Buffers schemas, this is done automatically for you.
