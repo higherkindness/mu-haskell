@@ -157,6 +157,27 @@ instance (ProtoBufTypeRef rref r)
     = unary @_ @() @(ViaProtoBufTypeRef rref r)
             rpc (\_ _ -> ViaProtoBufTypeRef <$> raiseErrors (f h))
 
+instance (ProtoBufTypeRef rref r, MonadIO m)
+         => GRpcMethodHandler m '[ ] ('RetStream rref)
+                              (ConduitT r Void m () -> m ()) where
+  gRpcMethodHandler f _ _ rpc h
+    = serverStream @_ @() @(ViaProtoBufTypeRef rref r) rpc sstream
+    where sstream :: req -> ()
+                  -> IO ((), ServerStream (ViaProtoBufTypeRef rref r) ())
+          sstream _ _ = do
+            -- Variable to connect input and output
+            var <- newEmptyTMVarIO :: IO (TMVar (Maybe r))
+            -- Start executing the handler
+            promise <- async (raiseErrors $ ViaProtoBufTypeRef <$> f (h (toTMVarConduit var)))
+              -- Return the information
+            let readNext _
+                  = do nextOutput <- atomically $ takeTMVar var
+                       case nextOutput of
+                         Just o  -> return $ Just ((), ViaProtoBufTypeRef o)
+                         Nothing -> do cancel promise
+                                       return Nothing
+            return ((), ServerStream readNext)
+
 instance (ProtoBufTypeRef vref v)
          => GRpcMethodHandler m '[ 'ArgSingle vref ] 'RetNothing (v -> m ()) where
   gRpcMethodHandler f _ _ rpc h
