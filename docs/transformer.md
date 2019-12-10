@@ -81,4 +81,4 @@ main = runGRpcAppTrans 8080 logger quickstartServer
 
 The `run` function you provide to `runGRpcAppTrans` may be called more than once! This is fine for readers and logging, but not for `StateT`, for example. In particular, you must ensure that your `run` function is *idempotent*, that is, that the result of calling it more than once is the same as calling it just once.
 
-In the particular case of `StateT`, we suggest using a [transactional variable](http://hackage.haskell.org/package/stm/docs/Control-Concurrent-STM-TVar.html), passed as either an argument or uisng `ReaderT`. This has the additional benefit that concurrent access to the variable - which is fairly possible in a gRPC server -- are automatically protected for data races and deadlocks.
+In the particular case of `StateT`, we suggest using a [transactional variable](http://hackage.haskell.org/package/stm/docs/Control-Concurrent-STM-TVar.html), passed as either an argument or using `ReaderT`. This has the additional benefit that concurrent access to the variable - which is fairly possible in a gRPC server -- are automatically protected for data races and deadlocks.
