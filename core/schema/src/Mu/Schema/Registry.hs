@@ -27,16 +27,16 @@ import qualified Mu.Schema.Interpretation.Schemaless as SLess
 
 type Registry = Mappings Nat Schema'
 
-fromRegistry :: forall r t.
-                FromRegistry r t
-             => SLess.Term -> Maybe t
+fromRegistry :: forall r t w. FromRegistry w r t
+             => SLess.Term w -> Maybe t
 fromRegistry = fromRegistry' (Proxy @r)
 
-class FromRegistry (ms :: Registry) (t :: Type) where
-  fromRegistry' :: Proxy ms -> SLess.Term -> Maybe t
+class FromRegistry (w :: * -> *) (ms :: Registry) (t :: Type) where
+  fromRegistry' :: Proxy ms -> SLess.Term w -> Maybe t
 
-instance FromRegistry '[] t where
+instance FromRegistry w '[] t where
   fromRegistry' _ _ = Nothing
-instance (HasSchema s sty t, SLess.CheckSchema s (s :/: sty), FromRegistry ms t)
-         => FromRegistry ( (n ':-> s) ': ms) t where
-  fromRegistry' _ t = SLess.fromSchemalessTerm @s t <|> fromRegistry' (Proxy @ms) t
+instance ( Traversable w, HasSchema w s sty t
+         , SLess.CheckSchema s (s :/: sty), FromRegistry w ms t )
+         => FromRegistry w ((n ':-> s) ': ms) t where
+  fromRegistry' _ t = SLess.fromSchemalessTerm @s @w t <|> fromRegistry' (Proxy @ms) t

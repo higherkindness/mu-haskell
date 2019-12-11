@@ -32,54 +32,60 @@ import           Mu.Schema.Definition
 import qualified Mu.Schema.Interpretation as S
 
 -- | Interpretation of a type in a schema.
-data Term where
-  TRecord :: [Field]    -> Term
-  TEnum   :: Int        -> Term
-  TSimple :: FieldValue -> Term
-  deriving (Eq, Ord, Show)
+data Term (w :: * -> *) where
+  TRecord :: [Field w]    -> Term w
+  TEnum   :: Int          -> Term w
+  TSimple :: FieldValue w -> Term w
+
+deriving instance Eq   (w (FieldValue w)) => Eq   (Term w)
+deriving instance Ord  (w (FieldValue w)) => Ord  (Term w)
+deriving instance Show (w (FieldValue w)) => Show (Term w)
 
 -- | Interpretation of a field.
-data Field where
-  Field :: T.Text -> FieldValue -> Field
-  deriving (Eq, Ord, Show)
+data Field (w :: * -> *) where
+  Field :: T.Text -> w (FieldValue w) -> Field w
+
+deriving instance Eq   (w (FieldValue w)) => Eq   (Field w)
+deriving instance Ord  (w (FieldValue w)) => Ord  (Field w)
+deriving instance Show (w (FieldValue w)) => Show (Field w)
 
 -- | Interpretation of a field type, by giving a value of that type.
-data FieldValue where
-  FNull      :: FieldValue
-  FPrimitive :: (Typeable t, Eq t, Ord t, Show t) => t -> FieldValue
-  FSchematic :: Term -> FieldValue
-  FOption    :: Maybe FieldValue -> FieldValue
-  FList      :: [FieldValue] -> FieldValue
-  FMap       :: M.Map FieldValue FieldValue -> FieldValue
+data FieldValue (w :: * -> *) where
+  FNull      :: FieldValue w
+  FPrimitive :: (Typeable t, Eq t, Ord t, Show t) => t -> FieldValue w
+  FSchematic :: Term w -> FieldValue w
+  FOption    :: Maybe (FieldValue w) -> FieldValue w
+  FList      :: [FieldValue w] -> FieldValue w
+  FMap       :: M.Map (FieldValue w) (FieldValue w) -> FieldValue w
 
 checkSchema
-  :: forall (s :: Schema tn fn) (t :: tn).
-     CheckSchema s (s :/: t)
-  => Proxy t -> Term -> Maybe (S.Term s (s :/: t))
+  :: forall (s :: Schema tn fn) (t :: tn) (w :: * -> *).
+     (Traversable w, CheckSchema s (s :/: t))
+  => Proxy t -> Term w -> Maybe (S.Term w s (s :/: t))
 checkSchema _ = checkSchema'
 
 fromSchemalessTerm
-  :: forall sch t sty.
-     (HasSchema sch sty t, CheckSchema sch (sch :/: sty))
-  => Term -> Maybe t
-fromSchemalessTerm t = fromSchema @_ @_ @sch <$> checkSchema (Proxy @sty) t
+  :: forall sch w t sty.
+     (Traversable w, HasSchema w sch sty t, CheckSchema sch (sch :/: sty))
+  => Term w -> Maybe t
+fromSchemalessTerm t = fromSchema @_ @_ @w @sch <$> checkSchema (Proxy @sty) t
 
-class ToSchemalessTerm t where
-  toSchemalessTerm  :: t -> Term
-class ToSchemalessValue t where
-  toSchemalessValue :: t -> FieldValue
+class ToSchemalessTerm t w where
+  toSchemalessTerm  :: t -> Term w
+class ToSchemalessValue t w where
+  toSchemalessValue :: t -> FieldValue w
 
 class CheckSchema (s :: Schema tn fn) (t :: TypeDef tn fn) where
-  checkSchema' :: Term -> Maybe (S.Term s t)
+  checkSchema' :: Traversable w => Term w -> Maybe (S.Term w s t)
 class CheckSchemaFields (s :: Schema tn fn) (fields :: [FieldDef tn fn]) where
-  checkSchemaFields :: [Field] -> Maybe (NP (S.Field s) fields)
+  checkSchemaFields :: Traversable w => [Field w] -> Maybe (NP (S.Field w s) fields)
 class CheckSchemaEnum (choices :: [ChoiceDef fn]) where
   checkSchemaEnumInt  :: Int -> Maybe (NS Proxy choices)
   checkSchemaEnumText :: T.Text -> Maybe (NS Proxy choices)
 class CheckSchemaValue (s :: Schema tn fn) (field :: FieldType tn) where
-  checkSchemaValue :: FieldValue -> Maybe (S.FieldValue s field)
+  checkSchemaValue :: Traversable w => FieldValue w -> Maybe (S.FieldValue w s field)
 class CheckSchemaUnion (s :: Schema tn fn) (ts :: [FieldType tn]) where
-  checkSchemaUnion :: FieldValue -> Maybe (NS (S.FieldValue s) ts)
+  checkSchemaUnion :: Traversable w => FieldValue w -> Maybe (NS (S.FieldValue w s) ts)
 
 instance CheckSchemaFields s fields => CheckSchema s ('DRecord nm fields) where
   checkSchema' (TRecord fields) = S.TRecord <$> checkSchemaFields fields
@@ -91,7 +97,7 @@ instance (KnownName nm, CheckSchemaValue s ty, CheckSchemaFields s rest)
   checkSchemaFields fs
     = do let name = T.pack (nameVal (Proxy @nm))
          Field _ v <- find (\(Field fieldName _) -> fieldName == name) fs
-         v' <- checkSchemaValue v
+         v' <- traverse checkSchemaValue v
          r' <- checkSchemaFields @_ @_ @s @rest fs
          return (S.Field v' :* r')
 
@@ -149,8 +155,8 @@ instance (CheckSchemaValue s t, CheckSchemaUnion s ts)
   checkSchemaUnion x = Z <$> checkSchemaValue @_ @_ @s @t x <|> S <$> checkSchemaUnion x
 
 -- Boring instances
-deriving instance Show FieldValue
-instance Eq FieldValue where
+deriving instance (Show (w (FieldValue w))) => Show (FieldValue w)
+instance (Eq (w (FieldValue w))) => Eq (FieldValue w) where
   FNull == FNull = True
   FPrimitive (x :: a) == FPrimitive (y :: b)
     = case eqT @a @b of
@@ -161,7 +167,7 @@ instance Eq FieldValue where
   FList      x == FList      y = x == y
   FMap       x == FMap       y = x == y
   _            == _            = False
-instance Ord FieldValue where
+instance (Ord (w (FieldValue w))) => Ord (FieldValue w) where
   FNull <= _ = True
   FPrimitive _ <= FNull = False
   FPrimitive (x :: a) <= FPrimitive (y :: b)

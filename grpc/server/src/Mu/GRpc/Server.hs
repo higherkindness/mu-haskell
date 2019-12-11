@@ -86,7 +86,7 @@ runGRpcAppTLS
      , GRpcMethodHandlers m methods handlers )
   => TLSSettings -> Settings
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT ('Service name anns methods) m handlers
+  -> ServerT Maybe ('Service name anns methods) m handlers
   -> IO ()
 runGRpcAppTLS tls st f svr = runTLS tls st (gRpcAppTrans f svr)
 
@@ -98,7 +98,7 @@ runGRpcAppTLS tls st f svr = runTLS tls st (gRpcAppTrans f svr)
 gRpcApp
   :: ( KnownName name, KnownName (FindPackageName anns)
      , GRpcMethodHandlers ServerErrorIO methods handlers )
-  => ServerT ('Service name anns methods) ServerErrorIO handlers
+  => ServerT Maybe ('Service name anns methods) ServerErrorIO handlers
   -> Application
 gRpcApp = gRpcAppTrans id
 
@@ -111,7 +111,7 @@ gRpcAppTrans
   :: ( KnownName name, KnownName (FindPackageName anns)
      , GRpcMethodHandlers m methods handlers )
   => (forall a. m a -> ServerErrorIO a)
-  -> ServerT ('Service name anns methods) m handlers
+  -> ServerT Maybe ('Service name anns methods) m handlers
   -> Application
 gRpcAppTrans f svr = Wai.grpcApp [uncompressed, gzip]
                                  (gRpcServiceHandlers f svr)
@@ -120,7 +120,7 @@ gRpcServiceHandlers
   :: forall name anns methods handlers m.
      (KnownName name, KnownName (FindPackageName anns), GRpcMethodHandlers m methods handlers)
   => (forall a. m a -> ServerErrorIO a)
-  -> ServerT ('Service name anns methods) m handlers
+  -> ServerT Maybe ('Service name anns methods) m handlers
   -> [ServiceHandler]
 gRpcServiceHandlers f (Server svr) = gRpcMethodHandlers f packageName serviceName svr
   where packageName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
@@ -129,7 +129,7 @@ gRpcServiceHandlers f (Server svr) = gRpcMethodHandlers f packageName serviceNam
 class GRpcMethodHandlers (m :: Type -> Type) (ms :: [Method mnm]) (hs :: [Type]) where
   gRpcMethodHandlers :: (forall a. m a -> ServerErrorIO a)
                      -> ByteString -> ByteString
-                     -> HandlersT ms m hs -> [ServiceHandler]
+                     -> HandlersT Maybe ms m hs -> [ServiceHandler]
 
 instance GRpcMethodHandlers m '[] '[] where
   gRpcMethodHandlers _ _ _ H0 = []

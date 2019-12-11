@@ -7,6 +7,7 @@
 {-# language MultiParamTypeClasses #-}
 {-# language PolyKinds             #-}
 {-# language QuasiQuotes           #-}
+{-# language StandaloneDeriving    #-}
 {-# language TemplateHaskell       #-}
 {-# language TypeApplications      #-}
 {-# language TypeFamilies          #-}
@@ -15,6 +16,7 @@
 module Mu.Schema.Examples where
 
 import qualified Data.Aeson                         as J
+import           Data.Functor.Identity
 import qualified Data.Text                          as T
 import           GHC.Generics
 
@@ -29,22 +31,22 @@ data Person
            , gender    :: Maybe Gender
            , address   :: Address }
   deriving (Eq, Show, Generic)
-  deriving (HasSchema ExampleSchema "person")
+  deriving (HasSchema Identity ExampleSchema "person")
   deriving (J.ToJSON, J.FromJSON)
-    via (WithSchema ExampleSchema "person" Person)
+    via (WithSchema Identity ExampleSchema "person" Person)
 
 data Address
   = Address { postcode :: T.Text
             , country  :: T.Text }
   deriving (Eq, Show, Generic)
-  deriving (HasSchema ExampleSchema "address")
+  deriving (HasSchema Identity ExampleSchema "address")
   deriving (J.ToJSON, J.FromJSON)
-    via (WithSchema ExampleSchema "address" Address)
+    via (WithSchema Identity ExampleSchema "address" Address)
 
 data Gender = Male | Female | NonBinary
   deriving (Eq, Show, Generic)
   deriving (J.ToJSON, J.FromJSON)
-    via (WithSchema ExampleSchema "gender" Gender)
+    via (WithSchema Identity ExampleSchema "gender" Gender)
 
 -- Schema for these data types
 type ExampleSchema
@@ -69,8 +71,8 @@ type GenderFieldMapping
      , "NonBinary" ':-> "nb" ]
 
 -- we can give a custom field mapping via a custom instance
-instance HasSchema ExampleSchema "gender" Gender where
-  type FieldMapping ExampleSchema "gender" Gender = GenderFieldMapping
+instance HasSchema f ExampleSchema "gender" Gender where
+  type FieldMapping f ExampleSchema "gender" Gender = GenderFieldMapping
 
 $(generateTypesFromSchema (++"Msg") ''ExampleSchema)
 

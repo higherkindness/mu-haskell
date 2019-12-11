@@ -55,8 +55,8 @@ instance All (Eq `Compose` Field w sch) args
 instance (KnownName name, All (Show `Compose` Field w sch) args)
          => Show (Term w sch ('DRecord name args)) where
   show (TRecord xs) = "record " ++ nameVal (Proxy @name) ++ " { " ++ printFields xs ++ " }"
-    where printFields :: forall fs. All (Show `Compose` Field sch) fs
-                      => NP (Field sch) fs -> String
+    where printFields :: forall fs. All (Show `Compose` Field w sch) fs
+                      => NP (Field w sch) fs -> String
           printFields Nil         = ""
           printFields (x :* Nil)  = show x
           printFields (x :* rest) = show x ++ ", " ++ printFields rest
@@ -73,9 +73,9 @@ instance Eq (FieldValue w sch t) => Eq (Term w sch ('DSimple t)) where
 instance Show (FieldValue w sch t) => Show (Term w sch ('DSimple t)) where
   show (TSimple x) = show x
 
-instance (Eq (w (FieldValue sch t))) => Eq (Field w sch ('FieldDef name t)) where
+instance (Eq (w (FieldValue w sch t))) => Eq (Field w sch ('FieldDef name t)) where
   Field x == Field y = x == y
-instance (KnownName name, Show (FieldValue w sch t))
+instance (KnownName name, Show (w (FieldValue w sch t)))
          => Show (Field w sch ('FieldDef name t)) where
   show (Field x) = nameVal (Proxy @name) ++ ": " ++ show x
 

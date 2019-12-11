@@ -47,7 +47,7 @@ import           Mu.Schema
 -- | Constraint for monads that can be used as servers
 type MonadServer m = (MonadError ServerError m, MonadIO m)
 type ServerErrorIO = ExceptT ServerError IO
-type ServerIO srv = ServerT srv ServerErrorIO
+type ServerIO w srv = ServerT w srv ServerErrorIO
 
 serverError :: (MonadError ServerError m)
             => ServerError -> m a
@@ -70,37 +70,37 @@ data ServerErrorCode
   | NotFound
   deriving (Eq, Show)
 
-data ServerT (s :: Service snm mnm) (m :: Type -> Type) (hs :: [Type]) where
-  Server :: HandlersT methods m hs -> ServerT ('Service sname anns methods) m hs
+data ServerT (w :: Type -> Type) (s :: Service snm mnm) (m :: Type -> Type) (hs :: [Type]) where
+  Server :: HandlersT w methods m hs -> ServerT w ('Service sname anns methods) m hs
 
 infixr 5 :<|>:
-data HandlersT (methods :: [Method mnm]) (m :: Type -> Type) (hs :: [Type]) where
-  H0 :: HandlersT '[] m '[]
-  (:<|>:) :: Handles args ret m h => h -> HandlersT ms m hs
-          -> HandlersT ('Method name anns args ret ': ms) m (h ': hs)
+data HandlersT (w :: Type -> Type) (methods :: [Method mnm]) (m :: Type -> Type) (hs :: [Type]) where
+  H0 :: HandlersT w '[] m '[]
+  (:<|>:) :: Handles w args ret m h => h -> HandlersT w ms m hs
+          -> HandlersT w ('Method name anns args ret ': ms) m (h ': hs)
 
 -- Define a relation for handling
-class Handles (args :: [Argument]) (ret :: Return)
+class Handles (w :: Type -> Type) (args :: [Argument]) (ret :: Return)
               (m :: Type -> Type) (h :: Type)
-class HandlesRef (ref :: TypeRef) (t :: Type)
+class HandlesRef (w :: Type -> Type) (ref :: TypeRef) (t :: Type)
 
 -- Type references
-instance HasSchema sch sty t => HandlesRef ('FromSchema sch sty) t
-instance HandlesRef ('FromRegistry subject t last) t
+instance HasSchema w sch sty t => HandlesRef w ('FromSchema sch sty) t
+instance HandlesRef w ('FromRegistry subject t last) t
 
 -- Arguments
-instance (HandlesRef ref t, Handles args ret m h,
+instance (HandlesRef w ref t, Handles w args ret m h,
           handler ~ (t -> h))
-         => Handles ('ArgSingle ref ': args) ret m handler
-instance (MonadError ServerError m, HandlesRef ref t, Handles args ret m h,
+         => Handles w ('ArgSingle ref ': args) ret m handler
+instance (MonadError ServerError m, HandlesRef w ref t, Handles w args ret m h,
           handler ~ (ConduitT () t m () -> h))
-         => Handles ('ArgStream ref ': args) ret m handler
+         => Handles w ('ArgStream ref ': args) ret m handler
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
-         => Handles '[] 'RetNothing m handler
-instance (MonadError ServerError m, HandlesRef eref e, HandlesRef vref v, handler ~ m (Either e v))
-         => Handles '[] ('RetThrows eref vref) m handler
-instance (MonadError ServerError m, HandlesRef ref v, handler ~ m v)
-         => Handles '[] ('RetSingle ref) m handler
-instance (MonadError ServerError m, HandlesRef ref v, handler ~ (ConduitT v Void m () -> m ()))
-         => Handles '[] ('RetStream ref) m handler
+         => Handles w '[] 'RetNothing m handler
+instance (MonadError ServerError m, HandlesRef w eref e, HandlesRef w vref v, handler ~ m (Either e v))
+         => Handles w '[] ('RetThrows eref vref) m handler
+instance (MonadError ServerError m, HandlesRef w ref v, handler ~ m v)
+         => Handles w '[] ('RetSingle ref) m handler
+instance (MonadError ServerError m, HandlesRef w ref v, handler ~ (ConduitT v Void m () -> m ()))
+         => Handles w '[] ('RetStream ref) m handler
