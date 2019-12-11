@@ -22,14 +22,14 @@ import           Mu.Schema
 grpc "SeedSchema" id "seed.proto"
 
 data Person = Person
-  { name :: T.Text
-  , age  :: Int32
-  } deriving (Eq, Show, Ord, Generic, HasSchema SeedSchema "Person")
+  { name :: Maybe T.Text
+  , age  :: Maybe Int32
+  } deriving (Eq, Show, Ord, Generic, HasSchema Maybe SeedSchema "Person")
 
 newtype PeopleRequest = PeopleRequest
-  { name :: T.Text
-  } deriving (Eq, Show, Ord, Generic, HasSchema SeedSchema "PeopleRequest")
+  { name :: Maybe T.Text
+  } deriving (Eq, Show, Ord, Generic, HasSchema Maybe SeedSchema "PeopleRequest")
 
 newtype PeopleResponse = PeopleResponse
-  { person :: Person
-  } deriving (Eq, Show, Ord, Generic, HasSchema SeedSchema "PeopleResponse")
+  { person :: Maybe Person
+  } deriving (Eq, Show, Ord, Generic, HasSchema Maybe SeedSchema "PeopleResponse")

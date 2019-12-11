@@ -42,14 +42,14 @@ setStatus_ m upd
       atomically $ do
         M.insert ss nm m
         writeTBMChan upd s
-setStatus_ _ _ _ = return ()
+setStatus_ _ _ _ = serverError (ServerError Invalid "name or status missing")
 
 checkH_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ServerStatusMsg
 checkH_ m (HealthCheckMsg (Just nm)) = alwaysOk $ do
   putStr "check: " >> print nm
   ss <- atomically $ M.lookup nm m
   return $ ServerStatusMsg ss
-checkH_ _ _ = return $ ServerStatusMsg Nothing
+checkH_ _ _ = serverError (ServerError Invalid "no server name given")
 
 clearStatus_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ()
 clearStatus_ m (HealthCheckMsg (Just nm)) = alwaysOk $ do

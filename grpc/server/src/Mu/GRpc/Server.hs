@@ -35,7 +35,6 @@ import           Network.GRPC.HTTP2.Encoding   (gzip, uncompressed)
 import           Network.GRPC.HTTP2.Proto3Wire
 import           Network.GRPC.HTTP2.Types      (GRPCStatus (..), GRPCStatusCode (..))
 import           Network.GRPC.Server.Handlers
-import           Network.GRPC.Server.Wai       (ServiceHandler)
 import           Network.GRPC.Server.Wai       as Wai
 import           Network.Wai                   (Application)
 import           Network.Wai.Handler.Warp      (Port, Settings, run, runSettings)

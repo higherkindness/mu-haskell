@@ -24,7 +24,7 @@ import qualified Data.HashMap.Strict                 as HM
 import           Data.List.NonEmpty                  (NonEmpty (..))
 import qualified Data.List.NonEmpty                  as NonEmptyList
 import qualified Data.Map                            as M
-import           Data.SOP                            (NP (..), NS (..))
+-- import           Data.SOP                            (NP (..), NS (..))
 import           Data.Tagged
 import qualified Data.Text                           as T
 import qualified Data.Vector                         as V
