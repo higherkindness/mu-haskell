@@ -12,3 +12,6 @@ instance MaybeLike Maybe where
 instance MaybeLike (Either a) where
   likeMaybe (Left  _) = Nothing
   likeMaybe (Right y) = Just y
+
+class FillDefaults f where
+  fillDefaults :: MaybeLike w => f w -> f Identity

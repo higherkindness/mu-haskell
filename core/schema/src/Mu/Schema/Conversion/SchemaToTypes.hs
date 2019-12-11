@@ -178,7 +178,7 @@ fieldTypeToDecl namer fVar (TUnion ts)
   = AppT (AppT (ConT ''NS) (ConT ''I)) (fieldTypeUnion namer fVar ts)
 
 fieldTypeUnion :: Namer -> Name -> [FieldTypeB Type String] -> Type
-fieldTypeUnion _ fVar [] = PromotedNilT
+fieldTypeUnion _ _fVar [] = PromotedNilT
 fieldTypeUnion namer fVar (t:ts)
   = AppT (AppT PromotedConsT (fieldTypeToDecl namer fVar t)) (fieldTypeUnion namer fVar ts)
 

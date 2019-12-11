@@ -51,7 +51,7 @@ runGRpcApp
   :: ( KnownName name, KnownName (FindPackageName anns)
      , GRpcMethodHandlers ServerErrorIO methods handlers )
   => Port
-  -> ServerT ('Service name anns methods) ServerErrorIO handlers
+  -> ServerT Maybe ('Service name anns methods) ServerErrorIO handlers
   -> IO ()
 runGRpcApp port = runGRpcAppTrans port id
 
@@ -61,7 +61,7 @@ runGRpcAppTrans
      , GRpcMethodHandlers m methods handlers )
   => Port
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT ('Service name anns methods) m handlers
+  -> ServerT Maybe ('Service name anns methods) m handlers
   -> IO ()
 runGRpcAppTrans port f svr = run port (gRpcAppTrans f svr)
 
@@ -73,7 +73,7 @@ runGRpcAppSettings
      , GRpcMethodHandlers m methods handlers )
   => Settings
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT ('Service name anns methods) m handlers
+  -> ServerT Maybe ('Service name anns methods) m handlers
   -> IO ()
 runGRpcAppSettings st f svr = runSettings st (gRpcAppTrans f svr)
 
