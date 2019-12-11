@@ -1,19 +1,27 @@
-{-# language DataKinds             #-}
-{-# language DeriveAnyClass        #-}
-{-# language DeriveGeneric         #-}
-{-# language DuplicateRecordFields #-}
-{-# language FlexibleContexts      #-}
-{-# language FlexibleInstances     #-}
-{-# language MultiParamTypeClasses #-}
-{-# language PolyKinds             #-}
-{-# language TemplateHaskell       #-}
-{-# language TypeFamilies          #-}
-{-# language TypeOperators         #-}
+{-# language DataKinds                  #-}
+{-# language DeriveAnyClass             #-}
+{-# language DeriveGeneric              #-}
+{-# language DuplicateRecordFields      #-}
+{-# language EmptyDataDecls             #-}
+{-# language FlexibleContexts           #-}
+{-# language FlexibleInstances          #-}
+{-# language GADTs                      #-}
+{-# language GeneralizedNewtypeDeriving #-}
+{-# language MultiParamTypeClasses      #-}
+{-# language OverloadedStrings          #-}
+{-# language PolyKinds                  #-}
+{-# language QuasiQuotes                #-}
+{-# language StandaloneDeriving         #-}
+{-# language TemplateHaskell            #-}
+{-# language TypeFamilies               #-}
+{-# language UndecidableInstances       #-}
 
 module Schema where
 
-import           Data.Int      (Int32)
-import           Data.Text     as T
+import           Data.Int                (Int32)
+import qualified Data.Text               as T
+import           Database.Persist.Sqlite
+import           Database.Persist.TH
 import           GHC.Generics
 
 import           Mu.Quasi.GRpc
@@ -21,12 +29,17 @@ import           Mu.Schema
 
 grpc "PersistentSchema" id "with-persistent.proto"
 
-newtype PersonId = PersonId
-  { id :: Int32
-  } deriving (Eq, Show, Ord, Generic, HasSchema PersistentSchema "PersonId")
+newtype PersonRequest = PersonRequest
+  { name :: T.Text
+  } deriving (Eq, Show, Ord, Generic, HasSchema PersistentSchema "PersonRequest")
 
-data Person = Person
-  { personId :: PersonId
-  , name     :: T.Text
-  , age      :: Int32
-  } deriving (Eq, Show, Ord, Generic, HasSchema PersistentSchema "Person")
+share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
+Person json
+  name         String
+  age          Int
+  UniquePerson name
+  deriving Show
+|]
+
+deriving instance Generic Person
+deriving instance HasSchema PersistentSchema "Person" Person

@@ -4,11 +4,11 @@ import "google/protobuf/empty.proto";
 
 package withpersistent;
 
-message PersonId { int32 id = 1; }
-message Person { PersonId personId = 1; string name = 2; int32 age = 3; }
+message PersonRequest { string name = 1; }
+message Person { string name = 1; int32 age = 2; }
 
 service PersistentService {
-  rpc getPerson (PersonId) returns (Person);
-  rpc newPerson (Person) returns (PersonId);
+  rpc getPerson (PersonRequest) returns (Person);
+  rpc newPerson (Person) returns (PersonRequest);
   rpc allPeople (google.protobuf.Empty) returns (stream Person);
 }
