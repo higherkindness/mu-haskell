@@ -4,8 +4,8 @@ import "google/protobuf/empty.proto";
 
 package withpersistent;
 
-message PersonRequest { string name = 1; }
-message Person { string name = 1; int32 age = 2; }
+message PersonRequest { int64 identifier = 1; }
+message Person { PersonRequest pid = 1; string name = 2; int32 age = 3; }
 
 service PersistentService {
   rpc getPerson (PersonRequest) returns (Person);

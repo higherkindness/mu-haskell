@@ -1,5 +1,4 @@
 {-# language DataKinds                  #-}
-{-# language DeriveAnyClass             #-}
 {-# language DeriveGeneric              #-}
 {-# language DuplicateRecordFields      #-}
 {-# language EmptyDataDecls             #-}
@@ -18,7 +17,7 @@
 
 module Schema where
 
-import           Data.Int                (Int32)
+import           Data.Int                (Int32, Int64)
 import qualified Data.Text               as T
 import           Database.Persist.Sqlite
 import           Database.Persist.TH
@@ -30,16 +29,21 @@ import           Mu.Schema
 grpc "PersistentSchema" id "with-persistent.proto"
 
 newtype PersonRequest = PersonRequest
-  { name :: T.Text
-  } deriving (Eq, Show, Ord, Generic, HasSchema PersistentSchema "PersonRequest")
+  { identifier :: Int64
+  } deriving (Eq, Show, Ord, Generic)
+
+instance HasSchema PersistentSchema "PersonRequest" PersonRequest
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Person json
-  name         String
-  age          Int
-  UniquePerson name
+  name T.Text
+  age  Int32
   deriving Show
 |]
 
 deriving instance Generic Person
-deriving instance HasSchema PersistentSchema "Person" Person
+
+-- Unfortunately we need to write this instance by hand 😔 (for now!)
+instance HasSchema PersistentSchema "Person" (Entity Person) where
+  fromSchema (TRecord (Field (FSchematic (TRecord (Field (FPrimitive pid) :* Nil))) :* Field (FPrimitive name) :* Field (FPrimitive age) :* Nil)) = Entity (PersonKey (SqlBackendKey pid)) (Person name age)
+  toSchema (Entity (PersonKey (SqlBackendKey pid)) (Person name age)) = TRecord $ Field (FSchematic (TRecord (Field (FPrimitive pid) :* Nil))) :* Field (FPrimitive name) :* Field (FPrimitive age) :* Nil
