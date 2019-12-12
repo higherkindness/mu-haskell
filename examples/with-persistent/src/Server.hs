@@ -21,7 +21,7 @@ main = do
   putStrLn "running app with persistent"
   -- thou shalt not use pools with :memory:
   runStderrLoggingT $
-    withSqliteConn @(LoggingT IO) @SqlBackend ":memory:" $ \conn -> do
+    withSqliteConn @(LoggingT IO) ":memory:" $ \conn -> do
       liftIO $ flip runSqlPersistM conn $ runMigration migrateAll
       liftIO $ runGRpcApp 1234 (server conn)
 
