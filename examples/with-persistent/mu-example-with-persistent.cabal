@@ -26,5 +26,4 @@ executable persistent-server
                      , persistent
                      , persistent-sqlite
                      , persistent-template
-                     , resource-pool
                      , text
