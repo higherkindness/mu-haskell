@@ -17,7 +17,6 @@ import           Data.Aeson.Types
 import           Data.Functor.Contravariant
 import           Data.Functor.Identity
 import qualified Data.HashMap.Strict                 as HM
--- import           Data.SOP                            (NP (..), NS (..))
 import qualified Data.Text                           as T
 import qualified Data.Vector                         as V
 
