@@ -51,7 +51,7 @@ typeDefToDecl schemaTy namer (DRecord name [f])
                      [PlainTV fVar]
                      Nothing
                      (pure (RecC (mkName complete) [fieldDefToDecl namer complete fVar f]))
-                     deriveClauses
+                     [pure (DerivClause Nothing [ConT ''Generic])]
        wTy <- VarT <$> newName "w"
        let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete [f])
        return [d, hsi]
@@ -64,7 +64,7 @@ typeDefToDecl schemaTy namer (DRecord name fields)
                   [PlainTV fVar]
                   Nothing
                   [pure (RecC (mkName complete) (map (fieldDefToDecl namer complete fVar) fields))]
-                  deriveClauses
+                  [pure (DerivClause Nothing [ConT ''Generic])]
        wTy <- VarT <$> newName "w"
        let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete fields)
        return [d, hsi]
@@ -78,7 +78,7 @@ typeDefToDecl schemaTy namer (DEnum name choices)
                   Nothing
                   [ pure (RecC (mkName (choiceName complete choicename)) [])
                     | ChoiceDef choicename <- choices]
-                  deriveClauses
+                  [pure (DerivClause Nothing [ConT ''Eq, ConT ''Ord, ConT ''Show, ConT ''Generic])]
        wTy <- VarT <$> newName "w"
        let hsi = generateHasSchemaInstance wTy schemaTy name complete (choiceMapping complete choices)
        return [d, hsi]
@@ -86,19 +86,26 @@ typeDefToDecl schemaTy namer (DEnum name choices)
 typeDefToDecl _ _ (DSimple _)
   = fail "DSimple is not supported"
 
-deriveClauses :: [Q DerivClause]
-deriveClauses
-  = [ pure (DerivClause Nothing [{- ConT ''Eq, ConT ''Ord, ConT ''Show, -} ConT ''Generic]) ]
-{- we need to add a field mapping
-    , pure (DerivClause (Just AnyclassStrategy)
-                        [AppT (AppT (ConT ''HasSchema) schemaTy) (LitT (StrTyLit name))]) ]
--}
-
 fieldDefToDecl :: Namer -> String -> Name -> FieldDefB Type String String -> (Name, Bang, Type)
 fieldDefToDecl namer complete fVar (FieldDef name ty)
   = ( mkName (fieldName complete name)
     , Bang NoSourceUnpackedness NoSourceStrictness
     , AppT (VarT fVar) (fieldTypeToDecl namer fVar ty) )
+
+{- broken for now
+generateBuiltinInstance :: Bool -> Type -> String -> Name -> Dec
+generateBuiltinInstance withPrereq wTy complete className
+#if MIN_VERSION_template_haskell(2,12,0)
+  = StandaloneDerivD Nothing ctx ty
+#else
+  = StandaloneDerivD ctx ty
+
+#endif
+  where
+    me  = ConT (mkName complete)
+    ctx = [AppT (ConT className) (AppT wTy (AppT me wTy)) | withPrereq]
+    ty  = AppT (ConT className) (AppT me wTy)
+-}
 
 generateHasSchemaInstance :: Type -> Type -> String -> String -> Type -> Dec
 generateHasSchemaInstance wTy schemaTy schemaName complete mapping

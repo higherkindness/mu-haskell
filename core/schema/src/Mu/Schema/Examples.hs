@@ -12,6 +12,7 @@
 {-# language TypeApplications      #-}
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
 -- | Look at my source code!
 module Mu.Schema.Examples where
 
