@@ -17,8 +17,8 @@ module Mu.GRpc.Server
 , runGRpcAppTLS, TLSSettings
   -- * Convert a 'Server' into a WAI application
 , gRpcApp
-  -- * Raise errors as exceptions
-, raiseErrors
+  -- * Raise errors as exceptions in IO
+, raiseErrors, liftServerConduit
 ) where
 
 import           Control.Concurrent.Async
@@ -130,6 +130,11 @@ instance (KnownName name, GRpcMethodHandler m args r h, GRpcMethodHandlers m res
 class GRpcMethodHandler m args r h where
   gRpcMethodHandler :: (forall a. m a -> ServerErrorIO a)
                     -> Proxy args -> Proxy r -> RPC -> h -> ServiceHandler
+
+liftServerConduit
+  :: MonadIO m
+  => ConduitT a b ServerErrorIO r -> ConduitT a b m r
+liftServerConduit = transPipe raiseErrors
 
 raiseErrors :: MonadIO m => ServerErrorIO a -> m a
 raiseErrors h

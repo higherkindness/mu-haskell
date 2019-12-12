@@ -9,9 +9,6 @@ module Main where
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Logger
 import           Data.Conduit
-import           Data.Conduit.Combinators     (yieldMany)
-import           Data.Maybe                   (fromMaybe)
-import           Data.Pool
 import qualified Data.Text                    as T
 import           Database.Persist.Sqlite
 import           Mu.GRpc.Server
@@ -56,4 +53,4 @@ allPeople :: SqlBackend
           -> ConduitT (Entity Person) Void ServerErrorIO ()
           -> ServerErrorIO ()
 allPeople conn sink = runDb conn $
-  runConduit $ selectSource [] [] .| transPipe raiseErrors sink
+  runConduit $ selectSource [] [] .| liftServerConduit sink
