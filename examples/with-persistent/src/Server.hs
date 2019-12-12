@@ -45,14 +45,13 @@ newPerson :: (MonadServer m, MonadLogger m)
           -> m PersonRequest
 newPerson pool p@(Person name _) = liftIO $ flip runSqlPersistMPool pool $ do
   logDebugN $ T.pack $ "inserting person: " ++ show p
-  newId <- insert p
-  pure $ case newId of
-    PersonKey (SqlBackendKey nId) -> PersonRequest nId
+  PersonKey (SqlBackendKey nId) <- insert p
+  pure $ PersonRequest nId
 
 allPeople :: (MonadServer m, MonadLogger m)
           => Pool SqlBackend
-          -> ConduitT Person Void m ()
+          -> ConduitT (Entity Person) Void m ()
           -> m ()
-allPeople pool = liftIO $ flip runSqlPersistMPool pool $ do
+allPeople pool sink = flip runSqlPool pool $ do
   logDebugN $ T.pack "streaming people..."
-  pure $ selectSource [] []
+  runConduit $ selectSource [] [] .| sink
