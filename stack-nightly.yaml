@@ -12,6 +12,7 @@ packages:
 - examples/route-guide
 - examples/seed
 - examples/todolist
+- examples/with-persistent
 - compendium-client
 
 extra-deps:
