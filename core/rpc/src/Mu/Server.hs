@@ -82,25 +82,28 @@ data HandlersT (w :: Type -> Type) (methods :: [Method mnm]) (m :: Type -> Type)
 -- Define a relation for handling
 class Handles (w :: Type -> Type) (args :: [Argument]) (ret :: Return)
               (m :: Type -> Type) (h :: Type)
-class HandlesRef (w :: Type -> Type) (ref :: TypeRef) (t :: Type)
+class ToRef (w :: Type -> Type) (ref :: TypeRef) (t :: Type)
+class FromRef (w :: Type -> Type) (ref :: TypeRef) (t :: Type)
 
 -- Type references
-instance HasSchema w sch sty t => HandlesRef w ('FromSchema sch sty) t
-instance HandlesRef w ('FromRegistry subject t last) t
+instance ToSchema w sch sty t => ToRef w ('ViaSchema sch sty) t
+instance ToRef w ('ViaRegistry subject t last) t
+instance FromSchema w sch sty t => FromRef w ('ViaSchema sch sty) t
+instance FromRef w ('ViaRegistry subject t last) t
 
 -- Arguments
-instance (HandlesRef w ref t, Handles w args ret m h,
+instance (FromRef w ref t, Handles w args ret m h,
           handler ~ (t -> h))
          => Handles w ('ArgSingle ref ': args) ret m handler
-instance (MonadError ServerError m, HandlesRef w ref t, Handles w args ret m h,
+instance (MonadError ServerError m, FromRef w ref t, Handles w args ret m h,
           handler ~ (ConduitT () t m () -> h))
          => Handles w ('ArgStream ref ': args) ret m handler
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
          => Handles w '[] 'RetNothing m handler
-instance (MonadError ServerError m, HandlesRef w eref e, HandlesRef w vref v, handler ~ m (Either e v))
+instance (MonadError ServerError m, ToRef w eref e, ToRef w vref v, handler ~ m (Either e v))
          => Handles w '[] ('RetThrows eref vref) m handler
-instance (MonadError ServerError m, HandlesRef w ref v, handler ~ m v)
+instance (MonadError ServerError m, ToRef w ref v, handler ~ m v)
          => Handles w '[] ('RetSingle ref) m handler
-instance (MonadError ServerError m, HandlesRef w ref v, handler ~ (ConduitT v Void m () -> m ()))
+instance (MonadError ServerError m, ToRef w ref v, handler ~ (ConduitT v Void m () -> m ()))
          => Handles w '[] ('RetStream ref) m handler

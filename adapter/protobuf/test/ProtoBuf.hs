@@ -27,13 +27,15 @@ data MPerson
             , gender    :: Maybe (Maybe Gender)
             , address   :: Maybe MAddress }
   deriving (Eq, Show, Generic)
-  deriving (HasSchema Maybe ExampleSchema "person")
+  deriving (ToSchema Maybe ExampleSchema "person")
+  deriving (FromSchema Maybe ExampleSchema "person")
 
 data MAddress
   = MAddress { postcode :: Maybe T.Text
              , country  :: Maybe T.Text }
   deriving (Eq, Show, Generic)
-  deriving (HasSchema Maybe ExampleSchema "address")
+  deriving (ToSchema Maybe ExampleSchema "address")
+  deriving (FromSchema Maybe ExampleSchema "address")
 
 type instance AnnotatedSchema ProtoBufAnnotation ExampleSchema
   = '[ 'AnnField "gender" "male"   ('ProtoBufId 1)

@@ -17,29 +17,43 @@ import           Mu.Adapter.ProtoBuf
 import           Mu.Rpc
 import           Mu.Schema
 
-newtype ViaProtoBufTypeRef (ref :: TypeRef) t
-  = ViaProtoBufTypeRef { unViaProtoBufTypeRef :: t }
+newtype ViaToProtoBufTypeRef (ref :: TypeRef) t
+  = ViaToProtoBufTypeRef { unViaToProtoBufTypeRef :: t }
+newtype ViaFromProtoBufTypeRef (ref :: TypeRef) t
+  = ViaFromProtoBufTypeRef { unViaFromProtoBufTypeRef :: t }
 
-instance ProtoBufTypeRef ref t
-         => Proto3WireEncoder (ViaProtoBufTypeRef ref t) where
-  proto3WireEncode = toProtoBufTypeRef (Proxy @ref) . unViaProtoBufTypeRef
-  proto3WireDecode = ViaProtoBufTypeRef <$> fromProtoBufTypeRef (Proxy @ref)
+instance ToProtoBufTypeRef ref t
+         => Proto3WireEncoder (ViaToProtoBufTypeRef ref t) where
+  proto3WireEncode = toProtoBufTypeRef (Proxy @ref) . unViaToProtoBufTypeRef
+  proto3WireDecode = error "this should never be called, use FromProtoBufTypeRef"
+instance FromProtoBufTypeRef ref t
+         => Proto3WireEncoder (ViaFromProtoBufTypeRef ref t) where
+  proto3WireEncode = error "this should never be called, use ToProtoBufTypeRef"
+  proto3WireDecode = ViaFromProtoBufTypeRef <$> fromProtoBufTypeRef (Proxy @ref)
 
 instance Proto3WireEncoder () where
   proto3WireEncode _ = mempty
   proto3WireDecode = return ()
 
-class ProtoBufTypeRef (ref :: TypeRef) t where
+class FromProtoBufTypeRef (ref :: TypeRef) t where
   fromProtoBufTypeRef :: Proxy ref -> PBDec.Parser PBDec.RawMessage t
+class ToProtoBufTypeRef (ref :: TypeRef) t where
   toProtoBufTypeRef   :: Proxy ref -> t -> PBEnc.MessageBuilder
 
-instance (HasProtoSchema Maybe sch sty t)
-         => ProtoBufTypeRef ('FromSchema sch sty) t where
+instance (IsProtoSchema Maybe sch sty, FromSchema Maybe sch sty t)
+         => FromProtoBufTypeRef ('ViaSchema sch sty) t where
   fromProtoBufTypeRef _ = fromProtoViaSchema @_ @_ @sch
+instance (IsProtoSchema Maybe sch sty, ToSchema Maybe sch sty t)
+         => ToProtoBufTypeRef ('ViaSchema sch sty) t where
   toProtoBufTypeRef   _ = toProtoViaSchema @_ @_ @sch
 
 instance ( FromProtoBufRegistry r t
-         , HasProtoSchema Maybe (MappingRight r last) sty t)
-         => ProtoBufTypeRef ('FromRegistry r t last) t where
+         , IsProtoSchema Maybe (MappingRight r last) sty
+         , FromSchema Maybe (MappingRight r last) sty t )
+         => FromProtoBufTypeRef ('ViaRegistry r t last) t where
   fromProtoBufTypeRef _ = fromProtoBufWithRegistry @r
+instance ( FromProtoBufRegistry r t
+         , IsProtoSchema Maybe (MappingRight r last) sty
+         , ToSchema Maybe (MappingRight r last) sty t )
+         => ToProtoBufTypeRef ('ViaRegistry r t last) t where
   toProtoBufTypeRef   _ = toProtoViaSchema @_ @_ @(MappingRight r last)

@@ -39,10 +39,10 @@ instance Applicative w => SLess.ToSchemalessValue Value w where
   toSchemalessValue (Array xs)
     = SLess.FList $ map SLess.toSchemalessValue $ V.toList xs
 
-instance (HasSchema w sch sty a, ToJSON (Term w sch (sch :/: sty)))
+instance (ToSchema w sch sty a, ToJSON (Term w sch (sch :/: sty)))
          => ToJSON (WithSchema w sch sty a) where
   toJSON (WithSchema x) = toJSON (toSchema' @_ @_ @sch @w x)
-instance (HasSchema w sch sty a, FromJSON (Term w sch (sch :/: sty)))
+instance (FromSchema w sch sty a, FromJSON (Term w sch (sch :/: sty)))
          => FromJSON (WithSchema w sch sty a) where
   parseJSON v = WithSchema . fromSchema' @_ @_ @sch @w <$> parseJSON v
 

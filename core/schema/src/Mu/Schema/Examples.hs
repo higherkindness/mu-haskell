@@ -32,7 +32,7 @@ data Person
            , gender    :: Maybe Gender
            , address   :: Address }
   deriving (Eq, Show, Generic)
-  deriving (HasSchema Identity ExampleSchema "person")
+  deriving (ToSchema Identity ExampleSchema "person", FromSchema Identity ExampleSchema "person")
   deriving (J.ToJSON, J.FromJSON)
     via (WithSchema Identity ExampleSchema "person" Person)
 
@@ -40,12 +40,19 @@ data Address
   = Address { postcode :: T.Text
             , country  :: T.Text }
   deriving (Eq, Show, Generic)
-  deriving (HasSchema Identity ExampleSchema "address")
+  deriving (ToSchema Identity ExampleSchema "address", FromSchema Identity ExampleSchema "address")
   deriving (J.ToJSON, J.FromJSON)
     via (WithSchema Identity ExampleSchema "address" Address)
 
+type GenderFieldMapping
+  = '[ "Male"      ':-> "male"
+     , "Female"    ':-> "female"
+     , "NonBinary" ':-> "nb" ]
+
 data Gender = Male | Female | NonBinary
   deriving (Eq, Show, Generic)
+  deriving (ToSchema f ExampleSchema "gender", FromSchema f ExampleSchema "gender")
+    via (CustomFieldMapping "gender" GenderFieldMapping Gender)
   deriving (J.ToJSON, J.FromJSON)
     via (WithSchema Identity ExampleSchema "gender" Gender)
 
@@ -65,15 +72,6 @@ type ExampleSchema
                  , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
                  , 'FieldDef "address"   ('TSchematic "address") ]
      ]
-
-type GenderFieldMapping
-  = '[ "Male"      ':-> "male"
-     , "Female"    ':-> "female"
-     , "NonBinary" ':-> "nb" ]
-
--- we can give a custom field mapping via a custom instance
-instance HasSchema f ExampleSchema "gender" Gender where
-  type FieldMapping f ExampleSchema "gender" Gender = GenderFieldMapping
 
 $(generateTypesFromSchema (++"Msg") ''ExampleSchema)
 

@@ -53,11 +53,11 @@ type family LookupMethod (s :: [Method mnm]) (m :: snm) :: Method snm where
 
 -- | Defines how to handle the type
 data TypeRef where
-  FromSchema   :: Schema typeName fieldName -> typeName -> TypeRef
+  ViaSchema   :: Schema typeName fieldName -> typeName -> TypeRef
   -- | Registry subject, type to convert to, and preferred serialization version
-  FromRegistry :: Registry -> Type -> Nat -> TypeRef
+  ViaRegistry :: Registry -> Type -> Nat -> TypeRef
   -- | To be used only during TH generation!
-  FromTH       :: TH.Type -> TypeRef
+  ViaTH       :: TH.Type -> TypeRef
 
 -- | Defines the way in which arguments are handled.
 data Argument where

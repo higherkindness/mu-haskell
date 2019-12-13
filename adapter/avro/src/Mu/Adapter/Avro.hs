@@ -71,12 +71,12 @@ instance HasAvroSchemas sch sch
   -- schema = coerce $ A.schema @(Term sch (sch :/: sty))
   -- but now we prefer to have all of them
   schema = Tagged $ ASch.Union (schemas (Proxy @sch) (Proxy @sch))
-instance ( HasSchema f sch sty t, HasAvroSchemas sch sch
+instance ( FromSchema f sch sty t, HasAvroSchemas sch sch
          , A.FromAvro (Term f sch (sch :/: sty)) )
          => A.FromAvro (WithSchema f sch sty t) where
   fromAvro (AVal.Union _ _ v) = WithSchema . fromSchema' @_ @_ @sch @f <$> A.fromAvro v
   fromAvro v                  = ASch.badValue v "top-level"
-instance ( HasSchema Identity sch sty t, HasAvroSchemas sch sch
+instance ( ToSchema Identity sch sty t, HasAvroSchemas sch sch
          , A.ToAvro (Term Identity sch (sch :/: sty)) )
          => A.ToAvro (WithSchema Identity sch sty t) where
   toAvro (WithSchema v) = AVal.Union (schemas (Proxy @sch) (Proxy @sch))

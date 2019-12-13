@@ -22,13 +22,21 @@ $(grpc "HealthCheckSchema" id "healthcheck.proto")
 
 newtype HealthCheckMsg
   = HealthCheckMsg { nameService :: Maybe T.Text }
-  deriving (Eq, Show, Ord, Generic, HasSchema Maybe HealthCheckSchema "HealthCheck")
+  deriving ( Eq, Show, Ord, Generic
+           , ToSchema   Maybe HealthCheckSchema "HealthCheck"
+           , FromSchema Maybe HealthCheckSchema "HealthCheck" )
 newtype ServerStatusMsg
   = ServerStatusMsg { status :: Maybe T.Text }
-  deriving (Eq, Show, Ord, Generic, HasSchema Maybe HealthCheckSchema "ServerStatus")
+  deriving ( Eq, Show, Ord, Generic
+           , ToSchema   Maybe HealthCheckSchema "ServerStatus"
+           , FromSchema Maybe HealthCheckSchema "ServerStatus" )
 data HealthStatusMsg
   = HealthStatusMsg { hc :: Maybe HealthCheckMsg, status :: Maybe ServerStatusMsg }
-  deriving (Eq, Show, Ord, Generic, HasSchema Maybe HealthCheckSchema "HealthStatus")
+  deriving ( Eq, Show, Ord, Generic
+           , ToSchema   Maybe HealthCheckSchema "HealthStatus"
+           , FromSchema Maybe HealthCheckSchema "HealthStatus" )
 newtype AllStatusMsg
   = AllStatusMsg { all :: Maybe [HealthStatusMsg] }
-  deriving (Eq, Show, Ord, Generic, HasSchema Maybe HealthCheckSchema "AllStatus")
+  deriving ( Eq, Show, Ord, Generic
+           , ToSchema   Maybe HealthCheckSchema "AllStatus"
+           , FromSchema Maybe HealthCheckSchema "AllStatus" )

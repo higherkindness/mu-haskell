@@ -53,8 +53,8 @@ typeDefToDecl schemaTy namer (DRecord name [f])
                      (pure (RecC (mkName complete) [fieldDefToDecl namer complete fVar f]))
                      [pure (DerivClause Nothing [ConT ''Generic])]
        wTy <- VarT <$> newName "w"
-       let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete [f])
-       return [d, hsi]
+       -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete [f])
+       return [d] -- , hsi]
 -- Records with more than one field
 typeDefToDecl schemaTy namer (DRecord name fields)
   = do let complete = completeName namer name
@@ -66,8 +66,8 @@ typeDefToDecl schemaTy namer (DRecord name fields)
                   [pure (RecC (mkName complete) (map (fieldDefToDecl namer complete fVar) fields))]
                   [pure (DerivClause Nothing [ConT ''Generic])]
        wTy <- VarT <$> newName "w"
-       let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete fields)
-       return [d, hsi]
+       -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete fields)
+       return [d] -- , hsi]
 -- Enumerations
 typeDefToDecl schemaTy namer (DEnum name choices)
   = do let complete = completeName namer name
@@ -80,8 +80,8 @@ typeDefToDecl schemaTy namer (DEnum name choices)
                     | ChoiceDef choicename <- choices]
                   [pure (DerivClause Nothing [ConT ''Eq, ConT ''Ord, ConT ''Show, ConT ''Generic])]
        wTy <- VarT <$> newName "w"
-       let hsi = generateHasSchemaInstance wTy schemaTy name complete (choiceMapping complete choices)
-       return [d, hsi]
+       -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (choiceMapping complete choices)
+       return [d] --, hsi]
 -- Simple things
 typeDefToDecl _ _ (DSimple _)
   = fail "DSimple is not supported"
@@ -107,6 +107,7 @@ generateBuiltinInstance withPrereq wTy complete className
     ty  = AppT (ConT className) (AppT me wTy)
 -}
 
+{-
 generateHasSchemaInstance :: Type -> Type -> String -> String -> Type -> Dec
 generateHasSchemaInstance wTy schemaTy schemaName complete mapping
   = InstanceD Nothing [AppT (ConT ''Applicative) wTy]
@@ -129,6 +130,7 @@ generateHasSchemaInstance wTy schemaTy schemaName complete mapping
                                     , AppT (ConT (mkName complete)) wTy ]
                                      mapping) ]
 #endif
+-}
 
 fieldMapping :: String -> [FieldDefB Type String String] -> Type
 fieldMapping _complete [] = PromotedNilT

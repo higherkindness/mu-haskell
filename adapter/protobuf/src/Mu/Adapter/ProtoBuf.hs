@@ -20,7 +20,6 @@ module Mu.Adapter.ProtoBuf (
   ProtoBufAnnotation(..)
   -- * Conversion using schemas
 , IsProtoSchema
-, HasProtoSchema
 , toProtoViaSchema
 , fromProtoViaSchema
 , parseProtoViaSchema
@@ -81,20 +80,20 @@ type family FindProtoBufOneOfIds' (t :: tn) (f :: fn) (p :: ProtoBufAnnotation) 
 class ProtoBridgeTerm w sch (sch :/: sty) => IsProtoSchema w sch sty
 instance ProtoBridgeTerm w sch (sch :/: sty) => IsProtoSchema w sch sty
 
-type HasProtoSchema w sch sty a = (HasSchema w sch sty a, IsProtoSchema w sch sty)
+-- type HasProtoSchema w sch sty a = (HasSchema w sch sty a, IsProtoSchema w sch sty)
 
 toProtoViaSchema :: forall t f (sch :: Schema t f) a sty.
-                    (HasProtoSchema Maybe sch sty a)
+                    (IsProtoSchema Maybe sch sty, ToSchema Maybe sch sty a)
                  => a -> PBEnc.MessageBuilder
 toProtoViaSchema = termToProto . toSchema' @_ @_ @sch @Maybe
 
 fromProtoViaSchema :: forall t f (sch :: Schema t f) a sty.
-                      (HasProtoSchema Maybe sch sty a)
+                      (IsProtoSchema Maybe sch sty, FromSchema Maybe sch sty a)
                    => PBDec.Parser PBDec.RawMessage a
 fromProtoViaSchema = fromSchema' @_ @_ @sch @Maybe <$> protoToTerm
 
 parseProtoViaSchema :: forall sch a sty.
-                       (HasProtoSchema Maybe sch sty a)
+                       (IsProtoSchema Maybe sch sty, FromSchema Maybe sch sty a)
                     => BS.ByteString -> Either PBDec.ParseError a
 parseProtoViaSchema = PBDec.parse (fromProtoViaSchema @_ @_ @sch)
 
@@ -117,7 +116,7 @@ class FromProtoBufRegistry (ms :: Mappings Nat Schema') t where
 
 instance FromProtoBufRegistry '[] t where
   fromProtoBufRegistry' _ = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "no schema found in registry"))
-instance (HasProtoSchema Maybe s sty t, FromProtoBufRegistry ms t)
+instance (IsProtoSchema Maybe s sty, FromSchema Maybe s sty t, FromProtoBufRegistry ms t)
          => FromProtoBufRegistry ( (n ':-> s) ': ms) t where
   fromProtoBufRegistry' _ = fromProtoViaSchema @_ @_ @s <|> fromProtoBufRegistry' (Proxy @ms)
 

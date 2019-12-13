@@ -22,8 +22,10 @@ deriving instance Eq   (V0 w sch sty)
 deriving instance Ord  (V0 w sch sty)
 
 instance (sch :/: sty ~ 'DRecord nm '[])
-         => HasSchema w sch sty (V0 w sch sty) where
+         => ToSchema w sch sty (V0 w sch sty) where
   toSchema V0 = TRecord Nil
+instance (sch :/: sty ~ 'DRecord nm '[])
+         => FromSchema w sch sty (V0 w sch sty) where
   fromSchema (TRecord Nil) = V0
 
 data V1 w sch sty where
@@ -43,8 +45,11 @@ deriving instance (Ord (w a), sch :/: sty
 
 instance ( Functor w
          , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a) ] )
-         => HasSchema w sch sty (V1 w sch sty) where
+         => ToSchema w sch sty (V1 w sch sty) where
   toSchema (V1 x) = TRecord (Field (FPrimitive <$> x) :* Nil)
+instance ( Functor w
+         , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a) ] )
+         => FromSchema w sch sty (V1 w sch sty) where
   fromSchema (TRecord (Field x :* Nil)) = V1 (unPrimitive <$> x)
     where unPrimitive :: FieldValue w sch ('TPrimitive t) -> t
           unPrimitive (FPrimitive l) = l
@@ -71,8 +76,12 @@ deriving instance (Ord (w a), Ord (w b),
 instance ( Functor w
          , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a)
                                       , 'FieldDef g ('TPrimitive b) ] )
-         => HasSchema w sch sty (V2 w sch sty) where
+         => ToSchema w sch sty (V2 w sch sty) where
   toSchema (V2 x y) = TRecord (Field (FPrimitive <$> x) :* Field (FPrimitive <$> y) :* Nil)
+instance ( Functor w
+         , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a)
+                                      , 'FieldDef g ('TPrimitive b) ] )
+         => FromSchema w sch sty (V2 w sch sty) where
   fromSchema (TRecord (Field x :* Field y :* Nil)) = V2 (unPrimitive <$> x) (unPrimitive <$> y)
     where unPrimitive :: FieldValue w sch ('TPrimitive t) -> t
           unPrimitive (FPrimitive l) = l

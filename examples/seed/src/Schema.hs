@@ -24,12 +24,18 @@ grpc "SeedSchema" id "seed.proto"
 data Person = Person
   { name :: Maybe T.Text
   , age  :: Maybe Int32
-  } deriving (Eq, Show, Ord, Generic, HasSchema Maybe SeedSchema "Person")
+  } deriving ( Eq, Show, Ord, Generic
+             , ToSchema   Maybe SeedSchema "Person"
+             , FromSchema Maybe SeedSchema "Person" )
 
 newtype PeopleRequest = PeopleRequest
   { name :: Maybe T.Text
-  } deriving (Eq, Show, Ord, Generic, HasSchema Maybe SeedSchema "PeopleRequest")
+  } deriving ( Eq, Show, Ord, Generic
+             , ToSchema   Maybe SeedSchema "PeopleRequest"
+             , FromSchema Maybe SeedSchema "PeopleRequest" )
 
 newtype PeopleResponse = PeopleResponse
   { person :: Maybe Person
-  } deriving (Eq, Show, Ord, Generic, HasSchema Maybe SeedSchema "PeopleResponse")
+  } deriving ( Eq, Show, Ord, Generic
+             , ToSchema   Maybe SeedSchema "PeopleResponse"
+             , FromSchema Maybe SeedSchema "PeopleResponse" )

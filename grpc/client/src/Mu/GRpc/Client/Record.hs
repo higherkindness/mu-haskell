@@ -128,9 +128,9 @@ computeMethodType n [ArgStream v] (RetStream r)
 computeMethodType _ _ _ = fail "method signature not supported"
 
 typeRefToType :: Namer -> TypeRef -> Q Type
-typeRefToType tNamer (FromTH (LitT (StrTyLit s)))
+typeRefToType tNamer (ViaTH (LitT (StrTyLit s)))
   = return $ ConT (mkName $ completeName tNamer s)
-typeRefToType _tNamer (FromTH ty)
+typeRefToType _tNamer (ViaTH ty)
   = return ty
 typeRefToType _ _ = error "this should never happen"
 
@@ -184,10 +184,10 @@ typeToServiceDef toplevelty
 
     typeToTypeRef :: Type -> Maybe TypeRef
     typeToTypeRef ty
-      =   (do (_,innerTy) <- tyD2 'FromSchema ty
-              return (FromTH innerTy))
-      <|> (do (_,innerTy,_) <- tyD3 'FromRegistry ty
-              return (FromTH innerTy))
+      =   (do (_,innerTy) <- tyD2 'ViaSchema ty
+              return (ViaTH innerTy))
+      <|> (do (_,innerTy,_) <- tyD3 'ViaRegistry ty
+              return (ViaTH innerTy))
 
 tyString :: Type -> Maybe String
 tyString (SigT t _)

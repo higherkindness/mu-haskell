@@ -66,7 +66,7 @@ checkSchema _ = checkSchema'
 
 fromSchemalessTerm
   :: forall sch w t sty.
-     (Traversable w, HasSchema w sch sty t, CheckSchema sch (sch :/: sty))
+     (Traversable w, FromSchema w sch sty t, CheckSchema sch (sch :/: sty))
   => Term w -> Maybe t
 fromSchemalessTerm t = fromSchema @_ @_ @w @sch <$> checkSchema (Proxy @sty) t
 

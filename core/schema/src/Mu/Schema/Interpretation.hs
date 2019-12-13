@@ -1,17 +1,20 @@
-{-# language DataKinds            #-}
-{-# language FlexibleContexts     #-}
-{-# language FlexibleInstances    #-}
-{-# language GADTs                #-}
-{-# language PolyKinds            #-}
-{-# language ScopedTypeVariables  #-}
-{-# language TypeApplications     #-}
-{-# language TypeFamilies         #-}
-{-# language TypeOperators        #-}
-{-# language UndecidableInstances #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language PolyKinds             #-}
+{-# language QuantifiedConstraints #-}
+{-# language RankNTypes            #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
 -- | Interpretation of schemas
 module Mu.Schema.Interpretation (
   Term(..), Field(..), FieldValue(..)
 , NS(..), NP(..), Proxy(..)
+, transWrap
 ) where
 
 import           Data.Map
@@ -40,10 +43,36 @@ data FieldValue w (sch :: Schema typeName fieldName) (t :: FieldType typeName) w
              -> FieldValue w sch ('TOption t)
   FList      :: [FieldValue w sch t]
              -> FieldValue w sch ('TList   t)
-  FMap       :: Map (FieldValue w sch k) (FieldValue w sch v)
+  FMap       :: Ord (FieldValue w sch k)
+             => Map (FieldValue w sch k) (FieldValue w sch v)
              -> FieldValue w sch ('TMap k v)
   FUnion     :: NS (FieldValue w sch) choices
              -> FieldValue w sch ('TUnion choices)
+
+transWrap
+  :: forall tn fn (sch :: Schema tn fn) t u v.
+     (Functor u, forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k))
+  => (forall a. u a -> v a)
+  -> Term u sch t -> Term v sch t
+transWrap n x = case x of
+  TRecord f -> TRecord (transFields f)
+  TEnum   c -> TEnum c
+  TSimple v -> TSimple (transValue v)
+  where
+    transFields :: NP (Field u sch) args -> NP (Field v sch) args
+    transFields Nil               = Nil
+    transFields (Field v :* rest) = Field (n (fmap transValue v)) :* transFields rest
+    transValue :: FieldValue u sch l -> FieldValue v sch l
+    transValue FNull          = FNull
+    transValue (FPrimitive y) = FPrimitive y
+    transValue (FSchematic t) = FSchematic (transWrap n t)
+    transValue (FOption    o) = FOption (transValue <$> o)
+    transValue (FList      l) = FList (transValue <$> l)
+    transValue (FMap       m) = FMap (mapKeys transValue (transValue <$> m))
+    transValue (FUnion     u) = FUnion (transUnion u)
+    transUnion :: NS (FieldValue u sch) us -> NS (FieldValue v sch) us
+    transUnion (Z z) = Z (transValue z)
+    transUnion (S s) = S (transUnion s)
 
 -- ===========================
 -- CRAZY EQ AND SHOW INSTANCES

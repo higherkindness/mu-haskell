@@ -36,7 +36,7 @@ class FromRegistry (w :: * -> *) (ms :: Registry) (t :: Type) where
 
 instance FromRegistry w '[] t where
   fromRegistry' _ _ = Nothing
-instance ( Traversable w, HasSchema w s sty t
+instance ( Traversable w, FromSchema w s sty t
          , SLess.CheckSchema s (s :/: sty), FromRegistry w ms t )
          => FromRegistry w ((n ':-> s) ': ms) t where
   fromRegistry' _ t = SLess.fromSchemalessTerm @s @w t <|> fromRegistry' (Proxy @ms) t

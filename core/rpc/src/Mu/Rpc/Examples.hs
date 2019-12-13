@@ -41,23 +41,26 @@ type QuickstartSchema
 type QuickStartService
   = 'Service "Greeter" '[Package "helloworld"]
       '[ 'Method "SayHello" '[]
-                 '[ 'ArgSingle ('FromSchema QuickstartSchema "HelloRequest") ]
-                 ('RetSingle ('FromSchema QuickstartSchema "HelloResponse"))
+                 '[ 'ArgSingle ('ViaSchema QuickstartSchema "HelloRequest") ]
+                 ('RetSingle ('ViaSchema QuickstartSchema "HelloResponse"))
        , 'Method "SayHi" '[]
-                 '[ 'ArgSingle ('FromSchema QuickstartSchema "HiRequest")]
-                 ('RetStream ('FromSchema QuickstartSchema "HelloResponse"))
+                 '[ 'ArgSingle ('ViaSchema QuickstartSchema "HiRequest")]
+                 ('RetStream ('ViaSchema QuickstartSchema "HelloResponse"))
        , 'Method "SayManyHellos" '[]
-                 '[ 'ArgStream ('FromSchema QuickstartSchema "HelloRequest")]
-                 ('RetStream ('FromSchema QuickstartSchema "HelloResponse")) ]
+                 '[ 'ArgStream ('ViaSchema QuickstartSchema "HelloRequest")]
+                 ('RetStream ('ViaSchema QuickstartSchema "HelloResponse")) ]
 
 newtype HelloRequest f = HelloRequest { name :: f T.Text } deriving (Generic)
-deriving instance Functor f => HasSchema f QuickstartSchema "HelloRequest" (HelloRequest f)
+deriving instance Functor f => ToSchema f QuickstartSchema "HelloRequest" (HelloRequest f)
+deriving instance Functor f => FromSchema f QuickstartSchema "HelloRequest" (HelloRequest f)
 
 newtype HelloResponse f = HelloResponse { message :: f T.Text } deriving (Generic)
-deriving instance Functor f => HasSchema f QuickstartSchema "HelloResponse" (HelloResponse f)
+deriving instance Functor f => ToSchema f QuickstartSchema "HelloResponse" (HelloResponse f)
+deriving instance Functor f => FromSchema f QuickstartSchema "HelloResponse" (HelloResponse f)
 
 newtype HiRequest f = HiRequest { number :: f Int } deriving (Generic)
-deriving instance Functor f => HasSchema f QuickstartSchema "HiRequest" (HiRequest f)
+deriving instance Functor f => ToSchema f QuickstartSchema "HiRequest" (HiRequest f)
+deriving instance Functor f => FromSchema f QuickstartSchema "HiRequest" (HiRequest f)
 
 quickstartServer :: forall m f.
                     (MonadServer m, Applicative f, MaybeLike f)

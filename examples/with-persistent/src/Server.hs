@@ -3,6 +3,7 @@
 {-# language PartialTypeSignatures #-}
 {-# language TypeApplications      #-}
 {-# language TypeFamilies          #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 
 module Main where
 
@@ -24,13 +25,13 @@ main = do
       liftIO $ flip runSqlPersistM conn $ runMigration migrateAll
       liftIO $ runGRpcApp 1234 (server conn)
 
-server :: SqlBackend -> ServerT PersistentService ServerErrorIO _
+server :: SqlBackend -> ServerT Maybe PersistentService ServerErrorIO _
 server p = Server (getPerson p :<|>: newPerson p :<|>: allPeople p :<|>: H0)
 
 runDb = (liftIO .) . flip runSqlPersistM
 
-getPerson :: SqlBackend -> PersonRequest -> ServerErrorIO (Entity Person)
-getPerson conn (PersonRequest idf) = do
+getPerson :: SqlBackend -> MPersonRequest -> ServerErrorIO (Entity Person)
+getPerson conn (MPersonRequest (Just idf)) = do
   r <- runDb conn $ do
     let pId = PersonKey $ SqlBackendKey idf
     maybePerson <- get pId
@@ -38,11 +39,13 @@ getPerson conn (PersonRequest idf) = do
   case r of
     Just p  -> pure p
     Nothing -> serverError $ ServerError NotFound "unknown person"
+getPerson _ _ = serverError $ ServerError Invalid "missing person id"
 
-newPerson :: SqlBackend -> Entity Person -> ServerErrorIO PersonRequest
-newPerson conn (Entity _ p@(Person name _)) = runDb conn $ do
-  PersonKey (SqlBackendKey nId) <- insert p
-  pure $ PersonRequest nId
+newPerson :: SqlBackend -> MPerson -> ServerErrorIO MPersonRequest
+newPerson conn (MPerson _ (Just name) (Just age)) = runDb conn $ do
+  PersonKey (SqlBackendKey nId) <- insert (Person name age)
+  pure $ MPersonRequest (Just nId)
+newPerson _ _ = serverError $ ServerError Invalid "missing person data"
 
 allPeople :: SqlBackend -> ConduitT (Entity Person) Void ServerErrorIO () -> ServerErrorIO ()
 allPeople conn sink = runDb conn $
