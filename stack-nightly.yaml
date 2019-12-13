@@ -1,4 +1,4 @@
-resolver: nightly-2019-11-29
+resolver: nightly-2019-12-12
 allow-newer: true
 
 packages:
@@ -18,7 +18,7 @@ packages:
 extra-deps:
 - http2-client-0.9.0.0
 - http2-grpc-types-0.5.0.0
-- proto3-wire-1.0.0
+- proto3-wire-1.1.0
 - http2-grpc-proto3-wire-0.1.0.0
 - warp-grpc-0.2.0.0
 - http2-client-grpc-0.8.0.0

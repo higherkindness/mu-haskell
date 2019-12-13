@@ -1,4 +1,5 @@
 {-# language AllowAmbiguousTypes   #-}
+{-# language CPP                   #-}
 {-# language ConstraintKinds       #-}
 {-# language DataKinds             #-}
 {-# language FlexibleContexts      #-}
@@ -44,6 +45,10 @@ import           Mu.Schema.Class
 import           Mu.Schema.Definition
 import           Mu.Schema.Interpretation
 import qualified Mu.Schema.Registry       as R
+
+#if MIN_VERSION_proto3_wire(1,1,0)
+instance ProtoEnum Bool
+#endif
 
 data ProtoBufAnnotation
   = ProtoBufId Nat
