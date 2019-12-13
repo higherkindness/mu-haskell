@@ -17,6 +17,8 @@ module Mu.GRpc.Server
 , runGRpcAppTLS, TLSSettings
   -- * Convert a 'Server' into a WAI application
 , gRpcApp
+  -- * Raise errors as exceptions in IO
+, raiseErrors, liftServerConduit
 ) where
 
 import           Control.Concurrent.Async
@@ -142,14 +144,20 @@ class GRpcMethodHandler m args r h where
   gRpcMethodHandler :: (forall a. m a -> ServerErrorIO a)
                     -> Proxy args -> Proxy r -> RPC -> h -> ServiceHandler
 
-raiseErrors :: ServerErrorIO a -> IO a
+liftServerConduit
+  :: MonadIO m
+  => ConduitT a b ServerErrorIO r -> ConduitT a b m r
+liftServerConduit = transPipe raiseErrors
+
+raiseErrors :: MonadIO m => ServerErrorIO a -> m a
 raiseErrors h
-  = do h' <- runExceptT h
-       case h' of
-         Right r -> return r
-         Left (ServerError code msg)
-           -> closeEarly $ GRPCStatus (serverErrorToGRpcError code)
-                                      (BS.pack msg)
+  = liftIO $ do
+      h' <- runExceptT h
+      case h' of
+        Right r -> return r
+        Left (ServerError code msg)
+          -> closeEarly $ GRPCStatus (serverErrorToGRpcError code)
+                                     (BS.pack msg)
   where
     serverErrorToGRpcError :: ServerErrorCode -> GRPCStatusCode
     serverErrorToGRpcError Unknown         = UNKNOWN
@@ -169,6 +177,27 @@ instance (ProtoBufTypeRef rref r)
   gRpcMethodHandler f _ _ rpc h
     = unary @_ @() @(ViaProtoBufTypeRef rref r)
             rpc (\_ _ -> ViaProtoBufTypeRef <$> raiseErrors (f h))
+
+instance (ProtoBufTypeRef rref r, MonadIO m)
+         => GRpcMethodHandler m '[ ] ('RetStream rref)
+                              (ConduitT r Void m () -> m ()) where
+  gRpcMethodHandler f _ _ rpc h
+    = serverStream @_ @() @(ViaProtoBufTypeRef rref r) rpc sstream
+    where sstream :: req -> ()
+                  -> IO ((), ServerStream (ViaProtoBufTypeRef rref r) ())
+          sstream _ _ = do
+            -- Variable to connect input and output
+            var <- newEmptyTMVarIO :: IO (TMVar (Maybe r))
+            -- Start executing the handler
+            promise <- async (raiseErrors $ ViaProtoBufTypeRef <$> f (h (toTMVarConduit var)))
+              -- Return the information
+            let readNext _
+                  = do nextOutput <- atomically $ takeTMVar var
+                       case nextOutput of
+                         Just o  -> return $ Just ((), ViaProtoBufTypeRef o)
+                         Nothing -> do cancel promise
+                                       return Nothing
+            return ((), ServerStream readNext)
 
 instance (ProtoBufTypeRef vref v)
          => GRpcMethodHandler m '[ 'ArgSingle vref ] 'RetNothing (v -> m ()) where
