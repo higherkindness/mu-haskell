@@ -100,6 +100,35 @@ instance ( KnownName name, ProtoBufTypeRef rref r
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
 
+instance ( KnownName name, ProtoBufTypeRef rref r
+         , handler ~ (IO (ConduitT () (GRpcReply r) IO ())) )
+         => GRpcMethodCall ('Method name anns '[ ] ('RetStream rref)) handler where
+  gRpcMethodCall pkgName srvName _ client
+    = do -- Create a new TMChan
+         chan <- newTMChanIO :: IO (TMChan r)
+         var  <- newEmptyTMVarIO  -- if full, this means an error
+         -- Start executing the client in another thread
+         _ <- async $ do
+            v <- simplifyResponse $
+                 buildGRpcReply3 <$>
+                 rawStreamServer @_ @() @(ViaProtoBufTypeRef rref r)
+                                 rpc client () ()
+                                 (\_ _ (ViaProtoBufTypeRef newVal) -> liftIO $ atomically $
+                                   -- on the first iteration, say that everything is OK
+                                   tryPutTMVar var (GRpcOk ()) >> writeTMChan chan newVal)
+            case v of
+              GRpcOk () -> liftIO $ atomically $ closeTMChan chan
+              _         -> liftIO $ atomically $ putTMVar var v
+         -- This conduit feeds information to the other thread
+         let go = do firstResult <- liftIO $ atomically $ takeTMVar var
+                     case firstResult of
+                       GRpcOk _ -> -- no error, everything is fine
+                         sourceTMChan chan .| C.map GRpcOk
+                       e -> yield $ (\_ -> error "this should never happen") <$> e
+         return go
+      where methodName = BS.pack (nameVal (Proxy @name))
+            rpc = RPC pkgName srvName methodName
+
 instance ( KnownName name, ProtoBufTypeRef vref v
          , handler ~ (v -> IO (GRpcReply ())) )
          => GRpcMethodCall ('Method name anns '[ 'ArgSingle vref ] 'RetNothing) handler where
