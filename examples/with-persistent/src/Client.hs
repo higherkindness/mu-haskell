@@ -26,7 +26,7 @@ main = do
   args <- getArgs
   case args of
     ["watch"]          -> watching client
-    ["get", idP]       -> get client idP
+    ["get", idp]       -> get client idp
     ["add", name, age] -> add client name age
     _                  -> putStrLn "unknown command"
 
