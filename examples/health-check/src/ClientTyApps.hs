@@ -31,7 +31,7 @@ main = do -- Setup the client
 
 simple :: GrpcClient -> String -> IO ()
 simple client who = do
-  let hcm = HealthCheckMsg (T.pack who)
+  let hcm = HealthCheckMsg $ Just (T.pack who)
   putStrLn ("UNARY: Is there some server named " <> who <> "?")
   rknown :: GRpcReply ServerStatusMsg
     <- gRpcCall @HealthCheckService @"check" client hcm
@@ -45,10 +45,10 @@ simple client who = do
 
 update :: GrpcClient -> String -> String -> IO ()
 update client who newstatus = do
-  let hcm = HealthCheckMsg (T.pack who)
+  let hcm = HealthCheckMsg $ Just (T.pack who)
   putStrLn ("UNARY: Setting " <> who <> " service to " <> newstatus)
   r <- gRpcCall @HealthCheckService @"setStatus" client
-                (HealthStatusMsg hcm (ServerStatusMsg (T.pack newstatus)))
+                (HealthStatusMsg (Just hcm) (Just $ ServerStatusMsg (Just $ T.pack newstatus)))
   putStrLn ("UNARY: Was setting successful? " <> show r)
   rstatus :: GRpcReply ServerStatusMsg
     <- gRpcCall @HealthCheckService @"check" client hcm
@@ -56,6 +56,6 @@ update client who newstatus = do
 
 watching :: GrpcClient -> String -> IO ()
 watching client who = do
-  let hcm = HealthCheckMsg (T.pack who)
+  let hcm = HealthCheckMsg $ Just (T.pack who)
   replies <- gRpcCall @HealthCheckService @"watch" client hcm
   runConduit $ replies .| C.mapM_ (print :: GRpcReply ServerStatusMsg -> IO ())

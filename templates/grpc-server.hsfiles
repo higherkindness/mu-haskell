@@ -87,10 +87,13 @@ grpc "Schema" id "{{name}}.proto"
 
 -- data Message
 --   = Message { ... }
---   deriving (Eq, Show, Generic, HasSchema Schema "Message")
+--   deriving ( Eq, Show, Generic
+              , ToSchema   Maybe Schema "Message"
+              , FromSchema Maybe Schema "Message" )
 
 {-# START_FILE src/Main.hs #-}
 {-# language PartialTypeSignatures #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 module Main where
 
 import Mu.GRpc.Server
@@ -101,5 +104,5 @@ import Schema
 main :: IO ()
 main = runGRpcApp 8080 server
 
-server :: (MonadServer m) => ServerT Service m _
+server :: (MonadServer m) => ServerT Maybe Service m _
 server = Server H0

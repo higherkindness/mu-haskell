@@ -9,7 +9,6 @@
 {-# language TemplateHaskell       #-}
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
-
 module Definition where
 
 import           Data.Int
@@ -22,24 +21,34 @@ import           Mu.Schema
 grpc "TodoListSchema" id "todolist.proto"
 
 newtype MessageId = MessageId
-  { value :: Int32
-  } deriving (Eq, Show, Ord, Generic, HasSchema TodoListSchema "MessageId")
+  { value :: Maybe Int32
+  } deriving ( Eq, Show, Ord, Generic
+             , ToSchema   Maybe TodoListSchema "MessageId"
+             , FromSchema Maybe TodoListSchema "MessageId" )
 
 data TodoListMessage = TodoListMessage
-  { id, tagId :: Int32
-  , title     :: Text
-  , completed :: Bool
-  } deriving (Eq, Show, Ord, Generic, HasSchema TodoListSchema "TodoListMessage")
+  { id, tagId :: Maybe Int32
+  , title     :: Maybe Text
+  , completed :: Maybe Bool
+  } deriving ( Eq, Show, Ord, Generic
+             , ToSchema   Maybe TodoListSchema "TodoListMessage"
+             , FromSchema Maybe TodoListSchema "TodoListMessage" )
 
 data TodoListRequest = TodoListRequest
-  { title :: Text
-  , tagId :: Int32
-  } deriving (Eq, Show, Ord, Generic, HasSchema TodoListSchema "TodoListRequest")
+  { title :: Maybe Text
+  , tagId :: Maybe Int32
+  } deriving ( Eq, Show, Ord, Generic
+             , ToSchema   Maybe TodoListSchema "TodoListRequest"
+             , FromSchema Maybe TodoListSchema "TodoListRequest" )
 
 newtype TodoListList = TodoListList
-  { list :: [TodoListMessage]
-  } deriving (Eq, Show, Ord, Generic, HasSchema TodoListSchema "TodoListList")
+  { list :: Maybe [TodoListMessage]
+  } deriving ( Eq, Show, Ord, Generic
+             , ToSchema   Maybe TodoListSchema "TodoListList"
+             , FromSchema Maybe TodoListSchema "TodoListList" )
 
 newtype TodoListResponse = TodoListResponse
-  { msg :: TodoListMessage
-  } deriving (Eq, Show, Ord, Generic, HasSchema TodoListSchema "TodoListResponse")
+  { msg :: Maybe TodoListMessage
+  } deriving ( Eq, Show, Ord, Generic
+             , ToSchema   Maybe TodoListSchema "TodoListResponse"
+             , FromSchema Maybe TodoListSchema "TodoListResponse" )
