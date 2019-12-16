@@ -10,7 +10,6 @@ module Main where
 
 import           Data.Conduit
 import qualified Data.Conduit.Combinators as C
-import           Data.Int                 (Int64)
 import qualified Data.Text                as T
 import           Database.Persist.Types   (Entity)
 import           System.Environment
@@ -26,7 +25,7 @@ main = do
   args <- getArgs
   case args of
     ["watch"]          -> watching client
-    ["get", idP]       -> get client idP
+    ["get", idp]       -> get client idp
     ["add", name, age] -> add client name age
     _                  -> putStrLn "unknown command"
 
