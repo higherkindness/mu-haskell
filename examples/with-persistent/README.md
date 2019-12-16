@@ -8,6 +8,12 @@ Running the server:
 stack run persistent-server
 ```
 
+In another terminal, run the client:
+
+```bash
+stack run persistent-client
+```
+
 [comment]: # (Start Copyright)
 # Copyright
 
