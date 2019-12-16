@@ -19,19 +19,21 @@ type instance AnnotatedSchema ProtoBufAnnotation QuickstartSchema
      , 'AnnField "HelloResponse" "message" ('ProtoBufId 1)
      , 'AnnField "HiRequest" "number" ('ProtoBufId 1) ]
 
-sayHello' :: HostName -> PortNumber -> T.Text -> IO (GRpcReply T.Text)
+type M a = a Maybe
+
+sayHello' :: HostName -> PortNumber -> T.Text -> IO (GRpcReply (Maybe T.Text))
 sayHello' host port req
   = do Right c <- setupGrpcClient' (grpcClientConfigSimple host port False)
-       fmap (\(HelloResponse r) -> r) <$> sayHello c (HelloRequest req)
+       fmap (\(HelloResponse r) -> r) <$> sayHello c (HelloRequest (Just req))
 
-sayHello :: GrpcClient -> HelloRequest -> IO (GRpcReply HelloResponse)
+sayHello :: GrpcClient -> M HelloRequest -> IO (GRpcReply (M HelloResponse))
 sayHello = gRpcCall @QuickStartService @"SayHello"
 
-sayHi' :: HostName -> PortNumber -> Int -> IO [GRpcReply T.Text]
+sayHi' :: HostName -> PortNumber -> Int -> IO [GRpcReply (Maybe T.Text)]
 sayHi' host port n
   = do Right c <- setupGrpcClient' (grpcClientConfigSimple host port False)
-       cndt <- sayHi c (HiRequest n)
+       cndt <- sayHi c (HiRequest (Just n))
        runConduit $ cndt .| C.map (fmap (\(HelloResponse r) -> r)) .| consume
 
-sayHi :: GrpcClient -> HiRequest -> IO (ConduitT () (GRpcReply HelloResponse) IO ())
+sayHi :: GrpcClient -> M HiRequest -> IO (ConduitT () (GRpcReply (M HelloResponse)) IO ())
 sayHi = gRpcCall @QuickStartService @"SayHi"

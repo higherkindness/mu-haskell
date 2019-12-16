@@ -5,15 +5,14 @@
 {-# language ScopedTypeVariables #-}
 {-# language TypeApplications    #-}
 {-# language TypeOperators       #-}
-
+{-# options_ghc -fno-warn-name-shadowing #-}
 module Main where
 
 import           Data.Conduit
 import qualified Data.Conduit.Combinators as C
 import qualified Data.Text                as T
-import           Database.Persist.Sql     (toSqlKey)
-import           Database.Persist.Types   (Entity(..))
 import           System.Environment
+import           Text.Read                (readMaybe)
 
 import           Mu.GRpc.Client.TyApps
 
@@ -32,21 +31,21 @@ main = do
 
 get :: GrpcClient -> String -> IO ()
 get client idPerson = do
-  let req = PersonRequest $ read idPerson
+  let req = MPersonRequest $ readMaybe idPerson
   putStrLn ("GET: Is there some person with id: " ++ idPerson ++ "?")
-  rknown :: GRpcReply (Entity Person)
+  rknown :: GRpcReply MPerson
     <- gRpcCall @PersistentService @"getPerson" client req
   putStrLn ("GET: response was: " ++ show rknown)
 
 add :: GrpcClient -> String -> String -> IO ()
 add client name age = do
-  let p = Entity (toSqlKey 1) (Person (T.pack name) (read age))
+  let p = MPerson Nothing (Just $ T.pack name) (readMaybe age)
   putStrLn ("ADD: Creating new person " <> name <> " with age " <> age)
-  response :: GRpcReply PersonRequest
+  response :: GRpcReply MPersonRequest
     <- gRpcCall @PersistentService @"newPerson" client p
   putStrLn ("ADD: Was creating successful? " <> show response)
 
 watching :: GrpcClient -> IO ()
 watching client = do
   replies <- gRpcCall @PersistentService @"allPeople" client
-  runConduit $ replies .| C.mapM_ (print :: GRpcReply (Entity Person) -> IO ())
+  runConduit $ replies .| C.mapM_ (print :: GRpcReply MPerson -> IO ())

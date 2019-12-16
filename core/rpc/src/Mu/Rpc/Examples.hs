@@ -8,13 +8,17 @@
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
 {-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language StandaloneDeriving    #-}
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
+{-# language ViewPatterns          #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 module Mu.Rpc.Examples where
 
 import           Data.Conduit
 import           Data.Conduit.Combinators as C
+import           Data.Functor.MaybeLike
 import qualified Data.Text                as T
 import           GHC.Generics
 
@@ -37,37 +41,44 @@ type QuickstartSchema
 type QuickStartService
   = 'Service "Greeter" '[Package "helloworld"]
       '[ 'Method "SayHello" '[]
-                 '[ 'ArgSingle ('FromSchema QuickstartSchema "HelloRequest") ]
-                 ('RetSingle ('FromSchema QuickstartSchema "HelloResponse"))
+                 '[ 'ArgSingle ('ViaSchema QuickstartSchema "HelloRequest") ]
+                 ('RetSingle ('ViaSchema QuickstartSchema "HelloResponse"))
        , 'Method "SayHi" '[]
-                 '[ 'ArgSingle ('FromSchema QuickstartSchema "HiRequest")]
-                 ('RetStream ('FromSchema QuickstartSchema "HelloResponse"))
+                 '[ 'ArgSingle ('ViaSchema QuickstartSchema "HiRequest")]
+                 ('RetStream ('ViaSchema QuickstartSchema "HelloResponse"))
        , 'Method "SayManyHellos" '[]
-                 '[ 'ArgStream ('FromSchema QuickstartSchema "HelloRequest")]
-                 ('RetStream ('FromSchema QuickstartSchema "HelloResponse")) ]
+                 '[ 'ArgStream ('ViaSchema QuickstartSchema "HelloRequest")]
+                 ('RetStream ('ViaSchema QuickstartSchema "HelloResponse")) ]
 
-newtype HelloRequest = HelloRequest { name :: T.Text }
-  deriving (Generic, HasSchema QuickstartSchema "HelloRequest")
-newtype HelloResponse = HelloResponse { message :: T.Text }
-  deriving (Generic, HasSchema QuickstartSchema "HelloResponse")
-newtype HiRequest = HiRequest { number :: Int }
-  deriving (Generic, HasSchema QuickstartSchema "HiRequest")
+newtype HelloRequest f = HelloRequest { name :: f T.Text } deriving (Generic)
+deriving instance Functor f => ToSchema f QuickstartSchema "HelloRequest" (HelloRequest f)
+deriving instance Functor f => FromSchema f QuickstartSchema "HelloRequest" (HelloRequest f)
 
-quickstartServer :: (MonadServer m) => ServerT QuickStartService m _
+newtype HelloResponse f = HelloResponse { message :: f T.Text } deriving (Generic)
+deriving instance Functor f => ToSchema f QuickstartSchema "HelloResponse" (HelloResponse f)
+deriving instance Functor f => FromSchema f QuickstartSchema "HelloResponse" (HelloResponse f)
+
+newtype HiRequest f = HiRequest { number :: f Int } deriving (Generic)
+deriving instance Functor f => ToSchema f QuickstartSchema "HiRequest" (HiRequest f)
+deriving instance Functor f => FromSchema f QuickstartSchema "HiRequest" (HiRequest f)
+
+quickstartServer :: forall m f.
+                    (MonadServer m, Applicative f, MaybeLike f)
+                 => ServerT f QuickStartService m _
 quickstartServer
   = Server (sayHello :<|>: sayHi :<|>: sayManyHellos :<|>: H0)
-  where sayHello :: (Monad m) => HelloRequest -> m HelloResponse
+  where sayHello :: HelloRequest f -> m (HelloResponse f)
         sayHello (HelloRequest nm)
-          = return (HelloResponse ("hi, " <> nm))
-        sayHi :: (MonadServer m)
-              => HiRequest
-              -> ConduitT HelloResponse Void m ()
+          = return (HelloResponse (("hi, " <>) <$> nm))
+        sayHi :: HiRequest f
+              -> ConduitT (HelloResponse f) Void m ()
               -> m ()
-        sayHi (HiRequest n) sink
-          = runConduit $ C.replicate n (HelloResponse "hi!") .| sink
-        sayManyHellos :: (MonadServer m)
-                      => ConduitT () HelloRequest m ()
-                      -> ConduitT HelloResponse Void m ()
+        sayHi (HiRequest (likeMaybe -> Just n)) sink
+          = runConduit $ C.replicate n (HelloResponse $ pure "hi!") .| sink
+        sayHi (HiRequest _) sink
+          = runConduit $ return () .| sink
+        sayManyHellos :: ConduitT () (HelloRequest f) m ()
+                      -> ConduitT (HelloResponse f) Void m ()
                       -> m ()
         sayManyHellos source sink
           = runConduit $ source .| C.mapM sayHello .| sink
