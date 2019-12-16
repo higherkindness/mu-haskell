@@ -1,0 +1,12 @@
+content:
+    - title: Lorem
+      description: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+      icon: img/main-feature-primary.svg
+
+    - title: Ipsum
+      description: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+      icon: img/main-feature-secondary.svg
+
+    - title: Consectetur
+      description: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+      icon: img/main-feature-tertiary.svg

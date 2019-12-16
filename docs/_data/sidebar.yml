@@ -1,0 +1,25 @@
+options:
+  - title: Start
+    url: docs/
+
+  - title: Benchmarks menu
+
+    nested_options:
+    - title: Benchmarks
+      url: docs/benchmarks/
+
+    - title: More Benchmarks
+      url: docs/more-benchmarks/
+
+  - title: Verification
+    url: docs/verification/
+
+    nested_options:
+    - title: Compile
+      url: docs/compile/
+
+    - title: Generation
+      url: docs/generation/
+
+  - title: Integration
+    url: docs/integration/
