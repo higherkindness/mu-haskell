@@ -14,7 +14,8 @@
 module Mu.Schema.Interpretation (
   Term(..), Field(..), FieldValue(..)
 , NS(..), NP(..), Proxy(..)
-, transWrap
+, transWrap, transFields, transValue
+, transWrapNoMaps, transFieldsNoMaps, transValueNoMaps
 ) where
 
 import           Data.Map
@@ -55,23 +56,70 @@ transWrap
   => (forall a. u a -> v a)
   -> Term u sch t -> Term v sch t
 transWrap n x = case x of
-  TRecord f -> TRecord (transFields f)
+  TRecord f -> TRecord (transFields n f)
   TEnum   c -> TEnum c
-  TSimple v -> TSimple (transValue v)
+  TSimple v -> TSimple (transValue n v)
+
+transWrapNoMaps
+  :: forall tn fn (sch :: Schema tn fn) t u v.
+     (Functor u)
+  => (forall a. u a -> v a)
+  -> Term u sch t -> Term v sch t
+transWrapNoMaps n x = case x of
+  TRecord f -> TRecord (transFieldsNoMaps n f)
+  TEnum   c -> TEnum c
+  TSimple v -> TSimple (transValueNoMaps n v)
+
+transFields
+  :: forall tn fn (sch :: Schema tn fn) args u v.
+     (Functor u, forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k))
+  => (forall a. u a -> v a)
+  -> NP (Field u sch) args -> NP (Field v sch) args
+transFields _ Nil = Nil
+transFields n (Field v :* rest)
+  = Field (n (fmap (transValue n) v)) :* transFields n rest
+
+transFieldsNoMaps
+  :: forall tn fn (sch :: Schema tn fn) args u v.
+     (Functor u)
+  => (forall a. u a -> v a)
+  -> NP (Field u sch) args -> NP (Field v sch) args
+transFieldsNoMaps _ Nil = Nil
+transFieldsNoMaps n (Field v :* rest)
+  = Field (n (fmap (transValueNoMaps n) v)) :* transFieldsNoMaps n rest
+
+transValue
+  :: forall tn fn (sch :: Schema tn fn) l u v.
+     (Functor u, forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k))
+  => (forall a. u a -> v a)
+  -> FieldValue u sch l -> FieldValue v sch l
+transValue _ FNull          = FNull
+transValue _ (FPrimitive y) = FPrimitive y
+transValue n (FSchematic t) = FSchematic (transWrap n t)
+transValue n (FOption    o) = FOption (transValue n <$> o)
+transValue n (FList      l) = FList (transValue n <$> l)
+transValue n (FMap       m) = FMap (mapKeys (transValue n) (transValue n <$> m))
+transValue n (FUnion     u) = FUnion (transUnion u)
   where
-    transFields :: NP (Field u sch) args -> NP (Field v sch) args
-    transFields Nil               = Nil
-    transFields (Field v :* rest) = Field (n (fmap transValue v)) :* transFields rest
-    transValue :: FieldValue u sch l -> FieldValue v sch l
-    transValue FNull          = FNull
-    transValue (FPrimitive y) = FPrimitive y
-    transValue (FSchematic t) = FSchematic (transWrap n t)
-    transValue (FOption    o) = FOption (transValue <$> o)
-    transValue (FList      l) = FList (transValue <$> l)
-    transValue (FMap       m) = FMap (mapKeys transValue (transValue <$> m))
-    transValue (FUnion     u) = FUnion (transUnion u)
     transUnion :: NS (FieldValue u sch) us -> NS (FieldValue v sch) us
-    transUnion (Z z) = Z (transValue z)
+    transUnion (Z z) = Z (transValue n z)
+    transUnion (S s) = S (transUnion s)
+
+transValueNoMaps
+  :: forall tn fn (sch :: Schema tn fn) l u v.
+     (Functor u)
+  => (forall a. u a -> v a)
+  -> FieldValue u sch l -> FieldValue v sch l
+transValueNoMaps _ FNull          = FNull
+transValueNoMaps _ (FPrimitive y) = FPrimitive y
+transValueNoMaps n (FSchematic t) = FSchematic (transWrapNoMaps n t)
+transValueNoMaps n (FOption    o) = FOption (transValueNoMaps n <$> o)
+transValueNoMaps n (FList      l) = FList (transValueNoMaps n <$> l)
+transValueNoMaps _ (FMap       _) = error "this should never happen"
+transValueNoMaps n (FUnion     u) = FUnion (transUnion u)
+  where
+    transUnion :: NS (FieldValue u sch) us -> NS (FieldValue v sch) us
+    transUnion (Z z) = Z (transValueNoMaps n z)
     transUnion (S s) = S (transUnion s)
 
 -- ===========================

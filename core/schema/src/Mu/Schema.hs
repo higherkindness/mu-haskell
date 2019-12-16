@@ -13,13 +13,11 @@ module Mu.Schema (
   -- * Interpretation of schemas
 , Term(..), Field(..), FieldValue(..)
 , NS(..), NP(..), Proxy(..)
-, transWrap
   -- * Conversion from types to schemas
 , WithSchema(..)
 , FromSchema(..), fromSchema'
 , ToSchema(..), toSchema'
 , CustomFieldMapping(..)
-, transSchema
   -- ** Mappings between fields
 , Mapping(..), Mappings, MappingRight, MappingLeft
   -- ** Field annotations

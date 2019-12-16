@@ -20,6 +20,8 @@ module Mu.Schema.Class (
 , CustomFieldMapping(..)
 , Mapping(..), Mappings, MappingRight, MappingLeft
 , transSchema
+  -- * Internal use only
+, GToSchemaRecord(..)
 ) where
 
 import           Data.Functor.Identity
