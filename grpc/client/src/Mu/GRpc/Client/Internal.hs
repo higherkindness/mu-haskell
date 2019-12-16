@@ -100,7 +100,7 @@ instance ( KnownName name, FromProtoBufTypeRef rref r
     where methodName = BS.pack (nameVal (Proxy @name))
           rpc = RPC pkgName srvName methodName
 
-instance ( KnownName name, ToProtoBufTypeRef rref r
+instance ( KnownName name, FromProtoBufTypeRef rref r
          , handler ~ (IO (ConduitT () (GRpcReply r) IO ())) )
          => GRpcMethodCall ('Method name anns '[ ] ('RetStream rref)) handler where
   gRpcMethodCall pkgName srvName _ client
@@ -111,9 +111,9 @@ instance ( KnownName name, ToProtoBufTypeRef rref r
          _ <- async $ do
             v <- simplifyResponse $
                  buildGRpcReply3 <$>
-                 rawStreamServer @_ @() @(ViaToProtoBufTypeRef rref r)
+                 rawStreamServer @_ @() @(ViaFromProtoBufTypeRef rref r)
                                  rpc client () ()
-                                 (\_ _ (ViaToProtoBufTypeRef newVal) -> liftIO $ atomically $
+                                 (\_ _ (ViaFromProtoBufTypeRef newVal) -> liftIO $ atomically $
                                    -- on the first iteration, say that everything is OK
                                    tryPutTMVar var (GRpcOk ()) >> writeTMChan chan newVal)
             case v of

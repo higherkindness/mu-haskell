@@ -34,7 +34,7 @@ import           Mu.Schema
 import           Mu.Schema.Class
 import           Mu.Schema.Interpretation
 
-grpc "PersistentSchema" id "examples/with-persistent/with-persistent.proto"
+grpc "PersistentSchema" id "with-persistent.proto"
 
 newtype MPersonRequest = MPersonRequest
   { identifier :: Maybe Int64
@@ -54,7 +54,7 @@ data MPerson = MPerson
   { pid  :: Maybe MPersonRequest
   , name :: Maybe T.Text
   , age  :: Maybe Int32 }
-  deriving (Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 instance ToSchema   Maybe PersistentSchema "Person" MPerson
 instance FromSchema Maybe PersistentSchema "Person" MPerson
@@ -76,7 +76,7 @@ instance ( Generic t, Applicative w
     = TRecord $ Field (pure $ FPrimitive (unSqlBackendKey $ toBackendKey key))
                 :* transFieldsNoMaps up (toSchemaRecord (Proxy @fmap) (unM1 $ unM1 $ from x))
     where up :: Identity a -> w a
-          up (Identity x) = pure x
+          up (Identity i) = pure i
 
 instance ( Generic t, Applicative w
          , (sch :/: sty) ~ 'DRecord name (nestedIdArg ': args)
@@ -93,7 +93,7 @@ instance ( Generic t, Applicative w
                 :* transFieldsNoMaps up (toSchemaRecord (Proxy @fmap) (unM1 $ unM1 $ from x))
     where key' = unSqlBackendKey $ toBackendKey key
           up :: Identity a -> w a
-          up (Identity x) = pure x
+          up (Identity i) = pure i
 
 type PersonFieldMapping
   = '[ "personAge" ':-> "age", "personName" ':-> "name" ]
