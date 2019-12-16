@@ -10,9 +10,9 @@ module Main where
 
 import           Data.Conduit
 import qualified Data.Conduit.Combinators as C
-import           Data.Int                 (Int64)
 import qualified Data.Text                as T
-import           Database.Persist.Types   (Entity)
+import           Database.Persist.Sql     (toSqlKey)
+import           Database.Persist.Types   (Entity(..))
 import           System.Environment
 
 import           Mu.GRpc.Client.TyApps
@@ -40,7 +40,7 @@ get client idPerson = do
 
 add :: GrpcClient -> String -> String -> IO ()
 add client name age = do
-  let p = Person (T.pack name) (read age)
+  let p = Entity (toSqlKey 1) (Person (T.pack name) (read age))
   putStrLn ("ADD: Creating new person " <> name <> " with age " <> age)
   response :: GRpcReply PersonRequest
     <- gRpcCall @PersistentService @"newPerson" client p
