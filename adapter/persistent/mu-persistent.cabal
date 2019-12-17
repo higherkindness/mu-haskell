@@ -5,7 +5,7 @@ version:             0.1.0.0
 homepage:            https://github.com/higherkindness/mu-haskell/persistent#readme
 license:             Apache-2.0
 license-file:        LICENSE
-author:              Flavio Corpa
+author:              Flavio Corpa, Alejandro Serrano
 maintainer:          flavio.corpa@47deg.com
 copyright:           Copyright © 2019-2020 47 Degrees. <http://47deg.com>
 category:            Network
@@ -20,4 +20,3 @@ library
   build-depends:       base >= 4.7 && < 5
                      , mu-schema
                      , persistent
-                     , persistent-sqlite

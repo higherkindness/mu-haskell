@@ -16,7 +16,7 @@ import           Data.Int                 (Int64)
 import           GHC.Generics
 import           GHC.TypeLits
 
-import           Database.Persist.Sqlite
+import           Database.Persist.Sql
 import           Mu.Schema
 import           Mu.Schema.Class
 import           Mu.Schema.Interpretation
