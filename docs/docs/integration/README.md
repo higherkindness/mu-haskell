@@ -1,7 +1,7 @@
 ---
 layout: docs
 title: Integration
-permalink: /docs/integration/
+permalink: integration/
 
 ---
 

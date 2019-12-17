@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: registry/
+---
+
 # Registry
 
 Schemas evolve over time. It is a good practice to keep an inventory of all the schemas you can work with, in the form of a *registry*. Using `mu-schema` you can declare one such registry as simply a mapping from versions to schemas:

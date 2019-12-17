@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: intro/
+---
+
 # Introduction to Mu-Haskell
 
 Many companies have embraced microservices architectures as the best way to scale up their internal software systems, separate work across different company divisions and development teams. Microservices architectures also allow teams to turn an idea or bug report into a working feature of fix in production more quickly, in accordance to the agile principles.

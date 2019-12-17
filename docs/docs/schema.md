@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: schema/
+---
+
 # Schemas
 
 Using `mu-schema` you can describe a schema for your data using type-level techniques. You can then automatically generate:

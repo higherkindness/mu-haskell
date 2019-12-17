@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: db/
+---
+
 # Databases
 
 Explain how to integrate with Persistent.

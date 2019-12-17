@@ -1,7 +1,7 @@
 ---
 layout: docs
 title: Generation
-permalink: /docs/generation/
+permalink: generation/
 
 ---
 

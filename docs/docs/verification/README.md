@@ -1,7 +1,7 @@
 ---
 layout: docs
 title: Verification
-permalink: /docs/verification/
+permalink: verification/
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 layout: docs
 title: Compendium
-permalink: /docs/more-benchmarks/
+permalink: more-benchmarks/
 ---
 
 

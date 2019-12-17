@@ -1,25 +1,54 @@
 options:
   - title: Start
-    url: docs/
+    url: /
+
+  - title: Introduction
+    url: intro/
+
+  - title: Schemas
+    url: schema/
+    nested_options:
+    - title: Registry
+      url: registry/
+
+  - title: Services and servers
+    url: rpc/
+    nested_options:
+    - title: gRPC
+      url: grpc/
+
+    - title: Streams
+      url: stream/
+
+    - title: Databases
+      url: db/
+
+  - title: Integrations
+    nested_options:
+    - title: Transformers
+      url: transformer/
+
+    - title: Middleware
+      url: middleware/
 
   - title: Benchmarks menu
 
     nested_options:
     - title: Benchmarks
-      url: docs/benchmarks/
+      url: benchmarks/
 
     - title: More Benchmarks
-      url: docs/more-benchmarks/
+      url: more-benchmarks/
 
   - title: Verification
-    url: docs/verification/
+    url: verification/
 
     nested_options:
     - title: Compile
-      url: docs/compile/
+      url: compile/
 
     - title: Generation
-      url: docs/generation/
+      url: generation/
 
   - title: Integration
-    url: docs/integration/
+    url: integration/

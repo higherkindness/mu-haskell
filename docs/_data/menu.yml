@@ -1,6 +1,6 @@
 nav:
     - title: Documentation
-      url: /docs
+      url: /
 
     - title: Github
       url: https://github.com/higherkindness/mu-haskell
