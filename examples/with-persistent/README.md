@@ -5,13 +5,13 @@
 Running the server:
 
 ```bash
-stack run persistent-server
+$ stack run persistent-server
 ```
 
 In another terminal, run the client:
 
 ```bash
-stack run persistent-client
+$ stack run persistent-client add "Flavio" 28
 ```
 
 [comment]: # (Start Copyright)
