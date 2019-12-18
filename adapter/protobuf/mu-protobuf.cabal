@@ -11,6 +11,7 @@ maintainer:          alejandro.serrano@47deg.com
 -- copyright:
 category:            Network
 build-type:          Simple
+data-files:          test/protobuf/*.proto
 
 library
   exposed-modules:     Mu.Adapter.ProtoBuf
