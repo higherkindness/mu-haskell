@@ -5,7 +5,7 @@
 {-# language ScopedTypeVariables #-}
 {-# language TypeApplications    #-}
 {-# language TypeOperators       #-}
-{-# options_ghc -fno-warn-name-shadowing #-}
+
 module Main where
 
 import           Data.Conduit
@@ -24,26 +24,26 @@ main = do
   Right client <- setupGrpcClient' config
   args <- getArgs
   case args of
-    ["watch"]          -> watching client
-    ["get", idp]       -> get client idp
-    ["add", name, age] -> add client name age
-    _                  -> putStrLn "unknown command"
+    ["watch"]       -> watching client
+    ["get", idp]    -> get client idp
+    ["add", nm, ag] -> add client nm ag
+    _               -> putStrLn "unknown command"
 
 get :: GrpcClient -> String -> IO ()
 get client idPerson = do
   let req = MPersonRequest $ readMaybe idPerson
-  putStrLn ("GET: Is there some person with id: " ++ idPerson ++ "?")
-  rknown :: GRpcReply MPerson
+  putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
+  response :: GRpcReply MPerson
     <- gRpcCall @PersistentService @"getPerson" client req
-  putStrLn ("GET: response was: " ++ show rknown)
+  putStrLn $ "GET: response was: " ++ show response
 
 add :: GrpcClient -> String -> String -> IO ()
-add client name age = do
-  let p = MPerson Nothing (Just $ T.pack name) (readMaybe age)
-  putStrLn ("ADD: Creating new person " <> name <> " with age " <> age)
+add client nm ag = do
+  let p = MPerson Nothing (Just $ T.pack nm) (readMaybe ag)
+  putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
   response :: GRpcReply MPersonRequest
     <- gRpcCall @PersistentService @"newPerson" client p
-  putStrLn ("ADD: Was creating successful? " <> show response)
+  putStrLn $ "ADD: was creating successful? " ++ show response
 
 watching :: GrpcClient -> IO ()
 watching client = do
