@@ -21,6 +21,7 @@ executable persistent-server
                      , monad-logger
                      , mu-schema
                      , mu-rpc
+                     , mu-persistent
                      , mu-protobuf
                      , mu-grpc-server
                      , persistent
@@ -35,6 +36,7 @@ executable persistent-client
                      , conduit
                      , mu-schema
                      , mu-rpc
+                     , mu-persistent
                      , mu-protobuf
                      , mu-grpc-client
                      , persistent

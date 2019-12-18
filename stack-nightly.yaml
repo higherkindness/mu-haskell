@@ -6,6 +6,7 @@ packages:
 - core/rpc
 - adapter/avro
 - adapter/protobuf
+- adapter/persistent
 - grpc/client
 - grpc/server
 - examples/health-check
