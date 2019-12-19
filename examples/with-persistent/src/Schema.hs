@@ -1,3 +1,4 @@
+{-# language CPP                        #-}
 {-# language DataKinds                  #-}
 {-# language DeriveGeneric              #-}
 {-# language DerivingVia                #-}
@@ -29,7 +30,11 @@ import           Mu.Adapter.Persistent   (WithEntityNestedId (..))
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
+#if __GHCIDE__
+grpc "PersistentSchema" id "examples/with-persistent/with-persistent.proto"
+#else
 grpc "PersistentSchema" id "with-persistent.proto"
+#endif
 
 newtype MPersonRequest = MPersonRequest
   { identifier :: Maybe Int64
