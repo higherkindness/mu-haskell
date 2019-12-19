@@ -1,3 +1,4 @@
+{-# language CPP                   #-}
 {-# language DataKinds             #-}
 {-# language DeriveAnyClass        #-}
 {-# language DeriveGeneric         #-}
@@ -18,7 +19,11 @@ import           GHC.Generics
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
+#if __GHCIDE__
+grpc "TodoListSchema" id "examples/todolist/todolist.proto"
+#else
 grpc "TodoListSchema" id "todolist.proto"
+#endif
 
 newtype MessageId = MessageId
   { value :: Maybe Int32
