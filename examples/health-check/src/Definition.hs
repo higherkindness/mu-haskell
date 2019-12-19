@@ -18,7 +18,7 @@ import           GHC.Generics
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
-$(grpc "HealthCheckSchema" id "healthcheck.proto")
+grpc "HealthCheckSchema" id "healthcheck.proto"
 
 newtype HealthCheckMsg
   = HealthCheckMsg { nameService :: Maybe T.Text }

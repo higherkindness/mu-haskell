@@ -11,6 +11,7 @@ maintainer:          alejandro.serrano@47deg.com
 -- copyright:
 category:            Network
 build-type:          Simple
+data-files:          test/avro/*.avsc
 
 library
   exposed-modules:     Mu.Adapter.Avro
