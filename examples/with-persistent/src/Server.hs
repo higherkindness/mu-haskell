@@ -22,7 +22,7 @@ main = do
   putStrLn "running app with persistent"
   runStderrLoggingT $
     withSqliteConn @(LoggingT IO) ":memory:" $ \conn -> do
-      liftIO $ flip runSqlPersistM conn $ runMigration migrateAll
+      runDb conn $ runMigration migrateAll
       liftIO $ runGRpcApp 1234 (server conn)
 
 server :: SqlBackend -> ServerT Maybe PersistentService ServerErrorIO _

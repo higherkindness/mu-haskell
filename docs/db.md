@@ -23,7 +23,7 @@ service PersistentService {
 }
 ```
 
-Maybe this example looks a bit contrived but bear with me, it covers a common use case when working with protobuf: that one of the messages has another message as its identifying key. Easier examples would not suffer from this and should be easier to implement.
+Maybe this example looks a bit contrived but bear with me, it covers a common use case when working with protobuf: that one of the messages has another message as its identifying key.
 
 ## Definning our Schema
 
@@ -33,7 +33,6 @@ You are going to need to enable the following extensions:
 {-# language DataKinds                  #-}
 {-# language DeriveGeneric              #-}
 {-# language DerivingVia                #-}
-{-# language DuplicateRecordFields      #-}
 {-# language FlexibleContexts           #-}
 {-# language FlexibleInstances          #-}
 {-# language GADTs                      #-}
@@ -74,7 +73,7 @@ instance FromSchema Maybe PersistentSchema "Person" MPerson
 
 Remember that all the magic starts with that first `grpc` line! ✨
 
-You might have noticed that this time, we are not using `DeriveAnyClass`, so we need to write the instances for `ToSchema` and `FromSchema` on a separate line from our deriving clause, and let GHC fill them for us.
+You might have noticed that this time, we are not using `DeriveAnyClass`, so we need to write the instances for `ToSchema` and `FromSchema` on a separate line from our deriving clause, and let GHC fill them for us. This decision was made due to a current [bug in Persistent](https://github.com/yesodweb/persistent/issues/578), but hopefully it will be fixed in future versions. 🙂
 
 ## Integration with `persistent`
 
@@ -120,7 +119,7 @@ Have in mind that we still need to define our own custom field mapping, in this 
 
 Now let's focus on the Server!
 
-All you need to do is open one time the database, and share the connection accross all your services:
+All you need to do is open one time the database, and share the connection across all your services:
 
 ```haskell
 {-# language FlexibleContexts      #-}
@@ -146,7 +145,9 @@ We have decided in this example to use `LoggintT` from `monad-logger` and `runSt
 
 ## This actually does not work
 
-Maybe you might have noticed that this example is not going to work yet, until we tell `persistent` what is our migration. We need a small tweak in our `Schema.hs`:
+Maybe you might have noticed that this example is not going to work yet. Unless you created `example.db` yourself, we need to define a "migration". Migrations are not actually *required* by Persistent, they are just a simple way to get an Sqlite database up and running.
+
+We need a small tweak in our `Schema.hs`:
 
 ```diff
 - mkPersist sqlSettings [persistLowerCase|
@@ -163,9 +164,11 @@ main =
   runStderrLoggingT $
 -   withSqliteConn @(LoggingT IO) "example.db" $ \conn ->
 +   withSqliteConn @(LoggingT IO) "example.db" $ \conn -> do
-+     liftIO $ flip runSqlPersistM conn $ runMigration migrateAll
++     runDb conn $ runMigration migrateAll
       liftIO $ runGRpcApp 8080 (server conn)
 ```
+
+More on that strange `runDb` method in the next section! 😇
 
 ## Sample usage with a service
 
@@ -181,15 +184,15 @@ allPeople conn sink = runDb conn $
 
 As you can see, all the services need to be passed the `SqlBackend` connection as an argument.
 
-Two interesting things we want to highlight here: we have provided a small helper called `runDb`, it's implementation is quite simple and it exist due to **developer ergonomics**. We are basically saving you from writing lots of `liftIO $ flip runSqlPersistM`. 😉
+Two interesting things we want to highlight here: we have provided a small helper called `runDb`, it's implementation is quite simple and it exists due to **developer ergonomics**. We are basically saving you from writing lots of `liftIO $ flip runSqlPersistM`. 😉
 
 The second one will be discussed in the next section.
 
-## On streams and `Conuit`
+## On streams and `Conduit`
 
-Since we are going to work with streams, it is wonderful that `persistent` also provides methods to work with `Conduit` like, for example, `selectSource`. But the Monad in which `persistent` operates returns `ConduitM () (Entity Person) m ()`, and we know that we want instead: `ConuitT (Entity Person) Void ServerErrorIO ()`. 🤔
+Since we are going to work with streams, it is wonderful that `persistent` also provides methods to work with `Conduit` like, for example, `selectSource`. But the Monad in which `persistent` operates returns `ConduitM () (Entity Person) m ()`, and we know that we want instead: `ConduitT (Entity Person) Void ServerErrorIO ()`. 🤔
 
-Well, have no fear my friend because we created yet another utility called `liftServerConduit`. Born specifically to address this problem, it's type signature is:
+Well, have no fear my friend because we created yet another utility called `liftServerConduit`, orn specifically to address this problem. It's type signature is:
 
 ```haskell
 liftServerConduit
@@ -197,4 +200,9 @@ liftServerConduit
   => ConduitT a b ServerErrorIO r -> ConduitT a b m r
 ```
 
-And that concludes our roundtrip! If you think that something is not clear or could be further improved, feel free to [open an Issue or Pull Request!](https://github.com/higherkindness/mu-haskell/issues) 😊
+What is this type signature telling us? That is, we can turn any of the Conduits given as input, which work on the `ServerErrorIO` Monad from `mu-rpc`, into a Conduit working on other `IO`-like Monad. This is the case, in particular, of the Monad in which Persistent runs.
+
+
+And that concludes our round-trip!
+
+If you think that something is not clear or could be further improved, feel free to [open an Issue or Pull Request!](https://github.com/higherkindness/mu-haskell/issues) 😊
