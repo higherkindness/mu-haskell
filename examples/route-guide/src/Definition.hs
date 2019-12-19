@@ -19,7 +19,7 @@ import           GHC.Generics
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
-$(grpc "RouteGuideSchema" id "routeguide.proto")
+grpc "RouteGuideSchema" id "routeguide.proto"
 
 data Point
   = Point { latitude, longitude :: Maybe Int32 }
