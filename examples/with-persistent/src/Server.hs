@@ -3,7 +3,6 @@
 {-# language PartialTypeSignatures #-}
 {-# language TypeApplications      #-}
 {-# language TypeFamilies          #-}
-{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 
 module Main where
 
@@ -12,6 +11,7 @@ import           Control.Monad.Logger
 import           Data.Conduit
 import qualified Data.Text               as T
 import           Database.Persist.Sqlite
+import           Mu.Adapter.Persistent   (runDb)
 import           Mu.GRpc.Server
 import           Mu.Server
 
@@ -27,8 +27,6 @@ main = do
 
 server :: SqlBackend -> ServerT Maybe PersistentService ServerErrorIO _
 server p = Server (getPerson p :<|>: newPerson p :<|>: allPeople p :<|>: H0)
-
-runDb = (liftIO .) . flip runSqlPersistM
 
 getPerson :: SqlBackend -> MPersonRequest -> ServerErrorIO (Entity Person)
 getPerson conn (MPersonRequest (Just idf)) = do

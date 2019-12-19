@@ -11,12 +11,15 @@
 
 module Mu.Adapter.Persistent where
 
+import           Control.Monad.IO.Class
+import           Control.Monad.Logger
+import           Control.Monad.Trans.Reader
+import           Control.Monad.Trans.Resource.Internal
 import           Data.Functor.Identity
-import           Data.Int                 (Int64)
+import           Data.Int
+import           Database.Persist.Sql
 import           GHC.Generics
 import           GHC.TypeLits
-
-import           Database.Persist.Sql
 import           Mu.Schema
 import           Mu.Schema.Class
 import           Mu.Schema.Interpretation
@@ -56,3 +59,9 @@ instance ( Generic t, Applicative w
     where key' = unSqlBackendKey $ toBackendKey key
           up :: Identity a -> w a
           up (Identity i) = pure i
+
+runDb :: MonadIO m
+      => SqlBackend
+      -> ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a
+      -> m a
+runDb = (liftIO .) . flip runSqlPersistM
