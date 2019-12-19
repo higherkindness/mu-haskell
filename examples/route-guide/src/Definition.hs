@@ -1,3 +1,4 @@
+{-# language CPP                   #-}
 {-# language DataKinds             #-}
 {-# language DeriveAnyClass        #-}
 {-# language DeriveGeneric         #-}
@@ -19,7 +20,11 @@ import           GHC.Generics
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
+#if __GHCIDE__
+grpc "RouteGuideSchema" id "examples/route-guide/routeguide.proto"
+#else
 grpc "RouteGuideSchema" id "routeguide.proto"
+#endif
 
 data Point
   = Point { latitude, longitude :: Maybe Int32 }

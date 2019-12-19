@@ -1,3 +1,4 @@
+{-# language CPP                   #-}
 {-# language DataKinds             #-}
 {-# language DeriveAnyClass        #-}
 {-# language DeriveGeneric         #-}
@@ -18,7 +19,11 @@ import           GHC.Generics
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
+#if __GHCIDE__
+grpc "HealthCheckSchema" id "examples/health-check/healthcheck.proto"
+#else
 grpc "HealthCheckSchema" id "healthcheck.proto"
+#endif
 
 newtype HealthCheckMsg
   = HealthCheckMsg { nameService :: Maybe T.Text }
