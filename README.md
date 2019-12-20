@@ -1,6 +1,6 @@
 # Mu for Haskell
 
-[![Actions Status](https://github.com/higherkindness/mu-haskell/workflows/Haskell%20CI/badge.svg)](https://github.com/higherkindness/mu-haskell/actions)
+[![Build Status](https://travis-ci.com/higherkindness/mu-haskell.svg?branch=master)](https://travis-ci.com/higherkindness/mu-haskell)
 
 This repo defines a set of libraries to write microservices in a format- and protocol-independent way. It shares the same goals as [Mu for Scala](http://higherkindness.io/mu/), but using idiomatic Haskell and more type-level techniques.
 
