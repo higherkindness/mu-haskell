@@ -1,0 +1,141 @@
+// Nav
+// -----------------------------------------------
+// -----------------------------------------------
+#site-nav {
+    flex: 0 0 auto;
+    position: fixed;
+    padding: ($base-point-grid * 5) 0;
+    width: 100%;
+    transition: background-color $base-duration $base-timing, padding $base-duration $base-timing;
+    height: ($base-point-grid * 18);
+
+    &.nav-scroll {
+        padding: ($base-point-grid * 2) 0;
+        background: rgba(244, 245, 255, 0.9);
+
+    }
+
+    .nav-flex {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 100%;
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            font-family: $base-font-family;
+            font-size: 1.5rem;
+            color: $base-font-color;
+
+            &:visited,
+            &:hover,
+            &:active {
+                color: $base-font-color;
+                text-decoration: none;
+            }
+        }
+
+        .nav-menu {
+            position: relative;
+
+            ul {
+              display: flex;
+
+              .nav-menu-item {
+                  &:not(:last-child) {
+                      margin-right: ($base-point-grid * 5);
+                  }
+
+                  a {
+                      padding-bottom: 4px;
+                      font-family: $base-font-family;
+                      color: $gray-primary;
+
+                      &:hover {
+                          text-decoration: none;
+                          border-bottom: 2px solid $brand-primary;
+                      }
+                  }
+              }
+            }
+        }
+
+        .nav-icon-open {
+            padding: 16px;
+            margin: -16px;
+            display: none;
+            transition: transform $base-duration $base-timing;
+
+            &:hover {
+              transform: scaleX(1.5);
+            }
+        }
+
+        .nav-icon-close {
+            display: none;
+            padding: 6px;
+            position: absolute;
+            background: rgba($brand-primary, 0.96);
+            right: 100%;
+            top: 32px;
+
+            img {
+                display: block;
+                transition: transform .3s ease;
+
+                &:hover {
+                  transform: rotate(180deg);
+                }
+            }
+        }
+    }
+}
+
+// Responsive
+// -----------------------------------------------
+@include bp(medium) {
+    #site-nav {
+        .nav-flex {
+            .nav-menu {
+                position: fixed;
+                padding: ($base-point-grid * 4) ($base-point-grid * 6);
+                background: rgba($brand-primary, 0.96);
+                height: 100%;
+                right: -100%;
+                top: 0;
+                width: 50%;
+                z-index: 2;
+                transition: right $base-duration $base-timing;
+
+                &.open {
+                  right: 0;
+                }
+
+                ul {
+                  flex-direction: column;
+
+                  .nav-menu-item {
+                      padding: $base-point-grid 0;
+                      &:not(:last-child) {
+                          margin-right: 0;
+                      }
+
+                      a {
+                          color: $white;
+                          &:hover {
+                            border-bottom-color: $white;
+                          }
+                      }
+                  }
+                }
+
+            }
+
+            .nav-icon-open,
+            .nav-icon-close {
+                display: block;
+            }
+        }
+    }
+}

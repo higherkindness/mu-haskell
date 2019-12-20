@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: stream/
+---
+
 # Streams
 
 In the docs about [service definition](rpc.md) we had one single `SayHello` method which takes one value and produces one value. However, we can also declare methods which perform streaming, such as:
@@ -16,8 +22,8 @@ type QuickstartService
   = 'Service "Greeter"
       '[ 'Method "SayHello" ...
        , 'Method "SayManyHellos"
-                 '[ 'ArgStream ('FromSchema QuickstartSchema "HelloRequest")]
-                 ('RetStream ('FromSchema QuickstartSchema "HelloResponse")) ]
+        '[ 'ArgStream ('FromSchema QuickstartSchema "HelloRequest")]
+        ('RetStream ('FromSchema QuickstartSchema "HelloResponse")) ]
 ```
 
 To define the implementation of this method we build upon the great [Conduit](https://github.com/snoyberg/conduit) library. Your input is now a producer of values, as defined by that library, and you must write the results to the provided sink. Better said with an example:

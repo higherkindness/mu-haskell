@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: rpc/
+---
+
 # Services and servers
 
 There are several formats in the wild used to declare service APIs, including [Avro IDL](https://avro.apache.org/docs/current/idl.html), [gRPC](https://grpc.io/), and [OpenAPI](https://swagger.io/specification/). `mu-rpc` abstract the commonalities into a single type-level format for declaring these services, building on the format-independent schema facilities of `mu-schema`. In addition, this package provides a generic notion of *server* of a service. One such server defines one behavior for each method in the service, but does not bother with (de)serialization mechanisms.
@@ -37,7 +43,7 @@ This is everything you need to start using gRPC services and clients in Haskell!
 
 ### Looking at the resulting code
 
-In order to use the library proficiently, we should look a bit at the code generated in the previous code. A type-level description of the messages is put into the type `QuickstartSchema`. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using `mu-schema` facilities, this amounts to declaring a bunch of data types and including `deriving (Generic, HasSchema Schema "type")` at the end of each of them.
+In order to use the library proficiently, we should look a bit at the code generated in the previous code. A type-level description of the messages is put into the type `QuickstartSchema`. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using `mu-schema` facilities, this amounts to declaring a bunch of data types and including `deriving (Generic, ToSchema Maybe Schema "type", FromSchema Maybe Schema "type")` at the end of each of them.
 
 ```haskell
 {-# language PolyKinds, DataKinds, TypeFamilies #-}
@@ -60,10 +66,16 @@ type instance AnnotatedSchema ProtoBufAnnotation QuickstartSchema
      , 'AnnField "HelloResponse" "message" ('ProtoBufId 1) ]
 
 -- TO BE WRITTEN
-newtype HelloRequest = HelloRequest { name :: T.Text }
-  deriving (Generic, HasSchema QuickstartSchema "HelloRequest")
-newtype HelloResponse = HelloResponse { message :: T.Text }
-  deriving (Generic, HasSchema QuickstartSchema "HelloResponse")
+newtype HelloRequest
+  = HelloRequest { name :: Maybe T.Text }
+  deriving (Generic
+           , ToSchema   Maybe QuickstartSchema "HelloRequest"
+           , FromSchema Maybe QuickstartSchema "HelloRequest")
+newtype HelloResponse
+  = HelloResponse { message :: Maybe T.Text }
+  deriving (Generic
+           , ToSchema   Maybe QuickstartSchema "HelloResponse"
+           , FromSchema Maybe QuickstartSchema "HelloResponse")
 ```
 
 The service declaration looks very similar to an schema declaration, but instead of record and enumerations you define *methods*. Each method has a name, a list of arguments, and a return type.
@@ -75,8 +87,8 @@ import Mu.Rpc
 type QuickstartService
   = 'Service "Greeter"
       '[ 'Method "SayHello"
-                 '[ 'ArgSingle ('FromSchema QuickstartSchema "HelloRequest") ]
-                 ('RetSingle ('FromSchema QuickstartSchema "HelloResponse")) ]
+        '[ 'ArgSingle ('FromSchema QuickstartSchema "HelloRequest") ]
+        ('RetSingle ('FromSchema QuickstartSchema "HelloResponse")) ]
 ```
 
 In order to support both [Avro IDL](https://avro.apache.org/docs/current/idl.html) and [gRPC](https://grpc.io/), the declaration of the method arguments and returns in a bit fancier that you might expect:
@@ -88,7 +100,7 @@ Note that depending on the concrete implementation you use to run the server, on
 
 ## Implementing the service
 
-In order to implement the service, you have to define the behavior of each method by means of a *handler*. You can use Haskell types for your handlers, given that you had previously declared that they can be mapped back and forth the schema types using `HasSchema`. For example, the following is a handler for the `SayHello` method in `Greeter`:
+In order to implement the service, you have to define the behavior of each method by means of a *handler*. You can use Haskell types for your handlers, given that you had previously declared that they can be mapped back and forth the schema types using `ToSchema` and `FromSchema`. For example, the following is a handler for the `SayHello` method in `Greeter`:
 
 ```haskell
 sayHello :: (MonadServer m) => HelloRequest -> m HelloResponse
@@ -107,6 +119,6 @@ Since you can declare more than one method in a service, you need to join them i
 ```haskell
 {-# language PartialTypeSignatures #-}
 
-quickstartServer :: (MonadServer m) => ServerT QuickstartService m _
+quickstartServer :: (MonadServer m) => ServerT Maybe QuickstartService m _
 quickstartServer = Server (sayHello :<|>: H0)
 ```

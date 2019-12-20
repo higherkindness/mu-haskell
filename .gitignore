@@ -3,3 +3,17 @@ stack*.yaml.lock
 *~
 dist
 *.pyc
+
+## User files
+.DS_Store
+
+## Jekyll
+_site
+.sass-cache
+.jekyll-metadata
+.jekyll-cache
+
+## Ruby environment normalization:
+.bundle/
+/docs/vendor/
+docs/haddock

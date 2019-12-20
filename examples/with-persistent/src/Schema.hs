@@ -1,7 +1,7 @@
+{-# language CPP                        #-}
 {-# language DataKinds                  #-}
 {-# language DeriveGeneric              #-}
 {-# language DerivingVia                #-}
-{-# language DuplicateRecordFields      #-}
 {-# language FlexibleContexts           #-}
 {-# language FlexibleInstances          #-}
 {-# language GADTs                      #-}
@@ -29,7 +29,11 @@ import           Mu.Adapter.Persistent   (WithEntityNestedId (..))
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
+#if __GHCIDE__
+grpc "PersistentSchema" id "examples/with-persistent/with-persistent.proto"
+#else
 grpc "PersistentSchema" id "with-persistent.proto"
+#endif
 
 newtype MPersonRequest = MPersonRequest
   { identifier :: Maybe Int64
@@ -48,8 +52,8 @@ Person json
 data MPerson = MPerson
   { pid  :: Maybe MPersonRequest
   , name :: Maybe T.Text
-  , age  :: Maybe Int32 }
-  deriving (Eq, Ord, Show, Generic)
+  , age  :: Maybe Int32
+  } deriving (Eq, Ord, Show, Generic)
 
 instance ToSchema   Maybe PersistentSchema "Person" MPerson
 instance FromSchema Maybe PersistentSchema "Person" MPerson
