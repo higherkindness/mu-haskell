@@ -6,7 +6,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: cachix/install-nix-action@v6
-    - uses: cachix/cachix-action@v3
+    - uses: cachix/cachix-action@releases/v3
       with:
         name: 47deg
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
