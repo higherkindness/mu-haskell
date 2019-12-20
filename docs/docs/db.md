@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: db/
+---
+
 # Databases
 
 In this section of the docs, to have a clearer understanding of how one would use `mu-haskell` to talk to a database, we are going to have a walk through the example of [`with-persistent`](https://github.com/higherkindness/mu-haskell/tree/master/examples/with-persistent).

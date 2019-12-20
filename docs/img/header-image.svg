@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="418px" height="418px" viewBox="0 0 418 418" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 57.1 (83088) - https://sketch.com -->
+    <title>header-image</title>
+    <desc>Created with Sketch.</desc>
+    <g id="header-image" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="header.image" transform="translate(40.000000, 58.000000)">
+            <path d="M68,38 L162.976834,92.2724764 C164.846284,93.3407335 166,95.3287941 166,97.4819352 L166,202.518065 C166,204.671206 164.846284,206.659267 162.976834,207.727524 L68,262 L68,262" id="path" stroke="#3D5AFE" stroke-width="3" stroke-dasharray="8,6" transform="translate(117.000000, 150.000000) rotate(-180.000000) translate(-117.000000, -150.000000) "></path>
+            <g id="browser" transform="translate(170.000000, 213.000000)">
+                <g id="content" transform="translate(0.000000, 14.600000)">
+                    <path d="M1.5,1.9 L1.5,69.4 C1.5,70.2284271 2.17157288,70.9 3,70.9 L131,70.9 C131.828427,70.9 132.5,70.2284271 132.5,69.4 L132.5,1.9 L1.5,1.9 Z" id="path" stroke="#3D5AFE" stroke-width="3" fill="#FFFFFF"></path>
+                    <g id="code" transform="translate(14.000000, 14.400000)">
+                        <rect id="path" fill="#3D5AFE" x="0" y="0" width="7" height="3"></rect>
+                        <rect id="path-copy-14" fill="#3D5AFE" x="0" y="42" width="9" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="0" y="7" width="5" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="0" y="14" width="13" height="3"></rect>
+                        <rect id="path-copy-9" fill="#3D5AFE" x="0" y="35" width="14" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="0" y="21" width="21" height="3"></rect>
+                        <rect id="path" fill="#8BF0FE" x="0" y="28" width="12" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="15" y="28" width="12" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="30" y="28" width="24" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="24" y="21" width="13" height="3"></rect>
+                        <rect id="path-copy-17" fill="#8BF0FE" x="40" y="21" width="21" height="3"></rect>
+                        <rect id="path" fill="#8BF0FE" x="16" y="14" width="9" height="3"></rect>
+                        <rect id="path-copy-10" fill="#3D5AFE" x="17" y="35" width="16" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="28" y="14" width="16" height="3"></rect>
+                        <rect id="path-copy-11" fill="#3D5AFE" x="36" y="35" width="8" height="3"></rect>
+                        <rect id="path-copy-13" fill="#8BF0FE" x="47" y="35" width="18" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="47" y="14" width="7" height="3"></rect>
+                        <rect id="path-copy-12" fill="#3D5AFE" x="68" y="35" width="5" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="8" y="7" width="15" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="26" y="7" width="22" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="51" y="7" width="5" height="3"></rect>
+                        <rect id="path" fill="#8BF0FE" x="10" y="0" width="14" height="3"></rect>
+                        <rect id="path-copy-15" fill="#8BF0FE" x="12" y="42" width="9" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="27" y="0" width="10" height="3"></rect>
+                        <rect id="path-copy-16" fill="#3D5AFE" x="24" y="42" width="12" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="40" y="0" width="10" height="3"></rect>
+                    </g>
+                </g>
+                <g id="bar">
+                    <path d="M1.5,16.5 L132.5,16.5 L132.5,3 C132.5,2.17157288 131.828427,1.5 131,1.5 L3,1.5 C2.17157288,1.5 1.5,2.17157288 1.5,3 L1.5,16.5 Z" id="path" stroke="#3D5AFE" stroke-width="3" fill="#B9C4FE"></path>
+                    <ellipse id="bullet" fill="#3D5AFE" cx="9" cy="9.0015444" rx="2" ry="2.0015444"></ellipse>
+                    <ellipse id="bullet" fill="#3D5AFE" cx="16" cy="9.0015444" rx="2" ry="2.0015444"></ellipse>
+                    <ellipse id="bullet" fill="#3D5AFE" cx="23" cy="9.0015444" rx="2" ry="2.0015444"></ellipse>
+                </g>
+            </g>
+            <g id="browser" transform="translate(163.000000, 0.000000)">
+                <g id="content" transform="translate(0.000000, 14.600000)">
+                    <path d="M1.5,1.9 L1.5,69.4 C1.5,70.2284271 2.17157288,70.9 3,70.9 L131,70.9 C131.828427,70.9 132.5,70.2284271 132.5,69.4 L132.5,1.9 L1.5,1.9 Z" id="path" stroke="#3D5AFE" stroke-width="3" fill="#FFFFFF"></path>
+                    <g id="code" transform="translate(14.000000, 14.400000)">
+                        <rect id="path" fill="#3D5AFE" x="0" y="0" width="7" height="3"></rect>
+                        <rect id="path-copy-14" fill="#3D5AFE" x="0" y="42" width="11" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="0" y="7" width="15" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="0" y="14" width="24" height="3"></rect>
+                        <rect id="path-copy-9" fill="#3D5AFE" x="0" y="35" width="14" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="0" y="21" width="29" height="3"></rect>
+                        <rect id="path" fill="#8BF0FE" x="0" y="28" width="12" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="15" y="28" width="12" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="30" y="28" width="24" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="32" y="21" width="12" height="3"></rect>
+                        <rect id="path" fill="#8BF0FE" x="27" y="14" width="19" height="3"></rect>
+                        <rect id="path-copy-10" fill="#8BF0FE" x="17" y="35" width="16" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="49" y="14" width="16" height="3"></rect>
+                        <rect id="path-copy-11" fill="#3D5AFE" x="36" y="35" width="8" height="3"></rect>
+                        <rect id="path-copy-13" fill="#3D5AFE" x="47" y="35" width="18" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="68" y="14" width="7" height="3"></rect>
+                        <rect id="path-copy-12" fill="#3D5AFE" x="68" y="35" width="5" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="18" y="7" width="15" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="36" y="7" width="22" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="61" y="7" width="5" height="3"></rect>
+                        <rect id="path" fill="#8BF0FE" x="10" y="0" width="14" height="3"></rect>
+                        <rect id="path-copy-15" fill="#8BF0FE" x="14" y="42" width="9" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="27" y="0" width="10" height="3"></rect>
+                        <rect id="path-copy-16" fill="#3D5AFE" x="26" y="42" width="23" height="3"></rect>
+                        <rect id="path" fill="#3D5AFE" x="40" y="0" width="10" height="3"></rect>
+                    </g>
+                </g>
+                <g id="bar">
+                    <path d="M1.5,16.5 L132.5,16.5 L132.5,3 C132.5,2.17157288 131.828427,1.5 131,1.5 L3,1.5 C2.17157288,1.5 1.5,2.17157288 1.5,3 L1.5,16.5 Z" id="path" stroke="#3D5AFE" stroke-width="3" fill="#B9C4FE"></path>
+                    <ellipse id="bullet" fill="#3D5AFE" cx="9" cy="9.0015444" rx="2" ry="2.0015444"></ellipse>
+                    <ellipse id="bullet" fill="#3D5AFE" cx="16" cy="9.0015444" rx="2" ry="2.0015444"></ellipse>
+                    <ellipse id="bullet" fill="#3D5AFE" cx="23" cy="9.0015444" rx="2" ry="2.0015444"></ellipse>
+                </g>
+            </g>
+            <g id="icon" transform="translate(282.000000, 206.000000)" stroke="#3D5AFE" stroke-width="3">
+                <circle id="path" fill="#8BF0FE" cx="16" cy="16" r="14.5"></circle>
+                <polyline id="path" points="10 16.8825244 14.5645924 21 23 11"></polyline>
+            </g>
+            <g id="computer" transform="translate(0.000000, 102.000000)">
+                <path d="M7.5,80.5 L136.5,80.5 L136.5,3 C136.5,2.17157288 135.828427,1.5 135,1.5 L9,1.5 C8.17157288,1.5 7.5,2.17157288 7.5,3 L7.5,80.5 Z" id="path" stroke="#3D5AFE" stroke-width="3" fill="#FFFFFF"></path>
+                <rect id="path" stroke="#3D5AFE" stroke-width="3" fill="#B9C4FE" x="1.5" y="80.5" width="141" height="12"></rect>
+                <path d="M39,80.5 C38.7238576,80.5 38.5,80.7238576 38.5,81 L38.5,85 C38.5,85.8284271 39.1715729,86.5 40,86.5 L104,86.5 C104.828427,86.5 105.5,85.8284271 105.5,85 L105.5,82 C105.5,81.1715729 104.828427,80.5 104,80.5 L39,80.5 Z" id="path" stroke="#3D5AFE" stroke-width="3" fill="#FFFFFF"></path>
+                <rect id="path" stroke="#3D5AFE" stroke-width="3" fill="#FFFFFF" x="15.5" y="9.5" width="113" height="63"></rect>
+                <path d="M87,37.6723647 L83.0909091,37.3076923 C82.9090909,36.7606838 82.6363636,36.1225071 82.3636364,35.5754986 L84.9090909,32.4757835 C85.1818182,32.1111111 85.1818182,31.5641026 84.8181818,31.2905983 L81.4545455,28.008547 C81.0909091,27.6438746 80.6363636,27.6438746 80.2727273,27.9173789 L77.1818182,30.4700855 C76.6363636,30.1965812 76.0909091,29.9230769 75.4545455,29.7407407 L75.0909091,25.8205128 C75.0909091,25.3646724 74.6363636,25 74.1818182,25 L69.5454545,25 C69.0909091,25 68.7272727,25.3646724 68.6363636,25.8205128 L68.2727273,29.7407407 C67.7272727,29.9230769 67.0909091,30.1965812 66.5454545,30.4700855 L63.4545455,27.9173789 C63.0909091,27.6438746 62.5454545,27.6438746 62.2727273,28.008547 L58.9090909,31.3817664 C58.6363636,31.6552707 58.6363636,32.2022792 58.9090909,32.5669516 L61.4545455,35.6666667 C61.1818182,36.2136752 60.9090909,36.7606838 60.7272727,37.3988604 L56.8181818,37.6723647 C56.3636364,37.6723647 56,38.1282051 56,38.5840456 L56,43.3247863 C56,43.7806268 56.3636364,44.1452991 56.8181818,44.2364672 L60.7272727,44.6011396 C60.9090909,45.1481481 61.1818182,45.7863248 61.4545455,46.3333333 L58.9090909,49.4330484 C58.6363636,49.7977208 58.6363636,50.3447293 59,50.6182336 L62.3636364,53.991453 C62.7272727,54.3561254 63.1818182,54.3561254 63.5454545,54.0826211 L66.6363636,51.5299145 C67.1818182,51.8034188 67.7272727,52.0769231 68.3636364,52.2592593 L68.7272727,56.1794872 C68.7272727,56.6353276 69.1818182,57 69.6363636,57 L74.3636364,57 C74.8181818,57 75.1818182,56.6353276 75.2727273,56.1794872 L75.6363636,52.2592593 C76.1818182,52.0769231 76.8181818,51.8034188 77.3636364,51.5299145 L80.4545455,54.0826211 C80.8181818,54.3561254 81.3636364,54.3561254 81.6363636,53.991453 L85,50.6182336 C85.3636364,50.2535613 85.3636364,49.7977208 85.0909091,49.4330484 L82.5454545,46.3333333 C82.8181818,45.7863248 83.0909091,45.2393162 83.2727273,44.6011396 L87.1818182,44.2364672 C87.6363636,44.2364672 88,43.7806268 88,43.3247863 L88,38.5840456 C87.8181818,38.1282051 87.4545455,37.7635328 87,37.6723647 Z M71.9090909,46.6068376 C68.8181818,46.6068376 66.2727273,44.0541311 66.2727273,40.954416 C66.2727273,37.8547009 68.8181818,35.3019943 71.9090909,35.3019943 C75,35.3019943 77.5454545,37.8547009 77.5454545,40.954416 C77.5454545,44.0541311 75,46.6068376 71.9090909,46.6068376 Z" id="icon" fill="#3D5AFE" fill-rule="nonzero"></path>
+            </g>
+        </g>
+    </g>
+</svg>

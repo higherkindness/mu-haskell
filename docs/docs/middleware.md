@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: middleware/
+---
+
 # Integration with WAI middleware
 
 Although you usually run a `mu-rpc` server directly using a function like `runGRpcApp`, this is just a convenience function to make it simpler to run the server. Under the hood, the library generates a so-called WAI application, which is then fed to an actual server.

@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: grpc/
+---
+
 # gRPC servers and clients
 
 Mu-Haskell defines a generic notion of service and server that implements it. This generic server can then be used by `mu-grpc-server`, to provide a concrete implementation using a specific wire format. Or you can use `mu-grpc-client` to build a client.
