@@ -89,29 +89,34 @@ data Address
   = Address { postcode :: T.Text
             , country  :: T.Text }
   deriving (Eq, Show, Generic)
-  deriving (HasSchema ExampleSchema "address")
+  deriving (ToSchema   Maybe ExampleSchema "address")
+  deriving (FromSchema Maybe ExampleSchema "address")
 ```
 
-Once again, you need to enable some extensions in the compiler (but do not worry, GHC should tell you which ones you need in case you forgot). You first must include `Generic` in the list of automatically-derived classes. Then you *derive* the mapping by using the line:
+Once again, you need to enable some extensions in the compiler (but do not worry, GHC should tell you which ones you need in case you forgot). You first must include `Generic` in the list of automatically-derived classes. Then you *derive* the mapping by using the lines:
 
 ```haskell
-  deriving (HasSchema YourSchema "yourSchemaType")
+  deriving (ToSchema   Maybe YourSchema "yourSchemaType")
+  deriving (FromSchema Maybe YourSchema "yourSchemaType")
 ```
 
 ## Customizing the mapping
 
-Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our schema above we use `male`, `female`, and `nb`, but in a Haskell enumeration the name of each constructor must begin with a capital letter. By using a stand-along `HasSchema` instance you can declare a custom mapping from Haskell fields or constructors to schema fields or enum choices, respectively:
+Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our schema above we use `male`, `female`, and `nb`, but in a Haskell enumeration the name of each constructor must begin with a capital letter. By using a stand-along `ToSchema` instance you can declare a custom mapping from Haskell fields or constructors to schema fields or enum choices, respectively:
 
 ```haskell
+{-# language DerivingVia  #-}
 {-# language TypeFamilies #-}
 
-data Gender = Male | Female | NonBinary
+type GenderFieldMapping
+  = '[ "Male"      ':-> "male"
+     , "Female"    ':-> "female"
+     , "NonBinary" ':-> "nb" ]
 
-instance HasSchema ExampleSchema "gender" Gender where
-  type FieldMapping ExampleSchema "gender" Gender
-    = '[ "Male"      ':-> "male"
-       , "Female"    ':-> "female"
-       , "NonBinary" ':-> "nb" ]
+data Gender = Male | Female | NonBinary
+  deriving (Eq, Show, Generic)
+  deriving (ToSchema f ExampleSchema "gender", FromSchema f ExampleSchema "gender")
+    via (CustomFieldMapping "gender" GenderFieldMapping Gender)
 ```
 
 ### Protocol Buffers field identifiers

@@ -57,17 +57,22 @@ The aforementioned `.proto` file defines two messages. The corresponding data ty
 
 ```haskell
 data HelloRequestMessage
-  = HelloRequestMessage { name :: T.Text }
-  deriving (Eq, Show, Generic, HasSchema Schema "HelloRequest")
+  = HelloRequestMessage { name :: Maybe T.Text }
+  deriving (Eq, Show, Generic
+           , ToSchema   Maybe Schema "HelloRequest"
+           , FromSchema Maybe Schema "HelloRequest")
 
 data HelloReplyMessage
-  = HelloReplyMessage { message :: T.Text }
-  deriving (Eq, Show, Generic, HasSchema Schema "HelloReply")
+  = HelloReplyMessage { message :: Maybe T.Text }
+  deriving (Eq, Show, Generic
+           , ToSchema   Maybe Schema "HelloReply",
+           , FromSchema Maybe Schema "HelloReply")
 ```
 
 You can give those data types and their constructors any name you like. However, keep in mind that:
 
 * The names of the fields must correspond with those in the `.proto` files. Otherwise you have to use a *custom mapping*, which is fully supported by `mu-schema` but requires more code.
+* All the fields must be wrapped in `Maybe` since all fields in `proto3` are **optional by default**.
 * The name between quotes in each `deriving` clause defines the message type in the `.proto` file each data type corresponds to.
 * To use the automatic-mapping functionality, it is required to also derive `Generic`, don't forget it!
 
@@ -81,7 +86,7 @@ Open the `src/Main.hs` file. The contents are quite small right now: a `main` fu
 main :: IO ()
 main = runGRpcApp 8080 server
 
-server :: (MonadServer m) => ServerT Service m _
+server :: (MonadServer m) => ServerT Maybe Service m _
 server = Server H0
 ```
 
