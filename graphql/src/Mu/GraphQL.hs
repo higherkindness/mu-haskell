@@ -14,6 +14,7 @@ module Mu.GraphQL where
 
 import           Data.Kind
 import           Data.SOP.NP
+import           GHC.TypeLits
 import           Mu.Schema
 
 -- | Defines whether we should get each field.
@@ -42,10 +43,15 @@ type SchemaResolver m (sch :: Schema tn fn)
   = NP (TypeResolver m sch) sch
 
 data TypeResolver m (sch :: Schema tn fn) (ty :: TypeDef tn fn) where
+  -- | Give the resolver of a record field by field.
   RR :: NP (FieldResolver m sch name) fields
      -> TypeResolver m sch ('DRecord name fields)
-  OR :: m (Term Maybe sch t)
+  -- | Direct resolver for a record.
+  DR :: FullResolver m (W Term sch t)
      -> TypeResolver m sch t
+  -- | For types which do not need a resolver.
+  --   That is, DEnum and DSimple.
+  NR :: TypeResolver m sch t
 
 data FieldResolver m (sch :: Schema tn fn) (ty :: tn) (fld :: FieldDef tn fn) where
   FR :: (Term Maybe sch (sch :/: ty) -> m (ConstructFieldType sch fld))
@@ -67,10 +73,41 @@ type family ConstructFieldType (sch :: Schema tn fn) (fld :: FieldType tn) :: Ty
 
 newtype W f a b w = W { unW :: f w a b }
 
-composeFullResolver
+-- FOR THE NEXT THING YOU HAVE TWO POSSIBIILITIES
+
+-- Possibility (1)
+fullResolverTy
   :: SchemaResolver m sch
   -> FullResolver m (W Term sch ty)
-composeFullResolver = undefined
+fullResolverTy = undefined
+
+-- Possibility (2), I think this is easier
+newtype FullResolver' m sch ty
+  = FullResolver' { unFullResolver' :: FullResolver m (W Term sch ty) }
+
+fullResolver
+  :: SchemaResolver m sch
+  -> NP (FullResolver' m sch) sch
+fullResolver = undefined
+
+class FindResolver (sch :: Schema tn fn) (iter :: Schema tn fn) (ty :: TypeDef tn fn) where
+  findResolver :: NP (FullResolver' m sch) iter -> FullResolver m (W Term sch ty)
+instance TypeError ('Text "cannot find resolver for " ':<>: 'ShowType ty)
+         => FindResolver sch '[] ty where
+  findResolver = error "this should never be called"
+instance {-# OVERLAPS #-}
+         FindResolver sch (ty ': tys) ty where
+  findResolver (r :* _) = unFullResolver' r
+instance {-# OVERLAPPABLE #-}
+         FindResolver sch rest ty
+         => FindResolver sch (other ': rest) ty where
+  findResolver (_ :* rs) = findResolver rs
+
+fullResolverTy'
+  :: (FindResolver sch sch ty)
+  => SchemaResolver m sch
+  -> FullResolver m (W Term sch ty)
+fullResolverTy' = findResolver . fullResolver
 
 -- COMPOSABLE RESOLVERS OVER DOMAIN TYPES
 -- ======================================
@@ -81,8 +118,11 @@ type SchemaResolverD m (sch :: Schema tn fn)
 data TypeResolverD m (sch :: Schema tn fn) (ty :: TypeDef tn fn) where
   RR_ :: NP (FieldResolverD m sch name) fields
       -> TypeResolverD m sch ('DRecord name fields)
-  OR_ :: ToSchema Maybe sch name r
-      => m r -> TypeResolverD m sch ('DEnum name choice)
+  DR_ :: ( FromSchema Wanted sch ty input
+         , ToSchema   Maybe  sch ty output )
+      => (input -> m output)
+      -> TypeResolverD m sch ('DRecord ty fields)
+  OR_ :: TypeResolverD m sch ('DEnum name choice)
 
 data FieldResolverD m (sch :: Schema tn fn) (ty :: tn) (fld :: FieldDef tn fn) where
   FR_ :: ( FromSchema Maybe sch ty input
@@ -119,5 +159,5 @@ resolve
   => SchemaResolverD m sch -> r -> m s
 resolve r x
   = fromSchema @tn @fn @Maybe @sch @ty . unW <$>
-    (composeFullResolver $ resolverDomain r)
+    (fullResolverTy $ resolverDomain r)
     (W $ toSchema @tn @fn @Wanted @sch @ty x)
