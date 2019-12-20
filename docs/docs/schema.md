@@ -105,15 +105,18 @@ Once again, you need to enable some extensions in the compiler (but do not worry
 Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our schema above we use `male`, `female`, and `nb`, but in a Haskell enumeration the name of each constructor must begin with a capital letter. By using a stand-along `ToSchema` instance you can declare a custom mapping from Haskell fields or constructors to schema fields or enum choices, respectively:
 
 ```haskell
+{-# language DerivingVia  #-}
 {-# language TypeFamilies #-}
 
-data Gender = Male | Female | NonBinary
+type GenderFieldMapping
+  = '[ "Male"      ':-> "male"
+     , "Female"    ':-> "female"
+     , "NonBinary" ':-> "nb" ]
 
-instance ToSchema ExampleSchema "gender" Gender where
-  type FieldMapping ExampleSchema "gender" Gender
-    = '[ "Male"      ':-> "male"
-       , "Female"    ':-> "female"
-       , "NonBinary" ':-> "nb" ]
+data Gender = Male | Female | NonBinary
+  deriving (Eq, Show, Generic)
+  deriving (ToSchema f ExampleSchema "gender", FromSchema f ExampleSchema "gender")
+    via (CustomFieldMapping "gender" GenderFieldMapping Gender)
 ```
 
 ### Protocol Buffers field identifiers

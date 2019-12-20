@@ -204,7 +204,7 @@ Since we are going to work with streams, it is wonderful that `persistent` also 
 + ConduitT (Entity Person) Void ServerErrorIO () -- the Monad we know we want instead... 🤔
 ```
 
-Well, have no fear my friend because we created yet another utility called `liftServerConduit`, born specifically to address this problem. It's type signature is:
+Well, have no fear my friend because we created yet another utility called `liftServerConduit`, born specifically to address this problem. Its type signature is:
 
 ```haskell
 liftServerConduit
