@@ -16,3 +16,4 @@ _site
 ## Ruby environment normalization:
 .bundle/
 /docs/vendor/
+docs/haddock
