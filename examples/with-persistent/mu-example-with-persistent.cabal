@@ -10,6 +10,7 @@ category:            Network
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README.md
+data-files:          with-persistent.proto
 
 executable persistent-server
   hs-source-dirs:      src
