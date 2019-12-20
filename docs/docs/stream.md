@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: stream/
+---
+
 # Streams
 
 In the docs about [service definition](rpc.md) we had one single `SayHello` method which takes one value and produces one value. However, we can also declare methods which perform streaming, such as:

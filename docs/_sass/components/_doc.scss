@@ -1,0 +1,97 @@
+// Doc content
+// -----------------------------------------------
+// -----------------------------------------------
+#site-doc {
+    position: absolute;
+    left: 290px;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    transition: left $base-duration $base-timing;
+
+    &.expanded {
+      left: 0;
+    }
+
+    .doc-header {
+      display: flex;
+      align-items: center;
+      height: ($base-point-grid * 11);
+      padding: 0 ($base-point-grid * 3)0 0;
+      background: $white;
+
+      .doc-toggle {
+        transition: transform $base-duration $base-timing;
+
+        &:hover {
+          transform: scaleX(1.5);
+        }
+
+        > * {
+          padding: ($base-point-grid * 2);
+          margin: ($base-point-grid * 2);
+        }
+      }
+    }
+
+    .doc-content {
+      padding: ($base-point-grid * 3);
+    }
+
+    h1 {
+        font-size: 2.5rem;
+        border-bottom: 1px solid $border-color;
+    }
+    h2 {
+        font-size:  2rem;
+        border-bottom: 1px solid $border-color;
+    }
+    h3 {
+        font-size: 1.5rem;
+    }
+    h4 {
+        font-size: 1.25rem;
+    }
+    h5 {
+        font-size: 1.125rem;
+    }
+    h6 {
+        font-size: 1rem;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        margin: {
+            top: ($base-point-grid * 3);
+            bottom: ($base-point-grid * 2);
+        }
+
+        &:first-child {
+          margin-top: 0;
+        }
+    }
+
+    p {
+        margin: ($base-point-grid * 2) 0;
+    }
+
+    ul {
+        padding-left: 20px;
+        margin-bottom: ($base-point-grid * 2);
+        li {
+            list-style: disc;
+        }
+    }
+}
+
+// Responsive
+// -----------------------------------------------
+@include bp(medium) {
+    #site-doc {
+        left: 0;
+    }
+}

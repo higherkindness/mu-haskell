@@ -1,0 +1,109 @@
+// Header
+// -----------------------------------------------
+// -----------------------------------------------
+
+#site-header {
+    flex: 1 0 auto;
+    margin-top: ($base-point-grid * 18);
+    background: rgba($brand-primary, 0.06);
+
+    .header-flex {
+        display: flex;
+        align-items: center;
+        justify-content: space-evenly;
+        color: $white;
+        height: 100%;
+
+        .header-text {
+            width: $column-5;
+
+            h1 {
+                color: $base-font-color;
+                font-size: 4.188rem;
+                line-height: 1.3;
+
+                span {
+                    display: block;
+                    margin: ($base-point-grid * 3) 0;
+                    font-size: 1.286rem;
+                    font-weight: $font-regular;
+
+                    strong {
+                        font-weight: $font-bold;
+                    }
+                }
+            }
+
+            .header-button {
+                padding: ($base-point-grid * 1.5) ($base-point-grid * 6);
+                display: inline-block;
+                font-weight: $font-semibold;
+                text-transform: uppercase;
+                color: $white;
+                border: none;
+                background: $brand-primary;
+                border-radius: 300px;
+                transition: color $base-duration $base-timing, background-color $base-duration $base-timing;
+
+                &:visited {
+                    color: $white;
+                }
+
+                &:hover {
+                    text-decoration: none;
+                    color: $white;
+                    background: darken($brand-primary, 0.2);
+                }
+
+                &:active {
+                    color: $white;
+                    background: darken($brand-primary, 0.2);
+
+                }
+            }
+        }
+
+        .header-image {
+            width: 33%;
+            text-align: center;
+        }
+    }
+}
+
+// Responsive
+// -----------------------------------------------
+
+@include bp(large) {
+    #site-header {
+        .header-flex {
+            .header-text {
+                h1 {
+                    font-size: 2.9rem;
+                }
+            }
+            .header-image {
+                img {
+                    width: 100%;
+                }
+            }
+        }
+    }
+}
+@include bp(medium) {
+    #site-header {
+        .header-flex {
+            padding: ($base-point-grid * 20) 0;
+            .header-text {
+                text-align: center;
+                width: $column-12;
+
+                h1 {
+                    font-size: 2.5rem;
+                }
+            }
+            .header-image {
+                display: none;
+            }
+        }
+    }
+}

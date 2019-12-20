@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Mu-Haskell
+permalink: transformer/
+---
+
 # Integration using transformers
 
 You might be wondering: how can I integrate my favorite logging library with `mu-grpc-server`? Our [explanation of services](rpc.md) introduced `MonadServer` as the simplest set of capabilities required for a server:
