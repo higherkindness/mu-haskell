@@ -45,73 +45,92 @@ typeDefToDecl :: Type -> Namer -> TypeDefB Type String String -> Q [Dec]
 -- Records with one field
 typeDefToDecl schemaTy namer (DRecord name [f])
   = do let complete = completeName namer name
+       fVar <- newName "f"
        d <- newtypeD (pure [])
                      (mkName complete)
-                     []
+                     [PlainTV fVar]
                      Nothing
-                     (pure (RecC (mkName complete) [fieldDefToDecl namer complete f]))
-                     deriveClauses
-       let hsi = generateHasSchemaInstance schemaTy name complete (fieldMapping complete [f])
-       return [d, hsi]
+                     (pure (RecC (mkName complete) [fieldDefToDecl namer complete fVar f]))
+                     [pure (DerivClause Nothing [ConT ''Generic])]
+       wTy <- VarT <$> newName "w"
+       -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete [f])
+       return [d] -- , hsi]
 -- Records with more than one field
 typeDefToDecl schemaTy namer (DRecord name fields)
   = do let complete = completeName namer name
+       fVar <- newName "f"
        d <- dataD (pure [])
                   (mkName complete)
-                  []
+                  [PlainTV fVar]
                   Nothing
-                  [pure (RecC (mkName complete) (map (fieldDefToDecl namer complete) fields))]
-                  deriveClauses
-       let hsi = generateHasSchemaInstance schemaTy name complete (fieldMapping complete fields)
-       return [d, hsi]
+                  [pure (RecC (mkName complete) (map (fieldDefToDecl namer complete fVar) fields))]
+                  [pure (DerivClause Nothing [ConT ''Generic])]
+       wTy <- VarT <$> newName "w"
+       -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete fields)
+       return [d] -- , hsi]
 -- Enumerations
 typeDefToDecl schemaTy namer (DEnum name choices)
   = do let complete = completeName namer name
+       fVar <- newName "f"
        d <- dataD (pure [])
                   (mkName complete)
-                  []
+                  [PlainTV fVar]
                   Nothing
                   [ pure (RecC (mkName (choiceName complete choicename)) [])
                     | ChoiceDef choicename <- choices]
-                  deriveClauses
-       let hsi = generateHasSchemaInstance schemaTy name complete (choiceMapping complete choices)
-       return [d, hsi]
+                  [pure (DerivClause Nothing [ConT ''Eq, ConT ''Ord, ConT ''Show, ConT ''Generic])]
+       wTy <- VarT <$> newName "w"
+       -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (choiceMapping complete choices)
+       return [d] --, hsi]
 -- Simple things
 typeDefToDecl _ _ (DSimple _)
   = fail "DSimple is not supported"
 
-deriveClauses :: [Q DerivClause]
-deriveClauses
-  = [ pure (DerivClause Nothing [ConT ''Eq, ConT ''Ord, ConT ''Show, ConT ''Generic]) ]
-{- we need to add a field mapping
-    , pure (DerivClause (Just AnyclassStrategy)
-                        [AppT (AppT (ConT ''HasSchema) schemaTy) (LitT (StrTyLit name))]) ]
--}
-
-fieldDefToDecl :: Namer -> String -> FieldDefB Type String String -> (Name, Bang, Type)
-fieldDefToDecl namer complete (FieldDef name ty)
+fieldDefToDecl :: Namer -> String -> Name -> FieldDefB Type String String -> (Name, Bang, Type)
+fieldDefToDecl namer complete fVar (FieldDef name ty)
   = ( mkName (fieldName complete name)
     , Bang NoSourceUnpackedness NoSourceStrictness
-    , fieldTypeToDecl namer ty )
+    , AppT (VarT fVar) (fieldTypeToDecl namer fVar ty) )
 
-generateHasSchemaInstance :: Type -> String -> String -> Type -> Dec
-generateHasSchemaInstance schemaTy schemaName complete mapping
-  = InstanceD Nothing []
-              (AppT (AppT (AppT (ConT ''HasSchema) schemaTy)
-                          (LitT (StrTyLit schemaName)))
-                          (ConT (mkName complete)))
+{- broken for now
+generateBuiltinInstance :: Bool -> Type -> String -> Name -> Dec
+generateBuiltinInstance withPrereq wTy complete className
+#if MIN_VERSION_template_haskell(2,12,0)
+  = StandaloneDerivD Nothing ctx ty
+#else
+  = StandaloneDerivD ctx ty
+
+#endif
+  where
+    me  = ConT (mkName complete)
+    ctx = [AppT (ConT className) (AppT wTy (AppT me wTy)) | withPrereq]
+    ty  = AppT (ConT className) (AppT me wTy)
+-}
+
+{-
+generateHasSchemaInstance :: Type -> Type -> String -> String -> Type -> Dec
+generateHasSchemaInstance wTy schemaTy schemaName complete mapping
+  = InstanceD Nothing [AppT (ConT ''Applicative) wTy]
+              (AppT (AppT (AppT (AppT (ConT ''HasSchema)
+                                      wTy )
+                                      schemaTy )
+                                      (LitT (StrTyLit schemaName)))
+                                      (AppT (ConT (mkName complete)) wTy) )
 #if MIN_VERSION_template_haskell(2,15,0)
               [TySynInstD (TySynEqn Nothing
-                                    (AppT (AppT (AppT (ConT ''FieldMapping)
+                                    (AppT (AppT (AppT (AppT (ConT ''FieldMapping)
+                                                      wTy )
                                                       schemaTy )
                                                       (LitT (StrTyLit schemaName)) )
-                                                      (ConT (mkName complete)) )
+                                                      (AppT (ConT (mkName complete)) wTy))
                                     mapping) ]
 #else
               [TySynInstD ''FieldMapping
-                          (TySynEqn [schemaTy, LitT (StrTyLit schemaName), ConT (mkName complete)]
+                          (TySynEqn [ wTy, schemaTy, LitT (StrTyLit schemaName)
+                                    , AppT (ConT (mkName complete)) wTy ]
                                      mapping) ]
 #endif
+-}
 
 fieldMapping :: String -> [FieldDefB Type String String] -> Type
 fieldMapping _complete [] = PromotedNilT
@@ -151,26 +170,26 @@ firstLower :: String -> String
 firstLower []       = error "Empty names are not allowed"
 firstLower (x:rest) = toLower x : rest
 
-fieldTypeToDecl :: Namer -> FieldTypeB Type String -> Type
-fieldTypeToDecl _namer TNull
+fieldTypeToDecl :: Namer -> Name -> FieldTypeB Type String -> Type
+fieldTypeToDecl _namer _fVar TNull
   = ConT ''()
-fieldTypeToDecl _namer (TPrimitive t)
+fieldTypeToDecl _namer _fVar (TPrimitive t)
   = t
-fieldTypeToDecl namer (TSchematic nm)
-  = ConT (mkName $ completeName namer nm)
-fieldTypeToDecl namer (TOption t)
-  = AppT (ConT ''Maybe) (fieldTypeToDecl namer t)
-fieldTypeToDecl namer (TList t)
-  = AppT ListT (fieldTypeToDecl namer t)
-fieldTypeToDecl namer (TMap k v)
-  = AppT (AppT (ConT ''M.Map) (fieldTypeToDecl namer k)) (fieldTypeToDecl namer v)
-fieldTypeToDecl namer (TUnion ts)
-  = AppT (AppT (ConT ''NS) (ConT ''I)) (fieldTypeUnion namer ts)
+fieldTypeToDecl namer fVar (TSchematic nm)
+  = AppT (ConT (mkName $ completeName namer nm)) (VarT fVar)
+fieldTypeToDecl namer fVar (TOption t)
+  = AppT (ConT ''Maybe) (fieldTypeToDecl namer fVar t)
+fieldTypeToDecl namer fVar (TList t)
+  = AppT ListT (fieldTypeToDecl namer fVar t)
+fieldTypeToDecl namer fVar (TMap k v)
+  = AppT (AppT (ConT ''M.Map) (fieldTypeToDecl namer fVar k)) (fieldTypeToDecl namer fVar v)
+fieldTypeToDecl namer fVar (TUnion ts)
+  = AppT (AppT (ConT ''NS) (ConT ''I)) (fieldTypeUnion namer fVar ts)
 
-fieldTypeUnion :: Namer -> [FieldTypeB Type String] -> Type
-fieldTypeUnion _ [] = PromotedNilT
-fieldTypeUnion namer (t:ts)
-  = AppT (AppT PromotedConsT (fieldTypeToDecl namer t)) (fieldTypeUnion namer ts)
+fieldTypeUnion :: Namer -> Name -> [FieldTypeB Type String] -> Type
+fieldTypeUnion _ _fVar [] = PromotedNilT
+fieldTypeUnion namer fVar (t:ts)
+  = AppT (AppT PromotedConsT (fieldTypeToDecl namer fVar t)) (fieldTypeUnion namer fVar ts)
 
 -- Parsing
 -- =======

@@ -15,7 +15,6 @@ import           Data.Conduit
 import qualified Data.Conduit.Combinators       as C
 import           Data.Conduit.Lift              (runExceptC)
 import           Data.Conduit.List              (sourceList)
-import           Data.Function                  ((&))
 import           Data.Int
 import           Data.List                      (find)
 import           Data.Maybe
@@ -39,17 +38,20 @@ main = do
 type Features = [Feature]
 
 findFeatureIn :: Features -> Point -> Maybe Feature
-findFeatureIn features p = find (\(Feature _ loc) -> loc == p) features
+findFeatureIn features p = find (\(Feature _ loc) -> loc == Just p) features
 
 withinBounds :: Rectangle -> Point -> Bool
-withinBounds (Rectangle (Point lox loy) (Point hix hiy)) (Point x y)
+withinBounds (Rectangle (Just (Point (Just lox) (Just loy))) (Just (Point (Just hix) (Just hiy))))
+             (Point (Just x) (Just y))
   = x >= lox && x <= hix && y >= loy && y <= hiy
+withinBounds _ _
+  = False
 
 featuresWithinBounds :: Features -> Rectangle -> Features
-featuresWithinBounds fs rect = filter (\(Feature _ loc) -> withinBounds rect loc) fs
+featuresWithinBounds fs rect = filter (\(Feature _ loc) -> maybe False (withinBounds rect) loc) fs
 
-calcDistance :: Point -> Point -> Int32
-calcDistance (Point lat1 lon1) (Point lat2 lon2)
+calcDistance :: Point -> Point -> Maybe Int32
+calcDistance (Point (Just lat1) (Just lon1)) (Point (Just lat2) (Just lon2))
   = let r = 6371000
         Radians (phi1 :: Double) = radians (Degrees (int32ToDouble lat1))
         Radians (phi2 :: Double) = radians (Degrees (int32ToDouble lat2))
@@ -58,19 +60,21 @@ calcDistance (Point lat1 lon1) (Point lat2 lon2)
         a = sin (deltaPhi / 2) * sin (deltaPhi / 2)
             + cos phi1 * cos phi2 * sin (deltaLambda / 2) * sin (deltaLambda / 2)
         c = 2 * atan2 (sqrt a) (sqrt (1 - a))
-    in fromInteger $ r * ceiling c
+    in Just (fromInteger $ r * ceiling c)
   where int32ToDouble :: Int32 -> Double
         int32ToDouble = fromInteger . toInteger
+calcDistance _ _ = Nothing
 
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/routeguide/server/src/main/scala/handlers/RouteGuideServiceHandler.scala
 
-server :: Features -> TBMChan RouteNote -> ServerIO RouteGuideService _
+server :: Features -> TBMChan RouteNote -> ServerIO Maybe RouteGuideService _
 server f m = Server
   (getFeature f :<|>: listFeatures f  :<|>: recordRoute f :<|>: routeChat m :<|>: H0)
 
 getFeature :: Features -> Point -> ServerErrorIO Feature
-getFeature fs p = return $ fromMaybe (Feature "" (Point 0 0)) (findFeatureIn fs p)
+getFeature fs p = return $ fromMaybe nilFeature (findFeatureIn fs p)
+  where nilFeature = Feature (Just "") (Just (Point (Just 0) (Just 0)))
 
 listFeatures :: Features -> Rectangle
              -> ConduitT Feature Void ServerErrorIO ()
@@ -82,19 +86,23 @@ recordRoute :: Features
             -> ServerErrorIO RouteSummary
 recordRoute fs ps = do
     initialTime <- liftIO getCurrentTime
-    (\(rs, _, _) -> rs) <$> runConduit (ps .| C.foldM step (RouteSummary 0 0 0 0, Nothing, initialTime))
+    (\(rs, _, _) -> rs) <$> runConduit (ps .| C.foldM step (initial, Nothing, initialTime))
   where
+    initial = RouteSummary (Just 0) (Just 0) (Just 0) (Just 0)
     step :: (RouteSummary, Maybe Point, UTCTime) -> Point
          -> ServerErrorIO (RouteSummary, Maybe Point, UTCTime)
     step (summary, previous, startTime) point = do
       currentTime <- liftIO getCurrentTime
       let feature = findFeatureIn fs point
-          new_distance = fmap (`calcDistance` point) previous & fromMaybe 0
+          new_distance = case previous of
+                           Nothing -> Just 0
+                           Just d  -> d `calcDistance` point
           new_elapsed = diffUTCTime currentTime startTime
-          new_summary = RouteSummary (point_count summary + 1)
-                                     (feature_count summary + if isJust feature then 1 else 0)
-                                     (distance summary + new_distance)
-                                     (floor new_elapsed)
+          update_feature_count = if isJust feature then 1 else 0
+          new_summary = RouteSummary ((1 +) <$> point_count summary)
+                                     ((update_feature_count +) <$> feature_count summary)
+                                     ((+) <$> distance summary <*> new_distance)
+                                     (Just $ floor new_elapsed)
       return (new_summary, Just point, startTime)
 
 routeChat :: TBMChan RouteNote
@@ -106,7 +114,7 @@ routeChat notesMap inS outS = do
     -- Start two threads, one to listen, one to send
     let inA  = runConduit $ runExceptC $ inS .| C.mapM_ (addNoteToMap toWatch)
         outA = runConduit $ runExceptC $
-                 readStmMap (\l1 (RouteNote _ l2)-> l1 == l2) toWatch notesMap .| outS
+                 readStmMap (\l1 (RouteNote _ l2)-> Just l1 == l2) toWatch notesMap .| outS
     res <- liftIO $ concurrently inA outA
     case res of
       (Right _, Right _) -> return ()
@@ -114,10 +122,11 @@ routeChat notesMap inS outS = do
       (_, Left e)        -> serverError e
   where
     addNoteToMap :: TMVar Point -> RouteNote -> ServerErrorIO ()
-    addNoteToMap toWatch newNote@(RouteNote _ loc) = liftIO $ atomically $ do
+    addNoteToMap toWatch newNote@(RouteNote _ (Just loc)) = liftIO $ atomically $ do
       _ <- tryTakeTMVar toWatch
       putTMVar toWatch loc
       writeTBMChan notesMap newNote
+    addNoteToMap _toWatch _ = return ()
 
 readStmMap :: (MonadIO m, Show b) => (a -> b -> Bool) -> TMVar a -> TBMChan b -> ConduitT () b m ()
 readStmMap p toWatch m = go

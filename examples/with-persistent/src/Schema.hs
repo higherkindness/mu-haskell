@@ -1,7 +1,7 @@
+{-# language CPP                        #-}
 {-# language DataKinds                  #-}
 {-# language DeriveGeneric              #-}
-{-# language DuplicateRecordFields      #-}
-{-# language EmptyDataDecls             #-}
+{-# language DerivingVia                #-}
 {-# language FlexibleContexts           #-}
 {-# language FlexibleInstances          #-}
 {-# language GADTs                      #-}
@@ -10,9 +10,11 @@
 {-# language OverloadedStrings          #-}
 {-# language PolyKinds                  #-}
 {-# language QuasiQuotes                #-}
+{-# language ScopedTypeVariables        #-}
 {-# language StandaloneDeriving         #-}
 {-# language TemplateHaskell            #-}
 {-# language TypeFamilies               #-}
+{-# language TypeOperators              #-}
 {-# language UndecidableInstances       #-}
 
 module Schema where
@@ -23,27 +25,40 @@ import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           GHC.Generics
 
+import           Mu.Adapter.Persistent   (WithEntityNestedId (..))
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
+#if __GHCIDE__
+grpc "PersistentSchema" id "examples/with-persistent/with-persistent.proto"
+#else
 grpc "PersistentSchema" id "with-persistent.proto"
+#endif
 
-newtype PersonRequest = PersonRequest
-  { identifier :: Int64
+newtype MPersonRequest = MPersonRequest
+  { identifier :: Maybe Int64
   } deriving (Eq, Show, Ord, Generic)
 
-instance HasSchema PersistentSchema "PersonRequest" PersonRequest
+instance ToSchema   Maybe PersistentSchema "PersonRequest" MPersonRequest
+instance FromSchema Maybe PersistentSchema "PersonRequest" MPersonRequest
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Person json
   name T.Text
   age  Int32
-  deriving Show
+  deriving Show Generic
 |]
 
-deriving instance Generic Person
+data MPerson = MPerson
+  { pid  :: Maybe MPersonRequest
+  , name :: Maybe T.Text
+  , age  :: Maybe Int32 }
+  deriving (Eq, Ord, Show, Generic)
 
--- Unfortunately we need to write this instance by hand 😔 (for now!)
-instance HasSchema PersistentSchema "Person" (Entity Person) where
-  fromSchema (TRecord (Field (FSchematic (TRecord (Field (FPrimitive pid) :* Nil))) :* Field (FPrimitive name) :* Field (FPrimitive age) :* Nil)) = Entity (PersonKey (SqlBackendKey pid)) (Person name age)
-  toSchema (Entity (PersonKey (SqlBackendKey pid)) (Person name age)) = TRecord $ Field (FSchematic (TRecord (Field (FPrimitive pid) :* Nil))) :* Field (FPrimitive name) :* Field (FPrimitive age) :* Nil
+instance ToSchema   Maybe PersistentSchema "Person" MPerson
+instance FromSchema Maybe PersistentSchema "Person" MPerson
+
+type PersonFieldMapping = '[ "personAge" ':-> "age", "personName" ':-> "name" ]
+
+deriving via (WithEntityNestedId "Person" PersonFieldMapping (Entity Person))
+  instance ToSchema Maybe PersistentSchema "Person" (Entity Person)

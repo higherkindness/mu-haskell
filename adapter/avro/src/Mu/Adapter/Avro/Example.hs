@@ -1,3 +1,4 @@
+{-# language CPP         #-}
 {-# language DataKinds   #-}
 {-# language QuasiQuotes #-}
 
@@ -35,4 +36,8 @@ type Example = [avro|
 }
 |]
 
+#if __GHCIDE__
+type ExampleFromFile = [avroFile|adapter/avro/test/avro/example.avsc|]
+#else
 type ExampleFromFile = [avroFile|test/avro/example.avsc|]
+#endif

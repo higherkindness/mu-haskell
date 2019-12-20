@@ -24,11 +24,11 @@ main = do
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/seed/server/modules/process/src/main/scala/example/seed/server/process/ProtoPeopleServiceHandler.scala
 
-server :: (MonadServer m, MonadLogger m) => ServerT PeopleService m _
+server :: (MonadServer m, MonadLogger m) => ServerT Maybe PeopleService m _
 server = Server (getPerson :<|>: getPersonStream :<|>: H0)
 
 evolvePerson :: PeopleRequest -> PeopleResponse
-evolvePerson (PeopleRequest n) = PeopleResponse $ Person n 18
+evolvePerson (PeopleRequest n) = PeopleResponse $ Just $ Person n (Just 18)
 
 getPerson :: Monad m => PeopleRequest -> m PeopleResponse
 getPerson = pure . evolvePerson
