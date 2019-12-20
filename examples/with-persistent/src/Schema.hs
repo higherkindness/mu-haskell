@@ -2,7 +2,6 @@
 {-# language DataKinds                  #-}
 {-# language DeriveGeneric              #-}
 {-# language DerivingVia                #-}
-{-# language DuplicateRecordFields      #-}
 {-# language FlexibleContexts           #-}
 {-# language FlexibleInstances          #-}
 {-# language GADTs                      #-}
