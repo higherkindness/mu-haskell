@@ -30,25 +30,3 @@ options:
 
     - title: Middleware
       url: middleware/
-
-  - title: Benchmarks menu
-
-    nested_options:
-    - title: Benchmarks
-      url: benchmarks/
-
-    - title: More Benchmarks
-      url: more-benchmarks/
-
-  - title: Verification
-    url: verification/
-
-    nested_options:
-    - title: Compile
-      url: compile/
-
-    - title: Generation
-      url: generation/
-
-  - title: Integration
-    url: integration/
