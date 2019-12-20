@@ -18,6 +18,12 @@ main = runGRpcApp 8080 "helloworld" quickstartServer
 
 ## Building a client
 
+-- TODO:
+
 ### Using records
 
+-- TODO:
+
 ### Using `TypeApplications`
+
+-- TODO:

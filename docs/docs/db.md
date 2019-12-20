@@ -70,8 +70,8 @@ instance FromSchema Maybe PersistentSchema "PersonRequest" MPersonRequest
 data MPerson = MPerson
   { pid  :: Maybe MPersonRequest
   , name :: Maybe T.Text
-  , age  :: Maybe Int32 }
-  deriving (Eq, Ord, Show, Generic)
+  , age  :: Maybe Int32
+  } deriving (Eq, Ord, Show, Generic)
 
 instance ToSchema   Maybe PersistentSchema "Person" MPerson
 instance FromSchema Maybe PersistentSchema "Person" MPerson
@@ -181,9 +181,10 @@ More on that strange `runDb` method in the next section! 😇
 All the pieces are now in place, let's check the implementation of the `allPeople` service:
 
 ```haskell
-allPeople :: SqlBackend
-          -> ConduitT (Entity Person) Void ServerErrorIO ()
-          -> ServerErrorIO ()
+allPeople
+  :: SqlBackend
+  -> ConduitT (Entity Person) Void ServerErrorIO ()
+  -> ServerErrorIO ()
 allPeople conn sink = runDb conn $
   runConduit $ selectSource [] [] .| liftServerConduit sink
 ```
@@ -196,9 +197,14 @@ The second one will be discussed in the next section.
 
 ## On streams and `Conduit`
 
-Since we are going to work with streams, it is wonderful that `persistent` also provides methods to work with `Conduit` like, for example, `selectSource`. But the Monad in which `persistent` operates returns `ConduitM () (Entity Person) m ()`, and we know that we want instead: `ConduitT (Entity Person) Void ServerErrorIO ()`. 🤔
+Since we are going to work with streams, it is wonderful that `persistent` also provides methods to work with `Conduit` like, for example, `selectSource`. However...
 
-Well, have no fear my friend because we created yet another utility called `liftServerConduit`, orn specifically to address this problem. It's type signature is:
+```diff
+- ConduitM () (Entity Person) m ()               -- the Monad in which persistent operates
++ ConduitT (Entity Person) Void ServerErrorIO () -- the Monad we know we want instead... 🤔
+```
+
+Well, have no fear my friend because we created yet another utility called `liftServerConduit`, born specifically to address this problem. Its type signature is:
 
 ```haskell
 liftServerConduit

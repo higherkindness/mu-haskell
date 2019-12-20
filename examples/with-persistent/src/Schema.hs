@@ -52,8 +52,8 @@ Person json
 data MPerson = MPerson
   { pid  :: Maybe MPersonRequest
   , name :: Maybe T.Text
-  , age  :: Maybe Int32 }
-  deriving (Eq, Ord, Show, Generic)
+  , age  :: Maybe Int32
+  } deriving (Eq, Ord, Show, Generic)
 
 instance ToSchema   Maybe PersistentSchema "Person" MPerson
 instance FromSchema Maybe PersistentSchema "Person" MPerson
