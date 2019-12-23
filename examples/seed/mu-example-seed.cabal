@@ -12,6 +12,7 @@ category:            Network
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README.md
+data-files:          seed.proto
 
 executable seed-server
   hs-source-dirs:      src
