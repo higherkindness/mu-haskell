@@ -91,7 +91,7 @@ get client idPerson = do
   putStrLn $ "GET: response was: " ++ show res
 ```
 
-Notice the use of `readMaybe` to cast the strings to the appropiate type in a safe manner! 👆🏼
+Notice the use of `readMaybe` to convert the strings to the appropiate type in a safe manner! 👆🏼
 
 ```haskell
 add :: Call -> String -> String -> IO ()
