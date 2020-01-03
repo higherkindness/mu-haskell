@@ -10,6 +10,7 @@
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
+
 module Mu.GraphQL where
 
 import           Data.Kind
@@ -58,16 +59,11 @@ data FieldResolver m (sch :: Schema tn fn) (ty :: tn) (fld :: FieldDef tn fn) wh
      -> FieldResolver m sch ty ('FieldDef name fld)
 
 type family ConstructFieldType (sch :: Schema tn fn) (fld :: FieldType tn) :: Type where
-  ConstructFieldType sch 'TNull
-    = ()
-  ConstructFieldType sch ('TPrimitive p)
-    = p
-  ConstructFieldType sch ('TSchematic other)
-    = Term Maybe sch (sch :/: other)
-  ConstructFieldType sch ('TOption fld)
-    = Maybe (ConstructFieldType sch fld)
-  ConstructFieldType sch ('TList fld)
-    = [ConstructFieldType sch fld]
+  ConstructFieldType sch 'TNull = ()
+  ConstructFieldType sch ('TPrimitive p) = p
+  ConstructFieldType sch ('TSchematic other) = Term Maybe sch (sch :/: other)
+  ConstructFieldType sch ('TOption fld) = Maybe (ConstructFieldType sch fld)
+  ConstructFieldType sch ('TList fld) = [ConstructFieldType sch fld]
 
 -- | The composer
 
@@ -92,15 +88,14 @@ fullResolver = undefined
 
 class FindResolver (sch :: Schema tn fn) (iter :: Schema tn fn) (ty :: TypeDef tn fn) where
   findResolver :: NP (FullResolver' m sch) iter -> FullResolver m (W Term sch ty)
-instance TypeError ('Text "cannot find resolver for " ':<>: 'ShowType ty)
-         => FindResolver sch '[] ty where
+
+instance TypeError ('Text "cannot find resolver for " ':<>: 'ShowType ty) => FindResolver sch '[] ty where
   findResolver = error "this should never be called"
-instance {-# OVERLAPS #-}
-         FindResolver sch (ty ': tys) ty where
+
+instance {-# OVERLAPS #-} FindResolver sch (ty ': tys) ty where
   findResolver (r :* _) = unFullResolver' r
-instance {-# OVERLAPPABLE #-}
-         FindResolver sch rest ty
-         => FindResolver sch (other ': rest) ty where
+
+instance {-# OVERLAPPABLE #-} FindResolver sch rest ty => FindResolver sch (other ': rest) ty where
   findResolver (_ :* rs) = findResolver rs
 
 fullResolverTy'
@@ -132,19 +127,17 @@ data FieldResolverD m (sch :: Schema tn fn) (ty :: tn) (fld :: FieldDef tn fn) w
 
 class ToSchemaD r term where
   toSchemaD :: r -> term
+
 instance {-# OVERLAPPABLE #-} ToSchemaD p p where
   toSchemaD = id
-instance {-# OVERLAPS #-}
-         (ToSchema Maybe sch ty r, sch :/: ty ~ t)
-         => ToSchemaD r (Term Maybe sch t) where
+
+instance {-# OVERLAPS #-} (ToSchema Maybe sch ty r, sch :/: ty ~ t) => ToSchemaD r (Term Maybe sch t) where
   toSchemaD = toSchema @_ @_ @Maybe @sch @ty
-instance {-# OVERLAPS #-}
-         (ToSchemaD r term)
-         => ToSchemaD (Maybe r) (Maybe term) where
+
+instance {-# OVERLAPS #-} (ToSchemaD r term) => ToSchemaD (Maybe r) (Maybe term) where
   toSchemaD = fmap toSchemaD
-instance {-# OVERLAPS #-}
-         (ToSchemaD r term)
-         => ToSchemaD [r] [term] where
+
+instance {-# OVERLAPS #-} (ToSchemaD r term) => ToSchemaD [r] [term] where
   toSchemaD = fmap toSchemaD
 
 resolverDomain
