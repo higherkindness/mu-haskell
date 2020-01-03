@@ -18,7 +18,7 @@ main = runGRpcApp 8080 "helloworld" quickstartServer
 
 ## Building a client
 
-Right now there are two options for building clients: using records or with `XTypeApplications`. To give a proper introduction to both options let's consider in detail an example client for the following services:
+Right now there are two options for building clients: using records or with `TypeApplications`. To give a proper introduction to both options let's consider in detail an example client for the following services:
 
 ```protobuf
 service Service {
@@ -49,9 +49,9 @@ Where `watch`, `get` and `add` are the only valid 3 commands that our CLI is goi
 
 ### Using records
 
-This option is a bit more verbose but it's also more explicit with the types and _"less magic"_ than the one with `TypeApplications`.
+This option is a bit more verbose but it's also more explicit with the types and _"a bit more magic"_ than the one with `TypeApplications` (due to the use of Generics).
 
-We need to define a new record type (hence the name) that declares the services our client is going to consume:
+We need to define a new record type (hence the name) that declares the services our client is going to consume. Remember that the names of the record fields **must match** exactly the methods in the service:
 
 ```haskell
 import GHC.Generics (Generic)
@@ -76,9 +76,9 @@ main = do
    args <- getArgs
 ```
 
-Instead of building our client directly, we need to use `TypeApplications` (yes, we can't escape from `TypeApplications` either way 🤷🏼‍♂️) in a call to `buildService` to create the actual gRPC client.
+Instead of building our client directly, we can use `TypeApplications` to call `buildService` to create the actual gRPC client. (You can also use `ScopedTypeVariables` and something like `(Proxy :: Proxy Service)` but it's a bit more verbose).
 
-After that, the implementation of the three service calls becomes quite trivial:
+After that, let's have a look at an example implementation of the three service calls:
 
 ```haskell
 import Text.Read (readMaybe)
@@ -135,7 +135,7 @@ add client nm ag = do
   putStrLn $ "ADD: was creating successful? " ++ show response
 ```
 
-We are being a bit more explicit with the types (for example, `response :: GRpcReply MPersonRequest`) to help a bit the `show` function with the ambiguity.
+We are being a bit more explicit with the types here (for example, `response :: GRpcReply MPersonRequest`) to help a bit the `show` function because GHC is not able to infer the type on its own.
 
 ```haskell
 watching :: GrpcClient -> IO ()
