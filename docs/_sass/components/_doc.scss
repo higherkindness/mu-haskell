@@ -32,6 +32,26 @@
           margin: ($base-point-grid * 2);
         }
       }
+
+      ul {
+        display: flex;
+        justify-content: space-between;
+        flex-direction: row;
+
+        .nav-menu-item {
+            padding: ($base-point-grid * 2);
+            margin: ($base-point-grid * 2);
+            list-style-type: none;
+
+            a {
+                color: $gray-primary;
+                &:hover {
+                  color: rgba($brand-primary, 0.96);
+                  text-decoration: none;
+                }
+            }
+        }
+      }
     }
 
     .doc-content {
