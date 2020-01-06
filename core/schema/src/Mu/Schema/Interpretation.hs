@@ -10,12 +10,31 @@
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
--- | Interpretation of schemas
+{-|
+Description : Interpretation of schemas
+
+This module defines 'Term's which comply with
+a given 'Schema'. These 'Term's are the main
+form of values used internally by @mu-haskell@.
+
+This module follows the ideas of
+<https://reasonablypolymorphic.com/blog/higher-kinded-data/ higher-kinded data>.
+In particular, each interpretation of a 'Field'
+wraps its contents into a "wrapper" type @w@,
+which may add additional behavior to it.
+For example, in Protocol Buffers every field is
+optional, and this is expressed by setting
+@w@ to 'Maybe'.
+-}
 module Mu.Schema.Interpretation (
+  -- * Interpretation
   Term(..), Field(..), FieldValue(..)
 , NS(..), NP(..), Proxy(..)
-, transWrap, transFields, transValue
-, transWrapNoMaps, transFieldsNoMaps, transValueNoMaps
+  -- * Transforming the wrapper type
+, transWrap, transWrapNoMaps
+  -- ** For internal use only
+, transFields, transFieldsNoMaps
+, transValue, transValueNoMaps
 ) where
 
 import           Data.Map
@@ -50,6 +69,7 @@ data FieldValue w (sch :: Schema typeName fieldName) (t :: FieldType typeName) w
   FUnion     :: NS (FieldValue w sch) choices
              -> FieldValue w sch ('TUnion choices)
 
+-- | Change the underlying wrapper of a term.
 transWrap
   :: forall tn fn (sch :: Schema tn fn) t u v.
      (Functor u, forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k))
@@ -60,6 +80,10 @@ transWrap n x = case x of
   TEnum   c -> TEnum c
   TSimple v -> TSimple (transValue n v)
 
+-- | Change the underlying wrapper of a term.
+--   This version assumes that no field is a map,
+--   which allows for a more general type.
+--   If a map is found, an exception is raised.
 transWrapNoMaps
   :: forall tn fn (sch :: Schema tn fn) t u v.
      (Functor u)
@@ -70,6 +94,7 @@ transWrapNoMaps n x = case x of
   TEnum   c -> TEnum c
   TSimple v -> TSimple (transValueNoMaps n v)
 
+-- | Change the underlying wrapper of a list of fields.
 transFields
   :: forall tn fn (sch :: Schema tn fn) args u v.
      (Functor u, forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k))
@@ -79,6 +104,8 @@ transFields _ Nil = Nil
 transFields n (Field v :* rest)
   = Field (n (fmap (transValue n) v)) :* transFields n rest
 
+-- | Change the underlying wrapper of a list of fields.
+--   This version assumes no maps are present as fields.
 transFieldsNoMaps
   :: forall tn fn (sch :: Schema tn fn) args u v.
      (Functor u)
@@ -88,6 +115,7 @@ transFieldsNoMaps _ Nil = Nil
 transFieldsNoMaps n (Field v :* rest)
   = Field (n (fmap (transValueNoMaps n) v)) :* transFieldsNoMaps n rest
 
+-- | Change the underlying wrapper of a value.
 transValue
   :: forall tn fn (sch :: Schema tn fn) l u v.
      (Functor u, forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k))
@@ -105,6 +133,8 @@ transValue n (FUnion     u) = FUnion (transUnion u)
     transUnion (Z z) = Z (transValue n z)
     transUnion (S s) = S (transUnion s)
 
+-- | Change the underlying wrapper of a value.
+--   This version assumes that the value is not a map.
 transValueNoMaps
   :: forall tn fn (sch :: Schema tn fn) l u v.
      (Functor u)

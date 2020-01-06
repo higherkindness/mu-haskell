@@ -43,7 +43,7 @@ generateTypesFromSchema namer schemaTyName
 
 typeDefToDecl :: Type -> Namer -> TypeDefB Type String String -> Q [Dec]
 -- Records with one field
-typeDefToDecl schemaTy namer (DRecord name [f])
+typeDefToDecl _schemaTy namer (DRecord name [f])
   = do let complete = completeName namer name
        fVar <- newName "f"
        d <- newtypeD (pure [])
@@ -52,11 +52,11 @@ typeDefToDecl schemaTy namer (DRecord name [f])
                      Nothing
                      (pure (RecC (mkName complete) [fieldDefToDecl namer complete fVar f]))
                      [pure (DerivClause Nothing [ConT ''Generic])]
-       wTy <- VarT <$> newName "w"
+       _wTy <- VarT <$> newName "w"
        -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete [f])
        return [d] -- , hsi]
 -- Records with more than one field
-typeDefToDecl schemaTy namer (DRecord name fields)
+typeDefToDecl _schemaTy namer (DRecord name fields)
   = do let complete = completeName namer name
        fVar <- newName "f"
        d <- dataD (pure [])
@@ -65,11 +65,11 @@ typeDefToDecl schemaTy namer (DRecord name fields)
                   Nothing
                   [pure (RecC (mkName complete) (map (fieldDefToDecl namer complete fVar) fields))]
                   [pure (DerivClause Nothing [ConT ''Generic])]
-       wTy <- VarT <$> newName "w"
+       _wTy <- VarT <$> newName "w"
        -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete fields)
        return [d] -- , hsi]
 -- Enumerations
-typeDefToDecl schemaTy namer (DEnum name choices)
+typeDefToDecl _schemaTy namer (DEnum name choices)
   = do let complete = completeName namer name
        fVar <- newName "f"
        d <- dataD (pure [])
@@ -79,7 +79,7 @@ typeDefToDecl schemaTy namer (DEnum name choices)
                   [ pure (RecC (mkName (choiceName complete choicename)) [])
                     | ChoiceDef choicename <- choices]
                   [pure (DerivClause Nothing [ConT ''Eq, ConT ''Ord, ConT ''Show, ConT ''Generic])]
-       wTy <- VarT <$> newName "w"
+       _wTy <- VarT <$> newName "w"
        -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (choiceMapping complete choices)
        return [d] --, hsi]
 -- Simple things
@@ -132,6 +132,7 @@ generateHasSchemaInstance wTy schemaTy schemaName complete mapping
 #endif
 -}
 
+{-
 fieldMapping :: String -> [FieldDefB Type String String] -> Type
 fieldMapping _complete [] = PromotedNilT
 fieldMapping complete (FieldDef name _ : rest)
@@ -149,6 +150,7 @@ choiceMapping complete (ChoiceDef name : rest)
           = AppT (AppT (PromotedT '(:->))
                        (LitT (StrTyLit (choiceName complete name))))
                        (LitT (StrTyLit name))
+-}
 
 -- Name manipulation
 -- =================

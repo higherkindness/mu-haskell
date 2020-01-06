@@ -6,8 +6,44 @@
 {-# language TypeFamilies         #-}
 {-# language TypeOperators        #-}
 {-# language UndecidableInstances #-}
--- | Schema definition
-module Mu.Schema.Definition where
+{-|
+Description : Definition of schemas
+
+This module gives a set of combinators
+to define schemas in the sense of Avro
+or Protocol Buffers.
+
+In order to re-use definitions at both
+the type and term levels, the actual
+constructors are defined in types ending
+with @B@, and are parametrized by the type
+used to describe identifiers.
+The versions without the suffix set this
+parameter to 'Type', and are thought as the
+API to be used in the type-level.
+If you use 'reflectSchema' to obtain a term-
+level representation, the parameter is set
+to 'TypeRep'.
+-}
+module Mu.Schema.Definition (
+-- * Definition of schemas
+  Schema', Schema, SchemaB
+, TypeDef, TypeDefB(..)
+, ChoiceDef(..)
+, FieldDef, FieldDefB(..)
+, FieldType, FieldTypeB(..)
+, (:/:)
+-- * One-to-one mappings
+, Mapping(..), Mappings
+-- ** Finding correspondences
+, MappingRight, MappingLeft
+-- * Reflection to term-level
+, reflectSchema
+, reflectFields, reflectChoices
+, reflectFieldTypes, reflectFieldType
+-- * Supporting type classes
+, KnownName(..)
+) where
 
 import           Data.Kind
 import           Data.Proxy
@@ -37,9 +73,11 @@ instance KnownNat n => KnownName (n :: Nat) where
 -- | A set of type definitions.
 --   In general, we can use any kind we want for
 --   both type and field names, although in practice
---   you always want to use 'Schema''.
+--   you always want to use 'Symbol'.
 type Schema typeName fieldName
   = SchemaB Type typeName fieldName
+-- | A set of type definitions,
+--   parametric on type representations.
 type SchemaB builtin typeName fieldName
   = [TypeDefB builtin typeName fieldName]
 
@@ -49,32 +87,52 @@ type SchemaB builtin typeName fieldName
 --   * an enumeration: an element of a list of choices,
 --   * a reference to a primitive type.
 type TypeDef = TypeDefB Type
+-- | Defines a type in a schema,
+--   parametric on type representations.
 data TypeDefB builtin typeName fieldName
-  = DRecord typeName [FieldDefB builtin typeName fieldName]
+  = -- | A list of key-value pairs.
+    DRecord typeName [FieldDefB builtin typeName fieldName]
+    -- | An element of a list of choices.
   | DEnum   typeName [ChoiceDef fieldName]
+    -- | A reference to a primitive type.
   | DSimple (FieldTypeB builtin typeName)
 
 -- | Defines each of the choices in an enumeration.
 newtype ChoiceDef fieldName
-  = ChoiceDef fieldName
+  = -- | One single choice from an enumeration.
+    ChoiceDef fieldName
 
 -- | Defines a field in a record
 --   by a name and the corresponding type.
 type FieldDef = FieldDefB Type
+-- | Defines a field in a record,
+--   parametric on type representations.
 data FieldDefB builtin typeName fieldName
-  = FieldDef fieldName (FieldTypeB builtin typeName)
+  = -- | One single field in a record.
+    FieldDef fieldName (FieldTypeB builtin typeName)
 
 -- | Types of fields of a record.
 --   References to other types in the same schema
 --   are done via the 'TSchematic' constructor.
 type FieldType = FieldTypeB Type
+-- | Types of fields of a record,
+--   parametric on type representations.
 data FieldTypeB builtin typeName
-  = TNull
+  = -- | Null, as found in Avro.
+    TNull
+    -- | Reference to a primitive type, such as integers or Booleans.
+    --   The set of supported primitive types depends on the protocol.
   | TPrimitive builtin
+    -- | Reference to another type in the schema.
   | TSchematic typeName
+    -- | Optional value.
   | TOption (FieldTypeB builtin typeName)
+    -- | List of values.
   | TList   (FieldTypeB builtin typeName)
+    -- | Map of values.
+    --   The set of supported key types depends on the protocol.
   | TMap    (FieldTypeB builtin typeName) (FieldTypeB builtin typeName)
+    -- | Represents a choice between types.
   | TUnion  [FieldTypeB builtin typeName]
 
 -- | Lookup a type in a schema by its name.
@@ -107,8 +165,8 @@ type family MappingLeft (ms :: Mappings a b) (v :: b) :: a where
   MappingLeft ((x ':-> y) ': rest) y = x
   MappingLeft (other      ': rest) y = MappingLeft rest y
 
--- | Reflect a schema into term-level.
 class ReflectSchema (s :: Schema tn fn) where
+  -- | Reflect a schema into term-level.
   reflectSchema :: Proxy s -> SchemaB TypeRep String String
 instance ReflectSchema '[] where
   reflectSchema _ = []
@@ -126,6 +184,7 @@ instance (ReflectFieldType ty, ReflectSchema s)
                   : reflectSchema (Proxy @s)
 
 class ReflectFields (fs :: [FieldDef tn fn]) where
+  -- | Reflect a list of fields into term-level.
   reflectFields :: Proxy fs -> [FieldDefB TypeRep String String]
 instance ReflectFields '[] where
   reflectFields _ = []
@@ -135,6 +194,7 @@ instance (KnownName name, ReflectFieldType ty, ReflectFields fs)
                   : reflectFields (Proxy @fs)
 
 class ReflectChoices (cs :: [ChoiceDef fn]) where
+  -- | Reflect a list of enumeration choices into term-level.
   reflectChoices :: Proxy cs -> [ChoiceDef String]
 instance ReflectChoices '[] where
   reflectChoices _ = []
@@ -144,6 +204,7 @@ instance (KnownName name, ReflectChoices cs)
                    : reflectChoices (Proxy @cs)
 
 class ReflectFieldType (ty :: FieldType tn) where
+  -- | Reflect a schema type into term-level.
   reflectFieldType :: Proxy ty -> FieldTypeB TypeRep String
 instance ReflectFieldType 'TNull where
   reflectFieldType _ = TNull
@@ -162,6 +223,7 @@ instance (ReflectFieldTypes ts) => ReflectFieldType ('TUnion ts) where
   reflectFieldType _ = TUnion (reflectFieldTypes (Proxy @ts))
 
 class ReflectFieldTypes (ts :: [FieldType tn]) where
+  -- | Reflect a list of schema types into term-level.
   reflectFieldTypes :: Proxy ts -> [FieldTypeB TypeRep String]
 instance ReflectFieldTypes '[] where
   reflectFieldTypes _ = []

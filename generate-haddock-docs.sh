@@ -9,7 +9,7 @@ echo "Removing previous docs"
 rm -rf ${DOCSDIR}
 
 echo "Building the project"
-stack build
+stack clean && stack build
 
 echo "Generating new docs"
 stack exec --no-ghc-package-path standalone-haddock -- -o ${DOCSDIR} \
