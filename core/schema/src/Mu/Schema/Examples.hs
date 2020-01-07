@@ -13,7 +13,11 @@
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
--- | Look at my source code!
+{-|
+Description : Examples for schema definitions.
+
+Look at the source code of this module.
+-}
 module Mu.Schema.Examples where
 
 import qualified Data.Aeson                         as J

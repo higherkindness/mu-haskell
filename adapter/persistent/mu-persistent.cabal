@@ -1,6 +1,6 @@
 name:                mu-persistent
 version:             0.1.0.0
--- synopsis:
+synopsis:            Utilities for interoperation between Mu and Persistent
 -- description:
 homepage:            https://github.com/higherkindness/mu-haskell/persistent#readme
 license:             Apache-2.0
