@@ -10,8 +10,12 @@
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
--- | Client for gRPC services defined using Mu 'Service'
---   using plain Haskell records of functions
+{-|
+Description : Client for gRPC services using plain Haskell records
+
+For further information over initialization of the connection,
+consult the <http://hackage.haskell.org/package/http2-client-grpc http2-client-grpc docs>.
+-}
 module Mu.GRpc.Client.Record (
   -- * Initialization of the gRPC client
   GrpcClient

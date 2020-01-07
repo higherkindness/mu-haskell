@@ -7,6 +7,15 @@
 {-# language TypeApplications      #-}
 {-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fno-warn-simplifiable-class-constraints -fno-warn-orphans #-}
+{-|
+Description : Wrappers to customize Protocol Buffers serialization
+
+In order to interoperate with the @proto3-wire@ library,
+we sometimes need an instance of 'Proto3WireEncoder'.
+By using the wrappers in this module, such instances can
+be obtained automatically if the type can be turned
+into a 'Schema'.
+-}
 module Mu.Adapter.ProtoBuf.Via where
 
 import           Network.GRPC.HTTP2.Proto3Wire
@@ -17,8 +26,12 @@ import           Mu.Adapter.ProtoBuf
 import           Mu.Rpc
 import           Mu.Schema
 
+-- | Specifies that a type is turned into a Protocol Buffers
+--   message by using the schema as intermediate representation.
 newtype ViaToProtoBufTypeRef (ref :: TypeRef) t
   = ViaToProtoBufTypeRef { unViaToProtoBufTypeRef :: t }
+-- | Specifies that a type can be parsed from a Protocol Buffers
+--   message by using the schema as intermediate representation.
 newtype ViaFromProtoBufTypeRef (ref :: TypeRef) t
   = ViaFromProtoBufTypeRef { unViaFromProtoBufTypeRef :: t }
 
@@ -35,8 +48,10 @@ instance Proto3WireEncoder () where
   proto3WireEncode _ = mempty
   proto3WireDecode = return ()
 
+-- | Types which can be parsed from a Protocol Buffers message.
 class FromProtoBufTypeRef (ref :: TypeRef) t where
   fromProtoBufTypeRef :: Proxy ref -> PBDec.Parser PBDec.RawMessage t
+-- | Types which can be turned into a Protocol Buffers message.
 class ToProtoBufTypeRef (ref :: TypeRef) t where
   toProtoBufTypeRef   :: Proxy ref -> t -> PBEnc.MessageBuilder
 

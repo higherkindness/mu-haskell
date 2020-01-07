@@ -6,7 +6,13 @@
 {-# language TypeFamilies              #-}
 {-# language TypeOperators             #-}
 {-# language UndecidableInstances      #-}
--- | Protocol-independent declaration of services
+{-|
+Description : Protocol-independent declaration of services
+
+This module defines a type-level language to describe
+RPC-like microservices independently of the transport
+and protocol.
+-}
 module Mu.Rpc (
   Service', Service(..)
 , ServiceAnnotation, Package, FindPackageName
@@ -21,7 +27,10 @@ import qualified Language.Haskell.TH as TH
 import           Mu.Schema
 import           Mu.Schema.Registry
 
+-- | Services whose names are given by type-level strings.
 type Service' = Service Symbol Symbol
+-- | Annotations for services. At this moment, such
+--   annotations can be of any type.
 type ServiceAnnotation = Type
 
 -- | A service is a set of methods.
@@ -32,6 +41,8 @@ data Service serviceName methodName
 --   This is used by some handlers, like gRPC.
 data Package (s :: Symbol)
 
+-- | Find the 'Package' for a service, to be found
+--   as part of the annotations.
 type family FindPackageName (anns :: [ServiceAnnotation]) :: Symbol where
   FindPackageName '[] = TypeError ('Text "Cannot find package name for the service")
   FindPackageName (Package s ': rest) = s

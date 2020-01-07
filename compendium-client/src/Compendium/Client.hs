@@ -4,7 +4,19 @@
 {-# language TypeApplications #-}
 {-# language TypeOperators    #-}
 {-# language ViewPatterns     #-}
-module Compendium.Client where
+{-|
+Description : Client for the Compendium schema registry
+
+Client for the Compendium schema registry
+-}
+module Compendium.Client (
+-- * Generic query of schemas
+  IdlName
+, transformation
+-- * Query Protocol Buffer schemas
+, obtainProtoBuf
+, ObtainProtoBufError(..)
+) where
 
 import           Data.Aeson
 import           Data.Char
@@ -23,6 +35,7 @@ newtype Protocol
   = Protocol { raw :: Text }
   deriving (Eq, Show, Generic, FromJSON)
 
+-- | Interface Description Languages supported by Compendium.
 data IdlName
   = Avro | Protobuf | Mu | OpenApi | Scala
   deriving (Eq, Show, Generic)
@@ -37,20 +50,29 @@ type TransformationAPI
                :> QueryParam' '[ Required ] "target" IdlName
                :> Get '[JSON] Protocol
 
-transformation :: Manager -> BaseUrl
-               -> Text -> IdlName -> IO (Either ClientError Protocol)
+-- | Obtain a schema from the registry.
+transformation :: Manager  -- ^ Connection details (from 'http-client').
+               -> BaseUrl  -- ^ URL in which Compendium is running.
+               -> Text     -- ^ Name that identifies the schema.
+               -> IdlName  -- ^ Format of the returned schema.
+               -> IO (Either ClientError Text)
 transformation m url ident idl
   = runClientM (transformation' ident idl) (mkClientEnv m url)
 
-transformation' :: Text -> IdlName -> ClientM Protocol
-transformation'
-  = client (Proxy @TransformationAPI)
+transformation' :: Text
+                -> IdlName
+                -> ClientM Text
+transformation' ident idl
+  = raw <$> client (Proxy @TransformationAPI) ident idl
 
+-- | Errors which may arise during 'obtainProtoBuf'.
 data ObtainProtoBufError
-  = OPEClient ClientError
-  | OPEParse  (ParseErrorBundle Text Char)
+  = OPEClient ClientError  -- ^ Error obtaining schema from Compendium
+  | OPEParse  (ParseErrorBundle Text Char)  -- ^ Obtaining the schema was OK, error parsing it
   deriving (Show)
 
+-- | Obtain a schema from the registry,
+--   and parse it as Protocol Buffers.
 obtainProtoBuf :: Manager -> BaseUrl
                -> Text -> IO (Either ObtainProtoBufError ProtoBuf)
 obtainProtoBuf m url ident = do
@@ -58,7 +80,7 @@ obtainProtoBuf m url ident = do
   case r of
     Left e
       -> return $ Left (OPEClient e)
-    Right (Protocol p)
+    Right p
       -> case parseProtoBuf p of
           Left e   -> return $ Left (OPEParse e)
           Right pb -> return $ Right pb

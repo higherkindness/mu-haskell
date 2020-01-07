@@ -12,7 +12,25 @@
 {-# language TypeFamilies           #-}
 {-# language TypeOperators          #-}
 {-# language UndecidableInstances   #-}
--- | Conversion from types to schemas
+{-|
+Description : Conversion from types to schemas
+
+This module defines a couple of type classes
+'ToSchema' and 'FromSchema' to turn Haskell
+types back and forth @mu-haskell@ 'Term's.
+
+In most cases, the instances can be automatically
+derived. If you enable the extensions
+@DeriveGeneric@ and @DeriveAnyClass@, you can do:
+
+> data MyHaskellType = ...
+>   deriving ( ToSchema   f MySchema "MySchemaType" MyHaskellType
+>            , FromSchema f MySchema "MySchemaType" MyHaskellType)
+
+If the default mapping which required identical
+names for fields in the Haskell and schema types
+does not suit you, use 'CustomFieldMapping'.
+-}
 module Mu.Schema.Class (
   WithSchema(..)
 , FromSchema(..), fromSchema'
@@ -41,8 +59,8 @@ newtype WithSchema (w :: Type -> Type) (sch :: Schema tn fn) (sty :: tn) a = Wit
 -- | Defines the conversion of a type @t@ into a 'Term'
 --   which follows the schema @sch@.
 --   You can give an optional mapping between the
---   field names of @t@ and that of 'SchemaType'
---   by means of 'FieldMapping'.
+--   field names of @t@ and that of @sty@
+--   by means of 'CustomFieldMapping'.
 class ToSchema (w :: Type -> Type) (sch :: Schema typeName fieldName) (sty :: typeName) (t :: Type)
       | sch t -> sty where
   -- | Conversion from Haskell type to schema term.
@@ -56,8 +74,8 @@ class ToSchema (w :: Type -> Type) (sch :: Schema typeName fieldName) (sty :: ty
 -- | Defines the conversion from a 'Term'
 --   which follows the schema @sch@ into a type @t@.
 --   You can give an optional mapping between the
---   field names of @t@ and that of 'SchemaType'
---   by means of 'FieldMapping'.
+--   field names of @t@ and that of @sty@
+--   by means of 'CustomFieldMapping'.
 class FromSchema (w :: Type -> Type) (sch :: Schema typeName fieldName) (sty :: typeName) (t :: Type)
       | sch t -> sty where
   -- | Conversion from schema term to Haskell type.
@@ -81,6 +99,17 @@ fromSchema' :: forall fn tn (sch :: Schema tn fn) w t sty.
                FromSchema w sch sty t => Term w sch (sch :/: sty) -> t
 fromSchema' = fromSchema
 
+-- | By default, the names of the fields in the Haskell type
+--   and those of the schema types must coincide. By using
+--   this wrapper you can override this default setting.
+--
+--   This type should be used with @DerivingVia@, as follows:
+--
+--   > type MyCustomFieldMapping = '[ "A" ':-> "a", ...]
+--   > data MyHaskellType = ...
+--   >   deriving ( ToSchema   f MySchema "MySchemaType" MyHaskellType
+--   >            , FromSchema f MySchema "MySchemaType" MyHaskellType)
+--   >     via (CustomFieldMapping "MySchemaType" MyCustomFieldMapping MyHaskellType)
 newtype CustomFieldMapping (sty :: typeName) (fmap :: [Mapping Symbol fieldName])  a
   = CustomFieldMapping a
 
@@ -92,6 +121,8 @@ instance (Generic t, GFromSchemaTypeDef w sch fmap (sch :/: sty) (Rep t))
          => FromSchema w sch sty (CustomFieldMapping sty fmap t) where
   fromSchema x = CustomFieldMapping $ to (fromSchemaTypeDef (Proxy @fmap) x)
 
+-- | Changes the underlying wrapper of a Haskell type,
+--   by converting back and forth 'Term's with those wrappers.
 transSchema
   :: forall fn tn (sch :: Schema tn fn) sty u v a b.
      ( ToSchema u sch sty a, FromSchema v sch sty b
@@ -431,7 +462,9 @@ instance {-# OVERLAPS #-}
 -- Due to some glitch in 'GHC.Generics', sometimes products
 -- are not represented by a linear sequence of ':*:',
 -- so we need to handle some cases in a special way
--- (see 'HereLeft'  and 'HereRight' instances)
+-- (see 'HereLeft' and 'HereRight' instances)
+
+-- | For internal use only: generic conversion of a list of fields.
 class GToSchemaRecord (w :: * -> *) (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
                       (args :: [FieldDef ts fs]) (f :: * -> *) where
   toSchemaRecord :: Proxy fmap -> f a -> NP (Field w sch) args

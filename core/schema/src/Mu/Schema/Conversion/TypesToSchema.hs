@@ -3,17 +3,21 @@
 {-# language TypeFamilies         #-}
 {-# language TypeOperators        #-}
 {-# language UndecidableInstances #-}
--- | Obtains a 'Schema' from a set of Haskell types.
---
---   Unfortunately, GHC does not allow type families
---   to appear in instances, so you cannot use the
---   resulting type directly. Instead, evaluate it
---   in an interpreter session using @:kind!@ and
---   copy the result to the file.
+{-|
+Description: From 'Schema' to Haskell types.
+
+Obtains a 'Schema' from a set of Haskell types.
+
+Unfortunately, GHC does not allow type families
+to appear in instances, so you cannot use the
+resulting type directly. Instead, evaluate it
+in an interpreter session using @:kind!@ and
+copy the result to the file.
+-}
 module Mu.Schema.Conversion.TypesToSchema (
   SchemaFromTypes
+, FromType(..)
 , AsRecord, AsEnum
-, FromTypes, FromType(..)
 ) where
 
 import           Data.Kind
@@ -24,9 +28,14 @@ import           GHC.TypeLits
 
 import           Mu.Schema.Definition
 
-type FromTypes = [FromType Symbol Symbol]
+-- | Defines whether to turn each Haskell type
+--   into a record or an enumeration.
+--   Any type not declared in the given list
+--   of 'FromType's is considered primitive.
 data FromType tn fn
-  = AsRecord' Type tn (Mappings Symbol fn)
+  = -- | Declares that the type should become a record.
+    AsRecord' Type tn (Mappings Symbol fn)
+    -- | Declares that the type should become an enumeration.
   | AsEnum'   Type tn (Mappings Symbol fn)
 
 -- | Declares that the type should become a record.

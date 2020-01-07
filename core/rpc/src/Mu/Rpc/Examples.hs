@@ -14,6 +14,11 @@
 {-# language TypeOperators         #-}
 {-# language ViewPatterns          #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+{-|
+Description : Examples for service and server definitions
+
+Look at the source code of this module.
+-}
 module Mu.Rpc.Examples where
 
 import           Data.Conduit

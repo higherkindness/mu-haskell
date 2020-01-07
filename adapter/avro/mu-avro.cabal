@@ -15,8 +15,8 @@ data-files:          test/avro/*.avsc
 
 library
   exposed-modules:     Mu.Adapter.Avro
-                     , Mu.Adapter.Avro.Example
                      , Mu.Quasi.Avro
+                     , Mu.Quasi.Avro.Example
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.12 && <5
