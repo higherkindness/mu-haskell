@@ -75,16 +75,17 @@ newtype W f a b w = W { unW :: f w a b }
 fullResolverTy
   :: SchemaResolver m sch
   -> FullResolver m (W Term sch ty)
-fullResolverTy = undefined
+fullResolverTy = undefined -- TODO:
 
 -- Possibility (2), I think this is easier
 newtype FullResolver' m sch ty
   = FullResolver' { unFullResolver' :: FullResolver m (W Term sch ty) }
 
 fullResolver
-  :: SchemaResolver m sch
-  -> NP (FullResolver' m sch) sch
-fullResolver = undefined
+  :: forall m sch tys.
+     NP (TypeResolver  m sch) tys
+  -> NP (FullResolver' m sch) tys
+fullResolver = undefined -- TODO:
 
 class FindResolver (sch :: Schema tn fn) (iter :: Schema tn fn) (ty :: TypeDef tn fn) where
   findResolver :: NP (FullResolver' m sch) iter -> FullResolver m (W Term sch ty)
@@ -114,7 +115,8 @@ data TypeResolverD m (sch :: Schema tn fn) (ty :: TypeDef tn fn) where
   RR_ :: NP (FieldResolverD m sch name) fields
       -> TypeResolverD m sch ('DRecord name fields)
   DR_ :: ( FromSchema Wanted sch ty input
-         , ToSchema   Maybe  sch ty output )
+         , ToSchema   Maybe  sch ty output
+         , sch :/: ty ~ 'DRecord ty fields)
       => (input -> m output)
       -> TypeResolverD m sch ('DRecord ty fields)
   OR_ :: TypeResolverD m sch ('DEnum name choice)
@@ -141,9 +143,33 @@ instance {-# OVERLAPS #-} (ToSchemaD r term) => ToSchemaD [r] [term] where
   toSchemaD = fmap toSchemaD
 
 resolverDomain
-  :: SchemaResolverD m sch
-  -> SchemaResolver  m sch
-resolverDomain = undefined
+  :: forall m sch tys.
+     Functor m
+  => NP (TypeResolverD m sch) tys
+  -> NP (TypeResolver  m sch) tys
+resolverDomain Nil = Nil
+resolverDomain (r :* rs) = resolveDomainT r :* resolverDomain rs
+  where
+    resolveDomainT
+      :: forall ty.
+         TypeResolverD m sch ty
+      -> TypeResolver m sch ty
+    resolveDomainT OR_                  = NR
+    resolveDomainT (DR_ f)              = DR $
+      (W . toSchema' @_ @_ @sch @Maybe <$>) . f . fromSchema' @_ @_ @sch @Wanted . unW
+    resolveDomainT (RR_ fieldResolvers) = RR $ resolveDomainFs fieldResolvers
+    resolveDomainFs
+      :: forall name flds.
+         NP (FieldResolverD m sch name) flds
+      -> NP (FieldResolver  m sch name) flds
+    resolveDomainFs Nil       = Nil
+    resolveDomainFs (f :* fs) = resolveField f :* resolveDomainFs fs
+    resolveField
+      :: forall name fld.
+         FieldResolverD m sch name fld
+      -> FieldResolver  m sch name fld
+    resolveField (FR_ f) = FR $
+      (toSchemaD <$>) . f . fromSchema' @_ @_ @sch @Maybe
 
 resolve
   :: forall tn fn (sch :: Schema tn fn) (ty :: tn)
