@@ -72,11 +72,13 @@ main = do
    let config = grpcClientConfigSimple "127.0.0.1" 1234 False
 -  Right client <- setupGrpcClient' config
 +  Right grpcClient <- setupGrpcClient' config
-+  let client = buildService @Service @"" grpcClient
++  let client = buildService @Service "/grpc" grpcClient
    args <- getArgs
 ```
 
-Instead of building our client directly, we can use `TypeApplications` to call `buildService` to create the actual gRPC client. (You can also use `ScopedTypeVariables` and something like `(Proxy :: Proxy Service)` but it's a bit more verbose).
+Instead of building our client directly, we need to call `buildService` (and enable `TypeApplications`) to create the actual gRPC client. If you don't like `TypeApplications`, it is also possible to use a combination of `ScopedTypeVariables` and something like `(Proxy :: Proxy Service)` to achieve the same result, but it's a bit more verbose and we _encourge you<sup>1</sup>_ to use `TypeApplications`  instead. 😉
+
+That string (or `ByteString`) as a second argument to `buildService` corresponds to the route of the service.
 
 After that, let's have a look at an example implementation of the three service calls:
 
@@ -147,5 +149,7 @@ watching client = do
 Here though, while mapping `print` to the `Conduit`, we needed to add a type annotation because the type was ambiguous... I think it's a small price to pay in exchange for the terseness. 🤑
 
 ---
+
+<sup>1</sup> To read more on `TypeApplications`, you can check [this](https://www.reddit.com/r/haskell/comments/6ufnmr/scrap_your_proxy_arguments_with_typeapplications/), [that](https://blog.sumtypeofway.com/posts/fluent-polymorphism-type-applications.html) and [this](https://kseo.github.io/posts/2017-01-08-visible-type-application-ghc8.html).
 
 To see a **working example** you can check all the code at the [example with persistent](https://github.com/higherkindness/mu-haskell/tree/master/examples/with-persistent).
