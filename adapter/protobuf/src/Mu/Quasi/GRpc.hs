@@ -1,7 +1,14 @@
 {-# language DataKinds         #-}
 {-# language OverloadedStrings #-}
 {-# language TemplateHaskell   #-}
--- | Read a @.proto@ file as a 'Service'
+{-|
+Description : Quasi-quoters for gRPC files
+
+Read @.proto@ files as a 'Schema' and a set
+of 'Service's. The origin of those @.proto@
+files can be local (if using 'grpc') or come
+from a Compendium Registry (if using 'compendium').
+-}
 module Mu.Quasi.GRpc (
   grpc
 , compendium

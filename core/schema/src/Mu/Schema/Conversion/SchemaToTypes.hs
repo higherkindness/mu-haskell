@@ -2,7 +2,13 @@
 {-# language DataKinds       #-}
 {-# language TemplateHaskell #-}
 {-# language TypeOperators   #-}
--- | Generate a set of Haskell types from a 'Schema'.
+{-|
+Description : (Deprecated) Generate a set of Haskell types from a 'Schema'
+
+This module is deprecated. Haskell types
+corresponding to schema types should be
+written manually.
+-}
 module Mu.Schema.Conversion.SchemaToTypes (
   generateTypesFromSchema
 , Namer
@@ -16,7 +22,6 @@ import           GHC.Generics                 (Generic)
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Datatype
 
-import           Mu.Schema.Class
 import           Mu.Schema.Definition
 
 -- | Generate the name from each new Haskell type

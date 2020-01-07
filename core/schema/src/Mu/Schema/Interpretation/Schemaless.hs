@@ -10,13 +10,24 @@
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
+{-|
+Description : Terms without an associated schema
+
+In the edges of your application it's useful to
+consider terms for which a type-level schema has
+not yet been applied. Think of receiving a JSON
+document: you can parse it but checking the schema
+is an additional step.
+-}
 module Mu.Schema.Interpretation.Schemaless (
   -- * Terms without an associated schema
   Term(..), Field(..), FieldValue(..)
   -- * Checking and conversion against a schema
-, CheckSchema, checkSchema, fromSchemalessTerm
+, checkSchema, fromSchemalessTerm
   -- * For deserialization to schemaless terms
 , ToSchemalessTerm(..), ToSchemalessValue(..)
+  -- * For implementors
+, CheckSchema
 ) where
 
 import           Control.Applicative      ((<|>))
@@ -33,8 +44,11 @@ import qualified Mu.Schema.Interpretation as S
 
 -- | Interpretation of a type in a schema.
 data Term (w :: * -> *) where
+  -- | A record given by the value of its fields.
   TRecord :: [Field w]    -> Term w
+  -- | An enumeration given by one choice.
   TEnum   :: Int          -> Term w
+  -- | A primitive value.
   TSimple :: FieldValue w -> Term w
 
 deriving instance Eq   (w (FieldValue w)) => Eq   (Term w)
@@ -43,6 +57,8 @@ deriving instance Show (w (FieldValue w)) => Show (Term w)
 
 -- | Interpretation of a field.
 data Field (w :: * -> *) where
+  -- | A single field given by its name and its value.
+  --   Note that the contents are wrapped in a @w@ type constructor.
   Field :: T.Text -> w (FieldValue w) -> Field w
 
 deriving instance Eq   (w (FieldValue w)) => Eq   (Field w)
@@ -58,23 +74,43 @@ data FieldValue (w :: * -> *) where
   FList      :: [FieldValue w] -> FieldValue w
   FMap       :: M.Map (FieldValue w) (FieldValue w) -> FieldValue w
 
+-- | Checks that a schemaless 'Term' obbeys the
+--   restrictions for tyoe @t@ of schema @s@.
+--   If successful, returns a 'S.Term' indexed
+--   by the corresponding schema and type.
+--
+--   Use this function to check a schemaless terms
+--   at the "borders" of your application.
 checkSchema
   :: forall (s :: Schema tn fn) (t :: tn) (w :: * -> *).
      (Traversable w, CheckSchema s (s :/: t))
   => Proxy t -> Term w -> Maybe (S.Term w s (s :/: t))
 checkSchema _ = checkSchema'
 
+-- | Converts a schemaless term to a Haskell type
+--   by going through the corresponding schema type.
 fromSchemalessTerm
   :: forall sch w t sty.
      (Traversable w, FromSchema w sch sty t, CheckSchema sch (sch :/: sty))
   => Term w -> Maybe t
 fromSchemalessTerm t = fromSchema @_ @_ @w @sch <$> checkSchema (Proxy @sty) t
 
+-- | Deserialization to schemaless terms.
 class ToSchemalessTerm t w where
+  -- | Turns a document (such as JSON) into a schemaless term.
+  --   This function should handle the "compound" types in that format,
+  --   such as records and enumerations.
   toSchemalessTerm  :: t -> Term w
+-- | Deserialization to schemaless values.
 class ToSchemalessValue t w where
+  -- | Turns a document (such as JSON) into a schemaless term.
+  --   This function should handle the "primitive" types in that format.
   toSchemalessValue :: t -> FieldValue w
 
+-- | Type class used to define the generic 'checkSchema'.
+--
+--   Exposed for usage in other modules,
+--   in particular 'Mu.Schema.Registry'.
 class CheckSchema (s :: Schema tn fn) (t :: TypeDef tn fn) where
   checkSchema' :: Traversable w => Term w -> Maybe (S.Term w s t)
 class CheckSchemaFields (s :: Schema tn fn) (fields :: [FieldDef tn fn]) where

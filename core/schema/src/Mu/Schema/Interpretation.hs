@@ -25,6 +25,14 @@ which may add additional behavior to it.
 For example, in Protocol Buffers every field is
 optional, and this is expressed by setting
 @w@ to 'Maybe'.
+
+In this module we make use of 'NP' and 'NS'
+as defined by <https://hackage.haskell.org/package/sop-core @sop-core@>.
+These are the n-ary versions of a pair and
+'Either', respectively. In other words, 'NP'
+puts together a bunch of values of different
+types, 'NS' allows you to choose from a bunch
+of types.
 -}
 module Mu.Schema.Interpretation (
   -- * Interpretation
@@ -45,27 +53,38 @@ import           Mu.Schema.Definition
 
 -- | Interpretation of a type in a schema.
 data Term w (sch :: Schema typeName fieldName) (t :: TypeDef typeName fieldName) where
+  -- | A record given by the value of its fields.
   TRecord :: NP (Field w sch) args -> Term w sch ('DRecord name args)
+  -- | An enumeration given by one choice.
   TEnum   :: NS Proxy choices      -> Term w sch ('DEnum name choices)
+  -- | A primitive value.
   TSimple :: FieldValue w sch t    -> Term w sch ('DSimple t)
 
 -- | Interpretation of a field.
 data Field w (sch :: Schema typeName fieldName) (f :: FieldDef typeName fieldName) where
+  -- | A single field. Note that the contents are wrapped in a @w@ type constructor.
   Field :: w (FieldValue w sch t) -> Field w sch ('FieldDef name t)
 
 -- | Interpretation of a field type, by giving a value of that type.
 data FieldValue w (sch :: Schema typeName fieldName) (t :: FieldType typeName) where
+  -- | Null value, as found in Avro and JSON.
   FNull      :: FieldValue w sch 'TNull
+  -- | Value of a primitive type.
   FPrimitive :: t -> FieldValue w sch ('TPrimitive t)
+  -- | Term of another type in the schema.
   FSchematic :: Term w sch (sch :/: t)
              -> FieldValue w sch ('TSchematic t)
+  -- | Optional value.
   FOption    :: Maybe (FieldValue w sch t)
              -> FieldValue w sch ('TOption t)
+  -- | List of values.
   FList      :: [FieldValue w sch t]
              -> FieldValue w sch ('TList   t)
+  -- | Dictionary (key-value map) of values.
   FMap       :: Ord (FieldValue w sch k)
              => Map (FieldValue w sch k) (FieldValue w sch v)
              -> FieldValue w sch ('TMap k v)
+  -- | One single value of one of the specified types.
   FUnion     :: NS (FieldValue w sch) choices
              -> FieldValue w sch ('TUnion choices)
 
