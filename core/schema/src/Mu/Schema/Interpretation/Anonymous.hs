@@ -7,12 +7,28 @@
 {-# language StandaloneDeriving    #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
+{-|
+Description : Anonymous terms for schema types
+
+This module provides "anonymous terms". These
+terms can be used when you don't want to write
+your own Haskell type, but simply have a quick
+and dirty interpretation for a schema type.
+An important limitation is that anonymous terms
+may only contain primitive fields.
+
+The names of the types exposed in this module
+refer to the amount of fields in the record.
+Hence, use 'V0' for empty record, 'V1' for a record
+with one field, 'V2' for two, and so forth.
+-}
 module Mu.Schema.Interpretation.Anonymous where
 
 import           Data.SOP
 
 import           Mu.Schema
 
+-- | Anonymous term for a record with zero fields.
 data V0 w sch sty where
   V0 :: (sch :/: sty ~ 'DRecord nm '[])
      => V0 w sch sty
@@ -28,6 +44,7 @@ instance (sch :/: sty ~ 'DRecord nm '[])
          => FromSchema w sch sty (V0 w sch sty) where
   fromSchema (TRecord Nil) = V0
 
+-- | Anonymous term for a record with one field.
 data V1 w sch sty where
   V1 :: (sch :/: sty
            ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a) ])
@@ -54,6 +71,7 @@ instance ( Functor w
     where unPrimitive :: FieldValue w sch ('TPrimitive t) -> t
           unPrimitive (FPrimitive l) = l
 
+-- | Anonymous term for a record with two fields.
 data V2 w sch sty where
   V2 :: (sch :/: sty
            ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a)

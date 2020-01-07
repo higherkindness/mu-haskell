@@ -16,9 +16,9 @@ data-files:          test/protobuf/*.proto
 library
   exposed-modules:     Mu.Adapter.ProtoBuf
                      , Mu.Adapter.ProtoBuf.Via
-                     , Mu.Adapter.ProtoBuf.Example
                      , Mu.Quasi.ProtoBuf
                      , Mu.Quasi.GRpc
+                     , Mu.Quasi.ProtoBuf.Example
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.12 && <5
