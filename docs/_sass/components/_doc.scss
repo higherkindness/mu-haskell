@@ -33,23 +33,15 @@
         }
       }
 
-      ul {
+      .link-container {
         display: flex;
-        justify-content: space-between;
-        flex-direction: row;
+        height: 100%;
+        width: 100%;
+        justify-content: flex-end;
+        align-items: center;
 
-        .nav-menu-item {
-            padding: ($base-point-grid * 2);
-            margin: ($base-point-grid * 2);
-            list-style-type: none;
-
-            a {
-                color: $gray-primary;
-                &:hover {
-                  color: rgba($brand-primary, 0.96);
-                  text-decoration: none;
-                }
-            }
+        .link-item {
+          margin-left: ($base-point-grid * 2);
         }
       }
     }
