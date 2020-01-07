@@ -17,7 +17,7 @@ stack exec --no-ghc-package-path standalone-haddock -- -o ${DOCSDIR} \
   --dist-dir=$(stack path --dist-dir) \
   --package-db=$(stack path --snapshot-pkg-db) \
   --package-db=$(stack path --local-pkg-db) \
+  --hyperlink-source \
   core/schema core/rpc \
   adapter/avro adapter/protobuf adapter/persistent \
-  grpc/client grpc/server \
-  compendium-client
+  grpc/client grpc/server

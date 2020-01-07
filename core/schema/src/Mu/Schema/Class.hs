@@ -104,6 +104,7 @@ fromSchema' = fromSchema
 --   this wrapper you can override this default setting.
 --
 --   This type should be used with @DerivingVia@, as follows:
+--
 --   > type MyCustomFieldMapping = '[ "A" ':-> "a", ...]
 --   > data MyHaskellType = ...
 --   >   deriving ( ToSchema   f MySchema "MySchemaType" MyHaskellType

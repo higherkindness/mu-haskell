@@ -27,7 +27,7 @@ optional, and this is expressed by setting
 @w@ to 'Maybe'.
 
 In this module we make use of 'NP' and 'NS'
-as defined by <https://hackage.haskell.org/package/sop-core @sop-core@>.
+as defined by <https://hackage.haskell.org/package/sop-core sop-core>.
 These are the n-ary versions of a pair and
 'Either', respectively. In other words, 'NP'
 puts together a bunch of values of different

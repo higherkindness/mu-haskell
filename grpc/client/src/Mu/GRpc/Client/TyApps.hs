@@ -7,8 +7,12 @@
 {-# language ScopedTypeVariables   #-}
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
--- | Client for gRPC services defined using Mu 'Service'
---   using 'TypeApplications'
+{-|
+Description : Client for gRPC services using @TypeApplications@
+
+For further information over initialization of the connection,
+consult the <http://hackage.haskell.org/package/http2-client-grpc http2-client-grpc docs>.
+-}
 module Mu.GRpc.Client.TyApps (
   -- * Initialization of the gRPC client
   GrpcClient
@@ -31,13 +35,14 @@ import           Mu.GRpc.Client.Internal
 
 -- | Call a method from a Mu definition.
 --   This method is thought to be used with @TypeApplications@:
+--
 --   > gRpcCall @"packageName" @ServiceDeclaration @"method"
 --
---   The additional arguments you must provide to 'grpcCall'
+--   The additional arguments you must provide to 'gRpcCall'
 --   depend on the signature of the method itself:
 --   * The resulting value is always wrapped in 'GRpcReply'.
---   * A 'Single' input or output turns into a single value.
---   * A 'Stream' input or output turns into a 'ConduitT'
+--   * A single input or output turns into a single value.
+--   * A streaming input or output turns into a Conduit.
 gRpcCall :: forall s methodName h.
             (GRpcServiceMethodCall s (s :-->: methodName) h)
          => GrpcClient -> h

@@ -4,8 +4,8 @@
 {-|
 Description : Quasi-quoters for gRPC files
 
-Read @.proto@ files as a 'Schema' and a set
-of 'Service's. The origin of those @.proto@
+Read @.proto@ files as a 'Mu.Schema.Definition.Schema'
+and a set of 'Service's. The origin of those @.proto@
 files can be local (if using 'grpc') or come
 from a Compendium Registry (if using 'compendium').
 -}
@@ -27,8 +27,8 @@ import           Mu.Quasi.ProtoBuf
 import           Mu.Rpc
 
 -- | Reads a @.proto@ file and generates:
---   * A 'Schema' with all the message types, using the
---     name given as first argument.
+--   * A 'Mu.Schema.Definition.Schema' with all the message
+--     types, using the name given as first argument.
 --   * A 'Service' declaration for each service in the file,
 --     where the name is obtained by applying the function
 --     given as second argument to the name in the file.

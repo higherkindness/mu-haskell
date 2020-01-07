@@ -6,7 +6,7 @@
 {-|
 Description : Quasi-quoters for Protocol Buffers schemas
 
-Read @.proto@ files as a 'Schema'.
+Read @.proto@ files as a 'Mu.Schema.Definition.Schema'.
 If you want to get the service definitions too,
 you should use 'Mu.Quasi.GRpc' instead.
 -}
@@ -29,7 +29,7 @@ import           Mu.Adapter.ProtoBuf
 import           Mu.Schema.Definition
 import           Mu.Schema.Annotations
 
--- | Reads a @.proto@ file and generates a 'Schema'
+-- | Reads a @.proto@ file and generates a 'Mu.Schema.Definition.Schema'
 --   with all the message types, using the name given
 --   as first argument.
 protobuf :: String -> FilePath -> Q [Dec]
