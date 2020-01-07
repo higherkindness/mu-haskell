@@ -1,8 +1,12 @@
 {-# language CPP         #-}
 {-# language DataKinds   #-}
 {-# language QuasiQuotes #-}
+{-|
+Description : Examples for Avro quasi-quoters
 
-module Mu.Adapter.Avro.Example where
+Look at the source code of this module.
+-}
+module Mu.Quasi.Avro.Example where
 
 import           Mu.Quasi.Avro (avro, avroFile)
 

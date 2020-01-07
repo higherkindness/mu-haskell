@@ -2,7 +2,12 @@
 {-# language DataKinds       #-}
 {-# language TemplateHaskell #-}
 {-# language TypeFamilies    #-}
-module Mu.Adapter.ProtoBuf.Example where
+{-|
+Description : Examples for Protocol Buffers quasi-quoters
+
+Look at the source code of this module.
+-}
+module Mu.Quasi.ProtoBuf.Example where
 
 import           Mu.Quasi.ProtoBuf
 

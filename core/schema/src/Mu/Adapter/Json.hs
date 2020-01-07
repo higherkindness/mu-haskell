@@ -9,7 +9,14 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Mu.Adapter.Json where
+{-|
+Description : Adapter for JSON serialization
+
+Just import the module and you can turn any
+value with a 'ToSchema' and 'FromSchema' from
+and to JSON values.
+-}
+module Mu.Adapter.Json () where
 
 import           Control.Applicative                 ((<|>))
 import           Data.Aeson

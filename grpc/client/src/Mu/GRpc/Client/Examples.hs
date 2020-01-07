@@ -1,6 +1,11 @@
 {-# language DataKinds        #-}
 {-# language TypeApplications #-}
 {-# language TypeFamilies     #-}
+{-|
+Description : Examples for gRPC clients
+
+Look at the source code of this module.
+-}
 module Mu.GRpc.Client.Examples where
 
 import           Data.Conduit

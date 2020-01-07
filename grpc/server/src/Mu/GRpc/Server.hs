@@ -9,7 +9,15 @@
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
--- | Execute a Mu 'Server' using gRPC as transport layer
+{-|
+Description : Execute a Mu 'Server' using gRPC as transport layer
+
+This module allows you to server a Mu 'Server'
+as a WAI 'Application' using gRPC as transport layer.
+
+The simples way is to use 'runGRpcApp', all other
+variants provide more control over the settings.
+-}
 module Mu.GRpc.Server
 ( -- * Run a 'Server' directly
   runGRpcApp, runGRpcAppTrans
@@ -143,11 +151,25 @@ class GRpcMethodHandler m args r h where
   gRpcMethodHandler :: (forall a. m a -> ServerErrorIO a)
                     -> Proxy args -> Proxy r -> RPC -> h -> ServiceHandler
 
+-- | Turns a 'Conduit' working on 'ServerErrorIO'
+--   into any other base monad which supports 'IO',
+--   by raising any error as an exception.
+--
+--   This function is useful to interoperate with
+--   libraries which generate 'Conduit's with other
+--   base monads, such as @persistent@.
 liftServerConduit
   :: MonadIO m
   => ConduitT a b ServerErrorIO r -> ConduitT a b m r
 liftServerConduit = transPipe raiseErrors
 
+-- | Raises errors from 'ServerErrorIO' as exceptions
+--   in a monad which supports 'IO'.
+--
+--   This function is useful to interoperate with other
+--   libraries which cannot handle the additional error
+--   layer. In particular, with Conduit, as witnessed
+--   by 'liftServerConduit'.
 raiseErrors :: MonadIO m => ServerErrorIO a -> m a
 raiseErrors h
   = liftIO $ do
