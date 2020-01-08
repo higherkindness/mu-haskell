@@ -21,3 +21,6 @@ stack exec --no-ghc-package-path standalone-haddock -- -o ${DOCSDIR} \
   core/schema core/rpc \
   adapter/avro adapter/protobuf adapter/persistent \
   grpc/client grpc/server
+
+echo "Setting Linuwial theme on Haddock generated docs"
+find ${DOCSDIR} -name "ocean.css" -exec cp -rf docs/css/linuwial.css {} \;
