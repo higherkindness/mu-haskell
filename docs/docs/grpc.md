@@ -47,6 +47,8 @@ main = do
 
 Where `watch`, `get` and `add` are the only valid 3 commands that our CLI is going to accept and call each respective service.
 
+If you are not familiar with `TypeApplications`, you can check [this](https://www.reddit.com/r/haskell/comments/6ufnmr/scrap_your_proxy_arguments_with_typeapplications/), [that](https://blog.sumtypeofway.com/posts/fluent-polymorphism-type-applications.html) and [this](https://kseo.github.io/posts/2017-01-08-visible-type-application-ghc8.html).
+
 ### Using records
 
 This option is a bit more verbose but it's also more explicit with the types and _"a bit more magic"_ than the one with `TypeApplications` (due to the use of Generics).
@@ -147,7 +149,5 @@ watching client = do
 Here though, while mapping `print` to the `Conduit`, we needed to add a type annotation because the type was ambiguous... I think it's a small price to pay in exchange for the terseness. 🤑
 
 ---
-
-<sup>1</sup> To read more on `TypeApplications`, you can check [this](https://www.reddit.com/r/haskell/comments/6ufnmr/scrap_your_proxy_arguments_with_typeapplications/), [that](https://blog.sumtypeofway.com/posts/fluent-polymorphism-type-applications.html) and [this](https://kseo.github.io/posts/2017-01-08-visible-type-application-ghc8.html).
 
 To see a **working example** you can check all the code at the [example with persistent](https://github.com/higherkindness/mu-haskell/tree/master/examples/with-persistent).
