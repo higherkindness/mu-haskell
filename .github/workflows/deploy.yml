@@ -3,7 +3,6 @@ on:
   push:
     branches:
     - master
-    - site-deploy-gh
 jobs:
   build:
     runs-on: ubuntu-latest
