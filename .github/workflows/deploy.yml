@@ -19,7 +19,7 @@ jobs:
         sudo gem update --system
         sudo bundle install --gemfile docs/Gemfile --path vendor/bundle
     - name: Build microsite
-      run: BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -s docs -d gen-docs
+      run: BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs
     - name: Deploy microsite
       uses: peaceiris/actions-gh-pages@v2
       env:
