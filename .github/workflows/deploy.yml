@@ -12,12 +12,13 @@ jobs:
     - uses: mstksg/setup-stack@v1
     - name: Generate Haddock Docs
       run: bash ./generate-haddock-docs.sh
-    - name: Get Bundle
+    - name: Get Bundle & Jekyll
       run: |
         sudo apt-get update
         sudo apt-get install ruby-dev
         sudo gem install bundler --force
         sudo gem update --system
+        sudo bundle install --gemfile docs/Gemfile --path vendor/bundle
     - name: Build microsite
       run: BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -s docs -d gen-docs
     - name: Deploy microsite
