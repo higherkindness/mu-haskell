@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Mu-Haskell</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Lorem ipusm">
+    <meta name="keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory">
+
+    <meta property="og:image" content="" />
+    <meta property="og:title" content="Mu-Haskell" />
+    <meta property="og:site_name" content="Mu-Haskell" />
+    <meta property="og:url" content="https://higherkindness.io/mu-haskell" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="Lorem ipusm" />
+    <meta property="og:keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory" />
+
+    <meta name="twitter:text:description" content="Lorem ipusm" />
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@47deg">
+    <meta name="twitter:creator" content="@47deg">
+    <meta name="twitter:image" content="" />
+
+    <script defer src="/js/docs.js"></script>
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.png">
+
+    <!-- mu-haskell docs css -->
+    <link rel="stylesheet" type="text/css" href="/css/docs.css">
+</head>
+
+    <body>
+        <div id="site-sidebar">
+  <div class="sidebar-brand">
+    <a href="/" class="brand" title="Mu-Haskell">
+      <img
+        src="/img/nav-brand-white.svg"
+        alt="Mu-Haskell"
+        class="brand-wrapper"
+      />
+      <span>Mu-Haskell</span>
+    </a>
+    <button
+      id="main-toggle"
+      type="button"
+      title="Close"
+      class="button sidebar-toggle"
+    >
+      <span class="close"></span>
+    </button>
+  </div>
+  <div class="sidebar-menu">
+    
+      
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item active ">
+      
+      <a
+        href="/"
+        class="active"
+        title="Start"
+      >
+        Start
+      </a>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/intro/"
+        class=""
+        title="Introduction"
+      >
+        Introduction
+      </a>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <a
+        href="/schema/"
+        title="Schemas"
+        class="drop-nested"
+      >
+        Schemas
+      </a>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/registry/"
+          title="Registry"
+        >
+          Registry
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <a
+        href="/rpc/"
+        title="Services and servers"
+        class="drop-nested"
+      >
+        Services and servers
+      </a>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/grpc/"
+          title="gRPC"
+        >
+          gRPC
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/stream/"
+          title="Streams"
+        >
+          Streams
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/db/"
+          title="Databases"
+        >
+          Databases
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item active open">
+       
+      <button
+        type="button"
+        title="Open Integrations"
+        class="button drop-nested"
+      >
+        Integrations
+      </button>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/transformer/"
+          title="Transformers"
+        >
+          Transformers
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/middleware/"
+          title="Middleware"
+        >
+          Middleware
+        </a>
+        
+      </div>
+      
+    </div>
+    
+    
+  </div>
+</div>
+
+        <main id="site-doc">
+    <div class="doc-header">
+      <button
+        id="menu-toggle"
+        type="button"
+        class="button doc-toggle"
+        title="Toggle">
+          <img src="/img/sidebar-icon-open.svg" alt="Toggle">
+      </button>
+
+      <div class="link-container">
+        <div class="link-item">
+          <a href="/haddock/index.html">API Docs</a>
+        </div>
+        <div class="link-item">
+          <a href="https://github.com/higherkindness/mu-haskell">GitHub</a>
+        </div>
+      </div>
+
+    </div>
+    <div class="doc-content">
+        <h1 id="docs-for-mu-haskell">Docs for Mu-Haskell</h1>
+
+<p>Mu-Haskell is a set of packages that help you build both servers and clients for (micro)services. The main goal of Mu-Haskell is to make you focus on your domain logic, instead of worrying about format and protocol issues.</p>
+
+<ul>
+  <li><a href="/intro/">Introduction</a></li>
+  <li><a href="/schema/">Schemas</a>
+    <ul>
+      <li><a href="/registry/">Registry</a></li>
+    </ul>
+  </li>
+  <li><a href="/rpc/">Services and servers</a>
+    <ul>
+      <li><a href="/grpc/">gRPC servers and clients</a></li>
+      <li><a href="/stream/">Streams</a></li>
+      <li><a href="/db/">Databases</a>, including resource pools</li>
+    </ul>
+  </li>
+  <li>Integration with other libraries
+    <ul>
+      <li><a href="/transformer/">Using transformers</a>: look here for logging</li>
+      <li><a href="/middleware/">WAI Middleware</a>: look here for metrics</li>
+    </ul>
+  </li>
+</ul>
+
+    </div>
+</main>
+
+    </body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Mu-Haskell</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Lorem ipusm">
+    <meta name="keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory">
+
+    <meta property="og:image" content="" />
+    <meta property="og:title" content="Mu-Haskell" />
+    <meta property="og:site_name" content="Mu-Haskell" />
+    <meta property="og:url" content="https://higherkindness.io/mu-haskell" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="Lorem ipusm" />
+    <meta property="og:keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory" />
+
+    <meta name="twitter:text:description" content="Lorem ipusm" />
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@47deg">
+    <meta name="twitter:creator" content="@47deg">
+    <meta name="twitter:image" content="" />
+
+    <script defer src="/js/docs.js"></script>
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/img/favicon.png">
+
+    <!-- mu-haskell docs css -->
+    <link rel="stylesheet" type="text/css" href="/css/docs.css">
+</head>
+
+    <body>
+        <div id="site-sidebar">
+  <div class="sidebar-brand">
+    <a href="/" class="brand" title="Mu-Haskell">
+      <img
+        src="/img/nav-brand-white.svg"
+        alt="Mu-Haskell"
+        class="brand-wrapper"
+      />
+      <span>Mu-Haskell</span>
+    </a>
+    <button
+      id="main-toggle"
+      type="button"
+      title="Close"
+      class="button sidebar-toggle"
+    >
+      <span class="close"></span>
+    </button>
+  </div>
+  <div class="sidebar-menu">
+    
+      
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/"
+        class=""
+        title="Start"
+      >
+        Start
+      </a>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/intro/"
+        class=""
+        title="Introduction"
+      >
+        Introduction
+      </a>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <a
+        href="/schema/"
+        title="Schemas"
+        class="drop-nested"
+      >
+        Schemas
+      </a>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/registry/"
+          title="Registry"
+        >
+          Registry
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  open">
+       
+      <a
+        href="/rpc/"
+        title="Services and servers"
+        class="drop-nested"
+      >
+        Services and servers
+      </a>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/grpc/"
+          title="gRPC"
+        >
+          gRPC
+        </a>
+        
+        
+        
+        <a
+          class="active"
+          href="/stream/"
+          title="Streams"
+        >
+          Streams
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/db/"
+          title="Databases"
+        >
+          Databases
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <button
+        type="button"
+        title="Open Integrations"
+        class="button drop-nested"
+      >
+        Integrations
+      </button>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/transformer/"
+          title="Transformers"
+        >
+          Transformers
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/middleware/"
+          title="Middleware"
+        >
+          Middleware
+        </a>
+        
+      </div>
+      
+    </div>
+    
+    
+  </div>
+</div>
+
+        <main id="site-doc">
+    <div class="doc-header">
+      <button
+        id="menu-toggle"
+        type="button"
+        class="button doc-toggle"
+        title="Toggle">
+          <img src="/img/sidebar-icon-open.svg" alt="Toggle">
+      </button>
+
+      <div class="link-container">
+        <div class="link-item">
+          <a href="/haddock/index.html">API Docs</a>
+        </div>
+        <div class="link-item">
+          <a href="https://github.com/higherkindness/mu-haskell">GitHub</a>
+        </div>
+      </div>
+
+    </div>
+    <div class="doc-content">
+        <h1 id="streams">Streams</h1>
+
+<p>In the docs about <a href="rpc.md">service definition</a> we had one single <code class="highlighter-rouge">SayHello</code> method which takes one value and produces one value. However, we can also declare methods which perform streaming, such as:</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">service</span> <span class="nc">Greeter</span> <span class="o">{</span>
+  <span class="n">rpc</span> <span class="nf">SayHello</span> <span class="o">(</span><span class="nc">HelloRequest</span><span class="o">)</span> <span class="n">returns</span> <span class="o">(</span><span class="nc">HelloReply</span><span class="o">)</span> <span class="o">{}</span>
+  <span class="n">rpc</span> <span class="nf">SayManyHellos</span> <span class="o">(</span><span class="n">stream</span> <span class="nc">HelloRequest</span><span class="o">)</span> <span class="n">returns</span> <span class="o">(</span><span class="n">stream</span> <span class="nc">HelloReply</span><span class="o">)</span> <span class="o">{}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Adding this method to the service definition should be easy, we just need to use <code class="highlighter-rouge">ArgStream</code> and <code class="highlighter-rouge">RetStream</code> to declare that behavior (of course, this is done automatically if you import the service from a file):</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">QuickstartService</span>
+  <span class="o">=</span> <span class="kt">'Service</span> <span class="s">"Greeter"</span>
+      <span class="sc">'[</span><span class="err"> </span><span class="kt">'Method</span> <span class="s">"SayHello"</span> <span class="o">...</span>
+       <span class="p">,</span> <span class="kt">'Method</span> <span class="s">"SayManyHellos"</span>
+        <span class="sc">'[</span><span class="err"> </span><span class="kt">'ArgStream</span> <span class="p">(</span><span class="kt">'FromSchema</span> <span class="kt">QuickstartSchema</span> <span class="s">"HelloRequest"</span><span class="p">)]</span>
+        <span class="p">(</span><span class="kt">'RetStream</span> <span class="p">(</span><span class="kt">'FromSchema</span> <span class="kt">QuickstartSchema</span> <span class="s">"HelloResponse"</span><span class="p">))</span> <span class="p">]</span>
+</code></pre></div></div>
+
+<p>To define the implementation of this method we build upon the great <a href="https://github.com/snoyberg/conduit">Conduit</a> library. Your input is now a producer of values, as defined by that library, and you must write the results to the provided sink. Better said with an example:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sayManyHellos</span>
+  <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span>
+  <span class="o">=&gt;</span> <span class="kt">ConduitT</span> <span class="nb">()</span> <span class="kt">HelloRequest</span> <span class="n">m</span> <span class="nb">()</span>
+  <span class="o">-&gt;</span> <span class="kt">ConduitT</span> <span class="kt">HelloResponse</span> <span class="kt">Void</span> <span class="n">m</span> <span class="nb">()</span>
+  <span class="o">-&gt;</span> <span class="n">m</span> <span class="nb">()</span>
+<span class="n">sayManyHellos</span> <span class="n">source</span> <span class="n">sink</span>
+  <span class="o">=</span> <span class="n">runConduit</span> <span class="o">$</span> <span class="n">source</span> <span class="o">.|</span> <span class="kt">C</span><span class="o">.</span><span class="n">mapM</span> <span class="n">sayHello</span> <span class="o">.|</span> <span class="n">sink</span>
+</code></pre></div></div>
+
+<p>In this case we are connecting the <code class="highlighter-rouge">source</code> to the <code class="highlighter-rouge">sink</code>, transforming in between each value using the <code class="highlighter-rouge">sayHello</code> function. More complicated pipelines can be built in this form.</p>
+
+<p>Since now the service has more than one method, we need to update our server declaration to bring together this new handler:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">quickstartServer</span> <span class="o">=</span> <span class="kt">Server</span> <span class="p">(</span><span class="n">sayHello</span> <span class="o">:&lt;|&gt;:</span> <span class="n">sayManyHellos</span> <span class="o">:&lt;|&gt;:</span> <span class="kt">H0</span><span class="p">)</span>
+</code></pre></div></div>
+
+    </div>
+</main>
+
+    </body>
+</html>
