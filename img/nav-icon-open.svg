@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <!-- Generator: Sketch 57.1 (83088) - https://sketch.com -->
     <title>nav-icon-open</title>
-    <desc>Created with Sketch.</desc>
     <g id="nav-icon-open" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <g transform="translate(0.000000, 4.000000)" fill="#1F1C49" fill-rule="nonzero" id="path">
+        <g transform="translate(0.000000, 4.000000)" fill="#001E38" fill-rule="nonzero" id="path">
             <rect x="0" y="0" width="24" height="2"></rect>
             <rect x="0" y="7" width="24" height="2"></rect>
             <rect x="0" y="14" width="24" height="2"></rect>
