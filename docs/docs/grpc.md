@@ -51,16 +51,16 @@ Where `watch`, `get` and `add` are the only valid 3 commands that our CLI is goi
 
 This option is a bit more verbose but it's also more explicit with the types and _"a bit more magic"_ than the one with `TypeApplications` (due to the use of Generics).
 
-We need to define a new record type (hence the name) that declares the services our client is going to consume. Remember that the names of the record fields **must match** exactly the methods in the service:
+We need to define a new record type (hence the name) that declares the services our client is going to consume. The names of the fields **must** match the names of the methods in the service, optionally prefixed by a **common** string. The prefix may also be empty, which means that the names in the record are exactly those in the service definition. In this case, we are prepending `call_` to each of them:
 
 ```haskell
 import GHC.Generics (Generic)
 import Mu.GRpc.Client.Record
 
 data Call = Call
-  { getPerson :: MPersonRequest -> IO (GRpcReply MPerson)
-  , newPerson :: MPerson -> IO (GRpcReply MPersonRequest)
-  , allPeople :: IO (ConduitT () (GRpcReply MPerson) IO ())
+  { call_getPerson :: MPersonRequest -> IO (GRpcReply MPerson)
+  , call_newPerson :: MPerson -> IO (GRpcReply MPersonRequest)
+  , call_allPeople :: IO (ConduitT () (GRpcReply MPerson) IO ())
   } deriving Generic
 ```
 
@@ -72,13 +72,11 @@ main = do
    let config = grpcClientConfigSimple "127.0.0.1" 1234 False
 -  Right client <- setupGrpcClient' config
 +  Right grpcClient <- setupGrpcClient' config
-+  let client = buildService @Service "/grpc" grpcClient
++  let client = buildService @Service @"call_" grpcClient
    args <- getArgs
 ```
 
-Instead of building our client directly, we need to call `buildService` (and enable `TypeApplications`) to create the actual gRPC client. If you don't like `TypeApplications`, it is also possible to use a combination of `ScopedTypeVariables` and something like `(Proxy :: Proxy Service)` to achieve the same result, but it's a bit more verbose and we _encourge you<sup>1</sup>_ to use `TypeApplications`  instead. 😉
-
-That string (or `ByteString`) as a second argument to `buildService` corresponds to the route of the service.
+Instead of building our client directly, we need to call `buildService` (and enable `TypeApplications`) to create the actual gRPC client. There are two type arguments to be explicitly given: the first one is the `Service` definition we want a client for, and the second one is the prefix in the record (in our case, this is `call_`). In the case you want an empty prefix, you write `@""` in that second position.
 
 After that, let's have a look at an example implementation of the three service calls:
 
@@ -89,7 +87,7 @@ get :: Call -> String -> IO ()
 get client idPerson = do
   let req = MPersonRequest $ readMaybe idPerson
   putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
-  res <- getPerson client req
+  res <- call_getPerson client req
   putStrLn $ "GET: response was: " ++ show res
 ```
 
@@ -100,12 +98,12 @@ add :: Call -> String -> String -> IO ()
 add client nm ag = do
   let p = MPerson Nothing (Just $ T.pack nm) (readMaybe ag)
   putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
-  res <- newPerson client p
+  res <- call_newPerson client p
   putStrLn $ "ADD: was creating successful? " ++ show res
 
 watching :: Call -> IO ()
 watching client = do
-  replies <- allPeople client
+  replies <- call_allPeople client
   runConduit $ replies .| C.mapM_ print
 ```
 
