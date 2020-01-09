@@ -1,1 +1,0 @@
-cradle: { stack: { component: "mu-example-with-persistent:exe:persistent-server" } }

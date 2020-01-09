@@ -1,9 +1,0 @@
-nav:
-    - title: Documentation
-      url: /
-
-    - title: Github
-      url: https://github.com/higherkindness/mu-haskell
-
-    - title: License
-      url: https://github.com/higherkindness/mu-haskell/blob/master/LICENSE

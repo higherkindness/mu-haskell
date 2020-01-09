@@ -1,1 +1,0 @@
-cradle: { stack: { component: "mu-example-todolist:exe:todolist-server" } }
