@@ -28,12 +28,12 @@
 
   &::before,
   &::after {
-    background-color: $white;
+    background-color: $gray-primary;
     content: " ";
     height: 100%;
     left: 98%;
     position: absolute;
-    top: 50%;
+    top: 36%;
     width: 2px;
   }
 
