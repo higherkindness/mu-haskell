@@ -5,15 +5,15 @@
 // -----------------------------------------------
 // Typography
 // -----------------------------------------------
-@import url('https://fonts.googleapis.com/css?family=Fira+Mono:400,500,700&display=swap');
+@import url('https://fonts.googleapis.com/css?family=Fira+Code:400,500,700&display=swap');
 @import url('https://fonts.googleapis.com/css?family=Montserrat:400,600,700&display=swap');
 // @import url('https://fonts.googleapis.com/css?family=Hind:400,500,600&display=swap');
 
 // Colors
 // -----------------------------------------------
-$brand-primary: #66296a;
-$brand-secondary: #001f39;
-$gray-primary: #001f39;
+$brand-primary: #9E358F;
+$brand-secondary: #001E38;
+$gray-primary: #001E38;
 $white: rgb(255, 255, 255);
 $link-color: darken($brand-primary, 10%);
 $link-hover: darken($brand-primary, 15%);
@@ -25,7 +25,7 @@ $sidebar-head-active-color: lighten($brand-primary, 4%);
 $base-font-family: 'Montserrat', sans-serif;
 // $header-font-family: 'Hind', sans-serif;
 $header-font-family: $base-font-family;
-$code-font-family: 'Fira Mono', monospace;
+$code-font-family: 'Fira Code', monospace;
 //-
 $base-font-color: $gray-primary;
 $header-font-color: $base-font-color;
