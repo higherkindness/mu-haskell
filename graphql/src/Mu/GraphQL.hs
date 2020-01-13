@@ -88,10 +88,20 @@ fullResolver
 fullResolver Nil = Nil
 fullResolver (r :* rs) = typeResolver r :* fullResolver rs
   where
-    typeResolver :: TypeResolver m sch x -> FullResolver' m sch x
-    typeResolver NR                  = undefined
-    typeResolver (DR directResolver) = undefined
-    typeResolver (RR fieldResolvers) = undefined
+    typeResolver
+      :: forall x.
+         TypeResolver m sch x
+      -> FullResolver' m sch x
+    typeResolver NR                  = undefined -- TODO:
+    typeResolver (DR directResolver) = FullResolver' directResolver
+    typeResolver (RR fieldResolvers) = fullResolverFromFields fieldResolvers
+    fullResolverFromFields
+      :: forall name fields x.
+         NP (FieldResolver m sch name) fields
+      -> FullResolver' m sch x
+    fullResolverFromFields Nil       = undefined -- TODO:
+    fullResolverFromFields (f :* fs) = undefined -- TODO:
+    -- resolverFromField :: forall name x. FieldResolver m sch name x -> FullResolver' m sch x
 
 class FindResolver (sch :: Schema tn fn) (iter :: Schema tn fn) (ty :: TypeDef tn fn) where
   findResolver :: NP (FullResolver' m sch) iter -> FullResolver m (W Term sch ty)
