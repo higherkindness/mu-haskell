@@ -6,5 +6,3 @@ packages: compendium-client/
           adapter/persistent/
           grpc/client/
           grpc/server/
-
-extra-packages: network==3.1.0.1
