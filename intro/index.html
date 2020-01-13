@@ -306,7 +306,7 @@
 <h3 id="super-quick-summary">Super-quick summary</h3>
 
 <ol>
-  <li>Create a new project with <code class="highlighter-rouge">stack new my-project url-to-hsfile</code>.</li>
+  <li>Create a new project with <code class="highlighter-rouge">stack new</code>.</li>
   <li>Define your schema and your services in the <code class="highlighter-rouge">.proto</code> file.</li>
   <li>Write your Haskell data types in <code class="highlighter-rouge">src/Schema.hs</code>.</li>
   <li>Implement the server in <code class="highlighter-rouge">src/Main.hs</code>.</li>
@@ -326,7 +326,7 @@
 
 <p>To get started with the project, we provide a <a href="https://docs.haskellstack.org">Stack</a> template (in fact, we recommend that you use Stack as your build tool, although Cabal should also work perfectly fine). You should run:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>stack new my-project url-to-hsfile
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>stack new my-project https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/grpc-server.hsfiles -p "author-email:your@email.com" -p "author-name:Your name"
 </code></pre></div></div>
 
 <p>This command creates a new folder called <code class="highlighter-rouge">my-project</code>, with a few files. The most important from those are the <code class="highlighter-rouge">.proto</code> file, in which you shall declare your service; <code class="highlighter-rouge">src/Schema.hs</code>, which loads the service definition at compile-time; and <code class="highlighter-rouge">src/Main.hs</code>, which contains the code of the server.</p>
