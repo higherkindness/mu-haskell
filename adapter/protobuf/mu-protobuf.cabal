@@ -2,16 +2,21 @@ cabal-version:       >=1.10
 name:                mu-protobuf
 version:             0.1.0.0
 synopsis:            Protocol Buffers serialization and gRPC schema import for Mu microservices
--- description:
--- bug-reports:
+description:         You can use @mu-protobuf@ to read Protobuf Schema Declarations and services for mu-haskell
 license:             Apache-2.0
 license-file:        LICENSE
-author:              Alejandro Serrano
+author:              Alejandro Serrano, Flavio Corpa
 maintainer:          alejandro.serrano@47deg.com
--- copyright:
+copyright:           Copyright © 2019-2020 <http://47deg.com 47 Degrees>
 category:            Network
 build-type:          Simple
 data-files:          test/protobuf/*.proto
+homepage:            https://higherkindness.io/mu-haskell/
+bug-reports:         https://github.com/higherkindness/mu-haskell/issues
+
+source-repository head
+  type:     git
+  location: https://github.com/higherkindness/mu-haskell
 
 library
   exposed-modules:     Mu.Adapter.ProtoBuf
@@ -19,8 +24,6 @@ library
                      , Mu.Quasi.ProtoBuf
                      , Mu.Quasi.GRpc
                      , Mu.Quasi.ProtoBuf.Example
-  -- other-modules:
-  -- other-extensions:
   build-depends:       base >=4.12 && <5
                      , mu-schema
                      , mu-rpc
@@ -49,4 +52,5 @@ executable test-protobuf
                      , proto3-wire
   hs-source-dirs:      test
   default-language:    Haskell2010
-  ghc-options:         -Wall -fprint-explicit-foralls
+  ghc-options:         -Wall
+                       -fprint-explicit-foralls
