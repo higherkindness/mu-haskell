@@ -21,7 +21,7 @@ The main goal of Mu-Haskell is to make you focus on your domain logic, instead o
 
 ### Super-quick summary
 
-1. Create a new project with `stack new my-project url-to-hsfile`.
+1. Create a new project with `stack new`.
 2. Define your schema and your services in the `.proto` file.
 3. Write your Haskell data types in `src/Schema.hs`.
 4. Implement the server in `src/Main.hs`.
@@ -42,7 +42,7 @@ message HelloReply { string message = 1; }
 To get started with the project, we provide a [Stack](https://docs.haskellstack.org) template (in fact, we recommend that you use Stack as your build tool, although Cabal should also work perfectly fine). You should run:
 
 ```
-stack new my-project url-to-hsfile
+stack new my-project https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/grpc-server.hsfiles -p "author-email:your@email.com" -p "author-name:Your name"
 ```
 
 This command creates a new folder called `my-project`, with a few files. The most important from those are the `.proto` file, in which you shall declare your service; `src/Schema.hs`, which loads the service definition at compile-time; and `src/Main.hs`, which contains the code of the server.
