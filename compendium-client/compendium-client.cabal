@@ -1,23 +1,24 @@
 cabal-version:       >=1.10
-
 name:                compendium-client
-version:             0.1.0.0
-synopsis:            Client for the compendium schema server
--- description:
--- bug-reports:
+version:             0.1.0.1
+synopsis:            Client for the Compendium schema server
+description:         Client for the <https://github.com/higherkindness/compendium Compendium> schema server
 license:             Apache-2.0
 license-file:        LICENSE
 author:              Alejandro Serrano
 maintainer:          alejandro.serrano@47deg.com
--- copyright:
+copyright:           Copyright © 2019-2020 <http://47deg.com 47 Degrees>
 category:            Network
 build-type:          Simple
--- extra-source-files:  README.md, CHANGELOG.md
+homepage:            https://higherkindness.io/mu-haskell/
+bug-reports:         https://github.com/higherkindness/mu-haskell/issues
+
+source-repository head
+  type:     git
+  location: https://github.com/higherkindness/mu-haskell
 
 library
   exposed-modules:     Compendium.Client
-  -- other-modules:
-  -- other-extensions:
   build-depends:       base >=4.12 && <5
                      , aeson
                      , text

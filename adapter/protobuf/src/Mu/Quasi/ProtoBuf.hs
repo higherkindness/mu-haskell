@@ -3,7 +3,13 @@
 {-# language LambdaCase      #-}
 {-# language NamedFieldPuns  #-}
 {-# language TemplateHaskell #-}
+{-|
+Description : Quasi-quoters for Protocol Buffers schemas
 
+Read @.proto@ files as a 'Mu.Schema.Definition.Schema'.
+If you want to get the service definitions too,
+you should use 'Mu.Quasi.GRpc' instead.
+-}
 module Mu.Quasi.ProtoBuf (
   -- * Quasi-quoters for @.proto@ files
     protobuf
@@ -23,7 +29,7 @@ import           Mu.Adapter.ProtoBuf
 import           Mu.Schema.Definition
 import           Mu.Schema.Annotations
 
--- | Reads a @.proto@ file and generates a 'Schema'
+-- | Reads a @.proto@ file and generates a 'Mu.Schema.Definition.Schema'
 --   with all the message types, using the name given
 --   as first argument.
 protobuf :: String -> FilePath -> Q [Dec]
@@ -35,6 +41,7 @@ protobuf schemaName fp
          Right p
            -> protobufToDecls schemaName p
 
+-- | Shared portion of Protocol Buffers and gRPC quasi-quoters.
 protobufToDecls :: String -> P.ProtoBuf -> Q [Dec]
 protobufToDecls schemaName p
   = do let schemaName' = mkName schemaName

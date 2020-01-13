@@ -9,7 +9,7 @@ echo "Removing previous docs"
 rm -rf ${DOCSDIR}
 
 echo "Building the project"
-stack build
+stack clean && stack build
 
 echo "Generating new docs"
 stack exec --no-ghc-package-path standalone-haddock -- -o ${DOCSDIR} \
@@ -17,7 +17,10 @@ stack exec --no-ghc-package-path standalone-haddock -- -o ${DOCSDIR} \
   --dist-dir=$(stack path --dist-dir) \
   --package-db=$(stack path --snapshot-pkg-db) \
   --package-db=$(stack path --local-pkg-db) \
+  --hyperlink-source \
   core/schema core/rpc \
   adapter/avro adapter/protobuf adapter/persistent \
-  grpc/client grpc/server \
-  compendium-client
+  grpc/client grpc/server
+
+echo "Setting Linuwial theme on Haddock generated docs"
+find ${DOCSDIR} -name "ocean.css" -exec cp -rf docs/css/linuwial.css {} \;

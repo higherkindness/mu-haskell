@@ -3,7 +3,18 @@
 {-# language NamedFieldPuns  #-}
 {-# language TemplateHaskell #-}
 {-# language ViewPatterns    #-}
+{-|
+Description : Quasi-quoters for Avro IDL format
 
+This module turns schema definitions written in
+<https://avro.apache.org/docs/current/idl.html Avro IDL>
+into Mu 'Schema's. We provide versions for writing
+the IDL inline ('avro') and import it from a file
+('avroFile').
+
+/Note/: as of now, only the JSON-based IDL format
+is supported, not the Java-like one.
+-}
 module Mu.Quasi.Avro (
   -- * Quasi-quoters for @.avsc@ files
     avro
@@ -64,6 +75,7 @@ schemaDecFromAvroType (A.Enum name _ _ symbols) =
     avChoiceToType c = [t|'ChoiceDef $(textToStrLit c)|]
 schemaDecFromAvroType t = [t|'DSimple $(schemaFromAvroType t)|]
 
+-- | Turns a schema from Avro into a Template Haskell 'Type'.
 schemaFromAvroType :: A.Type -> Q Type
 schemaFromAvroType =
   \case

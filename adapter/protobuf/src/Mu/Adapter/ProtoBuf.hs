@@ -15,6 +15,15 @@
 {-# language UndecidableInstances  #-}
 {-# language ViewPatterns          #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-|
+Description : Adapter for Protocol Buffers serialization
+
+Just import the module and you can turn any
+value with a 'ToSchema' and 'FromSchema' from
+and to Protocol Buffers. Since Protocol Buffers
+need information about field identifiers, you
+need to annotate your schema using 'ProtoBufAnnotation'.
+-}
 module Mu.Adapter.ProtoBuf (
   -- * Custom annotations
   ProtoBufAnnotation(..)
@@ -51,8 +60,11 @@ import qualified Mu.Schema.Registry       as R
 instance ProtoEnum Bool
 #endif
 
+-- | Annotations for Protocol Buffers fields.
 data ProtoBufAnnotation
-  = ProtoBufId Nat
+  = -- | Numeric field identifier for normal fields
+    ProtoBufId Nat
+    -- | List of identifiers for fields which contain a union
   | ProtoBufOneOfIds [Nat]
 
 type family FindProtoBufId (sch :: Schema tn fn) (t :: tn) (f :: fn) where
@@ -77,21 +89,33 @@ type family FindProtoBufOneOfIds' (t :: tn) (f :: fn) (p :: ProtoBufAnnotation) 
 
 -- CONVERSION USING SCHEMAS
 
+-- | Represents those 'Schema's which are supported by Protocol Buffers.
+--   Some values which can be represented as 'Term's cannot be so in
+--   Protocol Buffers. For example, you cannot have a list within an option.
 class ProtoBridgeTerm w sch (sch :/: sty) => IsProtoSchema w sch sty
 instance ProtoBridgeTerm w sch (sch :/: sty) => IsProtoSchema w sch sty
 
 -- type HasProtoSchema w sch sty a = (HasSchema w sch sty a, IsProtoSchema w sch sty)
 
+-- | Conversion to Protocol Buffers mediated by a schema.
 toProtoViaSchema :: forall t f (sch :: Schema t f) a sty.
                     (IsProtoSchema Maybe sch sty, ToSchema Maybe sch sty a)
                  => a -> PBEnc.MessageBuilder
 toProtoViaSchema = termToProto . toSchema' @_ @_ @sch @Maybe
 
+-- | Conversion from Protocol Buffers mediated by a schema.
+--   This function requires a 'PBDec.RawMessage', which means
+--   that we already know that the Protocol Buffers message
+--   is well-formed. Use 'parseProtoViaSchema' to parse directly
+--   from a 'BS.ByteString'.
 fromProtoViaSchema :: forall t f (sch :: Schema t f) a sty.
                       (IsProtoSchema Maybe sch sty, FromSchema Maybe sch sty a)
                    => PBDec.Parser PBDec.RawMessage a
 fromProtoViaSchema = fromSchema' @_ @_ @sch @Maybe <$> protoToTerm
 
+-- | Conversion from Protocol Buffers mediated by a schema.
+--   This function receives the 'BS.ByteString' directly,
+--   and parses it as part of its duty.
 parseProtoViaSchema :: forall sch a sty.
                        (IsProtoSchema Maybe sch sty, FromSchema Maybe sch sty a)
                     => BS.ByteString -> Either PBDec.ParseError a
@@ -99,18 +123,30 @@ parseProtoViaSchema = PBDec.parse (fromProtoViaSchema @_ @_ @sch)
 
 -- CONVERSION USING REGISTRY
 
+-- | Conversion from Protocol Buffers by checking
+--   all the 'Schema's in a 'R.Registry'.
+--
+--   As 'fromProtoViaSchema', this version requires
+--   an already well-formed Protocol Buffers message.
 fromProtoBufWithRegistry
   :: forall (r :: R.Registry) t.
      FromProtoBufRegistry r t
   => PBDec.Parser PBDec.RawMessage t
 fromProtoBufWithRegistry = fromProtoBufRegistry' (Proxy @r)
 
+-- | Conversion from Protocol Buffers by checking
+--   all the 'Schema's in a 'R.Registry'.
+--
+--   As 'parseProtoViaSchema', this version receives
+--   a 'BS.ByteString' and parses it as part of its duty.
 parseProtoBufWithRegistry
   :: forall (r :: R.Registry) t.
      FromProtoBufRegistry r t
   => BS.ByteString -> Either PBDec.ParseError t
 parseProtoBufWithRegistry = PBDec.parse (fromProtoBufWithRegistry @r)
 
+-- | Represents 'R.Registry's for which every 'Schema'
+--   is supported by the Protocol Buffers format.
 class FromProtoBufRegistry (ms :: Mappings Nat Schema') t where
   fromProtoBufRegistry' :: Proxy ms -> PBDec.Parser PBDec.RawMessage t
 

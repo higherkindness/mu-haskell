@@ -10,7 +10,14 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Mu.Adapter.Avro where
+{-|
+Description : Adapter for Avro serialization
+
+Just import the module and you can turn any
+value with a 'ToSchema' and 'FromSchema' from
+and to Avro values.
+-}
+module Mu.Adapter.Avro () where
 
 import           Control.Arrow                       ((***))
 import qualified Data.Avro                           as A

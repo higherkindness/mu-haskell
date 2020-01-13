@@ -1,7 +1,7 @@
 stack*.yaml.lock
 .stack-work
 *~
-dist
+dist*
 *.pyc
 
 ## User files

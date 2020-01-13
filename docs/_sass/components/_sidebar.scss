@@ -4,7 +4,8 @@
 
 #site-sidebar {
     position: fixed;
-    background-image: linear-gradient(to bottom, $brand-primary 60%, darken($brand-primary, 6%) 100%);
+    background-image: linear-gradient(to bottom, $white 60%, darken($white, 3%) 100%);
+    border-right: 1px solid rgba(0,0,0,0.1);
     width: 290px;
     height: 100%;
     left: 0;
@@ -30,10 +31,11 @@
 
         a {
             display: flex;
-            color: $white;
+            color: $gray-primary;
             justify-content: center;
             align-items: center;
             width: 100%;
+            transition: none;
 
             &:visited,
             &:hover,
@@ -50,7 +52,7 @@
               font-size: 1.5rem;
               z-index: 30;
               white-space: nowrap;
-              font-weight: 500;
+              font-weight: $font-semibold;
             }
         }
     }
@@ -74,7 +76,7 @@
 
         .sidebar-toggle {
             position: absolute;
-            right: 16px;;
+            right: 16px;
             padding: 24px 32px;
             display: block;
             opacity: 0.7;
