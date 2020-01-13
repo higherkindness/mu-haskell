@@ -96,6 +96,7 @@ grpc "TheSchema" id "{{name}}.proto"
 {-# START_FILE src/Main.hs #-}
 {-# language FlexibleContexts      #-}
 {-# language PartialTypeSignatures #-}
+{-# language OverloadedStrings     #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 module Main where
 

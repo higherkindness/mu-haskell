@@ -43,7 +43,7 @@ This is everything you need to start using gRPC services and clients in Haskell!
 
 ### Looking at the resulting code
 
-In order to use the library proficiently, we should look a bit at the code generated in the previous code. A type-level description of the messages is put into the type `QuickstartSchema`. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using `mu-schema` facilities, this amounts to declaring a bunch of data types and including `deriving (Generic, ToSchema Maybe Schema "type", FromSchema Maybe Schema "type")` at the end of each of them.
+In order to use the library proficiently, we should look a bit at the code generated in the previous sample. A type-level description of the messages is put into the type `QuickstartSchema`. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using `mu-schema` facilities, this amounts to declaring a bunch of data types and including `deriving (Generic, ToSchema Maybe <SchemaName> "<MessageType>", FromSchema Maybe <SchemaName> "<MessageType>")` at the end of each of them.
 
 ```haskell
 {-# language PolyKinds, DataKinds, TypeFamilies #-}
@@ -78,7 +78,7 @@ newtype HelloResponse
            , FromSchema Maybe QuickstartSchema "HelloResponse")
 ```
 
-The service declaration looks very similar to an schema declaration, but instead of record and enumerations you define *methods*. Each method has a name, a list of arguments, and a return type.
+The service declaration looks very similar to a schema declaration, but instead of records and enumerations you define *methods*. Each method has a name, a list of arguments, and a return type.
 
 ```haskell
 import Mu.Rpc
@@ -91,7 +91,7 @@ type QuickstartService
         ('RetSingle ('FromSchema QuickstartSchema "HelloResponse")) ]
 ```
 
-In order to support both [Avro IDL](https://avro.apache.org/docs/current/idl.html) and [gRPC](https://grpc.io/), the declaration of the method arguments and returns in a bit fancier that you might expect:
+In order to support both [Avro IDL](https://avro.apache.org/docs/current/idl.html) and [gRPC](https://grpc.io/), the declaration of the method arguments and return types is a bit fancier than you might expect:
 
 * Each *argument* declares the schema type used for serialization. Furthermore, the argument can be declared as `ArgSingle` (only one value is provided by the client) or `ArgStream` (a stream of values is provided).
 * The *return types* gives the same two choices under the names `RetSingle` or `RetStream`, and additionally supports the declaration of methods which may raise exceptions using `RetThrows`, or methods which do not retun any useful information using `RetNothing`.
