@@ -1,0 +1,10 @@
+packages: compendium-client/
+          core/schema/
+          core/rpc/
+          adapter/avro/
+          adapter/protobuf/
+          adapter/persistent/
+          grpc/client/
+          grpc/server/
+
+extra-packages: network==3.1.0.1
