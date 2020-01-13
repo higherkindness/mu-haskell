@@ -3,7 +3,6 @@ name:                mu-schema
 version:             0.1.0.0
 synopsis:            Format-independent schemas for serialization
 description:         With @mu-schema@ you can describe schemas using type-level constructs, and derive serializers from those. See @mu-avro@, @mu-protobuf@ for the actual adapters.
--- bug-reports:
 license:             Apache-2.0
 license-file:        LICENSE
 author:              Alejandro Serrano, Flavio Corpa
