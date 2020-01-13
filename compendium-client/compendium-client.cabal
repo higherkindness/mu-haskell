@@ -19,8 +19,6 @@ source-repository head
 
 library
   exposed-modules:     Compendium.Client
-  -- other-modules:
-  -- other-extensions:
   build-depends:       base >=4.12 && <5
                      , aeson
                      , text

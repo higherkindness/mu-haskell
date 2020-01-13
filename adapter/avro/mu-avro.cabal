@@ -2,23 +2,26 @@ cabal-version:       >=1.10
 name:                mu-avro
 version:             0.1.0.0
 synopsis:            Avro serialization support for Mu microservices
--- description:
--- bug-reports:
+description:         You can use @mu-avro@ to read AVRO Schema Declarations for mu-haskell
 license:             Apache-2.0
 license-file:        LICENSE
 author:              Alejandro Serrano, Flavio Corpa
 maintainer:          alejandro.serrano@47deg.com
--- copyright:
+copyright:           Copyright © 2019-2020 <http://47deg.com 47 Degrees>
 category:            Network
 build-type:          Simple
 data-files:          test/avro/*.avsc
+homepage:            https://higherkindness.io/mu-haskell/
+bug-reports:         https://github.com/higherkindness/mu-haskell/issues
+
+source-repository head
+  type:     git
+  location: https://github.com/higherkindness/mu-haskell
 
 library
   exposed-modules:     Mu.Adapter.Avro
                      , Mu.Quasi.Avro
                      , Mu.Quasi.Avro.Example
-  -- other-modules:
-  -- other-extensions:
   build-depends:       base >=4.12 && <5
                      , mu-schema
                      , avro
