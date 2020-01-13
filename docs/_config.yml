@@ -2,7 +2,7 @@ title: Mu-Haskell
 #-------------------------
 name: Mu-Haskell
 #-------------------------
-description: Lorem ipusm
+description: Mu-Haskell is a set of packages that helps you build servers and clients for (micro)services. The goal is to make you focus on your domain logic, instead of worrying about format and protocol issues.
 #-------------------------
 author: 47 Degrees
 keywords: functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory
