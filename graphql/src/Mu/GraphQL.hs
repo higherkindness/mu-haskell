@@ -101,12 +101,25 @@ fullResolver (r :* rs) = typeResolver r :* fullResolver rs
       -> FullResolver' m sch x
     fullResolverFromFields Nil       = undefined -- TODO:
     fullResolverFromFields (f :* fs) = undefined -- TODO:
-    -- resolverFromField :: forall name x. FieldResolver m sch name x -> FullResolver' m sch x
+
+class TermWanted (ty :: TypeDef tn fn) where
+  toTermMaybe :: Term Wanted m ty -> Term Maybe m ty
+
+instance TermWanted ('DEnum tn chs) where
+  toTermMaybe = undefined -- TODO:
+
+instance TermWanted ('DSimple fld) where
+  toTermMaybe = undefined -- TODO:
+
+instance TypeError ('Text "cannot work for records " ':<>: 'ShowType tn)
+  => TermWanted ('DRecord tn vls) where
+  toTermMaybe = error "this should never be called"
 
 class FindResolver (sch :: Schema tn fn) (iter :: Schema tn fn) (ty :: TypeDef tn fn) where
   findResolver :: NP (FullResolver' m sch) iter -> FullResolver m (W Term sch ty)
 
-instance TypeError ('Text "cannot find resolver for " ':<>: 'ShowType ty) => FindResolver sch '[] ty where
+instance TypeError ('Text "cannot find resolver for " ':<>: 'ShowType ty)
+  => FindResolver sch '[] ty where
   findResolver = error "this should never be called"
 
 instance {-# OVERLAPS #-} FindResolver sch (ty ': tys) ty where
