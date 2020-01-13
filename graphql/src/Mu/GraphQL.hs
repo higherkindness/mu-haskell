@@ -85,7 +85,13 @@ fullResolver
   :: forall m sch tys.
      NP (TypeResolver  m sch) tys
   -> NP (FullResolver' m sch) tys
-fullResolver = undefined -- TODO:
+fullResolver Nil = Nil
+fullResolver (r :* rs) = typeResolver r :* fullResolver rs
+  where
+    typeResolver :: TypeResolver m sch x -> FullResolver' m sch x
+    typeResolver NR                  = undefined
+    typeResolver (DR directResolver) = undefined
+    typeResolver (RR fieldResolvers) = undefined
 
 class FindResolver (sch :: Schema tn fn) (iter :: Schema tn fn) (ty :: TypeDef tn fn) where
   findResolver :: NP (FullResolver' m sch) iter -> FullResolver m (W Term sch ty)
