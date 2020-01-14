@@ -389,7 +389,7 @@
 
 <h2 id="customizing-the-mapping">Customizing the mapping</h2>
 
-<p>Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our schema above we use <code class="highlighter-rouge">male</code>, <code class="highlighter-rouge">female</code>, and <code class="highlighter-rouge">nb</code>, but in a Haskell enumeration the name of each constructor must begin with a capital letter. By using a stand-along <code class="highlighter-rouge">ToSchema</code> instance you can declare a custom mapping from Haskell fields or constructors to schema fields or enum choices, respectively:</p>
+<p>Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our schema above we use <code class="highlighter-rouge">male</code>, <code class="highlighter-rouge">female</code>, and <code class="highlighter-rouge">nb</code>, but in a Haskell enumeration the name of each constructor must begin with a capital letter. By using a standalone <code class="highlighter-rouge">ToSchema</code> instance you can declare a custom mapping from Haskell fields or constructors to schema fields or enum choices, respectively:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language DerivingVia  #-}</span>
 <span class="cp">{-# language TypeFamilies #-}</span>

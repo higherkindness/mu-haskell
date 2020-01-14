@@ -312,7 +312,7 @@
 
 <p>Maybe this example looks a bit contrived but bear with me, it covers a common use case when working with protobuf: that one of the messages has another message as its identifying key.</p>
 
-<h2 id="definning-our-schema">Definning our Schema</h2>
+<h2 id="defining-our-schema">Defining our Schema</h2>
 
 <p>You are going to need to enable the following extensions:</p>
 
@@ -396,13 +396,13 @@ Person json
   <span class="kr">instance</span> <span class="kt">ToSchema</span> <span class="kt">Maybe</span> <span class="kt">PersistentSchema</span> <span class="s">"Person"</span> <span class="p">(</span><span class="kt">Entity</span> <span class="kt">Person</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>Have in mind that we still need to define our own custom field mapping, in this case <code class="highlighter-rouge">PersonFieldMapping</code> so that the deriving via does it’s job properly.</p>
+<p>Have in mind that we still need to define our own custom field mapping, in this case <code class="highlighter-rouge">PersonFieldMapping</code> so that the deriving via does its job properly.</p>
 
 <h2 id="running-a-pool-of-database-connections">Running a pool of database connections</h2>
 
 <p>Now let’s focus on the Server!</p>
 
-<p>All you need to do is open one time the database, and share the connection across all your services:</p>
+<p>All you need to do is open the database once, and share the connection across all your services:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language FlexibleContexts      #-}</span>
 <span class="cp">{-# language OverloadedStrings     #-}</span>
@@ -423,7 +423,7 @@ Person json
       <span class="n">liftIO</span> <span class="o">$</span> <span class="n">runGRpcApp</span> <span class="mi">8080</span> <span class="p">(</span><span class="n">server</span> <span class="n">conn</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>We have decided in this example to use <code class="highlighter-rouge">LoggintT</code> from <code class="highlighter-rouge">monad-logger</code> and <code class="highlighter-rouge">runStderrLoggingT</code> to get some basic database logs to the console for free, but this is not a must!</p>
+<p>We have decided in this example to use <code class="highlighter-rouge">LoggingT</code> from <code class="highlighter-rouge">monad-logger</code> and <code class="highlighter-rouge">runStderrLoggingT</code> to get some basic database logs to the console for free, but this is not a must!</p>
 
 <h2 id="this-actually-does-not-work">This actually does not work</h2>
 
@@ -464,7 +464,7 @@ main =
 
 <p>As you can see, all the services need to be passed the <code class="highlighter-rouge">SqlBackend</code> connection as an argument.</p>
 
-<p>Two interesting things we want to highlight here: we have provided a small helper called <code class="highlighter-rouge">runDb</code>, it’s implementation is quite simple and it exists due to <strong>developer ergonomics</strong>. We are basically saving you from writing lots of <code class="highlighter-rouge">liftIO $ flip runSqlPersistM</code>. 😉</p>
+<p>Two interesting things we want to highlight here: we have provided a small helper called <code class="highlighter-rouge">runDb</code>, its implementation is quite simple and it exists due to <strong>developer ergonomics</strong>. We are basically saving you from writing lots of <code class="highlighter-rouge">liftIO $ flip runSqlPersistM</code>. 😉</p>
 
 <p>The second one will be discussed in the next section.</p>
 
@@ -483,7 +483,7 @@ main =
   <span class="o">=&gt;</span> <span class="kt">ConduitT</span> <span class="n">a</span> <span class="n">b</span> <span class="kt">ServerErrorIO</span> <span class="n">r</span> <span class="o">-&gt;</span> <span class="kt">ConduitT</span> <span class="n">a</span> <span class="n">b</span> <span class="n">m</span> <span class="n">r</span>
 </code></pre></div></div>
 
-<p>What is this type signature telling us? That is, we can turn any of the Conduits given as input, which work on the <code class="highlighter-rouge">ServerErrorIO</code> Monad from <code class="highlighter-rouge">mu-rpc</code>, into a Conduit working on other <code class="highlighter-rouge">IO</code>-like Monad. This is the case, in particular, of the Monad in which Persistent runs.</p>
+<p>What is this type signature telling us? That is, we can turn any of the Conduits given as input, which work on the <code class="highlighter-rouge">ServerErrorIO</code> Monad from <code class="highlighter-rouge">mu-rpc</code>, into a Conduit working on another <code class="highlighter-rouge">IO</code>-like Monad. This is the case, in particular, of the Monad in which Persistent runs.</p>
 
 <p>And that concludes our round-trip!</p>
 

@@ -325,7 +325,7 @@
 
 <h3 id="looking-at-the-resulting-code">Looking at the resulting code</h3>
 
-<p>In order to use the library proficiently, we should look a bit at the code generated in the previous code. A type-level description of the messages is put into the type <code class="highlighter-rouge">QuickstartSchema</code>. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using <code class="highlighter-rouge">mu-schema</code> facilities, this amounts to declaring a bunch of data types and including <code class="highlighter-rouge">deriving (Generic, ToSchema Maybe Schema "type", FromSchema Maybe Schema "type")</code> at the end of each of them.</p>
+<p>In order to use the library proficiently, we should look a bit at the code generated in the previous sample. A type-level description of the messages is put into the type <code class="highlighter-rouge">QuickstartSchema</code>. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using <code class="highlighter-rouge">mu-schema</code> facilities, this amounts to declaring a bunch of data types and including <code class="highlighter-rouge">deriving (Generic, ToSchema Maybe &lt;SchemaName&gt; "&lt;MessageType&gt;", FromSchema Maybe &lt;SchemaName&gt; "&lt;MessageType&gt;")</code> at the end of each of them.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language PolyKinds, DataKinds, TypeFamilies #-}</span>
 <span class="cp">{-# language MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances #-}</span>
@@ -359,7 +359,7 @@
            <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Maybe</span> <span class="kt">QuickstartSchema</span> <span class="s">"HelloResponse"</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>The service declaration looks very similar to an schema declaration, but instead of record and enumerations you define <em>methods</em>. Each method has a name, a list of arguments, and a return type.</p>
+<p>The service declaration looks very similar to a schema declaration, but instead of records and enumerations you define <em>methods</em>. Each method has a name, a list of arguments, and a return type.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Mu.Rpc</span>
 
@@ -371,7 +371,7 @@
         <span class="p">(</span><span class="kt">'RetSingle</span> <span class="p">(</span><span class="kt">'FromSchema</span> <span class="kt">QuickstartSchema</span> <span class="s">"HelloResponse"</span><span class="p">))</span> <span class="p">]</span>
 </code></pre></div></div>
 
-<p>In order to support both <a href="https://avro.apache.org/docs/current/idl.html">Avro IDL</a> and <a href="https://grpc.io/">gRPC</a>, the declaration of the method arguments and returns in a bit fancier that you might expect:</p>
+<p>In order to support both <a href="https://avro.apache.org/docs/current/idl.html">Avro IDL</a> and <a href="https://grpc.io/">gRPC</a>, the declaration of the method arguments and return types is a bit fancier than you might expect:</p>
 
 <ul>
   <li>Each <em>argument</em> declares the schema type used for serialization. Furthermore, the argument can be declared as <code class="highlighter-rouge">ArgSingle</code> (only one value is provided by the client) or <code class="highlighter-rouge">ArgStream</code> (a stream of values is provided).</li>
