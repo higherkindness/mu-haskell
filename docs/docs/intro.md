@@ -6,16 +6,16 @@ permalink: intro/
 
 # Introduction to Mu-Haskell
 
-Many companies have embraced microservices architectures as the best way to scale up their internal software systems, separate work across different company divisions and development teams. Microservices architectures also allow teams to turn an idea or bug report into a working feature of fix in production more quickly, in accordance to the agile principles.
+Many companies have embraced microservices architectures as the best way to scale up their internal software systems, and separate work across different company divisions and development teams. Microservices architectures also allow teams to turn an idea or bug report into a working feature or fix in production more quickly, in accordance to the agile principles.
 
-However, microservices are not without costs. Every connection between microservices becomes now a boundary that requires one to act as a server, and the other to act as the client. Each part implementation needs to add the protocol, the codification of the data for transmission, etc. Also, business logic of the application starts to spread around several code bases, making it difficult to maintain.
+However, microservices are not without costs. Every connection between microservices becomes now a boundary that requires one service to act as a server, and the other to act as the client. Each service needs to include an implementation of the protocol, the encoding of the data for transmission, etc. The business logic of the application also starts to spread around several code bases, making it difficult to maintain.
 
 ## What is Mu-Haskell?
 
-The main goal of Mu-Haskell is to make you focus on your domain logic, instead of worrying about format and protocol issues. To achieve this goal, Mu-Haskell provides two sets of packages:
+The main goal of Mu-Haskell is to allow you to focus on your domain logic, instead of worrying about format and protocol issues. To achieve this goal, Mu-Haskell provides two sets of packages:
 
 * `mu-schema` and `mu-rpc` define schemas for data and services, in a format- and protocol-independent way. These schemas are checked at compile-time, so you also gain an additional layer of type-safety.
-* `mu-avro`, `mu-protobuf`, `mu-grpc` (and other to come) implement each concrete format and protocol, following the interfaces laid out by the former two. In addition, most of those packages can turn a schema in the corresponding format into the corresponding one in `mu-schema` and `mu-rpc` terms, alleviating you from the need of duplicating definitions.
+* `mu-avro`, `mu-protobuf`, `mu-grpc` (and other to come) implement each concrete format and protocol, following the interfaces laid out by the former two. In addition, most of those packages can turn a schema in the corresponding format into the corresponding one in `mu-schema` and `mu-rpc` terms, alleviating the need to duplicate definitions.
 
 ## Quickstart
 
@@ -42,10 +42,12 @@ message HelloReply { string message = 1; }
 To get started with the project, we provide a [Stack](https://docs.haskellstack.org) template (in fact, we recommend that you use Stack as your build tool, although Cabal should also work perfectly fine). You should run:
 
 ```
-stack new my-project https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/grpc-server.hsfiles -p "author-email:your@email.com" -p "author-name:Your name"
+stack new my_project https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/grpc-server.hsfiles -p "author-email:your@email.com" -p "author-name:Your name"
 ```
 
-This command creates a new folder called `my-project`, with a few files. The most important from those are the `.proto` file, in which you shall declare your service; `src/Schema.hs`, which loads the service definition at compile-time; and `src/Main.hs`, which contains the code of the server.
+**WARNING:** Do not include a hyphen in your project name, as it will cause the template to generate a '.proto' file containing an invalid package name. Use `my_project`, not `my-project`.
+
+This command creates a new folder called `my_project`, with a few files. The most important from those are the `.proto` file, in which you will define your service; `src/Schema.hs`, which loads the service definition at compile-time; and `src/Main.hs`, which contains the code of the server.
 
 The first step to get your project running is defining the right schema and service. In this case, you can just copy the definition above after the `package` declaration.
 
@@ -59,26 +61,29 @@ The aforementioned `.proto` file defines two messages. The corresponding data ty
 data HelloRequestMessage
   = HelloRequestMessage { name :: Maybe T.Text }
   deriving (Eq, Show, Generic
-           , ToSchema   Maybe Schema "HelloRequest"
-           , FromSchema Maybe Schema "HelloRequest")
+           , ToSchema   Maybe TheSchema "HelloRequest"
+           , FromSchema Maybe TheSchema "HelloRequest")
 
 data HelloReplyMessage
   = HelloReplyMessage { message :: Maybe T.Text }
   deriving (Eq, Show, Generic
-           , ToSchema   Maybe Schema "HelloReply",
-           , FromSchema Maybe Schema "HelloReply")
+           , ToSchema   Maybe TheSchema "HelloReply"
+           , FromSchema Maybe TheSchema "HelloReply")
 ```
 
-You can give those data types and their constructors any name you like. However, keep in mind that:
+These data types should be added to the file `src/Schema.hs`, under the line that starts `grpc ...`. (See the [gRPC page]({% link docs/grpc.md %}) for information about what that line is doing.)
+
+You can give the data types and their constructors any name you like. However, keep in mind that:
 
 * The names of the fields must correspond with those in the `.proto` files. Otherwise you have to use a *custom mapping*, which is fully supported by `mu-schema` but requires more code.
 * All the fields must be wrapped in `Maybe` since all fields in `proto3` are **optional by default**.
+* The name `TheSchema` refers to a type generated by the `grpc` function, so it must match the first argument to that function.
 * The name between quotes in each `deriving` clause defines the message type in the `.proto` file each data type corresponds to.
 * To use the automatic-mapping functionality, it is required to also derive `Generic`, don't forget it!
 
 #### Server implementation
 
-If you try to compile the project right now by means of `stack build`, you will receive an error about `server` not having the right type. This is because you haven't defined yet any implementation for your service. This is one of the advantages of making the compiler aware of your service definitions: if the `.proto` file changes, you need to adapt your code correspondingly, or otherwise the project doesn't even compile!
+If you try to compile the project right now by means of `stack build`, you will receive an error about `server` not having the right type. This is because you haven't yet defined any implementation for your service. This is one of the advantages of making the compiler aware of your service definitions: if the `.proto` file changes, you need to adapt your code correspondingly, or otherwise the project doesn't even compile!
 
 Open the `src/Main.hs` file. The contents are quite small right now: a `main` function asks to run the gRPC service defined by `server`. The `server` function, on the other hand, declares that it implements the `Service` service in its signature, but contains no implementations.
 
@@ -90,17 +95,17 @@ server :: (MonadServer m) => ServerT Maybe Service m _
 server = Server H0
 ```
 
-The simplest way to provide an implementation for a service is to define one function for each method. You define those functions completely in terms of Haskell data types; in our case `HelloRequestMessage` and `HelloReplyMessage`. Here is a simple definition:
+The simplest way to provide an implementation for a service is to define one function for each method. You define those functions completely in terms of Haskell data types; in our case `HelloRequestMessage` and `HelloReplyMessage`. Here is an example definition:
 
 ```haskell
 sayHello :: (MonadServer m) => HelloRequestMessage -> m HelloReplyMessage
 sayHello (HelloRequestMessage nm)
-  = return $ HelloReplyMessage ("hello, " ++ nm)
+  = return (HelloReplyMessage (("hi, " <>) <$> nm))
 ```
 
 The `MonadServer` portion in the type is mandated by `mu-rpc`; it tells us that in a method we can perform any `IO` actions and additionally throw server errors (for conditions such as *not found*). We do not make use of any of those here, so we simply use `return` with a value. We could even make the definition a bit more polymorphic by replacing `MonadServer` by `Monad`.
 
-How does `server` know that `sayHello` is part of the implementation of the service? We have to tell it, by adding `sayHello` to the list of methods. Unfortunately, we cannot use a simple lists, so we use `(:<|>:)` to join them, and `H0` to finish it.
+How does `server` know that `sayHello` is part of the implementation of the service? We have to tell it, by adding `sayHello` to the list of methods. Unfortunately, we cannot use a normal list, so we use `(:<|>:)` to join them, and `H0` to finish it.
 
 ```haskell
 server = Server (sayHello :<|>: H0)
