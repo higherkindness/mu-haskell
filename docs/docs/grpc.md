@@ -10,7 +10,7 @@ Mu-Haskell defines a generic notion of service and server that implements it. Th
 
 ## Running the server with `mu-grpc`
 
-The combination of the declaration of a service API and a corresponding implementation as a `Server` may served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library `mu-grpc`. The following line starts a server at port `8080`, where the service can be found under the package name `helloworld`:
+The combination of the declaration of a service API and a corresponding implementation as a `Server` may be served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library `mu-grpc`. The following line starts a server at port `8080`, where the service can be found under the package name `helloworld`:
 
 ```haskell
 main = runGRpcApp 8080 "helloworld" quickstartServer
@@ -47,8 +47,6 @@ main = do
 
 Where `watch`, `get` and `add` are the only valid 3 commands that our CLI is going to accept and call each respective service.
 
-If you are not familiar with `TypeApplications`, you can check [this](https://www.reddit.com/r/haskell/comments/6ufnmr/scrap_your_proxy_arguments_with_typeapplications/), [that](https://blog.sumtypeofway.com/posts/fluent-polymorphism-type-applications.html) and [this](https://kseo.github.io/posts/2017-01-08-visible-type-application-ghc8.html).
-
 ### Using records
 
 This option is a bit more verbose but it's also more explicit with the types and _"a bit more magic"_ than the one with `TypeApplications` (due to the use of Generics).
@@ -66,7 +64,7 @@ data Call = Call
   } deriving Generic
 ```
 
-Note that we had to derive `Generic`. We also need to tweak a little bit our `main` function:
+Note that we had to derive `Generic`. We also need to tweak our `main` function a little bit:
 
 ```diff
 main :: IO ()
@@ -112,6 +110,9 @@ watching client = do
 ### Using `TypeApplications`
 
 With `TypeApplications` none of the above is needed, all you need to do is call `gRpcCall` with the appropiate service name as a type-level string, and the rest just _magically_ works! ✨
+
+If you are not familiar with `TypeApplications`, you can check [this](https://www.reddit.com/r/haskell/comments/6ufnmr/scrap_your_proxy_arguments_with_typeapplications/), [that](https://blog.sumtypeofway.com/posts/fluent-polymorphism-type-applications.html) and [this](https://kseo.github.io/posts/2017-01-08-visible-type-application-ghc8.html).
+
 
 ```haskell
 import Mu.GRpc.Client.TyApps

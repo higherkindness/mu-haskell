@@ -6,7 +6,7 @@ permalink: /
 
 # Docs for Mu-Haskell
 
-Mu-Haskell is a set of packages that help you build both servers and clients for (micro)services. The main goal of Mu-Haskell is to make you focus on your domain logic, instead of worrying about format and protocol issues.
+Mu-Haskell is a set of packages that help you build both servers and clients for (micro)services. The main goal of Mu-Haskell is to allow you to focus on your domain logic, instead of worrying about format and protocol issues.
 
 * [Introduction]({% link docs/intro.md %})
 * [Schemas]({% link docs/schema.md %})
