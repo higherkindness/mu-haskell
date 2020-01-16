@@ -31,7 +31,7 @@ service PersistentService {
 
 Maybe this example looks a bit contrived but bear with me, it covers a common use case when working with protobuf: that one of the messages has another message as its identifying key.
 
-## Definning our Schema
+## Defining our Schema
 
 You are going to need to enable the following extensions:
 
@@ -119,13 +119,13 @@ deriving via (WithEntityNestedId "Person" PersonFieldMapping (Entity Person))
   instance ToSchema Maybe PersistentSchema "Person" (Entity Person)
 ```
 
-Have in mind that we still need to define our own custom field mapping, in this case `PersonFieldMapping` so that the deriving via does it's job properly.
+Have in mind that we still need to define our own custom field mapping, in this case `PersonFieldMapping` so that the deriving via does its job properly.
 
 ## Running a pool of database connections
 
 Now let's focus on the Server!
 
-All you need to do is open one time the database, and share the connection across all your services:
+All you need to do is open the database once, and share the connection across all your services:
 
 ```haskell
 {-# language FlexibleContexts      #-}
@@ -147,7 +147,7 @@ main =
       liftIO $ runGRpcApp 8080 (server conn)
 ```
 
-We have decided in this example to use `LoggintT` from `monad-logger` and `runStderrLoggingT` to get some basic database logs to the console for free, but this is not a must!
+We have decided in this example to use `LoggingT` from `monad-logger` and `runStderrLoggingT` to get some basic database logs to the console for free, but this is not a must!
 
 ## This actually does not work
 
@@ -191,7 +191,7 @@ allPeople conn sink = runDb conn $
 
 As you can see, all the services need to be passed the `SqlBackend` connection as an argument.
 
-Two interesting things we want to highlight here: we have provided a small helper called `runDb`, it's implementation is quite simple and it exists due to **developer ergonomics**. We are basically saving you from writing lots of `liftIO $ flip runSqlPersistM`. 😉
+Two interesting things we want to highlight here: we have provided a small helper called `runDb`, its implementation is quite simple and it exists due to **developer ergonomics**. We are basically saving you from writing lots of `liftIO $ flip runSqlPersistM`. 😉
 
 The second one will be discussed in the next section.
 
@@ -212,7 +212,7 @@ liftServerConduit
   => ConduitT a b ServerErrorIO r -> ConduitT a b m r
 ```
 
-What is this type signature telling us? That is, we can turn any of the Conduits given as input, which work on the `ServerErrorIO` Monad from `mu-rpc`, into a Conduit working on other `IO`-like Monad. This is the case, in particular, of the Monad in which Persistent runs.
+What is this type signature telling us? That is, we can turn any of the Conduits given as input, which work on the `ServerErrorIO` Monad from `mu-rpc`, into a Conduit working on another `IO`-like Monad. This is the case, in particular, of the Monad in which Persistent runs.
 
 
 And that concludes our round-trip!

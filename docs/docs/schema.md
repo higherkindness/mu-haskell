@@ -102,7 +102,7 @@ Once again, you need to enable some extensions in the compiler (but do not worry
 
 ## Customizing the mapping
 
-Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our schema above we use `male`, `female`, and `nb`, but in a Haskell enumeration the name of each constructor must begin with a capital letter. By using a stand-along `ToSchema` instance you can declare a custom mapping from Haskell fields or constructors to schema fields or enum choices, respectively:
+Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our schema above we use `male`, `female`, and `nb`, but in a Haskell enumeration the name of each constructor must begin with a capital letter. By using a standalone `ToSchema` instance you can declare a custom mapping from Haskell fields or constructors to schema fields or enum choices, respectively:
 
 ```haskell
 {-# language DerivingVia  #-}
