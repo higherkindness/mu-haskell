@@ -50,9 +50,9 @@ data TypeResolver m (sch :: Schema tn fn) (ty :: TypeDef tn fn) where
   -- | Direct resolver for a record.
   DR :: FullResolver m (W Term sch t)
      -> TypeResolver m sch t
-  -- | For types which do not need a resolver.
-  --   That is, DEnum and DSimple.
-  NR :: TypeResolver m sch t
+  -- | Enumerations do not get resolved directly,
+  --   only as part of fields.
+  ER :: TypeResolver m sch ('DEnum name choices)
 
 data FieldResolver m (sch :: Schema tn fn) (ty :: tn) (fld :: FieldDef tn fn) where
   FR :: (Term Maybe sch (sch :/: ty) -> m (ConstructFieldType sch fld))
@@ -83,7 +83,8 @@ newtype FullResolver' m sch ty
 
 fullResolver
   :: forall m sch tys.
-     NP (TypeResolver  m sch) tys
+     Applicative m
+  => NP (TypeResolver  m sch) tys
   -> NP (FullResolver' m sch) tys
 fullResolver Nil = Nil
 fullResolver (r :* rs) = typeResolver r :* fullResolver rs
@@ -92,7 +93,7 @@ fullResolver (r :* rs) = typeResolver r :* fullResolver rs
       :: forall x.
          TypeResolver m sch x
       -> FullResolver' m sch x
-    typeResolver NR                  = undefined -- TODO:
+    typeResolver ER                  = FullResolver' (\(W (TEnum c)) -> pure $ W (TEnum c))
     typeResolver (DR directResolver) = FullResolver' directResolver
     typeResolver (RR fieldResolvers) = fullResolverFromFields fieldResolvers
     fullResolverFromFields
@@ -101,19 +102,6 @@ fullResolver (r :* rs) = typeResolver r :* fullResolver rs
       -> FullResolver' m sch x
     fullResolverFromFields Nil       = undefined -- TODO:
     fullResolverFromFields (f :* fs) = undefined -- TODO:
-
-class TermWanted (ty :: TypeDef tn fn) where
-  toTermMaybe :: Term Wanted m ty -> Term Maybe m ty
-
-instance TermWanted ('DEnum tn chs) where
-  toTermMaybe = undefined -- TODO:
-
-instance TermWanted ('DSimple fld) where
-  toTermMaybe = undefined -- TODO:
-
-instance TypeError ('Text "cannot work for records " ':<>: 'ShowType tn)
-  => TermWanted ('DRecord tn vls) where
-  toTermMaybe = error "this should never be called"
 
 class FindResolver (sch :: Schema tn fn) (iter :: Schema tn fn) (ty :: TypeDef tn fn) where
   findResolver :: NP (FullResolver' m sch) iter -> FullResolver m (W Term sch ty)
@@ -129,7 +117,7 @@ instance {-# OVERLAPPABLE #-} FindResolver sch rest ty => FindResolver sch (oth
   findResolver (_ :* rs) = findResolver rs
 
 fullResolverTy'
-  :: (FindResolver sch sch ty)
+  :: (Applicative m, FindResolver sch sch ty)
   => SchemaResolver m sch
   -> FullResolver m (W Term sch ty)
 fullResolverTy' = findResolver . fullResolver
@@ -148,7 +136,7 @@ data TypeResolverD m (sch :: Schema tn fn) (ty :: TypeDef tn fn) where
          , sch :/: ty ~ 'DRecord ty fields)
       => (input -> m output)
       -> TypeResolverD m sch ('DRecord ty fields)
-  OR_ :: TypeResolverD m sch ('DEnum name choice)
+  ER_ :: TypeResolverD m sch ('DEnum name choice)
 
 data FieldResolverD m (sch :: Schema tn fn) (ty :: tn) (fld :: FieldDef tn fn) where
   FR_ :: ( FromSchema Maybe sch ty input
@@ -183,10 +171,10 @@ resolverDomain (r :* rs) = resolveDomainT r :* resolverDomain rs
       :: forall ty.
          TypeResolverD m sch ty
       -> TypeResolver m sch ty
-    resolveDomainT OR_                  = NR
-    resolveDomainT (DR_ f)              = DR $
+    resolveDomainT ER_       = ER
+    resolveDomainT (DR_ f)   = DR $
       (W . toSchema' @_ @_ @sch @Maybe <$>) . f . fromSchema' @_ @_ @sch @Wanted . unW
-    resolveDomainT (RR_ fieldResolvers) = RR $ resolveDomainFs fieldResolvers
+    resolveDomainT (RR_ frs) = RR $ resolveDomainFs frs
     resolveDomainFs
       :: forall name flds.
          NP (FieldResolverD m sch name) flds
