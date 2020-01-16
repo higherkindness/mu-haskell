@@ -32,6 +32,7 @@ module Mu.GRpc.Server
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM        (atomically)
 import           Control.Concurrent.STM.TMVar
+import           Control.Exception
 import           Control.Monad.Except
 import           Data.ByteString               (ByteString)
 import qualified Data.ByteString.Char8         as BS
@@ -179,6 +180,11 @@ raiseErrors h
         Left (ServerError code msg)
           -> closeEarly $ GRPCStatus (serverErrorToGRpcError code)
                                      (BS.pack msg)
+    `catches`
+    [ Handler (\(e :: GRPCStatus) -> throwIO e)
+    , Handler (\(e :: SomeException) -> closeEarly $ GRPCStatus INTERNAL (BS.pack $ show e))
+    ]
+
   where
     serverErrorToGRpcError :: ServerErrorCode -> GRPCStatusCode
     serverErrorToGRpcError Unknown         = UNKNOWN
