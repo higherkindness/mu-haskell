@@ -25,14 +25,14 @@ executable {{name}}
                        mu-grpc-server
 
 {-# START_FILE stack.yaml #-}
-resolver: lts-14.20
+resolver: lts-14.17
 allow-newer: true
 extra-deps:
 # mu
 - mu-schema-0.1.0.0
 - mu-rpc-0.1.0.0
 - mu-protobuf-0.1.0.0
-- mu-grpc-server-0.1.0.0
+- mu-grpc-server-0.1.0.1
 - compendium-client-0.1.0.1
 # dependencies of mu
 - http2-client-0.9.0.0
