@@ -64,15 +64,6 @@ data FieldResolver m (sch :: Schema tn fn) (ty :: tn) (fld :: FieldDef tn fn) wh
 
 newtype W f a b w = W { unW :: f w a b }
 
--- FOR THE NEXT THING YOU HAVE TWO POSSIBIILITIES
-
--- Possibility (1)
-fullResolverTy
-  :: SchemaResolver m sch
-  -> FullResolver m (W Term sch ty)
-fullResolverTy = undefined -- TODO:
-
--- Possibility (2), I think this is easier
 newtype FullResolver' m sch ty
   = FullResolver' { unFullResolver' :: FullResolver m (W Term sch ty) }
 
