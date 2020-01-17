@@ -13,10 +13,12 @@
 
 module Mu.GraphQL where
 
+import           Data.Functor.Identity
 import           Data.Kind
 import           Data.SOP.NP
 import           GHC.TypeLits
 import           Mu.Schema
+import           Mu.Schema.Interpretation (transValueNoMaps)
 
 -- | Defines whether we should get each field.
 --   Invariant: if we have a recursive appearance
@@ -32,7 +34,7 @@ data Wanted a
 -- | This is the resolver which takes the entire
 --   query and returns the entire set of results.
 type FullResolver m f
-  = f Wanted -> f Maybe -> m (f Maybe)
+  = f Wanted -> f Identity -> m (f Maybe)
 
 -- COMPOSABLE RESOLVERS
 -- ====================
@@ -57,7 +59,7 @@ data TypeResolver m (sch :: Schema tn fn) (ty :: TypeDef tn fn) where
 
 data FieldResolver m (sch :: Schema tn fn) (ty :: tn) (fld :: FieldDef tn fn) where
   FR :: HasResolver sch fld
-     => (Term Maybe sch (sch :/: ty) -> m (FieldValue Maybe sch fld))
+     => (Term Identity sch (sch :/: ty) -> m (FieldValue Identity sch fld))
      -> FieldResolver m sch ty ('FieldDef name fld)
 
 -- | The composer
@@ -78,7 +80,7 @@ fullResolver schr = typeResolvers schr
       :: forall tys.
          NP (TypeResolver  m sch) tys
       -> NP (FullResolver' m sch) tys
-    typeResolvers Nil = Nil
+    typeResolvers Nil       = Nil
     typeResolvers (r :* rs) = typeResolver r :* typeResolvers rs
 
     typeResolver
@@ -96,7 +98,7 @@ fullResolver schr = typeResolvers schr
     fullResolverFromFields
       :: forall name fields allFields.
          (sch :/: name ~ 'DRecord name allFields)
-      => Term Maybe sch ('DRecord name allFields)
+      => Term Identity sch ('DRecord name allFields)
       -> NP (FieldResolver m sch name) fields
       -> NP (Field Wanted sch) fields
       -> m (NP (Field Maybe sch) fields)
@@ -104,14 +106,14 @@ fullResolver schr = typeResolvers schr
     fullResolverFromFields parent (_ :* fs) (Field NotWanted :* vs)
       = (Field Nothing :*) <$> fullResolverFromFields parent fs vs
     fullResolverFromFields parent (FR f :* fs) (Field WantedValue :* vs)
-      = (:*) <$> (Field . Just <$> f parent) <*> fullResolverFromFields parent fs vs
+      = (:*) <$> (Field . Just . transValueNoMaps (Just . runIdentity) <$> f parent) <*> fullResolverFromFields parent fs vs
     fullResolverFromFields parent (FR f :* fs) (Field (WantedSubset (FSchematic ws)) :* vs)
       = (:*) <$> (Field . Just . FSchematic <$> (f parent >>= g ws))
              <*> fullResolverFromFields parent fs vs
       where g :: forall ity.
                  HasResolver sch ('TSchematic ity)
               => Term Wanted sch (sch :/: ity)
-              -> FieldValue Maybe sch ('TSchematic ity)
+              -> FieldValue Identity sch ('TSchematic ity)
               -> m (Term Maybe sch (sch :/: ity))
             g wws (FSchematic t) = unW <$> fullResolverTy' @_ @sch @(sch :/: ity) schr (W wws) (W t)
 
@@ -154,27 +156,29 @@ data TypeResolverD m (sch :: Schema tn fn) (ty :: TypeDef tn fn) where
   RR_ :: ( sch :/: name ~ 'DRecord name fields )
       => NP (FieldResolverD m sch name) fields
       -> TypeResolverD m sch ('DRecord name fields)
-  DR_ :: ( FromSchema Wanted sch ty wanteds
-         , FromSchema Maybe  sch ty input
-         , ToSchema   Maybe  sch ty output
+  DR_ :: ( FromSchema Wanted   sch ty wanteds
+         , FromSchema Identity sch ty input
+         , ToSchema   Maybe    sch ty output
          , sch :/: ty ~ 'DRecord ty fields )
       => (wanteds -> input -> m output)
       -> TypeResolverD m sch ('DRecord ty fields)
   ER_ :: TypeResolverD m sch ('DEnum name choice)
 
 data FieldResolverD m (sch :: Schema tn fn) (ty :: tn) (fld :: FieldDef tn fn) where
-  FR_ :: ( FromSchema Maybe sch ty input
+  FR_ :: ( FromSchema Identity sch ty input
          , ToSchemaD sch output fld, HasResolver sch fld )
       => (input -> m output)
       -> FieldResolverD m sch ty ('FieldDef name fld)
 
 class ToSchemaD sch r t where
-  toSchemaD :: r -> FieldValue Maybe sch t
+  toSchemaD :: r -> FieldValue Identity sch t
 
 instance ToSchemaD sch () 'TNull where
   toSchemaD _ = FNull
-instance (ToSchema Maybe sch t r) => ToSchemaD sch r ('TSchematic t) where
-  toSchemaD = FSchematic . toSchema @_ @_ @Maybe @sch @t
+instance ToSchemaD sch p ('TPrimitive p) where
+  toSchemaD = FPrimitive
+instance (ToSchema Identity sch t r) => ToSchemaD sch r ('TSchematic t) where
+  toSchemaD = FSchematic . toSchema @_ @_ @Identity @sch @t
 instance (ToSchemaD sch r t) => ToSchemaD sch (Maybe r) ('TOption t) where
   toSchemaD = FOption . fmap toSchemaD
 instance (ToSchemaD sch r t) => ToSchemaD sch [r] ('TList t) where
@@ -196,7 +200,7 @@ resolverDomain (r :* rs) = resolveDomainT r :* resolverDomain rs
     resolveDomainT (DR_ f)   = DR $ \(W w) (W x) ->
       W . toSchema' @_ @_ @sch @Maybe
         <$> f (fromSchema' @_ @_ @sch @Wanted w)
-              (fromSchema' @_ @_ @sch @Maybe x)
+              (fromSchema' @_ @_ @sch @Identity x)
     resolveDomainT (RR_ frs) = RR $ resolveDomainFs frs
     resolveDomainFs
       :: forall name flds.
@@ -209,19 +213,19 @@ resolverDomain (r :* rs) = resolveDomainT r :* resolverDomain rs
          FieldResolverD m sch name fld
       -> FieldResolver  m sch name fld
     resolveField (FR_ f) = FR $
-      (toSchemaD <$>) . f . fromSchema' @_ @_ @sch @Maybe
+      (toSchemaD <$>) . f . fromSchema' @_ @_ @sch @Identity
 
 resolve
   :: forall tn fn (sch :: Schema tn fn) (ty :: tn)
             (m :: Type -> Type) (w :: Type) (r :: Type) (s :: Type).
      ( Monad m
-     , ToSchema   Wanted sch ty w
-     , ToSchema   Maybe  sch ty r
-     , FromSchema Maybe  sch ty s
+     , ToSchema   Wanted   sch ty w
+     , ToSchema   Identity sch ty r
+     , FromSchema Maybe    sch ty s
      , FindResolver sch sch (sch :/: ty) )
   => SchemaResolverD m sch -> w -> r -> m s
 resolve r w x
   = fromSchema @tn @fn @Maybe @sch @ty . unW <$>
     (fullResolverTy' $ resolverDomain r)
     (W $ toSchema @tn @fn @Wanted @sch @ty w)
-    (W $ toSchema @tn @fn @Maybe @sch @ty x)
+    (W $ toSchema @tn @fn @Identity @sch @ty x)

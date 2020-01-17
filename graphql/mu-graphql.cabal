@@ -15,7 +15,7 @@ build-type:          Simple
 
 library
   exposed-modules:     Mu.GraphQL
-  -- other-modules:
+  other-modules:       Mu.GraphQL.Examples
   -- other-extensions:
   build-depends:       base >=4.12 && <5
                      , mtl
