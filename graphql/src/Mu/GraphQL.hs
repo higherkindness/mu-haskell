@@ -214,13 +214,14 @@ resolverDomain (r :* rs) = resolveDomainT r :* resolverDomain rs
 resolve
   :: forall tn fn (sch :: Schema tn fn) (ty :: tn)
             (m :: Type -> Type) (w :: Type) (r :: Type) (s :: Type).
-     ( Functor m
+     ( Monad m
      , ToSchema   Wanted sch ty w
      , ToSchema   Maybe  sch ty r
-     , FromSchema Maybe  sch ty s)
+     , FromSchema Maybe  sch ty s
+     , FindResolver sch sch (sch :/: ty) )
   => SchemaResolverD m sch -> w -> r -> m s
 resolve r w x
   = fromSchema @tn @fn @Maybe @sch @ty . unW <$>
-    (fullResolverTy $ resolverDomain r)
+    (fullResolverTy' $ resolverDomain r)
     (W $ toSchema @tn @fn @Wanted @sch @ty w)
     (W $ toSchema @tn @fn @Maybe @sch @ty x)
