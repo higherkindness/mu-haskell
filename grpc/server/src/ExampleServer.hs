@@ -16,4 +16,4 @@ type instance AnnotatedSchema ProtoBufAnnotation QuickstartSchema
 main :: IO ()
 main = do
   putStrLn "running quickstart application"
-  runGRpcApp 8080 quickstartServer
+  runGRpcApp msgProtoBuf 8080 quickstartServer

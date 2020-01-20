@@ -7,6 +7,7 @@
 {-# language RankNTypes            #-}
 {-# language ScopedTypeVariables   #-}
 {-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-|
@@ -19,8 +20,11 @@ The simples way is to use 'runGRpcApp', all other
 variants provide more control over the settings.
 -}
 module Mu.GRpc.Server
-( -- * Run a 'Server' directly
-  runGRpcApp, runGRpcAppTrans
+( -- * Supported messaging formats
+  GRpcMessageProtocol(..)
+, msgProtoBuf, msgAvro
+  -- * Run a 'Server' directly
+, runGRpcApp, runGRpcAppTrans
 , runGRpcAppSettings, Settings
 , runGRpcAppTLS, TLSSettings
   -- * Convert a 'Server' into a WAI application
@@ -34,13 +38,15 @@ import           Control.Concurrent.STM        (atomically)
 import           Control.Concurrent.STM.TMVar
 import           Control.Exception
 import           Control.Monad.Except
+import           Data.Avro
 import           Data.ByteString               (ByteString)
 import qualified Data.ByteString.Char8         as BS
 import           Data.Conduit
 import           Data.Conduit.TMChan
+import           Data.Functor.Identity
 import           Data.Kind
 import           Data.Proxy
-import           Network.GRPC.HTTP2.Encoding   (gzip, uncompressed)
+import           Network.GRPC.HTTP2.Encoding   (GRPCInput, GRPCOutput, gzip, uncompressed)
 import           Network.GRPC.HTTP2.Proto3Wire
 import           Network.GRPC.HTTP2.Types      (GRPCStatus (..), GRPCStatusCode (..))
 import           Network.GRPC.Server.Handlers
@@ -50,40 +56,64 @@ import           Network.Wai.Handler.Warp      (Port, Settings, run, runSettings
 import           Network.Wai.Handler.WarpTLS   (TLSSettings, runTLS)
 
 import           Mu.Adapter.ProtoBuf.Via
+import           Mu.GRpc.Avro
 import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
 
+
+data GRpcMessageProtocol
+  = MsgProtoBuf | MsgAvro
+  deriving (Eq, Show)
+
+msgProtoBuf :: Proxy 'MsgProtoBuf
+msgProtoBuf = Proxy
+msgAvro :: Proxy 'MsgAvro
+msgAvro = Proxy
+
+class MkRPC (p :: GRpcMessageProtocol) where
+  type RPCTy p :: Type
+  mkRPC :: Proxy p -> ByteString -> ByteString -> ByteString -> RPCTy p
+instance MkRPC 'MsgProtoBuf where
+  type RPCTy 'MsgProtoBuf = RPC
+  mkRPC _ = RPC
+instance MkRPC 'MsgAvro where
+  type RPCTy 'MsgAvro = AvroRPC
+  mkRPC _ = AvroRPC
+
 -- | Run a Mu 'Server' on the given port.
 runGRpcApp
   :: ( KnownName name, KnownName (FindPackageName anns)
-     , GRpcMethodHandlers ServerErrorIO methods handlers )
-  => Port
+     , GRpcMethodHandlers protocol ServerErrorIO methods handlers )
+  => Proxy protocol
+  -> Port
   -> ServerT Maybe ('Service name anns methods) ServerErrorIO handlers
   -> IO ()
-runGRpcApp port = runGRpcAppTrans port id
+runGRpcApp protocol port = runGRpcAppTrans protocol port id
 
 -- | Run a Mu 'Server' on the given port.
 runGRpcAppTrans
   :: ( KnownName name, KnownName (FindPackageName anns)
-     , GRpcMethodHandlers m methods handlers )
-  => Port
+     , GRpcMethodHandlers protocol m methods handlers )
+  => Proxy protocol
+  -> Port
   -> (forall a. m a -> ServerErrorIO a)
   -> ServerT Maybe ('Service name anns methods) m handlers
   -> IO ()
-runGRpcAppTrans port f svr = run port (gRpcAppTrans f svr)
+runGRpcAppTrans protocol port f svr = run port (gRpcAppTrans protocol f svr)
 
 -- | Run a Mu 'Server' using the given 'Settings'.
 --
 --   Go to 'Network.Wai.Handler.Warp' to declare 'Settings'.
 runGRpcAppSettings
   :: ( KnownName name, KnownName (FindPackageName anns)
-     , GRpcMethodHandlers m methods handlers )
-  => Settings
+     , GRpcMethodHandlers protocol m methods handlers )
+  => Proxy protocol
+  -> Settings
   -> (forall a. m a -> ServerErrorIO a)
   -> ServerT Maybe ('Service name anns methods) m handlers
   -> IO ()
-runGRpcAppSettings st f svr = runSettings st (gRpcAppTrans f svr)
+runGRpcAppSettings protocol st f svr = runSettings st (gRpcAppTrans protocol f svr)
 
 -- | Run a Mu 'Server' using the given 'TLSSettings' and 'Settings'.
 --
@@ -91,12 +121,13 @@ runGRpcAppSettings st f svr = runSettings st (gRpcAppTrans f svr)
 --   and to 'Network.Wai.Handler.Warp' to declare 'Settings'.
 runGRpcAppTLS
   :: ( KnownName name, KnownName (FindPackageName anns)
-     , GRpcMethodHandlers m methods handlers )
-  => TLSSettings -> Settings
+     , GRpcMethodHandlers protocol m methods handlers )
+  => Proxy protocol
+  -> TLSSettings -> Settings
   -> (forall a. m a -> ServerErrorIO a)
   -> ServerT Maybe ('Service name anns methods) m handlers
   -> IO ()
-runGRpcAppTLS tls st f svr = runTLS tls st (gRpcAppTrans f svr)
+runGRpcAppTLS protocol tls st f svr = runTLS tls st (gRpcAppTrans protocol f svr)
 
 -- | Turn a Mu 'Server' into a WAI 'Application'.
 --
@@ -105,10 +136,11 @@ runGRpcAppTLS tls st f svr = runTLS tls st (gRpcAppTrans f svr)
 --   from @wai-extra@, among others.
 gRpcApp
   :: ( KnownName name, KnownName (FindPackageName anns)
-     , GRpcMethodHandlers ServerErrorIO methods handlers )
-  => ServerT Maybe ('Service name anns methods) ServerErrorIO handlers
+     , GRpcMethodHandlers protocol ServerErrorIO methods handlers )
+  => Proxy protocol
+  -> ServerT Maybe ('Service name anns methods) ServerErrorIO handlers
   -> Application
-gRpcApp = gRpcAppTrans id
+gRpcApp protocol = gRpcAppTrans protocol id
 
 -- | Turn a Mu 'Server' into a WAI 'Application'.
 --
@@ -117,40 +149,46 @@ gRpcApp = gRpcAppTrans id
 --   from @wai-extra@, among others.
 gRpcAppTrans
   :: ( KnownName name, KnownName (FindPackageName anns)
-     , GRpcMethodHandlers m methods handlers )
-  => (forall a. m a -> ServerErrorIO a)
+     , GRpcMethodHandlers protocol m methods handlers )
+  => Proxy protocol
+  -> (forall a. m a -> ServerErrorIO a)
   -> ServerT Maybe ('Service name anns methods) m handlers
   -> Application
-gRpcAppTrans f svr = Wai.grpcApp [uncompressed, gzip]
-                                 (gRpcServiceHandlers f svr)
+gRpcAppTrans protocol f svr
+  = Wai.grpcApp [uncompressed, gzip]
+                (gRpcServiceHandlers protocol f svr)
 
 gRpcServiceHandlers
-  :: forall name anns methods handlers m.
-     (KnownName name, KnownName (FindPackageName anns), GRpcMethodHandlers m methods handlers)
-  => (forall a. m a -> ServerErrorIO a)
+  :: forall name anns methods handlers m protocol.
+     ( KnownName name, KnownName (FindPackageName anns)
+     , GRpcMethodHandlers protocol m methods handlers )
+  => Proxy protocol
+  -> (forall a. m a -> ServerErrorIO a)
   -> ServerT Maybe ('Service name anns methods) m handlers
   -> [ServiceHandler]
-gRpcServiceHandlers f (Server svr) = gRpcMethodHandlers f packageName serviceName svr
+gRpcServiceHandlers pr f (Server svr) = gRpcMethodHandlers f pr packageName serviceName svr
   where packageName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
         serviceName = BS.pack (nameVal (Proxy @name))
 
-class GRpcMethodHandlers (m :: Type -> Type) (ms :: [Method mnm]) (hs :: [Type]) where
+class GRpcMethodHandlers (p :: GRpcMessageProtocol) (m :: Type -> Type)
+                         (ms :: [Method mnm]) (hs :: [Type]) where
   gRpcMethodHandlers :: (forall a. m a -> ServerErrorIO a)
-                     -> ByteString -> ByteString
+                     -> Proxy p -> ByteString -> ByteString
                      -> HandlersT Maybe ms m hs -> [ServiceHandler]
 
-instance GRpcMethodHandlers m '[] '[] where
-  gRpcMethodHandlers _ _ _ H0 = []
-instance (KnownName name, GRpcMethodHandler m args r h, GRpcMethodHandlers m rest hs)
-         => GRpcMethodHandlers m ('Method name anns args r ': rest) (h ': hs) where
-  gRpcMethodHandlers f p s (h :<|>: rest)
-    = gRpcMethodHandler f (Proxy @args) (Proxy @r) (RPC p s methodName) h
-      : gRpcMethodHandlers f p s rest
+instance GRpcMethodHandlers p m '[] '[] where
+  gRpcMethodHandlers _ _ _ _ H0 = []
+instance (KnownName name, GRpcMethodHandler p m args r h, GRpcMethodHandlers p m rest hs, MkRPC p)
+         => GRpcMethodHandlers p m ('Method name anns args r ': rest) (h ': hs) where
+  gRpcMethodHandlers f pr p s (h :<|>: rest)
+    = gRpcMethodHandler f pr (Proxy @args) (Proxy @r) (mkRPC pr p s methodName) h
+      : gRpcMethodHandlers f pr p s rest
     where methodName = BS.pack (nameVal (Proxy @name))
 
-class GRpcMethodHandler m args r h where
+class GRpcMethodHandler p m args r h where
   gRpcMethodHandler :: (forall a. m a -> ServerErrorIO a)
-                    -> Proxy args -> Proxy r -> RPC -> h -> ServiceHandler
+                    -> Proxy p -> Proxy args -> Proxy r
+                    -> RPCTy p -> h -> ServiceHandler
 
 -- | Turns a 'Conduit' working on 'ServerErrorIO'
 --   into any other base monad which supports 'IO',
@@ -195,53 +233,83 @@ raiseErrors h
     serverErrorToGRpcError NotFound        = NOT_FOUND
     serverErrorToGRpcError Invalid         = INVALID_ARGUMENT
 
-instance GRpcMethodHandler m '[ ] 'RetNothing (m ()) where
-  gRpcMethodHandler f _ _ rpc h
+-----
+
+class GRPCOutput (RPCTy p) (GRpcOWTy p ref r)
+      => GRpcOutputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef) (r :: Type) where
+  type GRpcOWTy p ref r :: Type
+  buildGRpcOWTy :: Proxy p -> Proxy ref -> r -> GRpcOWTy p ref r
+
+instance ToProtoBufTypeRef ref r
+         => GRpcOutputWrapper 'MsgProtoBuf ref r where
+  type GRpcOWTy 'MsgProtoBuf ref r = ViaToProtoBufTypeRef ref r
+  buildGRpcOWTy _ _ = ViaToProtoBufTypeRef
+
+instance (GRPCOutput AvroRPC (ViaAvroTypeRef ('ViaSchema sch sty) r))
+         => GRpcOutputWrapper 'MsgAvro ('ViaSchema sch sty) r where
+  type GRpcOWTy 'MsgAvro ('ViaSchema sch sty) r = ViaAvroTypeRef ('ViaSchema sch sty) r
+  buildGRpcOWTy _ _ = ViaAvroTypeRef
+
+-----
+
+instance (GRPCInput (RPCTy p) (), GRPCOutput (RPCTy p) ())
+         => GRpcMethodHandler p m '[ ] 'RetNothing (m ()) where
+  gRpcMethodHandler f _ _ _ rpc h
     = unary @_ @() @() rpc (\_ _ -> raiseErrors (f h))
 
-instance (ToProtoBufTypeRef rref r)
-         => GRpcMethodHandler m '[ ] ('RetSingle rref) (m r) where
-  gRpcMethodHandler f _ _ rpc h
-    = unary @_ @() @(ViaToProtoBufTypeRef rref r)
-            rpc (\_ _ -> ViaToProtoBufTypeRef <$> raiseErrors (f h))
+-----
 
-instance (ToProtoBufTypeRef rref r, MonadIO m)
-         => GRpcMethodHandler m '[ ] ('RetStream rref)
+instance (GRPCInput (RPCTy p) (), GRpcOutputWrapper p rref r)
+         => GRpcMethodHandler p m '[ ] ('RetSingle rref) (m r) where
+  gRpcMethodHandler f _ _ _ rpc h
+    = unary @_ @() @(GRpcOWTy p rref r)
+            rpc (\_ _ -> buildGRpcOWTy (Proxy @p) (Proxy @rref) <$> raiseErrors (f h))
+
+-----
+
+instance (GRPCInput (RPCTy p) (), GRpcOutputWrapper p rref r, MonadIO m)
+         => GRpcMethodHandler p m '[ ] ('RetStream rref)
                               (ConduitT r Void m () -> m ()) where
-  gRpcMethodHandler f _ _ rpc h
-    = serverStream @_ @() @(ViaToProtoBufTypeRef rref r) rpc sstream
+  gRpcMethodHandler f _ _ _ rpc h
+    = serverStream @_ @() @(GRpcOWTy p rref r) rpc sstream
     where sstream :: req -> ()
-                  -> IO ((), ServerStream (ViaToProtoBufTypeRef rref r) ())
+                  -> IO ((), ServerStream (GRpcOWTy p rref r) ())
           sstream _ _ = do
             -- Variable to connect input and output
             var <- newEmptyTMVarIO :: IO (TMVar (Maybe r))
             -- Start executing the handler
-            promise <- async (raiseErrors $ ViaToProtoBufTypeRef <$> f (h (toTMVarConduit var)))
+            promise <- async (raiseErrors $ f (h (toTMVarConduit var)))
               -- Return the information
             let readNext _
                   = do nextOutput <- atomically $ takeTMVar var
                        case nextOutput of
-                         Just o  -> return $ Just ((), ViaToProtoBufTypeRef o)
+                         Just o  -> return $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
                          Nothing -> do cancel promise
                                        return Nothing
             return ((), ServerStream readNext)
 
+-----
+
 instance (FromProtoBufTypeRef vref v)
-         => GRpcMethodHandler m '[ 'ArgSingle vref ] 'RetNothing (v -> m ()) where
-  gRpcMethodHandler f _ _ rpc h
+         => GRpcMethodHandler 'MsgProtoBuf m '[ 'ArgSingle vref ] 'RetNothing (v -> m ()) where
+  gRpcMethodHandler f _ _ _ rpc h
     = unary @_ @(ViaFromProtoBufTypeRef vref v) @()
             rpc (\_ -> raiseErrors . f . h . unViaFromProtoBufTypeRef)
 
+-----
+
 instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r)
-         => GRpcMethodHandler m '[ 'ArgSingle vref ] ('RetSingle rref) (v -> m r) where
-  gRpcMethodHandler f _ _ rpc h
+         => GRpcMethodHandler 'MsgProtoBuf m '[ 'ArgSingle vref ] ('RetSingle rref) (v -> m r) where
+  gRpcMethodHandler f _ _ _ rpc h
     = unary @_ @(ViaFromProtoBufTypeRef vref v) @(ViaToProtoBufTypeRef rref r)
             rpc (\_ -> (ViaToProtoBufTypeRef <$>) . raiseErrors . f . h . unViaFromProtoBufTypeRef)
 
+-----
+
 instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
-         => GRpcMethodHandler m '[ 'ArgStream vref ] ('RetSingle rref)
+         => GRpcMethodHandler 'MsgProtoBuf m '[ 'ArgStream vref ] ('RetSingle rref)
                               (ConduitT () v m () -> m r) where
-  gRpcMethodHandler f _ _ rpc h
+  gRpcMethodHandler f _ _ _ rpc h
     = clientStream @_ @(ViaFromProtoBufTypeRef vref v) @(ViaToProtoBufTypeRef rref r)
                    rpc cstream
     where cstream :: req
@@ -261,10 +329,12 @@ instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
             -- Return the information
             return ((), ClientStream cstreamHandler cstreamFinalizer)
 
+-----
+
 instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
-         => GRpcMethodHandler m '[ 'ArgSingle vref ] ('RetStream rref)
+         => GRpcMethodHandler 'MsgProtoBuf m '[ 'ArgSingle vref ] ('RetStream rref)
                               (v -> ConduitT r Void m () -> m ()) where
-  gRpcMethodHandler f _ _ rpc h
+  gRpcMethodHandler f _ _ _ rpc h
     = serverStream @_ @(ViaFromProtoBufTypeRef vref v) @(ViaToProtoBufTypeRef rref r)
                    rpc sstream
     where sstream :: req -> ViaFromProtoBufTypeRef vref v
@@ -283,10 +353,12 @@ instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
                                        return Nothing
             return ((), ServerStream readNext)
 
+-----
+
 instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
-         => GRpcMethodHandler m '[ 'ArgStream vref ] ('RetStream rref)
+         => GRpcMethodHandler 'MsgProtoBuf m '[ 'ArgStream vref ] ('RetStream rref)
                               (ConduitT () v m () -> ConduitT r Void m () -> m ()) where
-  gRpcMethodHandler f _ _ rpc h
+  gRpcMethodHandler f _ _ _ rpc h
     = generalStream @_ @(ViaFromProtoBufTypeRef vref v) @(ViaToProtoBufTypeRef rref r)
                     rpc bdstream
     where bdstream :: req -> IO ( (), IncomingStream (ViaFromProtoBufTypeRef vref v) ()
@@ -314,6 +386,8 @@ instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
                          Nothing -> -- no new elements to output
                            readNext ()
             return ((), IncomingStream cstreamHandler cstreamFinalizer, (), OutgoingStream readNext)
+
+-----
 
 toTMVarConduit :: MonadIO m => TMVar (Maybe r) -> ConduitT r Void m ()
 toTMVarConduit var = do
