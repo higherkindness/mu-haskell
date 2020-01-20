@@ -22,7 +22,7 @@ main = do
   m <- M.newIO
   upd <- newTBMChanIO 100
   putStrLn "running health check application"
-  runGRpcApp 8080 (server m upd)
+  runGRpcApp msgProtoBuf 8080 (server m upd)
 
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/handler/HealthServiceImpl.scala

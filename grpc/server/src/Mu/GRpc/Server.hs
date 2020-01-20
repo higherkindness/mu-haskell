@@ -38,12 +38,10 @@ import           Control.Concurrent.STM        (atomically)
 import           Control.Concurrent.STM.TMVar
 import           Control.Exception
 import           Control.Monad.Except
-import           Data.Avro
 import           Data.ByteString               (ByteString)
 import qualified Data.ByteString.Char8         as BS
 import           Data.Conduit
 import           Data.Conduit.TMChan
-import           Data.Functor.Identity
 import           Data.Kind
 import           Data.Proxy
 import           Network.GRPC.HTTP2.Encoding   (GRPCInput, GRPCOutput, gzip, uncompressed)
@@ -234,6 +232,11 @@ raiseErrors h
     serverErrorToGRpcError Invalid         = INVALID_ARGUMENT
 
 -----
+-- IMPLEMENTATION OF THE METHODS
+-----
+
+-- These type classes allow us to abstract over
+-- the choice of message protocol (PB or Avro)
 
 class GRPCOutput (RPCTy p) (GRpcOWTy p ref r)
       => GRpcOutputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef) (r :: Type) where
@@ -249,6 +252,21 @@ instance (GRPCOutput AvroRPC (ViaAvroTypeRef ('ViaSchema sch sty) r))
          => GRpcOutputWrapper 'MsgAvro ('ViaSchema sch sty) r where
   type GRpcOWTy 'MsgAvro ('ViaSchema sch sty) r = ViaAvroTypeRef ('ViaSchema sch sty) r
   buildGRpcOWTy _ _ = ViaAvroTypeRef
+
+class GRPCInput (RPCTy p) (GRpcIWTy p ref r)
+      => GRpcInputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef) (r :: Type) where
+  type GRpcIWTy p ref r :: Type
+  unGRpcIWTy :: Proxy p -> Proxy ref -> GRpcIWTy p ref r -> r
+
+instance FromProtoBufTypeRef ref r
+         => GRpcInputWrapper 'MsgProtoBuf ref r where
+  type GRpcIWTy 'MsgProtoBuf ref r = ViaFromProtoBufTypeRef ref r
+  unGRpcIWTy _ _ = unViaFromProtoBufTypeRef
+
+instance (GRPCInput AvroRPC (ViaAvroTypeRef ('ViaSchema sch sty) r))
+         => GRpcInputWrapper 'MsgAvro ('ViaSchema sch sty) r where
+  type GRpcIWTy 'MsgAvro ('ViaSchema sch sty) r = ViaAvroTypeRef ('ViaSchema sch sty) r
+  unGRpcIWTy _ _ = unViaAvroTypeRef
 
 -----
 
@@ -290,40 +308,42 @@ instance (GRPCInput (RPCTy p) (), GRpcOutputWrapper p rref r, MonadIO m)
 
 -----
 
-instance (FromProtoBufTypeRef vref v)
-         => GRpcMethodHandler 'MsgProtoBuf m '[ 'ArgSingle vref ] 'RetNothing (v -> m ()) where
+instance (GRpcInputWrapper p vref v, GRPCOutput (RPCTy p) ())
+         => GRpcMethodHandler p m '[ 'ArgSingle vref ] 'RetNothing (v -> m ()) where
   gRpcMethodHandler f _ _ _ rpc h
-    = unary @_ @(ViaFromProtoBufTypeRef vref v) @()
-            rpc (\_ -> raiseErrors . f . h . unViaFromProtoBufTypeRef)
+    = unary @_ @(GRpcIWTy p vref v) @()
+            rpc (\_ -> raiseErrors . f . h . unGRpcIWTy (Proxy @p) (Proxy @vref))
 
 -----
 
-instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r)
-         => GRpcMethodHandler 'MsgProtoBuf m '[ 'ArgSingle vref ] ('RetSingle rref) (v -> m r) where
+instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r)
+         => GRpcMethodHandler p m '[ 'ArgSingle vref ] ('RetSingle rref) (v -> m r) where
   gRpcMethodHandler f _ _ _ rpc h
-    = unary @_ @(ViaFromProtoBufTypeRef vref v) @(ViaToProtoBufTypeRef rref r)
-            rpc (\_ -> (ViaToProtoBufTypeRef <$>) . raiseErrors . f . h . unViaFromProtoBufTypeRef)
+    = unary @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
+            rpc (\_ -> (buildGRpcOWTy (Proxy @p) (Proxy @rref) <$>)
+                       . raiseErrors . f . h
+                       . unGRpcIWTy (Proxy @p) (Proxy @vref))
 
 -----
 
-instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
-         => GRpcMethodHandler 'MsgProtoBuf m '[ 'ArgStream vref ] ('RetSingle rref)
+instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
+         => GRpcMethodHandler p m '[ 'ArgStream vref ] ('RetSingle rref)
                               (ConduitT () v m () -> m r) where
   gRpcMethodHandler f _ _ _ rpc h
-    = clientStream @_ @(ViaFromProtoBufTypeRef vref v) @(ViaToProtoBufTypeRef rref r)
+    = clientStream @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
                    rpc cstream
     where cstream :: req
-                  -> IO ((), ClientStream (ViaFromProtoBufTypeRef vref v)
-                        (ViaToProtoBufTypeRef rref r) ())
+                  -> IO ((), ClientStream (GRpcIWTy p vref v)
+                        (GRpcOWTy p rref r) ())
           cstream _ = do
             -- Create a new TMChan
             chan <- newTMChanIO :: IO (TMChan v)
             let producer = sourceTMChan @m chan
             -- Start executing the handler in another thread
-            promise <- async (raiseErrors $ ViaToProtoBufTypeRef <$> f (h producer))
+            promise <- async (raiseErrors $ buildGRpcOWTy (Proxy @p) (Proxy @rref) <$> f (h producer))
             -- Build the actual handler
-            let cstreamHandler _ (ViaFromProtoBufTypeRef newInput)
-                  = atomically (writeTMChan chan newInput)
+            let cstreamHandler _ newInput
+                  = atomically (writeTMChan chan (unGRpcIWTy (Proxy @p) (Proxy @vref) newInput))
                 cstreamFinalizer _
                   = atomically (closeTMChan chan) >> wait promise
             -- Return the information
@@ -331,38 +351,39 @@ instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
 
 -----
 
-instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
-         => GRpcMethodHandler 'MsgProtoBuf m '[ 'ArgSingle vref ] ('RetStream rref)
+instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
+         => GRpcMethodHandler p m '[ 'ArgSingle vref ] ('RetStream rref)
                               (v -> ConduitT r Void m () -> m ()) where
   gRpcMethodHandler f _ _ _ rpc h
-    = serverStream @_ @(ViaFromProtoBufTypeRef vref v) @(ViaToProtoBufTypeRef rref r)
+    = serverStream @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
                    rpc sstream
-    where sstream :: req -> ViaFromProtoBufTypeRef vref v
-                  -> IO ((), ServerStream (ViaToProtoBufTypeRef rref r) ())
-          sstream _ (ViaFromProtoBufTypeRef v) = do
+    where sstream :: req -> GRpcIWTy p vref v
+                  -> IO ((), ServerStream (GRpcOWTy p rref r) ())
+          sstream _ v = do
             -- Variable to connect input and output
             var <- newEmptyTMVarIO :: IO (TMVar (Maybe r))
             -- Start executing the handler
-            promise <- async (raiseErrors $ ViaToProtoBufTypeRef <$> f (h v (toTMVarConduit var)))
+            let v' = unGRpcIWTy (Proxy @p) (Proxy @vref) v
+            promise <- async (raiseErrors $ f (h v' (toTMVarConduit var)))
               -- Return the information
             let readNext _
                   = do nextOutput <- atomically $ takeTMVar var
                        case nextOutput of
-                         Just o  -> return $ Just ((), ViaToProtoBufTypeRef o)
+                         Just o  -> return $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
                          Nothing -> do cancel promise
                                        return Nothing
             return ((), ServerStream readNext)
 
 -----
 
-instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
-         => GRpcMethodHandler 'MsgProtoBuf m '[ 'ArgStream vref ] ('RetStream rref)
+instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
+         => GRpcMethodHandler p m '[ 'ArgStream vref ] ('RetStream rref)
                               (ConduitT () v m () -> ConduitT r Void m () -> m ()) where
   gRpcMethodHandler f _ _ _ rpc h
-    = generalStream @_ @(ViaFromProtoBufTypeRef vref v) @(ViaToProtoBufTypeRef rref r)
+    = generalStream @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
                     rpc bdstream
-    where bdstream :: req -> IO ( (), IncomingStream (ViaFromProtoBufTypeRef vref v) ()
-                                , (), OutgoingStream (ViaToProtoBufTypeRef rref r) () )
+    where bdstream :: req -> IO ( (), IncomingStream (GRpcIWTy p vref v) ()
+                                , (), OutgoingStream (GRpcOWTy p rref r) () )
           bdstream _ = do
             -- Create a new TMChan and a new variable
             chan <- newTMChanIO :: IO (TMChan v)
@@ -371,15 +392,15 @@ instance (FromProtoBufTypeRef vref v, ToProtoBufTypeRef rref r, MonadIO m)
             -- Start executing the handler
             promise <- async (raiseErrors $ f $ h producer (toTMVarConduit var))
             -- Build the actual handler
-            let cstreamHandler _ (ViaFromProtoBufTypeRef newInput)
-                  = atomically (writeTMChan chan newInput)
+            let cstreamHandler _ newInput
+                  = atomically (writeTMChan chan (unGRpcIWTy (Proxy @p) (Proxy @vref) newInput))
                 cstreamFinalizer _
                   = atomically (closeTMChan chan) >> wait promise
                 readNext _
                   = do nextOutput <- atomically $ tryTakeTMVar var
                        case nextOutput of
                          Just (Just o) ->
-                           return $ Just ((), ViaToProtoBufTypeRef o)
+                           return $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
                          Just Nothing  -> do
                            cancel promise
                            return Nothing
