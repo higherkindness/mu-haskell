@@ -25,7 +25,7 @@ executable {{name}}
                        mu-grpc-server
 
 {-# START_FILE stack.yaml #-}
-resolver: lts-14.20
+resolver: lts-14.21
 allow-newer: true
 extra-deps:
 # mu
