@@ -25,7 +25,7 @@ executable {{name}}
                        mu-grpc-server
 
 {-# START_FILE stack.yaml #-}
-resolver: lts-14.17
+resolver: lts-14.21
 allow-newer: true
 extra-deps:
 # mu
@@ -38,7 +38,7 @@ extra-deps:
 - http2-client-0.9.0.0
 - http2-grpc-types-0.5.0.0
 - http2-grpc-proto3-wire-0.1.0.0
-- warp-grpc-0.2.0.0
+- warp-grpc-0.3.0.0
 - proto3-wire-1.1.0
 - language-protobuf-1.0
 

@@ -34,7 +34,7 @@ library
                      , stm
                      , stm-conduit
                      , wai
-                     , warp < 3.3
+                     , warp
                      , warp-grpc
                      , warp-tls
   hs-source-dirs:      src
@@ -59,7 +59,7 @@ executable grpc-example-server
                      , stm
                      , stm-conduit
                      , wai
-                     , warp < 3.3
+                     , warp
                      , warp-grpc
                      , warp-tls
   hs-source-dirs:      src
