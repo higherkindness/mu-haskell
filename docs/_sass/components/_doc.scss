@@ -143,5 +143,9 @@
 @include bp(medium) {
     #site-doc {
         left: 0;
+
+        &.expanded {
+          overflow: hidden;
+        }
     }
 }

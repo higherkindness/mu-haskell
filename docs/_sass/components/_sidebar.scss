@@ -71,6 +71,7 @@
 
         &.toggled {
             left: 0;
+            overflow-y: auto;
         }
 
         .sidebar-toggle {
