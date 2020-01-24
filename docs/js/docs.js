@@ -126,7 +126,7 @@ function anchorForId(id) {
   const anchor = document.createElement("a");
   anchor.className = "header-link";
   anchor.href = `#${id}`;
-  anchor.innerHTML = '<i class="fa fa-link"></i>';
+	anchor.innerHTML = '🔗';
   return anchor;
 }
 
@@ -148,7 +148,7 @@ function linkifyAnchors(level, containingElement) {
  * Function
  */
 function linkifyAllLevels() {
-  const content = document.querySelector("#content");
+  const content = document.querySelector(".doc-content");
   [...Array(7).keys()].map(level => {
     linkifyAnchors(level, content);
   });
@@ -158,5 +158,5 @@ window.addEventListener("DOMContentLoaded", () => {
   activateToggle();
   activateMenuNesting();
   // loadGitHubStats();
-  // linkifyAllLevels();
+  linkifyAllLevels();
 });

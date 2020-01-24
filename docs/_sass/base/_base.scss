@@ -39,6 +39,7 @@ h6 {
     color: $header-font-color;
     font-family: $header-font-family;
     font-weight: $font-semibold;
+    position: relative;
 }
 
 a {
@@ -54,7 +55,7 @@ a {
         text-decoration: underline;
     }
     &:active {
-        color: $white;
+        color: $link-hover;
     }
 }
 
