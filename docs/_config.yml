@@ -7,7 +7,10 @@ description: Mu is a purely functional library for building microservices.
 author: 47 Degrees
 keywords: functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory
 #-------------------------
-url: https://www.47deg.com
+github-owner: higherkindness
+github-repo: mu-haskell
+#-------------------------
+url: https://higherkindess.io/mu-haskell
 #-------------------------
 markdown: kramdown
 sass:

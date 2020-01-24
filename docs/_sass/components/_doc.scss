@@ -41,7 +41,15 @@
         align-items: center;
 
         .link-item {
-          margin-left: ($base-point-grid * 2);
+          margin-left: ($base-point-grid * 3);
+
+          .strong {
+            font-weight: 600;
+          }
+
+          a:hover {
+            text-decoration: none;
+          }
         }
       }
     }
