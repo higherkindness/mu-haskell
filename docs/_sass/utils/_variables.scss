@@ -16,8 +16,8 @@ $gray-primary: #001E38;
 $white: rgb(255, 255, 255);
 $link-color: darken($brand-primary, 10%);
 $link-hover: darken($brand-primary, 15%);
-$sidebar-active-color: $white;
-$sidebar-head-active-color: darken($white, 3%);
+$sidebar-active-color: lighten($brand-secondary, 2%);
+$sidebar-head-active-color: lighten($brand-secondary, 4%);
 
 // Typography
 // -----------------------------------------------

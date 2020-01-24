@@ -1,6 +1,6 @@
 ---
 layout: docs
-title: Mu-Haskell
+title: Services and servers
 permalink: rpc/
 ---
 

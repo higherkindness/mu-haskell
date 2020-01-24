@@ -4,7 +4,7 @@
 
 #site-sidebar {
     position: fixed;
-    background-image: linear-gradient(to bottom, $white 60%, darken($white, 3%) 100%);
+    background-image: linear-gradient(to bottom, $brand-secondary 60%, darken($brand-secondary, 3%) 100%);
     border-right: 1px solid rgba(0,0,0,0.1);
     width: 290px;
     height: 100%;
@@ -31,8 +31,7 @@
 
         a {
             display: flex;
-            color: $gray-primary;
-            justify-content: center;
+            color: $white;
             align-items: center;
             width: 100%;
             transition: none;
@@ -72,6 +71,7 @@
 
         &.toggled {
             left: 0;
+            overflow-y: auto;
         }
 
         .sidebar-toggle {
