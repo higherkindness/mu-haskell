@@ -5,15 +5,18 @@
         type="button"
         class="button doc-toggle"
         title="Toggle">
-          <img src="{{ site.baseurl }}/img/sidebar-icon-open.svg" alt="Toggle">
+          <img src="{{ 'img/sidebar-icon-open.svg' | relative_url }}" alt="Toggle" title="Toggle">
       </button>
 
       <div class="link-container">
         <div class="link-item">
-          <a href="{{ 'haddock/index.html' | relative_url }}">API Docs</a>
+          <a class="strong" href="{{ 'haddock/' | relative_url }}" title="API Docs" target="_blank" rel="noopener noreferrer">API Docs</a>
         </div>
         <div class="link-item">
-          <a href="https://github.com/higherkindness/mu-haskell">GitHub</a>
+          <a href="https://github.com/{{ site.github-owner }}/{{ site.github-repo }}" title="GitHub repo" target="_blank" rel="noopener noreferrer">
+            <span class="strong">GitHub</span>
+            <span id="stars-count"></span>
+          </a>
         </div>
       </div>
 

@@ -1,14 +1,21 @@
 <head>
     <meta charset="UTF-8">
-    <title>{{site.name}}</title>
+
+    {% if page.title %}
+    {% assign pageTitle = site.title | append: ': ' | append: page.title %}
+    {% else %}
+    {% assign pageTitle = site.title %}
+    {% endif %}
+
+    <title>{{ pageTitle }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{site.description}}">
     <meta name="keywords" content="{{site.keywords}}">
 
     <meta property="og:image" content="{{ 'img/poster.png' | relative_url }}" />
-    <meta property="og:title" content="{{site.name}}" />
-    <meta property="og:site_name" content="{{site.name}}" />
-    <meta property="og:url" content="https://higherkindness.io/mu-haskell" />
+    <meta property="og:title" content="{{ pageTitle }}" />
+    <meta property="og:site_name" content="{{ pageTitle }}" />
+    <meta property="og:url" content="{{ site.url }}" />
     <meta property="og:type" content="website" />
     <meta property="og:description" content="{{site.description}}" />
     <meta property="og:keywords" content="{{site.keywords}}" />
@@ -18,6 +25,8 @@
     <meta name="twitter:site" content="@47deg">
     <meta name="twitter:creator" content="@47deg">
     <meta name="twitter:image" content="{{ 'img/poster.png' | relative_url }}" />
+
+    <meta property="github-info" data-github-owner="{{ site.github-owner }}" data-github-repo="{{ site.github-repo }}" />
 
     <script defer src="{{ '/js/docs.js' | relative_url }}"></script>
 

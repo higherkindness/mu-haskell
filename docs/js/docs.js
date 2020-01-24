@@ -102,18 +102,24 @@ function activateMenuNesting() {
  * GitHub API and set it on its proper nodes.
  */
 async function loadGitHubStats() {
-  const content = document.querySelector("#content");
-  const ghOwner = content.dataset.githubOwner;
-  const ghRepo = content.dataset.githubRepo;
+  const ghInfo = document.querySelector('meta[property="github-info"]');
+  const ghOwner = ghInfo.dataset.githubOwner;
+  const ghRepo = ghInfo.dataset.githubRepo;
 
   if (ghOwner && ghRepo) {
     const ghAPI = `https://api.github.com/repos/${ghOwner}/${ghRepo}`;
     const ghDataResponse = await fetch(ghAPI);
     const ghData = await ghDataResponse.json();
-    const watchersElement = document.querySelector("#eyes");
-    const starsElement = document.querySelector("#stars");
-    watchersElement.textContent = ghData.subscribers_count;
-    starsElement.textContent = ghData.stargazers_count;
+		const ghStars = ghData.stargazers_count;
+		const starsElement = document.querySelector("#stars-count");
+		if (starsElement) {
+			if (ghStars) {
+				starsElement.textContent = `☆ ${ghStars}`;
+			}
+			else {
+				starsElement.remove();
+			}
+		}
   }
 }
 
@@ -126,7 +132,7 @@ function anchorForId(id) {
   const anchor = document.createElement("a");
   anchor.className = "header-link";
   anchor.href = `#${id}`;
-  anchor.innerHTML = '<i class="fa fa-link"></i>';
+	anchor.innerHTML = '🔗';
   return anchor;
 }
 
@@ -148,7 +154,7 @@ function linkifyAnchors(level, containingElement) {
  * Function
  */
 function linkifyAllLevels() {
-  const content = document.querySelector("#content");
+  const content = document.querySelector(".doc-content");
   [...Array(7).keys()].map(level => {
     linkifyAnchors(level, content);
   });
@@ -157,6 +163,6 @@ function linkifyAllLevels() {
 window.addEventListener("DOMContentLoaded", () => {
   activateToggle();
   activateMenuNesting();
-  // loadGitHubStats();
-  // linkifyAllLevels();
+  loadGitHubStats();
+  linkifyAllLevels();
 });
