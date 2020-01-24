@@ -1,6 +1,7 @@
-title: Mu-Haskell
 #-------------------------
 name: Mu-Haskell
+#-------------------------
+title: Mu-Haskell # To be used on meta tags mainly
 #-------------------------
 description: Mu is a purely functional library for building microservices.
 #-------------------------
