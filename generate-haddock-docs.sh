@@ -1,9 +1,6 @@
 #!/bin/sh
 
-DOCSDIR=docs/haddock
-
-echo "Installing required packages"
-stack install standalone-haddock
+DOCSDIR=$1/haddock
 
 echo "Removing previous docs"
 rm -rf ${DOCSDIR}
@@ -23,4 +20,4 @@ stack exec --no-ghc-package-path standalone-haddock -- -o ${DOCSDIR} \
   grpc/client grpc/server
 
 echo "Setting Linuwial theme on Haddock generated docs"
-find ${DOCSDIR} -name "ocean.css" -exec cp -rf docs/css/linuwial.css {} \;
+find ${DOCSDIR} -name "ocean.css" -exec cp -rf $1/css/linuwial.css {} \;
