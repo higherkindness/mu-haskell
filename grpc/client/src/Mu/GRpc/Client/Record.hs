@@ -43,7 +43,7 @@ import           Language.Haskell.TH.Datatype
 import           Network.GRPC.Client          (CompressMode (..))
 import           Network.GRPC.Client.Helpers
 
-import Mu.GRpc.Bridge
+import           Mu.GRpc.Bridge
 import           Mu.GRpc.Client.Internal
 import           Mu.Rpc
 
