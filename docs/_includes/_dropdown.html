@@ -1,0 +1,24 @@
+<div id="{{ include.item.name | downcase | replace: ' ', '-' }}-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="{{ include.item.name }}">
+      {% if include.item.icon != "" %}
+        <i class="nav-item-icon fa fa-lg {{ include.item.icon }}" aria-hidden="true"></i>
+        <span class="nav-item-text">{{ include.item.name }}</span>
+      {% else %}
+        <span class="nav-item-text">{{ include.item.name }}</span>
+      {% endif %}
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      {% for link in include.item.links %}
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="{{ link[0] | capitalize }}" href="{{ link[1] }}" target="_blank" rel="noopener noreferrer">
+            <span>
+              {{ link[0] | capitalize }}
+            </span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+
+</div>

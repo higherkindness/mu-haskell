@@ -1,7 +1,7 @@
 // Doc content
 // -----------------------------------------------
 // -----------------------------------------------
-#site-doc {
+.site-doc {
     position: absolute;
     left: 290px;
     right: 0;
@@ -40,12 +40,12 @@
         justify-content: flex-end;
         align-items: center;
 
-        .link-item {
-          margin-left: ($base-point-grid * 3);
+        .strong {
+          font-weight: 600;
+        }
 
-          .strong {
-            font-weight: 600;
-          }
+        .link-item {
+          margin-left: ($base-point-grid * 2);
 
           a:hover {
             text-decoration: none;
@@ -146,7 +146,7 @@
 // Responsive
 // -----------------------------------------------
 @include bp(medium) {
-    #site-doc {
+    .site-doc {
         left: 0;
 
         &.expanded {
