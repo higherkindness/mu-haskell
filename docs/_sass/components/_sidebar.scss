@@ -2,7 +2,7 @@
 // -----------------------------------------------
 // -----------------------------------------------
 
-#site-sidebar {
+.site-sidebar {
     position: fixed;
     background-image: linear-gradient(to bottom, $brand-secondary 60%, darken($brand-secondary, 3%) 100%);
     border-right: 1px solid rgba(0,0,0,0.1);
@@ -65,7 +65,7 @@
 // -----------------------------------------------
 @include bp(medium) {
 
-    #site-sidebar {
+    .site-sidebar {
         left: -100%;
         width: 100%;
 

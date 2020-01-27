@@ -1,0 +1,9 @@
+- name: Version
+  links:
+    stable: https://higherkindness.io/mu-haskell/
+    next: https://higherkindness.io/mu-haskell/wip
+
+- name: API Docs
+  links:
+    stable: https://higherkindness.io/mu-haskell/haddock
+    next: https://higherkindness.io/mu-haskell/wip/haddock
