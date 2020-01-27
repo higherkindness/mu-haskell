@@ -2,9 +2,6 @@
 
 DOCSDIR=$1/haddock
 
-echo "Installing required packages"
-stack install standalone-haddock
-
 echo "Removing previous docs"
 rm -rf ${DOCSDIR}
 

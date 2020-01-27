@@ -9,6 +9,8 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: mstksg/setup-stack@v1
+    - name: Get Standalone Haddock
+      run: stack install standalone-haddock
     - name: Get Bundle & Jekyll
       run: |
         sudo apt-get update
