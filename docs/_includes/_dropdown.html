@@ -1,4 +1,4 @@
-<div id="{{ include.item.name | downcase | replace: ' ', '-' }}-dropdown">
+<div id="{{ include.item.name | downcase | replace: ' ', '-' }}-dropdown" class="link-item">
 
     <button class="button link-like strong" onclick="openDropdown(event)" title="{{ include.item.name }}">
       {% if include.item.icon != "" %}
