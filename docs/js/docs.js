@@ -151,7 +151,7 @@ function linkifyAnchors(level, containingElement) {
 }
 
 /**
- * Function
+ * Go through all headers applying linkify function
  */
 function linkifyAllLevels() {
   const content = document.querySelector(".doc-content");
@@ -159,6 +159,46 @@ function linkifyAllLevels() {
     linkifyAnchors(level, content);
   });
 }
+
+// Dropdown functions
+
+/* When the user clicks on the navigation Documentation button,
+ * toggle between hiding and showing the dropdown content.
+ */
+function openDropdown(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  // Calling close func. in case we're clicking another dropdown with one opened
+  closeDropdown(e);
+  const parent = e.target.closest("div[id$='-dropdown']");
+  if (parent) {
+    const dropdown = parent.querySelector(".dropdown-content");
+    if (dropdown) {
+      dropdown.classList.toggle("show");
+      if (dropdown.classList.contains("show")) {
+        document.documentElement.addEventListener("click", closeDropdown);
+      }
+      else {
+        document.documentElement.removeEventListener("click", closeDropdown);
+      }
+    }
+  }
+}
+
+// Close the dropdown if the user clicks (only) outside of it
+function closeDropdown(e) {
+  const dropdown = document.querySelector("div[id$='-dropdown'] > .dropdown-content.show");
+  if (dropdown) {
+    const currentTarget = e.currentTarget || {};
+    const currentTargetParent = currentTarget.closest("div[id$='-dropdown']");
+    const dropdownParent = dropdown.closest("div[id$='-dropdown']");
+    if (currentTargetParent !== dropdownParent) {
+      dropdown.classList.remove("show");
+    }
+    document.documentElement.removeEventListener("click", closeDropdown);
+  }
+}
+
 
 window.addEventListener("DOMContentLoaded", () => {
   activateToggle();

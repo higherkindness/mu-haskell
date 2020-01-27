@@ -1,7 +1,7 @@
 // Doc content
 // -----------------------------------------------
 // -----------------------------------------------
-#site-doc {
+.site-doc {
     position: absolute;
     left: 290px;
     right: 0;
@@ -146,7 +146,7 @@
 // Responsive
 // -----------------------------------------------
 @include bp(medium) {
-    #site-doc {
+    .site-doc {
         left: 0;
 
         &.expanded {

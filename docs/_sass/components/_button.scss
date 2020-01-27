@@ -2,12 +2,12 @@
 // ----------------------------------------------
 // ----------------------------------------------
 .button {
+  font-family: $base-font-family;
   display: block;
   background: none;
   border: none;
   outline: none;
   text-decoration: none;
-  position: relative;
 
   &:hover {
     cursor: pointer;
@@ -16,8 +16,48 @@
   > img {
     vertical-align: bottom;
   }
-}
 
+  &.link-like {
+    font-size: 1rem;
+    color: $link-color;
+    font-weight: $font-regular;
+    border: none;
+    padding: 0 0 ($base-point-grid / 2) 0;
+    margin:
+      0
+      ($base-point-grid * 2)
+      -5px
+      ($base-point-grid * 2);
+    text-transform: none;
+
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 150%;
+      width: 100%;
+      background-image: url("../img/arrow-down.svg");
+      background-repeat: no-repeat;
+      background-position-x: 100%;
+      background-position-y: 20%;
+      background-size: 0.8em;
+      transition: background-position 0.1s ease;
+    }
+
+    &:hover,
+    &:active,
+    &:focus {
+      text-decoration: none;
+      box-shadow: 0 2px;
+      background: none;
+
+      &::after {
+        background-position-y: 60%;
+      }
+    }
+  }
+}
 
 .close {
   height: 28px;

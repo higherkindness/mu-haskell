@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="13px" height="13px" viewBox="0 0 13 13" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>arrow-down</title>
+    <g id="arrow-bottom" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <polygon id="arrow" fill="#001E38" opacity="0.8" transform="translate(6.500000, 7.000000) rotate(-360.000000) translate(-6.500000, -7.000000) " points="1 4 1.00034371 7 6.5 10 12 7 12 6.62589305 11.9979378 4.00811864 6.49965629 7"></polygon>
+    </g>
+</svg>
