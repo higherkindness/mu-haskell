@@ -3,7 +3,7 @@ cabal-version:       >=1.10
 -- init'.  For further documentation, see
 -- http://haskell.org/cabal/users-guide/
 
-name:                mu-example-health-check
+name:                mu-example-health-check-avro
 version:             0.1.0.0
 -- synopsis:
 -- description:
@@ -17,7 +17,7 @@ category:            Network
 build-type:          Simple
 data-files:          healthcheck.proto
 
-executable health-server
+executable health-server-avro
   main-is:             Server.hs
   other-modules:       Definition
   build-depends:       base >=4.12 && <5, text,
@@ -30,7 +30,7 @@ executable health-server
   default-language:    Haskell2010
   ghc-options:         -Wall
 
-executable health-client-tyapps
+executable health-client-tyapps-avro
   main-is:             ClientTyApps.hs
   other-modules:       Definition
   build-depends:       base >=4.12 && <5, text,
@@ -40,7 +40,7 @@ executable health-client-tyapps
   default-language:    Haskell2010
   ghc-options:         -Wall
 
-executable health-client-record
+executable health-client-record-avro
   main-is:             ClientRecord.hs
   other-modules:       Definition
   build-depends:       base >=4.12 && <5, text,
@@ -49,3 +49,5 @@ executable health-client-record
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall
+
+

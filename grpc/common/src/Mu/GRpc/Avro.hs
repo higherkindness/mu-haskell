@@ -10,16 +10,21 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# options_ghc -fno-warn-orphans  #-}
-module Mu.GRpc.Avro where
+module Mu.GRpc.Avro (
+  AvroRPC(..)
+, ViaAvroTypeRef(..)
+) where
 
 import           Data.Avro
+import           Data.Kind
 import           Data.Binary.Builder         (fromByteString, putWord32be, singleton)
-import           Data.Binary.Get             (getByteString, getInt8, getWord32be,
-                                              runGetIncremental, Decoder(..))
+import           Data.Binary.Get             (Decoder (..), getByteString, getInt8, getWord32be,
+                                              runGetIncremental)
 import           Data.ByteString.Char8       (ByteString)
 import qualified Data.ByteString.Char8       as ByteString
 import           Data.ByteString.Lazy        (fromStrict, toStrict)
 import           Data.Functor.Identity
+import           GHC.TypeLits
 import           Network.GRPC.HTTP2.Encoding
 import           Network.GRPC.HTTP2.Types
 
@@ -28,6 +33,7 @@ import           Network.GRPC.HTTP2.Types
 import           Data.Monoid                 ((<>))
 #endif
 
+import qualified Mu.Adapter.Avro ()
 import           Mu.Rpc
 import           Mu.Schema
 
@@ -49,12 +55,14 @@ instance GRPCOutput AvroRPC () where
   encodeOutput _ _ = mempty
   decodeOutput = error "you should not call this"
 
-instance (FromSchema Identity sch sty i, FromAvro (Term Identity sch (sch :/: sty)))
+instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
+         (FromSchema Identity sch sty i, FromAvro (Term Identity sch (sch :/: sty)))
          => GRPCInput AvroRPC (ViaAvroTypeRef ('ViaSchema sch sty) i) where
   encodeInput = error "you should not call this"
   decodeInput _ i = (ViaAvroTypeRef . fromSchema' @_ @_ @sch @Identity <$>) <$> decoder i
 
-instance (ToSchema Identity sch sty o, ToAvro (Term Identity sch (sch :/: sty)))
+instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
+         (ToSchema Identity sch sty o, ToAvro (Term Identity sch (sch :/: sty)))
          => GRPCOutput AvroRPC (ViaAvroTypeRef ('ViaSchema sch sty) o) where
   encodeOutput _ compression
     = encoder compression . toSchema' @_ @_ @sch @Identity . unViaAvroTypeRef
@@ -82,6 +90,6 @@ decoder compression = runGetIncremental $ do
 
 -- Based on https://hackage.haskell.org/package/binary/docs/Data-Binary-Get-Internal.html
 instance Functor Decoder where
-  fmap f (Done b s a) = Done b s (f a)
-  fmap f (Partial k) = Partial (fmap f . k)
+  fmap f (Done b s a)   = Done b s (f a)
+  fmap f (Partial k)    = Partial (fmap f . k)
   fmap _ (Fail b s msg) = Fail b s msg

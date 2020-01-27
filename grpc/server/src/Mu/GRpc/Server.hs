@@ -31,6 +31,8 @@ module Mu.GRpc.Server
 , gRpcApp
   -- * Raise errors as exceptions in IO
 , raiseErrors, liftServerConduit
+  -- * Re-export useful instances
+, module Avro
 ) where
 
 import           Control.Concurrent.Async
@@ -54,6 +56,7 @@ import           Network.Wai.Handler.WarpTLS  (TLSSettings, runTLS)
 
 import           Mu.Adapter.ProtoBuf.Via
 import           Mu.GRpc.Avro
+import qualified Mu.GRpc.Avro                 as Avro
 import           Mu.GRpc.Bridge
 import           Mu.Rpc
 import           Mu.Schema
@@ -65,7 +68,7 @@ runGRpcApp
      , GRpcMethodHandlers protocol ServerErrorIO methods handlers )
   => Proxy protocol
   -> Port
-  -> ServerT Maybe ('Service name anns methods) ServerErrorIO handlers
+  -> ServerT f ('Service name anns methods) ServerErrorIO handlers
   -> IO ()
 runGRpcApp protocol port = runGRpcAppTrans protocol port id
 
@@ -76,7 +79,7 @@ runGRpcAppTrans
   => Proxy protocol
   -> Port
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT Maybe ('Service name anns methods) m handlers
+  -> ServerT f ('Service name anns methods) m handlers
   -> IO ()
 runGRpcAppTrans protocol port f svr = run port (gRpcAppTrans protocol f svr)
 
@@ -89,7 +92,7 @@ runGRpcAppSettings
   => Proxy protocol
   -> Settings
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT Maybe ('Service name anns methods) m handlers
+  -> ServerT f ('Service name anns methods) m handlers
   -> IO ()
 runGRpcAppSettings protocol st f svr = runSettings st (gRpcAppTrans protocol f svr)
 
@@ -103,7 +106,7 @@ runGRpcAppTLS
   => Proxy protocol
   -> TLSSettings -> Settings
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT Maybe ('Service name anns methods) m handlers
+  -> ServerT f ('Service name anns methods) m handlers
   -> IO ()
 runGRpcAppTLS protocol tls st f svr = runTLS tls st (gRpcAppTrans protocol f svr)
 
@@ -116,7 +119,7 @@ gRpcApp
   :: ( KnownName name, KnownName (FindPackageName anns)
      , GRpcMethodHandlers protocol ServerErrorIO methods handlers )
   => Proxy protocol
-  -> ServerT Maybe ('Service name anns methods) ServerErrorIO handlers
+  -> ServerT f ('Service name anns methods) ServerErrorIO handlers
   -> Application
 gRpcApp protocol = gRpcAppTrans protocol id
 
@@ -130,19 +133,19 @@ gRpcAppTrans
      , GRpcMethodHandlers protocol m methods handlers )
   => Proxy protocol
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT Maybe ('Service name anns methods) m handlers
+  -> ServerT f ('Service name anns methods) m handlers
   -> Application
 gRpcAppTrans protocol f svr
   = Wai.grpcApp [uncompressed, gzip]
                 (gRpcServiceHandlers protocol f svr)
 
 gRpcServiceHandlers
-  :: forall name anns methods handlers m protocol.
+  :: forall name anns methods handlers m protocol w.
      ( KnownName name, KnownName (FindPackageName anns)
      , GRpcMethodHandlers protocol m methods handlers )
   => Proxy protocol
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT Maybe ('Service name anns methods) m handlers
+  -> ServerT w ('Service name anns methods) m handlers
   -> [ServiceHandler]
 gRpcServiceHandlers pr f (Server svr) = gRpcMethodHandlers f pr packageName serviceName svr
   where packageName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
@@ -152,7 +155,7 @@ class GRpcMethodHandlers (p :: GRpcMessageProtocol) (m :: Type -> Type)
                          (ms :: [Method mnm]) (hs :: [Type]) where
   gRpcMethodHandlers :: (forall a. m a -> ServerErrorIO a)
                      -> Proxy p -> ByteString -> ByteString
-                     -> HandlersT Maybe ms m hs -> [ServiceHandler]
+                     -> HandlersT f ms m hs -> [ServiceHandler]
 
 instance GRpcMethodHandlers p m '[] '[] where
   gRpcMethodHandlers _ _ _ _ H0 = []

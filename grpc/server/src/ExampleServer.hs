@@ -1,5 +1,6 @@
 {-# language DataKinds         #-}
 {-# language OverloadedStrings #-}
+{-# language TypeApplications  #-}
 {-# language TypeFamilies      #-}
 module Main where
 
@@ -16,4 +17,4 @@ type instance AnnotatedSchema ProtoBufAnnotation QuickstartSchema
 main :: IO ()
 main = do
   putStrLn "running quickstart application"
-  runGRpcApp msgProtoBuf 8080 quickstartServer
+  runGRpcApp msgProtoBuf 8080 (quickstartServer @_ @Maybe)

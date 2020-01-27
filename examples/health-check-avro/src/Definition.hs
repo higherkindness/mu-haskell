@@ -13,7 +13,8 @@
 {-# language TypeOperators         #-}
 module Definition where
 
-import           Data.Text     as T
+import           Data.Functor.Identity
+import           Data.Text             as T
 import           GHC.Generics
 
 import           Mu.Quasi.GRpc
@@ -25,23 +26,25 @@ grpc "HealthCheckSchema" id "examples/health-check/healthcheck.proto"
 grpc "HealthCheckSchema" id "healthcheck.proto"
 #endif
 
+type HealthCheckService = HealthCheckServiceFS2
+
 newtype HealthCheckMsg
-  = HealthCheckMsg { nameService :: Maybe T.Text }
+  = HealthCheckMsg { nameService :: T.Text }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe HealthCheckSchema "HealthCheck"
-           , FromSchema Maybe HealthCheckSchema "HealthCheck" )
+           , ToSchema   Identity HealthCheckSchema "HealthCheck"
+           , FromSchema Identity HealthCheckSchema "HealthCheck" )
 newtype ServerStatusMsg
-  = ServerStatusMsg { status :: Maybe T.Text }
+  = ServerStatusMsg { status :: T.Text }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe HealthCheckSchema "ServerStatus"
-           , FromSchema Maybe HealthCheckSchema "ServerStatus" )
+           , ToSchema   Identity HealthCheckSchema "ServerStatus"
+           , FromSchema Identity HealthCheckSchema "ServerStatus" )
 data HealthStatusMsg
-  = HealthStatusMsg { hc :: Maybe HealthCheckMsg, status :: Maybe ServerStatusMsg }
+  = HealthStatusMsg { hc :: HealthCheckMsg, status :: ServerStatusMsg }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe HealthCheckSchema "HealthStatus"
-           , FromSchema Maybe HealthCheckSchema "HealthStatus" )
+           , ToSchema   Identity HealthCheckSchema "HealthStatus"
+           , FromSchema Identity HealthCheckSchema "HealthStatus" )
 newtype AllStatusMsg
-  = AllStatusMsg { all :: Maybe [HealthStatusMsg] }
+  = AllStatusMsg { all :: [HealthStatusMsg] }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe HealthCheckSchema "AllStatus"
-           , FromSchema Maybe HealthCheckSchema "AllStatus" )
+           , ToSchema   Identity HealthCheckSchema "AllStatus"
+           , FromSchema Identity HealthCheckSchema "AllStatus" )
