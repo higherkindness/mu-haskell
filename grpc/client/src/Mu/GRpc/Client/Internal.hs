@@ -43,12 +43,14 @@ setupGrpcClient' = runExceptT . setupGrpcClient
 
 class GRpcServiceMethodCall (p :: GRpcMessageProtocol) (s :: Service snm mnm) (m :: Method mnm) h where
   gRpcServiceMethodCall :: Proxy p -> Proxy s -> Proxy m -> GrpcClient -> h
-instance (KnownName serviceName, KnownName (FindPackageName anns), GRpcMethodCall p m h, MkRPC p)
-         => GRpcServiceMethodCall p ('Service serviceName anns methods) m h where
+instance ( KnownName serviceName, KnownName (FindPackageName anns), KnownName mname
+         , GRpcMethodCall p ('Method mname manns margs mret) h, MkRPC p )
+         => GRpcServiceMethodCall p ('Service serviceName anns methods)
+                                  ('Method mname manns margs mret) h where
   gRpcServiceMethodCall pro _ = gRpcMethodCall @p rpc
     where pkgName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
           svrName = BS.pack (nameVal (Proxy @serviceName))
-          metName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
+          metName = BS.pack (nameVal (Proxy @mname))
           rpc = mkRPC pro pkgName svrName metName
 
 data GRpcReply a
