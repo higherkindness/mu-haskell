@@ -34,28 +34,28 @@ simple client who = do
   let hcm = HealthCheckMsg $ Just (T.pack who)
   putStrLn ("UNARY: Is there some server named " <> who <> "?")
   rknown :: GRpcReply ServerStatusMsg
-    <- gRpcCall @HealthCheckService @"check" client hcm
+    <- gRpcCall @'MsgProtoBuf @HealthCheckService @"check" client hcm
   putStrLn ("UNARY: Actually the status is " <> show rknown)
   update client who "SERVING"
-  r <- gRpcCall @HealthCheckService @"clearStatus" client hcm
+  r <- gRpcCall @'MsgProtoBuf @HealthCheckService @"clearStatus" client hcm
   putStrLn ("UNARY: Was clearing successful? " <> show r)
   runknown :: GRpcReply ServerStatusMsg
-    <- gRpcCall @HealthCheckService @"check" client hcm
+    <- gRpcCall @'MsgProtoBuf @HealthCheckService @"check" client hcm
   putStrLn ("UNARY: Current status of " <> who <> ": " <> show runknown)
 
 update :: GrpcClient -> String -> String -> IO ()
 update client who newstatus = do
   let hcm = HealthCheckMsg $ Just (T.pack who)
   putStrLn ("UNARY: Setting " <> who <> " service to " <> newstatus)
-  r <- gRpcCall @HealthCheckService @"setStatus" client
+  r <- gRpcCall @'MsgProtoBuf @HealthCheckService @"setStatus" client
                 (HealthStatusMsg (Just hcm) (Just $ ServerStatusMsg (Just $ T.pack newstatus)))
   putStrLn ("UNARY: Was setting successful? " <> show r)
   rstatus :: GRpcReply ServerStatusMsg
-    <- gRpcCall @HealthCheckService @"check" client hcm
+    <- gRpcCall @'MsgProtoBuf @HealthCheckService @"check" client hcm
   putStrLn ("UNARY: Checked the status of " <> who <> ". Obtained: " <> show rstatus)
 
 watching :: GrpcClient -> String -> IO ()
 watching client who = do
   let hcm = HealthCheckMsg $ Just (T.pack who)
-  replies <- gRpcCall @HealthCheckService @"watch" client hcm
+  replies <- gRpcCall @'MsgProtoBuf @HealthCheckService @"watch" client hcm
   runConduit $ replies .| C.mapM_ (print :: GRpcReply ServerStatusMsg -> IO ())

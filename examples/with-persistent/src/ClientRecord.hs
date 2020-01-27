@@ -25,7 +25,7 @@ main :: IO ()
 main = do
   let config = grpcClientConfigSimple "127.0.0.1" 1234 False
   Right grpcClient <- setupGrpcClient' config
-  let client = buildService @PersistentService @"" grpcClient
+  let client = buildService @'MsgProtoBuf @PersistentService @"" grpcClient
   args <- getArgs
   case args of
     ["watch"]       -> watching client

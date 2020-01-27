@@ -20,17 +20,14 @@ source-repository head
 
 library
   exposed-modules:     Mu.GRpc.Server
-                     , Mu.GRpc.Avro
   build-depends:       base >=4.12 && <5
                      , async
-                     , avro
                      , binary
                      , bytestring
                      , conduit
-                     , http2-grpc-proto3-wire
                      , http2-grpc-types
                      , mtl
-                     , mu-avro
+                     , mu-grpc-common
                      , mu-protobuf
                      , mu-rpc
                      , mu-schema
@@ -48,16 +45,15 @@ library
 
 executable grpc-example-server
   main-is:             ExampleServer.hs
-  other-modules:       Mu.GRpc.Server, Mu.GRpc.Avro
+  other-modules:       Mu.GRpc.Server
   build-depends:       base >=4.12 && <5
                      , async
-                     , avro
                      , binary
                      , bytestring
                      , conduit
-                     , http2-grpc-proto3-wire
                      , http2-grpc-types
                      , mtl
+                     , mu-grpc-common
                      , mu-protobuf
                      , mu-rpc
                      , mu-schema

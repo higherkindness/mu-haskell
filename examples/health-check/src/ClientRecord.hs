@@ -28,7 +28,7 @@ data HealthCall = HealthCall
   } deriving (Generic)
 
 buildHealthCall :: GrpcClient -> HealthCall
-buildHealthCall = buildService @HealthCheckService @""
+buildHealthCall = buildService @'MsgProtoBuf @HealthCheckService @""
 
 main :: IO ()
 main = do -- Setup the client

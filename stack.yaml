@@ -8,6 +8,7 @@ packages:
 - adapter/avro
 - adapter/protobuf
 - adapter/persistent
+- grpc/common
 - grpc/client
 - grpc/server
 - examples/health-check

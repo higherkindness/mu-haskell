@@ -34,50 +34,30 @@ module Mu.GRpc.Server
 ) where
 
 import           Control.Concurrent.Async
-import           Control.Concurrent.STM        (atomically)
+import           Control.Concurrent.STM       (atomically)
 import           Control.Concurrent.STM.TMVar
 import           Control.Exception
 import           Control.Monad.Except
-import           Data.ByteString               (ByteString)
-import qualified Data.ByteString.Char8         as BS
+import           Data.ByteString              (ByteString)
+import qualified Data.ByteString.Char8        as BS
 import           Data.Conduit
 import           Data.Conduit.TMChan
 import           Data.Kind
 import           Data.Proxy
-import           Network.GRPC.HTTP2.Encoding   (GRPCInput, GRPCOutput, gzip, uncompressed)
-import           Network.GRPC.HTTP2.Proto3Wire
-import           Network.GRPC.HTTP2.Types      (GRPCStatus (..), GRPCStatusCode (..))
+import           Network.GRPC.HTTP2.Encoding  (GRPCInput, GRPCOutput, gzip, uncompressed)
+import           Network.GRPC.HTTP2.Types     (GRPCStatus (..), GRPCStatusCode (..))
 import           Network.GRPC.Server.Handlers
-import           Network.GRPC.Server.Wai       as Wai
-import           Network.Wai                   (Application)
-import           Network.Wai.Handler.Warp      (Port, Settings, run, runSettings)
-import           Network.Wai.Handler.WarpTLS   (TLSSettings, runTLS)
+import           Network.GRPC.Server.Wai      as Wai
+import           Network.Wai                  (Application)
+import           Network.Wai.Handler.Warp     (Port, Settings, run, runSettings)
+import           Network.Wai.Handler.WarpTLS  (TLSSettings, runTLS)
 
 import           Mu.Adapter.ProtoBuf.Via
 import           Mu.GRpc.Avro
+import           Mu.GRpc.Bridge
 import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
-
-
-data GRpcMessageProtocol
-  = MsgProtoBuf | MsgAvro
-  deriving (Eq, Show)
-
-msgProtoBuf :: Proxy 'MsgProtoBuf
-msgProtoBuf = Proxy
-msgAvro :: Proxy 'MsgAvro
-msgAvro = Proxy
-
-class MkRPC (p :: GRpcMessageProtocol) where
-  type RPCTy p :: Type
-  mkRPC :: Proxy p -> ByteString -> ByteString -> ByteString -> RPCTy p
-instance MkRPC 'MsgProtoBuf where
-  type RPCTy 'MsgProtoBuf = RPC
-  mkRPC _ = RPC
-instance MkRPC 'MsgAvro where
-  type RPCTy 'MsgAvro = AvroRPC
-  mkRPC _ = AvroRPC
 
 -- | Run a Mu 'Server' on the given port.
 runGRpcApp
@@ -268,7 +248,7 @@ instance (GRPCInput AvroRPC (ViaAvroTypeRef ('ViaSchema sch sty) r))
   type GRpcIWTy 'MsgAvro ('ViaSchema sch sty) r = ViaAvroTypeRef ('ViaSchema sch sty) r
   unGRpcIWTy _ _ = unViaAvroTypeRef
 
------
+---
 
 instance (GRPCInput (RPCTy p) (), GRPCOutput (RPCTy p) ())
          => GRpcMethodHandler p m '[ ] 'RetNothing (m ()) where

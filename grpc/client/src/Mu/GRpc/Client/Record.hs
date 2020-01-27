@@ -24,6 +24,7 @@ module Mu.GRpc.Client.Record (
 , setupGrpcClient'
   -- * Fill and generate the Haskell record of functions
 , buildService
+, GRpcMessageProtocol(..)
 , CompressMode(..)
 , GRpcReply(..)
 , generateRecordFromService
@@ -42,39 +43,41 @@ import           Language.Haskell.TH.Datatype
 import           Network.GRPC.Client          (CompressMode (..))
 import           Network.GRPC.Client.Helpers
 
+import Mu.GRpc.Bridge
 import           Mu.GRpc.Client.Internal
 import           Mu.Rpc
 
 -- | Fills in a Haskell record of functions with the corresponding
 --   calls to gRPC services from a Mu 'Service' declaration.
-buildService :: forall (s :: Service') (p :: Symbol) t
+buildService :: forall (pro :: GRpcMessageProtocol) (s :: Service') (p :: Symbol) t
                 (nm :: Symbol) (anns :: [ServiceAnnotation]) (ms :: [Method Symbol]).
-                (s ~ 'Service nm anns ms, Generic t, BuildService s p ms (Rep t))
+                (s ~ 'Service nm anns ms, Generic t, BuildService pro s p ms (Rep t))
              => GrpcClient -> t
-buildService client = to (buildService' (Proxy @s) (Proxy @p) (Proxy @ms) client)
+buildService client = to (buildService' (Proxy @pro) (Proxy @s) (Proxy @p) (Proxy @ms) client)
 
-class BuildService (s :: Service') (p :: Symbol) (ms :: [Method Symbol]) (f :: * -> *) where
-  buildService' :: Proxy s -> Proxy p -> Proxy ms -> GrpcClient -> f a
+class BuildService (pro :: GRpcMessageProtocol) (s :: Service')
+                   (p :: Symbol) (ms :: [Method Symbol]) (f :: * -> *) where
+  buildService' :: Proxy pro -> Proxy s -> Proxy p -> Proxy ms -> GrpcClient -> f a
 
-instance BuildService s p ms U1 where
-  buildService' _ _ _ _ = U1
-instance BuildService s p ms f => BuildService s p ms (D1 meta f) where
-  buildService' ps ppr pms client
-    = M1 (buildService' ps ppr pms client)
-instance BuildService s p ms f => BuildService s p ms (C1 meta f) where
-  buildService' ps ppr pms client
-    = M1 (buildService' ps ppr pms client)
+instance BuildService pro s p ms U1 where
+  buildService' _ _ _ _ _ = U1
+instance BuildService pro s p ms f => BuildService pro s p ms (D1 meta f) where
+  buildService' ppro ps ppr pms client
+    = M1 (buildService' ppro ps ppr pms client)
+instance BuildService pro s p ms f => BuildService pro s p ms (C1 meta f) where
+  buildService' ppro ps ppr pms client
+    = M1 (buildService' ppro ps ppr pms client)
 instance TypeError ('Text "building a service from sums is not supported")
-         => BuildService s p ms (f :+: g) where
+         => BuildService pro s p ms (f :+: g) where
   buildService' = error "this should never happen"
-instance (BuildService s p ms f, BuildService s p ms g)
-         => BuildService s p ms (f :*: g) where
-  buildService' ps ppr pms client
-    = buildService' ps ppr pms client :*: buildService' ps ppr pms client
-instance (m ~ AppendSymbol p x, GRpcServiceMethodCall s (s :-->: x) h)
-         => BuildService s p ms (S1 ('MetaSel ('Just m) u ss ds) (K1 i h)) where
-  buildService' ps _ _ client
-    = M1 $ K1 $ gRpcServiceMethodCall ps (Proxy @(s :-->: x)) client
+instance (BuildService pro s p ms f, BuildService pro s p ms g)
+         => BuildService pro s p ms (f :*: g) where
+  buildService' ppro ps ppr pms client
+    = buildService' ppro ps ppr pms client :*: buildService' ppro ps ppr pms client
+instance (m ~ AppendSymbol p x, GRpcServiceMethodCall pro s (s :-->: x) h)
+         => BuildService pro s p ms (S1 ('MetaSel ('Just m) u ss ds) (K1 i h)) where
+  buildService' ppro ps _ _ client
+    = M1 $ K1 $ gRpcServiceMethodCall ppro ps (Proxy @(s :-->: x)) client
 
 -- TEMPLATE HASKELL
 -- ================

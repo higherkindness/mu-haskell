@@ -1,0 +1,1 @@
+cradle: { stack: { component: "mu-grpc-common:lib" } }
