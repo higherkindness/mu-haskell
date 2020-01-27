@@ -22,12 +22,12 @@ jobs:
       run: |
         LAST_TAG=$(git describe --abbrev=0)
         git checkout $LAST_TAG
-        bash ./generate-haddock-docs.sh docs
+        bash ./generate-haddock-docs.sh
         BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs
     - name: Build microsite from master
       run: |
         git checkout master
-        bash ./generate-haddock-docs.sh docs/wip
+        bash ./generate-haddock-docs.sh
         BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell/wip -s docs -d gen-docs/wip
     - name: Deploy microsite
       uses: peaceiris/actions-gh-pages@v2
