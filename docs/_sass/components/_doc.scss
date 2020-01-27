@@ -40,12 +40,12 @@
         justify-content: flex-end;
         align-items: center;
 
-        .link-item {
-          margin-left: ($base-point-grid * 3);
+        .strong {
+          font-weight: 600;
+        }
 
-          .strong {
-            font-weight: 600;
-          }
+        .link-item {
+          margin-left: ($base-point-grid * 2);
 
           a:hover {
             text-decoration: none;

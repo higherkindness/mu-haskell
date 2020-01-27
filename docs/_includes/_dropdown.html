@@ -1,6 +1,6 @@
 <div id="{{ include.item.name | downcase | replace: ' ', '-' }}-dropdown">
 
-    <button class="button link-like" onclick="openDropdown(event)" title="{{ include.item.name }}">
+    <button class="button link-like strong" onclick="openDropdown(event)" title="{{ include.item.name }}">
       {% if include.item.icon != "" %}
         <i class="nav-item-icon fa fa-lg {{ include.item.icon }}" aria-hidden="true"></i>
         <span class="nav-item-text">{{ include.item.name }}</span>
