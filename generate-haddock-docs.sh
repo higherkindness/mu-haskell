@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DOCSDIR=$1/haddock
+DOCSDIR=docs/haddock
 
 echo "Removing previous docs"
 rm -rf ${DOCSDIR}
