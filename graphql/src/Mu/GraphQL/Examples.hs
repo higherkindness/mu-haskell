@@ -2,7 +2,7 @@ module Mu.GraphQL.Examples where
 
 import Data.SOP
 
-import Mu.GraphQL
+import Mu.GraphQL.Resolver
 import Mu.Schema.Examples
 
 exampleResolver :: SchemaResolverD IO ExampleSchema

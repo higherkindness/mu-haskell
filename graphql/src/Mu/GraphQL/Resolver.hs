@@ -11,7 +11,7 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 
-module Mu.GraphQL where
+module Mu.GraphQL.Resolver where
 
 import           Data.Functor.Identity
 import           Data.Kind

@@ -14,7 +14,8 @@ build-type:          Simple
 -- extra-source-files:  CHANGELOG.md
 
 library
-  exposed-modules:     Mu.GraphQL
+  exposed-modules:     Mu.GraphQL.Operation
+                     , Mu.GraphQL.Resolver
   other-modules:       Mu.GraphQL.Examples
   -- other-extensions:
   build-depends:       base >=4.12 && <5
