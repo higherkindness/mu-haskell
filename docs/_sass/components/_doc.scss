@@ -99,12 +99,17 @@
         margin: ($base-point-grid * 2) 0;
     }
 
-    ul {
-        padding-left: 20px;
+    ol, ul {
+        padding-left: ($base-point-grid * 4);
         margin-bottom: ($base-point-grid * 2);
-        li {
-            list-style: disc;
-        }
+    }
+
+    ol li {
+      list-style: decimal;
+    }
+
+    ul li {
+      list-style: disc;
     }
 
     .header-link {
