@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="48px" height="48px" viewBox="0 0 48 48" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>sidebar-haskell</title>
+    <g id="sidebar-haskell" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <polygon id="path" fill="#9E358F" points="23.7994 34.3318 7.0004 24.6328 7.0004 35.7178 23.7994 45.4178 40.5994 35.7168 40.5994 24.6328"></polygon>
+        <path d="M23.7994,2.0002 L7.8004,11.2372 L7.0004,11.6992 L7.0004,12.6232 L7.0004,21.8612 L23.7994,31.5612 L40.5994,21.8602 L40.5994,11.6992 L39.7994,11.2372 L23.7994,2.0002 Z M9.3994,12.1612 L23.7994,3.8482 L38.2004,12.1612 L23.7994,20.4752 L9.3994,12.1612 Z" id="path" fill="#9E358F"></path>
+    </g>
+</svg>

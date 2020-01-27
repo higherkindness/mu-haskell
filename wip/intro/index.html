@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="UTF-8">
+
+    
+
+    <title>Mu-Haskell: Introduction</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Mu is a purely functional library for building microservices.">
+    <meta name="keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory">
+
+    <meta property="og:image" content="/mu-haskell/img/poster.png" />
+    <meta property="og:title" content="Mu-Haskell: Introduction" />
+    <meta property="og:site_name" content="Mu-Haskell: Introduction" />
+    <meta property="og:url" content="https://higherkindess.io/mu-haskell" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="Mu is a purely functional library for building microservices." />
+    <meta property="og:keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory" />
+
+    <meta name="twitter:text:description" content="Mu is a purely functional library for building microservices." />
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@47deg">
+    <meta name="twitter:creator" content="@47deg">
+    <meta name="twitter:image" content="/mu-haskell/img/poster.png" />
+
+    <meta property="github-info" data-github-owner="higherkindness" data-github-repo="mu-haskell" />
+
+    <script defer src="/mu-haskell/js/docs.js"></script>
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/mu-haskell/img/favicon.png">
+
+    <!-- mu-haskell docs css -->
+    <link rel="stylesheet" type="text/css" href="/mu-haskell/css/docs.css">
+</head>
+
+    <body>
+        <div id="site-sidebar">
+  <div class="sidebar-brand">
+    <a href="/mu-haskell/" class="brand" title="Mu-Haskell">
+      <img
+        src="/mu-haskell/img/nav-brand-white.svg"
+        alt="Mu-Haskell"
+        class="brand-wrapper"
+      />
+      <span>Mu-Haskell</span>
+    </a>
+    <button
+      id="main-toggle"
+      type="button"
+      title="Close"
+      class="button sidebar-toggle"
+    >
+      <span class="close"></span>
+    </button>
+  </div>
+  <div class="sidebar-menu">
+    
+      
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/mu-haskell/"
+        class=""
+        title="Start"
+      >
+        Start
+      </a>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item active ">
+      
+      <a
+        href="/mu-haskell/intro/"
+        class="active"
+        title="Introduction"
+      >
+        Introduction
+      </a>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <a
+        href="/mu-haskell/schema/"
+        title="Schemas"
+        class="drop-nested"
+      >
+        Schemas
+      </a>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/registry/"
+          title="Registry"
+        >
+          Registry
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <a
+        href="/mu-haskell/rpc/"
+        title="Services and servers"
+        class="drop-nested"
+      >
+        Services and servers
+      </a>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/grpc/"
+          title="gRPC"
+        >
+          gRPC
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/stream/"
+          title="Streams"
+        >
+          Streams
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/db/"
+          title="Databases"
+        >
+          Databases
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <button
+        type="button"
+        title="Open Integrations"
+        class="button drop-nested"
+      >
+        Integrations
+      </button>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/transformer/"
+          title="Transformers"
+        >
+          Transformers
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/middleware/"
+          title="Middleware"
+        >
+          Middleware
+        </a>
+        
+      </div>
+      
+    </div>
+    
+    
+  </div>
+</div>
+
+        <main id="site-doc">
+    <div class="doc-header">
+      <button
+        id="menu-toggle"
+        type="button"
+        class="button doc-toggle"
+        title="Toggle">
+          <img src="/mu-haskell/img/sidebar-icon-open.svg" alt="Toggle" title="Toggle">
+      </button>
+
+      <div class="link-container">
+        <div class="link-item">
+          <a class="strong" href="/mu-haskell/haddock/" title="API Docs" target="_blank" rel="noopener noreferrer">API Docs</a>
+        </div>
+        <div class="link-item">
+          <a href="https://github.com/higherkindness/mu-haskell" title="GitHub repo" target="_blank" rel="noopener noreferrer">
+            <span class="strong">GitHub</span>
+            <span id="stars-count"></span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+    <div class="doc-content">
+        <h1 id="introduction-to-mu-haskell">Introduction to Mu-Haskell</h1>
+
+<p>Many companies have embraced microservices architectures as the best way to scale up their internal software systems, and separate work across different company divisions and development teams. Microservices architectures also allow teams to turn an idea or bug report into a working feature or fix in production more quickly, in accordance to the agile principles.</p>
+
+<p>However, microservices are not without costs. Every connection between microservices becomes now a boundary that requires one service to act as a server, and the other to act as the client. Each service needs to include an implementation of the protocol, the encoding of the data for transmission, etc. The business logic of the application also starts to spread around several code bases, making it difficult to maintain.</p>
+
+<h2 id="what-is-mu-haskell">What is Mu-Haskell?</h2>
+
+<p>The main goal of Mu-Haskell is to allow you to focus on your domain logic, instead of worrying about format and protocol issues. To achieve this goal, Mu-Haskell provides two sets of packages:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">mu-schema</code> and <code class="highlighter-rouge">mu-rpc</code> define schemas for data and services, in a format- and protocol-independent way. These schemas are checked at compile-time, so you also gain an additional layer of type-safety.</li>
+  <li><code class="highlighter-rouge">mu-avro</code>, <code class="highlighter-rouge">mu-protobuf</code>, <code class="highlighter-rouge">mu-grpc</code> (and other to come) implement each concrete format and protocol, following the interfaces laid out by the former two. In addition, most of those packages can turn a schema in the corresponding format into the corresponding one in <code class="highlighter-rouge">mu-schema</code> and <code class="highlighter-rouge">mu-rpc</code> terms, alleviating the need to duplicate definitions.</li>
+</ul>
+
+<h2 id="quickstart">Quickstart</h2>
+
+<h3 id="super-quick-summary">Super-quick summary</h3>
+
+<ol>
+  <li>Create a new project with <code class="highlighter-rouge">stack new</code>.</li>
+  <li>Define your schema and your services in the <code class="highlighter-rouge">.proto</code> file.</li>
+  <li>Write your Haskell data types in <code class="highlighter-rouge">src/Schema.hs</code>.</li>
+  <li>Implement the server in <code class="highlighter-rouge">src/Main.hs</code>.</li>
+</ol>
+
+<h3 id="step-by-step">Step by step</h3>
+
+<p>As an appetizer we are going to develop the same service as in the <a href="https://grpc.io/docs/quickstart/">gRPC Quickstart Guide</a>. The service is defined as a <code class="highlighter-rouge">.proto</code> file, which includes the schema for the messages and the signature for the methods in the service:</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">service</span> <span class="nc">Service</span> <span class="o">{</span>
+  <span class="n">rpc</span> <span class="nf">SayHello</span> <span class="o">(</span><span class="nc">HelloRequest</span><span class="o">)</span> <span class="n">returns</span> <span class="o">(</span><span class="nc">HelloReply</span><span class="o">)</span> <span class="o">{}</span>
+<span class="o">}</span>
+
+<span class="n">message</span> <span class="nc">HelloRequest</span> <span class="o">{</span> <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span> <span class="o">}</span>
+<span class="n">message</span> <span class="nc">HelloReply</span> <span class="o">{</span> <span class="n">string</span> <span class="n">message</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span> <span class="o">}</span>
+</code></pre></div></div>
+
+<p>To get started with the project, we provide a <a href="https://docs.haskellstack.org">Stack</a> template (in fact, we recommend that you use Stack as your build tool, although Cabal should also work perfectly fine). You should run:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>stack new my_project https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/grpc-server.hsfiles -p "author-email:your@email.com" -p "author-name:Your name"
+</code></pre></div></div>
+
+<p><strong>WARNING:</strong> Do not include a hyphen in your project name, as it will cause the template to generate a ‘.proto’ file containing an invalid package name. Use <code class="highlighter-rouge">my_project</code>, not <code class="highlighter-rouge">my-project</code>.</p>
+
+<p>This command creates a new folder called <code class="highlighter-rouge">my_project</code>, with a few files. The most important from those are the <code class="highlighter-rouge">.proto</code> file, in which you will define your service; <code class="highlighter-rouge">src/Schema.hs</code>, which loads the service definition at compile-time; and <code class="highlighter-rouge">src/Main.hs</code>, which contains the code of the server.</p>
+
+<p>The first step to get your project running is defining the right schema and service. In this case, you can just copy the definition above after the <code class="highlighter-rouge">package</code> declaration.</p>
+
+<h4 id="data-type-definition">Data type definition</h4>
+
+<p>The second step is to define some Haskell data type corresponding to the message types in the gRPC definition. Although in some cases those data types can be inferred from the schema itself, we have made the design choice of having to write them explicitly, but check for compatibility at compile-time. The main goal is to discourage from making your domain types simple copies of the protocol types.</p>
+
+<p>The aforementioned <code class="highlighter-rouge">.proto</code> file defines two messages. The corresponding data types are as follows:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">HelloRequestMessage</span>
+  <span class="o">=</span> <span class="kt">HelloRequestMessage</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">Maybe</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span> <span class="p">}</span>
+  <span class="kr">deriving</span> <span class="p">(</span><span class="kt">Eq</span><span class="p">,</span> <span class="kt">Show</span><span class="p">,</span> <span class="kt">Generic</span>
+           <span class="p">,</span> <span class="kt">ToSchema</span>   <span class="kt">Maybe</span> <span class="kt">TheSchema</span> <span class="s">"HelloRequest"</span>
+           <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Maybe</span> <span class="kt">TheSchema</span> <span class="s">"HelloRequest"</span><span class="p">)</span>
+
+<span class="kr">data</span> <span class="kt">HelloReplyMessage</span>
+  <span class="o">=</span> <span class="kt">HelloReplyMessage</span> <span class="p">{</span> <span class="n">message</span> <span class="o">::</span> <span class="kt">Maybe</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span> <span class="p">}</span>
+  <span class="kr">deriving</span> <span class="p">(</span><span class="kt">Eq</span><span class="p">,</span> <span class="kt">Show</span><span class="p">,</span> <span class="kt">Generic</span>
+           <span class="p">,</span> <span class="kt">ToSchema</span>   <span class="kt">Maybe</span> <span class="kt">TheSchema</span> <span class="s">"HelloReply"</span>
+           <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Maybe</span> <span class="kt">TheSchema</span> <span class="s">"HelloReply"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>These data types should be added to the file <code class="highlighter-rouge">src/Schema.hs</code>, under the line that starts <code class="highlighter-rouge">grpc ...</code>. (See the <a href="/mu-haskell/grpc/">gRPC page</a> for information about what that line is doing.)</p>
+
+<p>You can give the data types and their constructors any name you like. However, keep in mind that:</p>
+
+<ul>
+  <li>The names of the fields must correspond with those in the <code class="highlighter-rouge">.proto</code> files. Otherwise you have to use a <em>custom mapping</em>, which is fully supported by <code class="highlighter-rouge">mu-schema</code> but requires more code.</li>
+  <li>All the fields must be wrapped in <code class="highlighter-rouge">Maybe</code> since all fields in <code class="highlighter-rouge">proto3</code> are <strong>optional by default</strong>.</li>
+  <li>The name <code class="highlighter-rouge">TheSchema</code> refers to a type generated by the <code class="highlighter-rouge">grpc</code> function, so it must match the first argument to that function.</li>
+  <li>The name between quotes in each <code class="highlighter-rouge">deriving</code> clause defines the message type in the <code class="highlighter-rouge">.proto</code> file each data type corresponds to.</li>
+  <li>To use the automatic-mapping functionality, it is required to also derive <code class="highlighter-rouge">Generic</code>, don’t forget it!</li>
+</ul>
+
+<h4 id="server-implementation">Server implementation</h4>
+
+<p>If you try to compile the project right now by means of <code class="highlighter-rouge">stack build</code>, you will receive an error about <code class="highlighter-rouge">server</code> not having the right type. This is because you haven’t yet defined any implementation for your service. This is one of the advantages of making the compiler aware of your service definitions: if the <code class="highlighter-rouge">.proto</code> file changes, you need to adapt your code correspondingly, or otherwise the project doesn’t even compile!</p>
+
+<p>Open the <code class="highlighter-rouge">src/Main.hs</code> file. The contents are quite small right now: a <code class="highlighter-rouge">main</code> function asks to run the gRPC service defined by <code class="highlighter-rouge">server</code>. The <code class="highlighter-rouge">server</code> function, on the other hand, declares that it implements the <code class="highlighter-rouge">Service</code> service in its signature, but contains no implementations.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="mi">8080</span> <span class="n">server</span>
+
+<span class="n">server</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">ServerT</span> <span class="kt">Maybe</span> <span class="kt">Service</span> <span class="n">m</span> <span class="kr">_</span>
+<span class="n">server</span> <span class="o">=</span> <span class="kt">Server</span> <span class="kt">H0</span>
+</code></pre></div></div>
+
+<p>The simplest way to provide an implementation for a service is to define one function for each method. You define those functions completely in terms of Haskell data types; in our case <code class="highlighter-rouge">HelloRequestMessage</code> and <code class="highlighter-rouge">HelloReplyMessage</code>. Here is an example definition:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sayHello</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">HelloRequestMessage</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">HelloReplyMessage</span>
+<span class="n">sayHello</span> <span class="p">(</span><span class="kt">HelloRequestMessage</span> <span class="n">nm</span><span class="p">)</span>
+  <span class="o">=</span> <span class="n">return</span> <span class="p">(</span><span class="kt">HelloReplyMessage</span> <span class="p">((</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span><span class="p">)</span> <span class="o">&lt;$&gt;</span> <span class="n">nm</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>The <code class="highlighter-rouge">MonadServer</code> portion in the type is mandated by <code class="highlighter-rouge">mu-rpc</code>; it tells us that in a method we can perform any <code class="highlighter-rouge">IO</code> actions and additionally throw server errors (for conditions such as <em>not found</em>). We do not make use of any of those here, so we simply use <code class="highlighter-rouge">return</code> with a value. We could even make the definition a bit more polymorphic by replacing <code class="highlighter-rouge">MonadServer</code> by <code class="highlighter-rouge">Monad</code>.</p>
+
+<p>How does <code class="highlighter-rouge">server</code> know that <code class="highlighter-rouge">sayHello</code> is part of the implementation of the service? We have to tell it, by adding <code class="highlighter-rouge">sayHello</code> to the list of methods. Unfortunately, we cannot use a normal list, so we use <code class="highlighter-rouge">(:&lt;|&gt;:)</code> to join them, and <code class="highlighter-rouge">H0</code> to finish it.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">server</span> <span class="o">=</span> <span class="kt">Server</span> <span class="p">(</span><span class="n">sayHello</span> <span class="o">:&lt;|&gt;:</span> <span class="kt">H0</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>At this point you can build the project using <code class="highlighter-rouge">stack build</code>, and then execute via <code class="highlighter-rouge">stack run</code>. This spawns a gRPC server at port 8080, which you can test using applications such as <a href="https://github.com/uw-labs/bloomrpc">BloomRPC</a>.</p>
+
+    </div>
+</main>
+
+    </body>
+</html>

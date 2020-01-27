@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="UTF-8">
+
+    
+
+    <title>Mu-Haskell: Registry</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Mu is a purely functional library for building microservices.">
+    <meta name="keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory">
+
+    <meta property="og:image" content="/mu-haskell/img/poster.png" />
+    <meta property="og:title" content="Mu-Haskell: Registry" />
+    <meta property="og:site_name" content="Mu-Haskell: Registry" />
+    <meta property="og:url" content="https://higherkindess.io/mu-haskell" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="Mu is a purely functional library for building microservices." />
+    <meta property="og:keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory" />
+
+    <meta name="twitter:text:description" content="Mu is a purely functional library for building microservices." />
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@47deg">
+    <meta name="twitter:creator" content="@47deg">
+    <meta name="twitter:image" content="/mu-haskell/img/poster.png" />
+
+    <meta property="github-info" data-github-owner="higherkindness" data-github-repo="mu-haskell" />
+
+    <script defer src="/mu-haskell/js/docs.js"></script>
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/mu-haskell/img/favicon.png">
+
+    <!-- mu-haskell docs css -->
+    <link rel="stylesheet" type="text/css" href="/mu-haskell/css/docs.css">
+</head>
+
+    <body>
+        <div id="site-sidebar">
+  <div class="sidebar-brand">
+    <a href="/mu-haskell/" class="brand" title="Mu-Haskell">
+      <img
+        src="/mu-haskell/img/nav-brand-white.svg"
+        alt="Mu-Haskell"
+        class="brand-wrapper"
+      />
+      <span>Mu-Haskell</span>
+    </a>
+    <button
+      id="main-toggle"
+      type="button"
+      title="Close"
+      class="button sidebar-toggle"
+    >
+      <span class="close"></span>
+    </button>
+  </div>
+  <div class="sidebar-menu">
+    
+      
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/mu-haskell/"
+        class=""
+        title="Start"
+      >
+        Start
+      </a>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/mu-haskell/intro/"
+        class=""
+        title="Introduction"
+      >
+        Introduction
+      </a>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  open">
+       
+      <a
+        href="/mu-haskell/schema/"
+        title="Schemas"
+        class="drop-nested"
+      >
+        Schemas
+      </a>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class="active"
+          href="/mu-haskell/registry/"
+          title="Registry"
+        >
+          Registry
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <a
+        href="/mu-haskell/rpc/"
+        title="Services and servers"
+        class="drop-nested"
+      >
+        Services and servers
+      </a>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/grpc/"
+          title="gRPC"
+        >
+          gRPC
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/stream/"
+          title="Streams"
+        >
+          Streams
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/db/"
+          title="Databases"
+        >
+          Databases
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <button
+        type="button"
+        title="Open Integrations"
+        class="button drop-nested"
+      >
+        Integrations
+      </button>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/transformer/"
+          title="Transformers"
+        >
+          Transformers
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/middleware/"
+          title="Middleware"
+        >
+          Middleware
+        </a>
+        
+      </div>
+      
+    </div>
+    
+    
+  </div>
+</div>
+
+        <main id="site-doc">
+    <div class="doc-header">
+      <button
+        id="menu-toggle"
+        type="button"
+        class="button doc-toggle"
+        title="Toggle">
+          <img src="/mu-haskell/img/sidebar-icon-open.svg" alt="Toggle" title="Toggle">
+      </button>
+
+      <div class="link-container">
+        <div class="link-item">
+          <a class="strong" href="/mu-haskell/haddock/" title="API Docs" target="_blank" rel="noopener noreferrer">API Docs</a>
+        </div>
+        <div class="link-item">
+          <a href="https://github.com/higherkindness/mu-haskell" title="GitHub repo" target="_blank" rel="noopener noreferrer">
+            <span class="strong">GitHub</span>
+            <span id="stars-count"></span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+    <div class="doc-content">
+        <h1 id="registry">Registry</h1>
+
+<p>Schemas evolve over time. It is a good practice to keep an inventory of all the schemas you can work with, in the form of a <em>registry</em>. Using <code class="highlighter-rouge">mu-schema</code> you can declare one such registry as simply a mapping from versions to schemas:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">ExampleRegistry</span>
+  <span class="o">=</span> <span class="sc">'[</span><span class="err"> </span><span class="mi">2</span> <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="kt">ExampleSchemaV2</span><span class="p">,</span> <span class="mi">1</span> <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="kt">ExampleSchema</span> <span class="p">]</span>
+</code></pre></div></div>
+
+<p>Once we have done that you can use functions like <code class="highlighter-rouge">fromRegistry</code> to try to parse a term into a Haskell type by trying each of the schemas.</p>
+
+<h2 id="using-the-registry">Using the Registry</h2>
+
+<p>By default, <a href="rpc.md">service definition</a> talks about concrete schemas and types. If you define a registry, you can also use it to accomodate different schemas. In this case, apart from the registry itself, we need to specify the <em>Haskell</em> type to use during (de)serialization, and the <em>version number</em> to use for serialization.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">QuickstartService</span>
+  <span class="o">=</span> <span class="kt">'Service</span> <span class="s">"Greeter"</span>
+      <span class="sc">'[</span><span class="err"> </span><span class="kt">'Method</span> <span class="s">"SayHello"</span>
+                 <span class="sc">'[</span><span class="err"> </span><span class="kt">'ArgSingle</span> <span class="p">(</span><span class="kt">'FromRegistry</span> <span class="kt">ExampleRegistry</span> <span class="kt">HelloRequest</span> <span class="mi">2</span><span class="p">)</span> <span class="p">]</span>
+                 <span class="p">(</span><span class="kt">'RetSingle</span> <span class="p">(</span><span class="kt">'FromRegistry</span> <span class="kt">ExampleRegistry</span> <span class="kt">HelloResponse</span> <span class="mi">1</span><span class="p">))</span> <span class="p">]</span>
+</code></pre></div></div>
+
+    </div>
+</main>
+
+    </body>
+</html>
