@@ -30,21 +30,6 @@
       ($base-point-grid * 2);
     text-transform: none;
 
-    &::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0;
-      height: 150%;
-      width: 100%;
-      background-image: url("../img/arrow-down.svg");
-      background-repeat: no-repeat;
-      background-position-x: 100%;
-      background-position-y: 20%;
-      background-size: 0.8em;
-      transition: background-position 0.1s ease;
-    }
-
     &:hover,
     &:active,
     &:focus {
