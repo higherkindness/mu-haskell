@@ -28,7 +28,7 @@ jobs:
       run: |
         git checkout master
         bash ./generate-haddock-docs.sh docs/wip
-        BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs/wip
+        BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell/wip -s docs -d gen-docs/wip
     - name: Deploy microsite
       uses: peaceiris/actions-gh-pages@v2
       env:
