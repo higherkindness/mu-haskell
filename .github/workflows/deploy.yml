@@ -9,8 +9,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: mstksg/setup-stack@v1
-    - name: Generate Haddock Docs
-      run: bash ./generate-haddock-docs.sh
     - name: Get Bundle & Jekyll
       run: |
         sudo apt-get update
@@ -18,8 +16,17 @@ jobs:
         sudo gem install bundler --force
         sudo gem update --system
         sudo bundle install --gemfile docs/Gemfile --path vendor/bundle
-    - name: Build microsite
-      run: BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs
+    - name: Build microsite from last release
+      run: |
+        LAST_TAG=$(git describe)
+        git checkout $LAST_TAG
+        bash ./generate-haddock-docs.sh docs
+        BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs
+    - name: Build microsite from master
+      run: |
+        git checkout master
+        bash ./generate-haddock-docs.sh docs/wip
+        BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs/wip
     - name: Deploy microsite
       uses: peaceiris/actions-gh-pages@v2
       env:
