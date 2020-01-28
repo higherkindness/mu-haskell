@@ -43,11 +43,13 @@ setStatus_ m upd s@(HealthStatusMsg (HealthCheckMsg nm) (ServerStatusMsg ss))
       atomically $ do
         M.insert ss nm m
         writeTBMChan upd s
+      print =<< atomically (M.lookup nm m)
 
 checkH_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ServerStatusMsg
 checkH_ m (HealthCheckMsg nm) = alwaysOk $ do
   putStr "check: " >> print nm
   ss <- atomically $ M.lookup nm m
+  print ss
   return $ ServerStatusMsg (fromMaybe "<unknown>" ss)
 
 clearStatus_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ()

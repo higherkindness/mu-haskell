@@ -97,10 +97,10 @@ instance ToProtoBufTypeRef ref r
   type GRpcIWTy 'MsgProtoBuf ref r = ViaToProtoBufTypeRef ref r
   buildGRpcIWTy _ _ = ViaToProtoBufTypeRef
 
-instance (GRPCInput AvroRPC (ViaAvroTypeRef ('ViaSchema sch sty) r))
+instance (GRPCInput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) r))
          => GRpcInputWrapper 'MsgAvro ('ViaSchema sch sty) r where
-  type GRpcIWTy 'MsgAvro ('ViaSchema sch sty) r = ViaAvroTypeRef ('ViaSchema sch sty) r
-  buildGRpcIWTy _ _ = ViaAvroTypeRef
+  type GRpcIWTy 'MsgAvro ('ViaSchema sch sty) r = ViaToAvroTypeRef ('ViaSchema sch sty) r
+  buildGRpcIWTy _ _ = ViaToAvroTypeRef
 
 class GRPCOutput (RPCTy p) (GRpcOWTy p ref r)
       => GRpcOutputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef) (r :: Type) where
@@ -112,10 +112,10 @@ instance FromProtoBufTypeRef ref r
   type GRpcOWTy 'MsgProtoBuf ref r = ViaFromProtoBufTypeRef ref r
   unGRpcOWTy _ _ = unViaFromProtoBufTypeRef
 
-instance (GRPCOutput AvroRPC (ViaAvroTypeRef ('ViaSchema sch sty) r))
+instance (GRPCOutput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) r))
          => GRpcOutputWrapper 'MsgAvro ('ViaSchema sch sty) r where
-  type GRpcOWTy 'MsgAvro ('ViaSchema sch sty) r = ViaAvroTypeRef ('ViaSchema sch sty) r
-  unGRpcOWTy _ _ = unViaAvroTypeRef
+  type GRpcOWTy 'MsgAvro ('ViaSchema sch sty) r = ViaFromAvroTypeRef ('ViaSchema sch sty) r
+  unGRpcOWTy _ _ = unViaFromAvroTypeRef
 
 -- -----------------------------
 -- IMPLEMENTATION OF THE METHODS
