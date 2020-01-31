@@ -1,3 +1,4 @@
+{-# language ConstraintKinds       #-}
 {-# language DataKinds             #-}
 {-# language FlexibleContexts      #-}
 {-# language FlexibleInstances     #-}
@@ -17,7 +18,7 @@ Just import the module and you can turn any
 value with a 'ToSchema' and 'FromSchema' from
 and to Avro values.
 -}
-module Mu.Adapter.Avro () where
+module Mu.Adapter.Avro (AvroSchema) where
 
 import           Control.Arrow                       ((***))
 import qualified Data.Avro                           as A
@@ -71,6 +72,8 @@ instance SLess.ToSchemalessValue (AVal.Value t) Identity where
     = SLess.FSchematic (SLess.toSchemalessTerm r)
   toSchemalessValue e@AVal.Enum {}
     = SLess.FSchematic (SLess.toSchemalessTerm e)
+
+type AvroSchema sch = HasAvroSchemas sch sch
 
 instance HasAvroSchemas sch sch
          => A.HasAvroSchema (WithSchema f sch sty t) where

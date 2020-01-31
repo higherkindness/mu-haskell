@@ -32,7 +32,7 @@ names for fields in the Haskell and schema types
 does not suit you, use 'CustomFieldMapping'.
 -}
 module Mu.Schema.Class (
-  WithSchema(..)
+  WithSchema(..), unWithSchema
 , FromSchema(..), fromSchema'
 , ToSchema(..), toSchema'
 , CustomFieldMapping(..)
@@ -54,7 +54,13 @@ import           Mu.Schema.Interpretation
 
 -- | Tags a value with its schema.
 --   For usage with @deriving via@.
-newtype WithSchema (w :: Type -> Type) (sch :: Schema tn fn) (sty :: tn) a = WithSchema a
+newtype WithSchema (w :: Type -> Type) (sch :: Schema tn fn) (sty :: tn) a where
+  WithSchema :: forall tn fn (w :: Type -> Type) (sch :: Schema tn fn) (sty :: tn) a.
+                a -> WithSchema w sch sty a
+
+unWithSchema :: forall tn fn (w :: Type -> Type) (sch :: Schema tn fn) (sty :: tn) a.
+                WithSchema w sch sty a -> a
+unWithSchema (WithSchema x) = x
 
 -- | Defines the conversion of a type @t@ into a 'Term'
 --   which follows the schema @sch@.

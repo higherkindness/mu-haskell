@@ -1,3 +1,4 @@
+{-# language BangPatterns          #-}
 {-# language CPP                   #-}
 {-# language DataKinds             #-}
 {-# language FlexibleContexts      #-}
@@ -17,7 +18,6 @@ module Mu.GRpc.Avro (
 ) where
 
 import           Data.Avro
-import           Data.Kind
 import           Data.Binary.Builder         (fromByteString, putWord32be, singleton)
 import           Data.Binary.Get             (Decoder (..), getByteString, getInt8, getWord32be,
                                               runGetIncremental)
@@ -25,6 +25,7 @@ import           Data.ByteString.Char8       (ByteString)
 import qualified Data.ByteString.Char8       as ByteString
 import           Data.ByteString.Lazy        (fromStrict, toStrict)
 import           Data.Functor.Identity
+import           Data.Kind
 import           GHC.TypeLits
 import           Network.GRPC.HTTP2.Encoding
 import           Network.GRPC.HTTP2.Types
@@ -34,9 +35,10 @@ import           Network.GRPC.HTTP2.Types
 import           Data.Monoid                 ((<>))
 #endif
 
-import qualified Mu.Adapter.Avro ()
+import           Mu.Adapter.Avro
 import           Mu.Rpc
 import           Mu.Schema
+import           Mu.Schema.Class
 
 -- | A proxy type for giving static information about RPCs.
 data AvroRPC = AvroRPC { pkg :: ByteString, srv :: ByteString, meth :: ByteString }
@@ -51,37 +53,45 @@ newtype ViaToAvroTypeRef (ref :: TypeRef) t
   = ViaToAvroTypeRef { unViaToAvroTypeRef :: t }
 
 instance GRPCInput AvroRPC () where
-  encodeInput _ _ = mempty
+  encodeInput _ _ () = mempty
   decodeInput _ _ = runGetIncremental $ pure $ Right ()
 
 instance GRPCOutput AvroRPC () where
-  encodeOutput _ _ = mempty
+  encodeOutput _ _ () = mempty
   decodeOutput _ _ = runGetIncremental $ pure $ Right ()
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
-         (FromSchema Identity sch sty i, FromAvro (Term Identity sch (sch :/: sty)))
+         ( FromSchema Identity sch sty i
+         , FromAvro (Term Identity sch (sch :/: sty))
+         , AvroSchema sch )
          => GRPCInput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) i) where
   encodeInput = error "eif/you should not call this"
-  decodeInput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch @Identity <$>) <$> decoder i
+  decodeInput _ i = (ViaFromAvroTypeRef . unWithSchema @_ @_ @Identity @sch @sty <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
-         (FromSchema Identity sch sty i, FromAvro (Term Identity sch (sch :/: sty)))
+         ( FromSchema Identity sch sty i
+         , FromAvro (Term Identity sch (sch :/: sty))
+         , AvroSchema sch )
          => GRPCOutput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) i) where
   encodeOutput = error "eof/you should not call this"
-  decodeOutput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch @Identity <$>) <$> decoder i
+  decodeOutput _ i = (ViaFromAvroTypeRef . unWithSchema @_ @_ @Identity @sch @sty <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
-         (ToSchema Identity sch sty o, ToAvro (Term Identity sch (sch :/: sty)))
+         ( ToSchema Identity sch sty o
+         , ToAvro (Term Identity sch (sch :/: sty))
+         , AvroSchema sch )
          => GRPCInput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) o) where
-  encodeInput _ compression
-    = encoder compression . toSchema' @_ @_ @sch @Identity . unViaToAvroTypeRef
+  encodeInput _ compression (ViaToAvroTypeRef !x)
+    = encoder compression (WithSchema @_ @_ @Identity @sch @sty x)
   decodeInput = error "dit/you should not call this"
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
-         (ToSchema Identity sch sty o, ToAvro (Term Identity sch (sch :/: sty)))
+         ( ToSchema Identity sch sty o
+         , ToAvro (Term Identity sch (sch :/: sty))
+         , AvroSchema sch )
          => GRPCOutput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) o) where
-  encodeOutput _ compression
-    = encoder compression . toSchema' @_ @_ @sch @Identity . unViaToAvroTypeRef
+  encodeOutput _ compression (ViaToAvroTypeRef !x)
+    = encoder compression (WithSchema @_ @_ @Identity @sch @sty x)
   decodeOutput = error "dot/you should not call this"
 
 encoder :: ToAvro m => Compression -> m -> Builder
