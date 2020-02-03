@@ -1,1 +1,1 @@
-cradle: { stack: { component: "mu-example-health-check:exe:health-server-protobuf" } }
+cradle: { stack: { component: "mu-example-health-check-protobuf:exe:health-server-protobuf" } }

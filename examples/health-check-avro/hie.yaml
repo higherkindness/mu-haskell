@@ -1,1 +1,1 @@
-cradle: { stack: { component: "mu-example-health-check:exe:health-server-avro" } }
+cradle: { stack: { component: "mu-example-health-check-avro:exe:health-server-avro" } }
