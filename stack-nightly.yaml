@@ -11,8 +11,8 @@ packages:
 - grpc/common
 - grpc/client
 - grpc/server
-- examples/health-check-avro
-- examples/health-check-protobuf
+- examples/health-check/avro
+- examples/health-check/protobuf
 - examples/route-guide
 - examples/seed
 - examples/todolist
