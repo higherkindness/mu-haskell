@@ -105,67 +105,92 @@ instance forall r d ds.
 
 -- HasAvroSchema instances
 
+class HasAvroSchema' x where
+  schema' :: [ASch.TypeName] -> Tagged x ASch.Type
+
+instance HasAvroSchema' (Term f sch t)
+         => A.HasAvroSchema (Term f sch t) where
+  schema = schema' []
+instance HasAvroSchema' (FieldValue f sch t)
+         => A.HasAvroSchema (FieldValue f sch t) where
+  schema = schema' []
+
 instance (KnownName name, HasAvroSchemaFields sch args)
-         => A.HasAvroSchema (Term f sch ('DRecord name args)) where
-  schema = Tagged $ ASch.Record recordName [] Nothing Nothing fields
+         => HasAvroSchema' (Term f sch ('DRecord name args)) where
+  schema' visited
+    = if recordName `elem` visited
+         then Tagged $ ASch.NamedType recordName
+         else Tagged $ ASch.Record recordName [] Nothing Nothing fields
     where recordName = nameTypeName (Proxy @name)
-          fields = schemaF (Proxy @sch) (Proxy @args)
+          fields = schemaF (Proxy @sch) (Proxy @args) visited
 instance (KnownName name, HasAvroSchemaEnum choices)
-          => A.HasAvroSchema (Term f sch ('DEnum name choices)) where
-  schema = Tagged $ ASch.mkEnum enumName [] Nothing choicesNames
+          => HasAvroSchema' (Term f sch ('DEnum name choices)) where
+  schema' visited
+    = if enumName `elem` visited
+         then Tagged $ ASch.NamedType enumName
+         else Tagged $ ASch.mkEnum enumName [] Nothing choicesNames
     where enumName = nameTypeName (Proxy @name)
           choicesNames = schemaE (Proxy @choices)
-instance A.HasAvroSchema (FieldValue f sch t)
-         => A.HasAvroSchema (Term f sch ('DSimple t)) where
-  schema = coerce $ A.schema @(FieldValue f sch t)
+instance HasAvroSchema' (FieldValue f sch t)
+         => HasAvroSchema' (Term f sch ('DSimple t)) where
+  schema' visited = coerce $ schema' @(FieldValue f sch t) visited
 
-instance A.HasAvroSchema (FieldValue f sch 'TNull) where
-  schema = Tagged ASch.Null
+instance HasAvroSchema' (FieldValue f sch 'TNull) where
+  schema' _ = Tagged ASch.Null
 instance A.HasAvroSchema t
-         => A.HasAvroSchema (FieldValue f sch ('TPrimitive t)) where
-  schema = coerce $ A.schema @t
-instance KnownName t
-         => A.HasAvroSchema (FieldValue f sch ('TSchematic t)) where
-  -- schema = coerce $ A.schema @(Term sch (sch :/: t))
-  schema = Tagged $ ASch.NamedType (nameTypeName (Proxy @t))
+         => HasAvroSchema' (FieldValue f sch ('TPrimitive t)) where
+  schema' _ = coerce $ A.schema @t
+instance (HasAvroSchema' (Term f sch (sch :/: t)))
+         => HasAvroSchema' (FieldValue f sch ('TSchematic t)) where
+  schema' visited = coerce $ schema' @(Term f sch (sch :/: t)) visited
 instance forall sch f choices.
          HasAvroSchemaUnion (FieldValue f sch) choices
-         => A.HasAvroSchema (FieldValue f sch ('TUnion choices)) where
-  schema = Tagged $ ASch.mkUnion $ schemaU (Proxy @(FieldValue f sch)) (Proxy @choices)
-instance A.HasAvroSchema (FieldValue f sch t)
-         => A.HasAvroSchema (FieldValue f sch ('TOption t)) where
-  schema = coerce $ A.schema @(Maybe (FieldValue f sch t))
-instance A.HasAvroSchema (FieldValue f sch t)
-         => A.HasAvroSchema (FieldValue f sch ('TList t)) where
-  schema = coerce $ A.schema @[FieldValue f sch t]
+         => HasAvroSchema' (FieldValue f sch ('TUnion choices)) where
+  schema' visited
+    = Tagged $ ASch.mkUnion $ schemaU (Proxy @(FieldValue f sch)) (Proxy @choices) visited
+-- FIX!!!
+instance HasAvroSchema' (FieldValue f sch t)
+         => HasAvroSchema' (FieldValue f sch ('TOption t)) where
+  schema' visited
+    = Tagged $ ASch.mkUnion $ ASch.Null :| [iSchema]
+    where iSchema = unTagged $ schema' @(FieldValue f sch t) visited
+instance HasAvroSchema' (FieldValue f sch t)
+         => HasAvroSchema' (FieldValue f sch ('TList t)) where
+  schema' visited
+    = Tagged $ ASch.Array iSchema
+    where iSchema = unTagged $ schema' @(FieldValue f sch t) visited
 -- These are the only two versions of Map supported by the library
-instance A.HasAvroSchema (FieldValue f sch v)
-         => A.HasAvroSchema (FieldValue f sch ('TMap ('TPrimitive T.Text) v)) where
-  schema = coerce $ A.schema @(M.Map T.Text (FieldValue f sch v))
-instance A.HasAvroSchema (FieldValue f sch v)
-         => A.HasAvroSchema (FieldValue f sch ('TMap ('TPrimitive String) v)) where
-  schema = coerce $ A.schema @(M.Map String (FieldValue f sch v))
+instance HasAvroSchema' (FieldValue f sch v)
+         => HasAvroSchema' (FieldValue f sch ('TMap ('TPrimitive T.Text) v)) where
+  schema' visited
+    = Tagged $ ASch.Map iSchema
+    where iSchema = unTagged $ schema' @(FieldValue f sch v) visited
+instance HasAvroSchema' (FieldValue f sch v)
+         => HasAvroSchema' (FieldValue f sch ('TMap ('TPrimitive String) v)) where
+  schema' visited
+    = Tagged $ ASch.Map iSchema
+    where iSchema = unTagged $ schema' @(FieldValue f sch v) visited
 
 class HasAvroSchemaUnion (f :: k -> *) (xs :: [k]) where
-  schemaU :: Proxy f -> Proxy xs -> NonEmpty ASch.Type
-instance A.HasAvroSchema (f v) => HasAvroSchemaUnion f '[v] where
-  schemaU _ _ = vSchema :| []
-    where vSchema = unTagged (A.schema @(f v))
-instance (A.HasAvroSchema (f x), HasAvroSchemaUnion f (y ': zs))
+  schemaU :: Proxy f -> Proxy xs -> [ASch.TypeName] -> NonEmpty ASch.Type
+instance HasAvroSchema' (f v) => HasAvroSchemaUnion f '[v] where
+  schemaU _ _ visited = vSchema :| []
+    where vSchema = unTagged (schema' @(f v) visited)
+instance (HasAvroSchema' (f x), HasAvroSchemaUnion f (y ': zs))
          => HasAvroSchemaUnion f (x ': y ': zs) where
-  schemaU p _ = xSchema :| NonEmptyList.toList yzsSchema
-    where xSchema = unTagged (A.schema @(f x))
-          yzsSchema = schemaU p (Proxy @(y ': zs))
+  schemaU p _ visited = xSchema :| NonEmptyList.toList yzsSchema
+    where xSchema = unTagged (schema' @(f x) visited)
+          yzsSchema = schemaU p (Proxy @(y ': zs)) visited
 
 class HasAvroSchemaFields sch (fs :: [FieldDef tn fn]) where
-  schemaF :: Proxy sch -> Proxy fs -> [ASch.Field]
+  schemaF :: Proxy sch -> Proxy fs -> [ASch.TypeName] -> [ASch.Field]
 instance HasAvroSchemaFields sch '[] where
-  schemaF _ _ = []
-instance (KnownName name, A.HasAvroSchema (FieldValue Identity sch t), HasAvroSchemaFields sch fs)
+  schemaF _ _ _ = []
+instance (KnownName name, HasAvroSchema' (FieldValue Identity sch t), HasAvroSchemaFields sch fs)
          => HasAvroSchemaFields sch ('FieldDef name t ': fs) where
-  schemaF psch _ = schemaThis : schemaF psch (Proxy @fs)
+  schemaF psch _ visited = schemaThis : schemaF psch (Proxy @fs) visited
     where fieldName = nameText (Proxy @name)
-          schemaT = unTagged $ A.schema @(FieldValue Identity sch t)
+          schemaT = unTagged $ schema' @(FieldValue Identity sch t) visited
           schemaThis = ASch.Field fieldName [] Nothing Nothing schemaT Nothing
 
 class HasAvroSchemaEnum (fs :: [ChoiceDef fn]) where
@@ -186,7 +211,7 @@ instance (KnownName name, HasAvroSchemaEnum choices, FromAvroEnum choices)
           => A.FromAvro (Term f sch ('DEnum name choices)) where
   fromAvro v@(AVal.Enum _ n _) = TEnum <$> fromAvroEnum v n
   fromAvro v                   = A.badValue v "enum"
-instance A.FromAvro (FieldValue f sch t)
+instance (HasAvroSchema' (FieldValue f sch t), A.FromAvro (FieldValue f sch t))
          => A.FromAvro (Term f sch ('DSimple t)) where
   fromAvro v = TSimple <$> A.fromAvro v
 
@@ -195,24 +220,25 @@ instance A.FromAvro (FieldValue f sch 'TNull) where
   fromAvro v         = A.badValue v "null"
 instance A.FromAvro t => A.FromAvro (FieldValue f sch ('TPrimitive t)) where
   fromAvro v = FPrimitive <$> A.fromAvro v
-instance (KnownName t, A.FromAvro (Term f sch (sch :/: t)))
+instance ( KnownName t, HasAvroSchema' (Term f sch (sch :/: t))
+         , A.FromAvro (Term f sch (sch :/: t)) )
          => A.FromAvro (FieldValue f sch ('TSchematic t)) where
   fromAvro v = FSchematic <$> A.fromAvro v
 instance (HasAvroSchemaUnion (FieldValue f sch) choices, FromAvroUnion f sch choices)
          => A.FromAvro (FieldValue f sch ('TUnion choices)) where
   fromAvro (AVal.Union _ branch v) = FUnion <$> fromAvroU branch v
   fromAvro v                       = A.badValue v "union"
-instance A.FromAvro (FieldValue f sch t)
+instance (HasAvroSchema' (FieldValue f sch t), A.FromAvro (FieldValue f sch t))
          => A.FromAvro (FieldValue f sch ('TOption t)) where
   fromAvro v = FOption <$> A.fromAvro v
-instance A.FromAvro (FieldValue f sch t)
+instance (HasAvroSchema' (FieldValue f sch t), A.FromAvro (FieldValue f sch t))
          => A.FromAvro (FieldValue f sch ('TList t)) where
   fromAvro v = FList <$> A.fromAvro v
 -- These are the only two versions of Map supported by the library
-instance A.FromAvro (FieldValue f sch v)
+instance (HasAvroSchema' (FieldValue f sch v), A.FromAvro (FieldValue f sch v))
          => A.FromAvro (FieldValue f sch ('TMap ('TPrimitive T.Text) v)) where
   fromAvro v = FMap . M.mapKeys FPrimitive <$> A.fromAvro v
-instance A.FromAvro (FieldValue f sch v)
+instance (HasAvroSchema' (FieldValue f sch v), A.FromAvro (FieldValue f sch v))
          => A.FromAvro (FieldValue f sch ('TMap ('TPrimitive String) v)) where
   fromAvro v = FMap . M.mapKeys (FPrimitive . T.unpack) <$> A.fromAvro v
 
@@ -258,7 +284,7 @@ instance (KnownName name, HasAvroSchemaEnum choices, ToAvroEnum choices)
   toAvro (TEnum n) = AVal.Enum wholeSchema choice text
     where wholeSchema = unTagged (A.schema @(Term Identity sch ('DEnum name choices)))
           (choice, text) = toAvroE n
-instance A.ToAvro (FieldValue Identity sch t)
+instance (HasAvroSchema' (FieldValue Identity sch t), A.ToAvro (FieldValue Identity sch t))
          => A.ToAvro (Term Identity sch ('DSimple t)) where
   toAvro (TSimple v) = A.toAvro v
 
@@ -266,27 +292,28 @@ instance A.ToAvro (FieldValue Identity sch 'TNull) where
   toAvro FNull = AVal.Null
 instance A.ToAvro t => A.ToAvro (FieldValue Identity sch ('TPrimitive t)) where
   toAvro (FPrimitive v) = A.toAvro v
-instance (KnownName t, A.ToAvro (Term Identity sch (sch :/: t)))
+instance ( KnownName t, HasAvroSchema' (Term Identity sch (sch :/: t))
+         , A.ToAvro (Term Identity sch (sch :/: t)) )
          => A.ToAvro (FieldValue Identity sch ('TSchematic t)) where
   toAvro (FSchematic v) = A.toAvro v
 instance forall sch choices.
          (HasAvroSchemaUnion (FieldValue Identity sch) choices, ToAvroUnion sch choices)
          => A.ToAvro (FieldValue Identity sch ('TUnion choices)) where
   toAvro (FUnion v) = AVal.Union wholeSchema' chosenTy chosenVal
-    where wholeSchema = schemaU (Proxy @(FieldValue Identity sch)) (Proxy @choices)
+    where wholeSchema = schemaU (Proxy @(FieldValue Identity sch)) (Proxy @choices) []
           wholeSchema' = V.fromList (NonEmptyList.toList wholeSchema)
           (chosenTy, chosenVal) = toAvroU v
-instance A.ToAvro (FieldValue Identity sch t)
+instance (HasAvroSchema' (FieldValue Identity sch t), A.ToAvro (FieldValue Identity sch t))
          => A.ToAvro (FieldValue Identity sch ('TOption t)) where
   toAvro (FOption v) = A.toAvro v
-instance A.ToAvro (FieldValue Identity sch t)
+instance (HasAvroSchema' (FieldValue Identity sch t), A.ToAvro (FieldValue Identity sch t))
          => A.ToAvro (FieldValue Identity sch ('TList t)) where
   toAvro (FList v) = AVal.Array $ V.fromList $ A.toAvro <$> v
 -- These are the only two versions of Map supported by the library
-instance A.ToAvro (FieldValue Identity sch v)
+instance (HasAvroSchema' (FieldValue Identity sch v), A.ToAvro (FieldValue Identity sch v))
          => A.ToAvro (FieldValue Identity sch ('TMap ('TPrimitive T.Text) v)) where
   toAvro (FMap v) = A.toAvro $ M.mapKeys (\(FPrimitive k) -> k) v
-instance A.ToAvro (FieldValue Identity sch v)
+instance (HasAvroSchema' (FieldValue Identity sch v), A.ToAvro (FieldValue Identity sch v))
          => A.ToAvro (FieldValue Identity sch ('TMap ('TPrimitive String) v)) where
   toAvro (FMap v) = A.toAvro $ M.mapKeys (\(FPrimitive k) -> k) v
 

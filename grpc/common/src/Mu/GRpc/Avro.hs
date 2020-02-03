@@ -66,7 +66,7 @@ instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          , AvroSchema sch )
          => GRPCInput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) i) where
   encodeInput = error "eif/you should not call this"
-  decodeInput _ i = (ViaFromAvroTypeRef . unWithSchema @_ @_ @Identity @sch @sty <$>) <$> decoder i
+  decodeInput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch @Identity <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          ( FromSchema Identity sch sty i
@@ -74,15 +74,15 @@ instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          , AvroSchema sch )
          => GRPCOutput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) i) where
   encodeOutput = error "eof/you should not call this"
-  decodeOutput _ i = (ViaFromAvroTypeRef . unWithSchema @_ @_ @Identity @sch @sty <$>) <$> decoder i
+  decodeOutput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch @Identity <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
          ( ToSchema Identity sch sty o
          , ToAvro (Term Identity sch (sch :/: sty))
          , AvroSchema sch )
          => GRPCInput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) o) where
-  encodeInput _ compression (ViaToAvroTypeRef !x)
-    = encoder compression (WithSchema @_ @_ @Identity @sch @sty x)
+  encodeInput _ compression
+    = encoder compression . toSchema' @_ @_ @sch @Identity . unViaToAvroTypeRef
   decodeInput = error "dit/you should not call this"
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
@@ -90,8 +90,8 @@ instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
          , ToAvro (Term Identity sch (sch :/: sty))
          , AvroSchema sch )
          => GRPCOutput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) o) where
-  encodeOutput _ compression (ViaToAvroTypeRef !x)
-    = encoder compression (WithSchema @_ @_ @Identity @sch @sty x)
+  encodeOutput _ compression
+    = encoder compression . toSchema' @_ @_ @sch @Identity . unViaToAvroTypeRef
   decodeOutput = error "dot/you should not call this"
 
 encoder :: ToAvro m => Compression -> m -> Builder
