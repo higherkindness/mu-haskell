@@ -1,4 +1,3 @@
-{-# language BangPatterns          #-}
 {-# language CPP                   #-}
 {-# language DataKinds             #-}
 {-# language FlexibleContexts      #-}
@@ -35,10 +34,9 @@ import           Network.GRPC.HTTP2.Types
 import           Data.Monoid                 ((<>))
 #endif
 
-import           Mu.Adapter.Avro
+import           Mu.Adapter.Avro ()
 import           Mu.Rpc
 import           Mu.Schema
-import           Mu.Schema.Class
 
 -- | A proxy type for giving static information about RPCs.
 data AvroRPC = AvroRPC { pkg :: ByteString, srv :: ByteString, meth :: ByteString }
@@ -62,24 +60,21 @@ instance GRPCOutput AvroRPC () where
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          ( FromSchema Identity sch sty i
-         , FromAvro (Term Identity sch (sch :/: sty))
-         , AvroSchema sch )
+         , FromAvro (Term Identity sch (sch :/: sty)) )
          => GRPCInput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) i) where
   encodeInput = error "eif/you should not call this"
   decodeInput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch @Identity <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          ( FromSchema Identity sch sty i
-         , FromAvro (Term Identity sch (sch :/: sty))
-         , AvroSchema sch )
+         , FromAvro (Term Identity sch (sch :/: sty)) )
          => GRPCOutput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) i) where
   encodeOutput = error "eof/you should not call this"
   decodeOutput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch @Identity <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
          ( ToSchema Identity sch sty o
-         , ToAvro (Term Identity sch (sch :/: sty))
-         , AvroSchema sch )
+         , ToAvro (Term Identity sch (sch :/: sty)) )
          => GRPCInput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) o) where
   encodeInput _ compression
     = encoder compression . toSchema' @_ @_ @sch @Identity . unViaToAvroTypeRef
@@ -87,8 +82,7 @@ instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
          ( ToSchema Identity sch sty o
-         , ToAvro (Term Identity sch (sch :/: sty))
-         , AvroSchema sch )
+         , ToAvro (Term Identity sch (sch :/: sty)) )
          => GRPCOutput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) o) where
   encodeOutput _ compression
     = encoder compression . toSchema' @_ @_ @sch @Identity . unViaToAvroTypeRef

@@ -18,7 +18,7 @@ Just import the module and you can turn any
 value with a 'ToSchema' and 'FromSchema' from
 and to Avro values.
 -}
-module Mu.Adapter.Avro (AvroSchema) where
+module Mu.Adapter.Avro () where
 
 import           Control.Arrow                       ((***))
 import qualified Data.Avro                           as A
@@ -73,35 +73,17 @@ instance SLess.ToSchemalessValue (AVal.Value t) Identity where
   toSchemalessValue e@AVal.Enum {}
     = SLess.FSchematic (SLess.toSchemalessTerm e)
 
-type AvroSchema sch = HasAvroSchemas sch sch
-
-instance HasAvroSchemas sch sch
+instance A.HasAvroSchema (Term f sch (sch :/: sty))
          => A.HasAvroSchema (WithSchema f sch sty t) where
-  -- the previous iteration added only the schema of the type
-  -- schema = coerce $ A.schema @(Term sch (sch :/: sty))
-  -- but now we prefer to have all of them
-  schema = Tagged $ ASch.Union (schemas (Proxy @sch) (Proxy @sch))
-instance ( FromSchema f sch sty t, HasAvroSchemas sch sch
+  schema = coerce $ A.schema @(Term f sch (sch :/: sty))
+instance ( FromSchema f sch sty t
          , A.FromAvro (Term f sch (sch :/: sty)) )
          => A.FromAvro (WithSchema f sch sty t) where
-  fromAvro (AVal.Union _ _ v) = WithSchema . fromSchema' @_ @_ @sch @f <$> A.fromAvro v
-  fromAvro v                  = ASch.badValue v "top-level"
-instance ( ToSchema Identity sch sty t, HasAvroSchemas sch sch
+  fromAvro v = WithSchema . fromSchema' @_ @_ @sch @f <$> A.fromAvro v
+instance ( ToSchema Identity sch sty t
          , A.ToAvro (Term Identity sch (sch :/: sty)) )
          => A.ToAvro (WithSchema Identity sch sty t) where
-  toAvro (WithSchema v) = AVal.Union (schemas (Proxy @sch) (Proxy @sch))
-                                     (unTagged $ A.schema @(Term Identity sch (sch :/: sty)))
-                                     (A.toAvro (toSchema' @_ @_ @sch @Identity v))
-
-class HasAvroSchemas (r :: Schema tn fn) (sch :: Schema tn fn) where
-  schemas :: Proxy r -> Proxy sch -> V.Vector ASch.Type
-instance HasAvroSchemas r '[] where
-  schemas _ _ = V.empty
-instance forall r d ds.
-         (A.HasAvroSchema (Term Identity r d), HasAvroSchemas r ds)
-         => HasAvroSchemas r (d ': ds) where
-  schemas pr _ = V.cons thisSchema (schemas pr (Proxy @ds))
-    where thisSchema = unTagged $ A.schema @(Term Identity r d)
+  toAvro (WithSchema v) = A.toAvro (toSchema' @_ @_ @sch @Identity v)
 
 -- HasAvroSchema instances
 
@@ -148,7 +130,6 @@ instance forall sch f choices.
          => HasAvroSchema' (FieldValue f sch ('TUnion choices)) where
   schema' visited
     = Tagged $ ASch.mkUnion $ schemaU (Proxy @(FieldValue f sch)) (Proxy @choices) visited
--- FIX!!!
 instance HasAvroSchema' (FieldValue f sch t)
          => HasAvroSchema' (FieldValue f sch ('TOption t)) where
   schema' visited
