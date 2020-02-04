@@ -4,6 +4,7 @@ allow-newer: true
 packages:
 - core/schema
 - core/rpc
+- core/optics
 - adapter/avro
 - adapter/protobuf
 - adapter/persistent
