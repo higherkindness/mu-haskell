@@ -4,6 +4,7 @@
 {-# language FunctionalDependencies #-}
 {-# language GADTs                  #-}
 {-# language KindSignatures         #-}
+{-# language RankNTypes             #-}
 {-# language ScopedTypeVariables    #-}
 {-# language TypeApplications       #-}
 {-# language TypeOperators          #-}
@@ -37,7 +38,7 @@ import           Mu.Schema.Optics
 newtype GRpcConnection (s :: Service Symbol Symbol)
   = GRpcConnection { gcClient  :: G.GrpcClient }
 
-initGRpc :: forall s. G.GrpcClientConfig -> IO (Either ClientError (GRpcConnection s))
+initGRpc :: G.GrpcClientConfig -> forall s. IO (Either ClientError (GRpcConnection s))
 initGRpc config = do
   setup <- setupGrpcClient' config
   case setup of
