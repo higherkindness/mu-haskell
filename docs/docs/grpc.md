@@ -36,7 +36,7 @@ import System.Environment
 main :: IO ()
 main = do
   let config = grpcClientConfigSimple "127.0.0.1" 8080 False
-  Right client <- setupGrpcClient' config
+  Right client <- setup config
   args <- getArgs
   case args of
     ["watch"]       -> watching client
@@ -45,11 +45,53 @@ main = do
     _               -> putStrLn "unknown command"
 ```
 
-Where `watch`, `get` and `add` are the only valid 3 commands that our CLI is going to accept and call each respective service.
+Where `watch`, `get` and `add` are the only valid 3 commands that our CLI is going to accept and call each respective service. The `setup` function is responsible from initializing the
+
+### Using optics
+
+The simplest way to call methods is to use the `optics`-based API. In that case, your setup is done using `initGRpc`, which receives the configuration.
+
+```haskell
+main :: IO ()
+main = do ...
+  where setup config = initGRpc config
+```
+
+To call a method, you use the corresponding getter (for those familiar with optics, a version of a lens which does not allow to set). This means that your code reads `client ^. #method`, where `client` is the value obtained previously in the call to `initGRpc`.
+
+```haskell
+{-# language OverloadedLabels #-}
+import Text.Read (readMaybe)
+
+get :: GRpcConnection QuickstartService -> String -> IO ()
+get client idPerson = do
+  let req = record (readMaybe idPerson)
+  putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
+  res <- (client ^. #getPerson) req
+  putStrLn $ "GET: response was: " ++ show res
+```
+
+Notice the use of `readMaybe` to convert the strings to the appropiate type in a safe manner! 👆🏼
+
+Using this approach you must also use the optics-based interface to the terms. As a quick reminder: you use `record` to build new values, and use `value ^. #field` to access a field. The rest of the methods look as follows:
+
+```haskell
+add :: GRpcConnection QuickstartService -> String -> String -> IO ()
+add client nm ag = do
+  let p = record (Nothing, Just $ T.pack nm, readMaybe ag)
+  putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
+  res <- (client ^. #newPerson) p
+  putStrLn $ "ADD: was creating successful? " ++ show res
+
+watching :: GRpcConnection QuickstartService -> IO ()
+watching client = do
+  replies <- client ^. #allPeople
+  runConduit $ replies .| C.mapM_ print
+```
 
 ### Using records
 
-This option is a bit more verbose but it's also more explicit with the types and _"a bit more magic"_ than the one with `TypeApplications` (due to the use of Generics).
+This option is a bit more verbose but it's also more explicit with the types. Furthermore, it allows us to use our Haskell data types, we are not forced to use plain terms. As discussed several times, this is important to ensure that Haskell types are not mere shadows of the schema types.
 
 We need to define a new record type (hence the name) that declares the services our client is going to consume. The names of the fields **must** match the names of the methods in the service, optionally prefixed by a **common** string. The prefix may also be empty, which means that the names in the record are exactly those in the service definition. In this case, we are prepending `call_` to each of them:
 
@@ -64,36 +106,28 @@ data Call = Call
   } deriving Generic
 ```
 
-Note that we had to derive `Generic`. We also need to tweak our `main` function a little bit:
+Note that we had to derive `Generic`. We also need to tweak our `setup` function a little bit:
 
-```diff
+```haskell
+{-# language TypeApplications #-}
+
 main :: IO ()
-main = do
-   let config = grpcClientConfigSimple "127.0.0.1" 1234 False
--  Right client <- setupGrpcClient' config
-+  Right grpcClient <- setupGrpcClient' config
-+  let client = buildService @Service @"call_" grpcClient
-   args <- getArgs
+main = do ...
+  where setup config = buildService @Service @"call_" <$> setupGrpcClient' config
 ```
 
 Instead of building our client directly, we need to call `buildService` (and enable `TypeApplications`) to create the actual gRPC client. There are two type arguments to be explicitly given: the first one is the `Service` definition we want a client for, and the second one is the prefix in the record (in our case, this is `call_`). In the case you want an empty prefix, you write `@""` in that second position.
 
-After that, let's have a look at an example implementation of the three service calls:
+After that, let's have a look at an example implementation of the three service calls. Almost as before, except that we use `call_` followed by the name of the method.
 
 ```haskell
-import Text.Read (readMaybe)
-
 get :: Call -> String -> IO ()
 get client idPerson = do
   let req = MPersonRequest $ readMaybe idPerson
   putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
   res <- call_getPerson client req
   putStrLn $ "GET: response was: " ++ show res
-```
 
-Notice the use of `readMaybe` to convert the strings to the appropiate type in a safe manner! 👆🏼
-
-```haskell
 add :: Call -> String -> String -> IO ()
 add client nm ag = do
   let p = MPerson Nothing (Just $ T.pack nm) (readMaybe ag)
@@ -116,6 +150,9 @@ If you are not familiar with `TypeApplications`, you can check [this](https://ww
 
 ```haskell
 import Mu.GRpc.Client.TyApps
+
+main = do ...
+  where setup config = setupGrpcClient' config
 
 get :: GrpcClient -> String -> IO ()
 get client idPerson = do

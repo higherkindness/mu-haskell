@@ -25,12 +25,13 @@ executable {{name}}
                        mu-grpc-server
 
 {-# START_FILE stack.yaml #-}
-resolver: lts-14.21
+resolver: lts-14.22
 allow-newer: true
 extra-deps:
 # mu
 - mu-schema-0.1.0.0
 - mu-rpc-0.1.0.0
+- mu-optics-0.1.0.0
 - mu-protobuf-0.1.0.0
 - mu-grpc-server-0.1.0.1
 - compendium-client-0.1.0.1
@@ -87,11 +88,15 @@ import Mu.Schema
 
 grpc "TheSchema" id "{{name}}.proto"
 
+-- A. Map to Haskell types
 -- data Message
 --   = Message { ... }
 --   deriving ( Eq, Show, Generic
 --            , ToSchema   Maybe TheSchema "Message"
 --            , FromSchema Maybe TheSchema "Message" )
+
+-- B. Use optics
+type Message = Term Maybe TheSchema (TheSchema :/: "Message")
 
 {-# START_FILE src/Main.hs #-}
 {-# language FlexibleContexts      #-}
