@@ -1,8 +1,5 @@
-{-# language DataKinds           #-}
-{-# language OverloadedLabels    #-}
-{-# language OverloadedStrings   #-}
-{-# language ScopedTypeVariables #-}
-{-# language TypeApplications    #-}
+{-# language DataKinds        #-}
+{-# language OverloadedLabels #-}
 
 module Main where
 
