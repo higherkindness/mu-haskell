@@ -101,7 +101,7 @@ instance ( KnownName name, FromProtoBufTypeRef rref r
           rpc = RPC pkgName srvName methodName
 
 instance ( KnownName name, FromProtoBufTypeRef rref r
-         , handler ~ (IO (ConduitT () (GRpcReply r) IO ())) )
+         , handler ~ IO (ConduitT () (GRpcReply r) IO ()) )
          => GRpcMethodCall ('Method name anns '[ ] ('RetStream rref)) handler where
   gRpcMethodCall pkgName srvName _ client
     = do -- Create a new TMChan

@@ -14,9 +14,7 @@ import           Control.Monad.IO.Class   (liftIO)
 import           Control.Monad.Logger
 import           Data.Conduit
 import           Data.Conduit.Combinators as C
-import           Data.Int
 import           Data.Text                as T
-import           GHC.Generics
 import           Mu.GRpc.Server
 import           Mu.Schema
 import           Mu.Schema.Optics
