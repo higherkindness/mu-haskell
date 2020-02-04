@@ -10,28 +10,60 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mu.Schema.Optics (
   module Optics.Core
+, record
 ) where
 
 import           Data.Functor.Identity
 import           Data.Kind
 import           Data.Map
 import           Data.Proxy
-import           GHC.OverloadedLabels
 import           GHC.TypeLits
 import           Optics.Core
 
 import           Mu.Schema
 
 instance {-# OVERLAPS #-}
-         (FieldLabel Identity sch args fieldName r, k ~ A_Lens, is ~ NoIx)
-         => IsLabel fieldName (Optic' k is (Term Identity sch ('DRecord name args)) r) where
-  fromLabel = lens (\(TRecord r) -> runIdentity $ fieldLensGet (Proxy @fieldName) r)
-                   (\(TRecord r) x -> TRecord $ fieldLensSet (Proxy @fieldName) r (Identity x))
+         (FieldLabel Identity sch args fieldName r)
+         => LabelOptic fieldName A_Lens
+                       (Term Identity sch ('DRecord name args))
+                       (Term Identity sch ('DRecord name args))
+                       r r where
+  labelOptic = lens (\(TRecord r) -> runIdentity $ fieldLensGet (Proxy @fieldName) r)
+                    (\(TRecord r) x -> TRecord $ fieldLensSet (Proxy @fieldName) r (Identity x))
 instance {-# OVERLAPPABLE #-}
-         (FieldLabel w sch args fieldName r, t ~ w r, k ~ A_Lens, is ~ NoIx)
-         => IsLabel fieldName (Optic' k is (Term w sch ('DRecord name args)) t) where
-  fromLabel = lens (\(TRecord r) -> fieldLensGet (Proxy @fieldName) r)
-                   (\(TRecord r) x -> TRecord $ fieldLensSet (Proxy @fieldName) r x)
+         (FieldLabel w sch args fieldName r, t ~ w r)
+         => LabelOptic fieldName A_Lens
+                       (Term w sch ('DRecord name args))
+                       (Term w sch ('DRecord name args))
+                       t t where
+  labelOptic = lens (\(TRecord r) -> fieldLensGet (Proxy @fieldName) r)
+                    (\(TRecord r) x -> TRecord $ fieldLensSet (Proxy @fieldName) r x)
+
+record :: BuildRecord w sch args r => r -> Term w sch ('DRecord name args)
+record values = TRecord $ buildR values
+
+class BuildRecord (w :: Type -> Type)
+                  (sch :: Schema Symbol Symbol)
+                  (args :: [FieldDef Symbol Symbol])
+                  (r :: Type) | w sch args -> r where
+  buildR :: r -> NP (Field w sch) args
+instance BuildRecord w sch '[] () where
+  buildR _ = Nil
+instance (Functor w, TypeLabel w sch t1 r1)
+         => BuildRecord w sch '[ 'FieldDef x1 t1 ] (w r1) where
+  buildR v = Field (typeLensSet <$> v) :* Nil
+instance (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2)
+         => BuildRecord w sch '[ 'FieldDef x1 t1, 'FieldDef x2 t2 ] (w r1, w r2) where
+  buildR (v1, v2) = Field (typeLensSet <$> v1)
+                  :* Field (typeLensSet <$> v2) :* Nil
+instance (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2, TypeLabel w sch t3 r3)
+         => BuildRecord w sch
+                        '[ 'FieldDef x1 t1, 'FieldDef x2 t2, 'FieldDef x3 t3 ]
+                        (w r1, w r2, w r3) where
+  buildR (v1, v2, v3) = Field (typeLensSet <$> v1)
+                      :* Field (typeLensSet <$> v2)
+                      :* Field (typeLensSet <$> v3) :* Nil
+
 
 class FieldLabel (w :: Type -> Type)
                  (sch :: Schema Symbol Symbol)
@@ -81,9 +113,12 @@ instance ( TypeLabel w sch k k', TypeLabel w sch v v'
   typeLensGet (FMap x) = mapKeys typeLensGet (typeLensGet <$> x)
   typeLensSet new = FMap (mapKeys typeLensSet (typeLensSet <$> new))
 
-instance (EnumLabel choices choiceName, k ~ A_Prism, is ~ NoIx, r ~ ())
-         => IsLabel choiceName (Optic' k is (Term w sch ('DEnum name choices)) r) where
-  fromLabel = prism' (\_ -> TEnum $ enumPrismBuild (Proxy @choiceName))
+instance (EnumLabel choices choiceName, r ~ ())
+         => LabelOptic choiceName A_Prism
+                       (Term w sch ('DEnum name choices))
+                       (Term w sch ('DEnum name choices))
+                       r r where
+  labelOptic = prism' (\_ -> TEnum $ enumPrismBuild (Proxy @choiceName))
                      (\(TEnum r) -> enumPrismMatch (Proxy @choiceName) r)
 
 class EnumLabel (choices :: [ChoiceDef Symbol])
