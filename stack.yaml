@@ -4,6 +4,7 @@ allow-newer: true
 packages:
 - core/schema
 - core/rpc
+- core/optics
 - adapter/avro
 - adapter/protobuf
 - adapter/persistent
@@ -32,3 +33,5 @@ extra-deps:
 - stm-hamt-1.2.0.4
 - stm-containers-1.1.0.4
 - AC-Angle-1.0
+- optics-core-0.2
+- indexed-profunctors-0.1

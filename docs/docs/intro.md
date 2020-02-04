@@ -23,7 +23,7 @@ The main goal of Mu-Haskell is to allow you to focus on your domain logic, inste
 
 1. Create a new project with `stack new`.
 2. Define your schema and your services in the `.proto` file.
-3. Write your Haskell data types in `src/Schema.hs`.
+3. Map to your Haskell data types in `src/Schema.hs`, or use optics.
 4. Implement the server in `src/Main.hs`.
 
 ### Step by step
@@ -53,7 +53,9 @@ The first step to get your project running is defining the right schema and serv
 
 #### Data type definition
 
-The second step is to define some Haskell data type corresponding to the message types in the gRPC definition. Although in some cases those data types can be inferred from the schema itself, we have made the design choice of having to write them explicitly, but check for compatibility at compile-time. The main goal is to discourage from making your domain types simple copies of the protocol types.
+The second step is to define Haskell types corresponding to the message types in the gRPC definition. The recommended route is to create new Haskell data types and check for compatibility at compile-time. The goal is to discourage from making your domain types simple copies of the protocol types. Another possibility is to use the `optics` bridge and work with lenses for the fields.
+
+##### Using Haskell types
 
 The aforementioned `.proto` file defines two messages. The corresponding data types are as follows:
 
@@ -81,6 +83,17 @@ You can give the data types and their constructors any name you like. However, k
 * The name between quotes in each `deriving` clause defines the message type in the `.proto` file each data type corresponds to.
 * To use the automatic-mapping functionality, it is required to also derive `Generic`, don't forget it!
 
+##### Using optics
+
+As we mentioned above, you may decide to not introduce new Haskell types, at the expense of losing some automatic checks against the current version of the schema. However, you gain access to a set of lenses and optics which can be used to inspect the values. In the Mu jargon, values from a schema which are not Haskell types are called *terms*, and we usually define type synonyms for each of them.
+
+```haskell
+type HelloRequestMessage' = Term Maybe TheSchema (TheSchema :/: "HelloRequest")
+type HelloReplyMessage'   = Term Maybe TheSchema (TheSchema :/: "HelloReply")
+```
+
+The arguments to `Term` closely correspond to those in `FromSchema` and `ToSchema` described above.
+
 #### Server implementation
 
 If you try to compile the project right now by means of `stack build`, you will receive an error about `server` not having the right type. This is because you haven't yet defined any implementation for your service. This is one of the advantages of making the compiler aware of your service definitions: if the `.proto` file changes, you need to adapt your code correspondingly, or otherwise the project doesn't even compile!
@@ -95,7 +108,7 @@ server :: (MonadServer m) => ServerT Maybe Service m _
 server = Server H0
 ```
 
-The simplest way to provide an implementation for a service is to define one function for each method. You define those functions completely in terms of Haskell data types; in our case `HelloRequestMessage` and `HelloReplyMessage`. Here is an example definition:
+The simplest way to provide an implementation for a service is to define one function for each method. You can define those functions completely in terms of Haskell data types; in our case `HelloRequestMessage` and `HelloReplyMessage`. Here is an example definition:
 
 ```haskell
 sayHello :: (MonadServer m) => HelloRequestMessage -> m HelloReplyMessage
@@ -105,7 +118,17 @@ sayHello (HelloRequestMessage nm)
 
 The `MonadServer` portion in the type is mandated by `mu-rpc`; it tells us that in a method we can perform any `IO` actions and additionally throw server errors (for conditions such as *not found*). We do not make use of any of those here, so we simply use `return` with a value. We could even make the definition a bit more polymorphic by replacing `MonadServer` by `Monad`.
 
-How does `server` know that `sayHello` is part of the implementation of the service? We have to tell it, by adding `sayHello` to the list of methods. Unfortunately, we cannot use a normal list, so we use `(:<|>:)` to join them, and `H0` to finish it.
+Another possibility is to use the `optics`-based API in `Mu.Schema.Optics`. In that case, you access the value of the fields using `(^.)` followed by the name of the field after `#`, and build messages by using `record` followed by a tuple of the components. The previous example would then be written:
+
+```haskell
+{-# language OverloadedLabels #-}
+
+sayHello :: (MonadServer m) => HelloRequestMessage' -> m HelloReplyMessage'
+sayHello (HelloRequestMessage nm)
+  = return $ record (("hi, " <>) <$> (nm ^. #name))
+```
+
+How does `server` know that `sayHello` (any of the two versions) is part of the implementation of the service? We have to tell it, by adding `sayHello` to the list of methods. Unfortunately, we cannot use a normal list, so we use `(:<|>:)` to join them, and `H0` to finish it.
 
 ```haskell
 server = Server (sayHello :<|>: H0)

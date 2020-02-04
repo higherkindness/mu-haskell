@@ -135,6 +135,15 @@ data FieldTypeB builtin typeName
     -- | Represents a choice between types.
   | TUnion  [FieldTypeB builtin typeName]
 
+instance KnownName n => KnownName ('DRecord n fields) where
+  nameVal _ = nameVal (Proxy @n)
+instance KnownName n => KnownName ('DEnum n choices) where
+  nameVal _ = nameVal (Proxy @n)
+instance KnownName n => KnownName ('ChoiceDef n) where
+  nameVal _ = nameVal (Proxy @n)
+instance KnownName n => KnownName ('FieldDef n t) where
+  nameVal _ = nameVal (Proxy @n)
+
 -- | Lookup a type in a schema by its name.
 type family (sch :: Schema t f) :/: (name :: t) :: TypeDef t f where
   '[] :/: name = TypeError ('Text "Cannot find type " ':<>: 'ShowType name ':<>: 'Text " in the schema")

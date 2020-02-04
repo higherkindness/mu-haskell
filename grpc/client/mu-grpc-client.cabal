@@ -21,6 +21,7 @@ source-repository head
 library
   exposed-modules:     Mu.GRpc.Client.TyApps,
                        Mu.GRpc.Client.Record,
+                       Mu.GRpc.Client.Optics,
                        Mu.GRpc.Client.Examples
   other-modules:       Mu.GRpc.Client.Internal
   build-depends:       base >=4.12 && <5
@@ -31,9 +32,11 @@ library
                      , http2-client
                      , http2-client-grpc
                      , http2-grpc-proto3-wire
+                     , mu-optics
                      , mu-protobuf
                      , mu-rpc
                      , mu-schema
+                     , optics-core
                      , sop-core
                      , stm
                      , stm-chans

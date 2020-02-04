@@ -86,6 +86,19 @@ class FromSchema (w :: Type -> Type) (sch :: Schema typeName fieldName) (sty :: 
                => Term w sch (sch :/: sty) -> t
   fromSchema x = to (fromSchemaTypeDef (Proxy @'[]) x)
 
+instance (sch :/: sty ~ 'DRecord sty fields)
+         => ToSchema w sch sty (Term w sch ('DRecord sty fields)) where
+  toSchema = id
+instance (sch :/: sty ~ 'DEnum sty choices)
+         => ToSchema w sch sty (Term w sch ('DEnum sty choices)) where
+  toSchema = id
+instance (sch :/: sty ~ 'DRecord sty fields)
+         => FromSchema w sch sty (Term w sch ('DRecord sty fields)) where
+  fromSchema = id
+instance (sch :/: sty ~ 'DEnum sty choices)
+         => FromSchema w sch sty (Term w sch ('DEnum sty choices)) where
+  fromSchema = id
+
 -- | Conversion from Haskell type to schema term.
 --   This version is intended for usage with @TypeApplications@:
 --   > toSchema' @MySchema myValue
