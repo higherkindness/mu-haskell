@@ -65,3 +65,21 @@ executable persistent-client-record
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall
+
+executable persistent-client-optics
+  main-is:             ClientOptics.hs
+  other-modules:       Schema
+  build-depends:       base >=4.12 && <5
+                     , conduit
+                     , mu-schema
+                     , mu-rpc
+                     , mu-persistent
+                     , mu-protobuf
+                     , mu-grpc-client
+                     , persistent
+                     , persistent-sqlite
+                     , persistent-template
+                     , text
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  ghc-options:         -Wall

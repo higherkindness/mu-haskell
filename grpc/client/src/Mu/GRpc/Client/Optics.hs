@@ -9,10 +9,14 @@
 {-# language TypeOperators          #-}
 {-# language UndecidableInstances   #-}
 module Mu.GRpc.Client.Optics (
-  initGRpc
+  GRpcConnection
+, initGRpc
 , G.GrpcClientConfig
 , G.grpcClientConfigSimple
 , CompressMode
+, GRpcReply(..)
+, module Optics.Core
+, module Mu.Schema.Optics
 ) where
 
 import           Data.ByteString             (ByteString)
@@ -28,6 +32,7 @@ import           Optics.Core
 import           Mu.GRpc.Client.Internal
 import           Mu.Rpc
 import           Mu.Schema
+import           Mu.Schema.Optics
 
 newtype GRpcConnection (s :: Service Symbol Symbol)
   = GRpcConnection { gcClient  :: G.GrpcClient }
@@ -39,7 +44,8 @@ initGRpc config = do
     Left e  -> return $ Left e
     Right c -> return $ Right $ GRpcConnection c
 
-instance ( SearchMethodOptic methods m t
+instance forall (serviceName :: Symbol) anns (methods :: [Method Symbol]) (m :: Symbol) (t :: *).
+         ( SearchMethodOptic methods m t
          , KnownName serviceName
          , KnownName (FindPackageName anns))
          => LabelOptic m A_Getter
@@ -71,29 +77,37 @@ class GRpcMethodCall method t => MethodOptic (method :: Method Symbol) t
   methodOptic = gRpcMethodCall
 
 -- No arguments
-instance ( GRpcMethodCall ('Method name anns '[ ] 'RetNothing) t
+instance forall (name :: Symbol) anns t.
+         ( GRpcMethodCall ('Method name anns '[ ] 'RetNothing) t
          , t ~ IO (GRpcReply ()) )
          => MethodOptic ('Method name anns '[ ] 'RetNothing) t
-instance ( GRpcMethodCall ('Method name anns '[ ] ('RetSingle ('ViaSchema sch r))) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (r :: Symbol) anns t.
+         ( GRpcMethodCall ('Method name anns '[ ] ('RetSingle ('ViaSchema sch r))) t
          , t ~ IO (GRpcReply (Term Maybe sch (sch :/: r))) )
          => MethodOptic ('Method name anns '[ ] ('RetSingle ('ViaSchema sch r))) t
-instance ( GRpcMethodCall ('Method name anns '[ ] ('RetStream ('ViaSchema sch r))) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (r :: Symbol) anns t.
+         ( GRpcMethodCall ('Method name anns '[ ] ('RetStream ('ViaSchema sch r))) t
          , t ~ IO (ConduitT () (GRpcReply (Term Maybe sch (sch :/: r))) IO ()) )
          => MethodOptic ('Method name anns '[ ] ('RetStream ('ViaSchema sch r))) t
 -- Simple arguments
-instance ( GRpcMethodCall ('Method name anns '[ 'ArgSingle ('ViaSchema sch v) ] 'RetNothing) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) anns t.
+         ( GRpcMethodCall ('Method name anns '[ 'ArgSingle ('ViaSchema sch v) ] 'RetNothing) t
          , t ~ (Term Maybe sch (sch :/: v) -> IO (GRpcReply ())) )
          => MethodOptic ('Method name anns '[ 'ArgSingle ('ViaSchema sch v) ] 'RetNothing) t
-instance ( GRpcMethodCall ('Method name anns '[ 'ArgSingle ('ViaSchema sch v) ] ('RetSingle ('ViaSchema sch r))) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) anns t.
+         ( GRpcMethodCall ('Method name anns '[ 'ArgSingle ('ViaSchema sch v) ] ('RetSingle ('ViaSchema sch r))) t
          , t ~ (Term Maybe sch (sch :/: v) -> IO (GRpcReply (Term Maybe sch (sch :/: r))) ) )
          => MethodOptic ('Method name anns '[ 'ArgSingle ('ViaSchema sch v)  ] ('RetSingle ('ViaSchema sch r))) t
-instance ( GRpcMethodCall ('Method name anns '[ 'ArgSingle ('ViaSchema sch v)  ] ('RetStream ('ViaSchema sch r))) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) anns t.
+         ( GRpcMethodCall ('Method name anns '[ 'ArgSingle ('ViaSchema sch v)  ] ('RetStream ('ViaSchema sch r))) t
          , t ~ (Term Maybe sch (sch :/: v) ->  IO (ConduitT () (GRpcReply (Term Maybe sch (sch :/: r))) IO ()) ) )
          => MethodOptic ('Method name anns '[ 'ArgSingle ('ViaSchema sch v)  ] ('RetStream ('ViaSchema sch r))) t
 -- Stream arguments
-instance ( GRpcMethodCall ('Method name anns '[ 'ArgStream ('ViaSchema sch v) ] ('RetSingle ('ViaSchema sch r))) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) anns t.
+         ( GRpcMethodCall ('Method name anns '[ 'ArgStream ('ViaSchema sch v) ] ('RetSingle ('ViaSchema sch r))) t
          , t ~ (CompressMode -> IO (ConduitT (Term Maybe sch (sch :/: v)) Void IO (GRpcReply (Term Maybe sch (sch :/: r))))) )
          => MethodOptic ('Method name anns '[ 'ArgStream ('ViaSchema sch v)  ] ('RetSingle ('ViaSchema sch r))) t
-instance ( GRpcMethodCall ('Method name anns '[ 'ArgStream ('ViaSchema sch v)  ] ('RetStream ('ViaSchema sch r))) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) anns t.
+         ( GRpcMethodCall ('Method name anns '[ 'ArgStream ('ViaSchema sch v)  ] ('RetStream ('ViaSchema sch r))) t
          , t ~ (CompressMode -> IO (ConduitT (Term Maybe sch (sch :/: v)) (GRpcReply (Term Maybe sch (sch :/: r))) IO ())) )
          => MethodOptic ('Method name anns '[ 'ArgStream ('ViaSchema sch v)  ] ('RetStream ('ViaSchema sch r))) t
