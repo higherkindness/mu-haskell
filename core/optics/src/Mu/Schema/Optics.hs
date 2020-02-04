@@ -8,9 +8,31 @@
 {-# language TypeOperators          #-}
 {-# language UndecidableInstances   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-|
+Description : Optics-based interface for @mu-schema@ terms
+
+This module provides instances of 'LabelOptic' to be
+used in conjunction with the @optics@ package.
+In particular, there are two kind of optics to access
+different parts of a 'Term':
+
+* With @#field@ you obtain the lens (that is, a getter
+  and a setter) for the corresponding field in a record.
+* With @#choice@ you obtain the prism for the
+  desired choice in an enumeration. You can use then
+  'review' to construct a term with the value.
+
+In addition, we provide a utility function 'record' to
+build a record out of the inner values. We intend the
+interface to be very simple, so this function is overloaded
+to take tuples of different size, with as many components
+as values in the schema type.
+-}
 module Mu.Schema.Optics (
-  module Optics.Core
-, record
+  -- * Build a term
+  record
+  -- * Re-exported for convenience.
+, module Optics.Core
 ) where
 
 import           Data.Functor.Identity

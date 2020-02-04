@@ -9,13 +9,22 @@
 {-# language TypeApplications       #-}
 {-# language TypeOperators          #-}
 {-# language UndecidableInstances   #-}
+{-|
+Description : Client for gRPC services using optics and labels
+
+For further information over initialization of the connection,
+consult the <http://hackage.haskell.org/package/http2-client-grpc http2-client-grpc docs>.
+-}
 module Mu.GRpc.Client.Optics (
+  -- * Initialization of the gRPC client
   GRpcConnection
 , initGRpc
 , G.GrpcClientConfig
 , G.grpcClientConfigSimple
+  -- * Request arguments and responses
 , CompressMode
 , GRpcReply(..)
+  -- * Re-exported for convenience
 , module Optics.Core
 , module Mu.Schema.Optics
 ) where
@@ -35,10 +44,19 @@ import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Schema.Optics
 
+-- | Represents a connection to the service @s@.
 newtype GRpcConnection (s :: Service Symbol Symbol)
   = GRpcConnection { gcClient  :: G.GrpcClient }
 
-initGRpc :: G.GrpcClientConfig -> forall s. IO (Either ClientError (GRpcConnection s))
+-- | Initializes a connection to a gRPC server.
+--   Usually the service you are connecting to is
+--   inferred from the usage later on.
+--   However, it can also be made explicit by using
+--
+--   > initGRpc config @Service
+--
+initGRpc :: G.GrpcClientConfig  -- ^ gRPC configuration
+         -> forall s. IO (Either ClientError (GRpcConnection s))
 initGRpc config = do
   setup <- setupGrpcClient' config
   case setup of
