@@ -1,4 +1,4 @@
-FROM fpco/stack-build:lts-14.7 as build
+FROM fpco/stack-build:lts-14.22 as build
 RUN mkdir /opt/build
 RUN mkdir /opt/build/bin
 COPY . /opt/build
