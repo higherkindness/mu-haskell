@@ -1,0 +1,1 @@
+cradle: { stack: { component: "mu-docker-example:exe:mu-docker-example" } }

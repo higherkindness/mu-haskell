@@ -41,7 +41,7 @@ extra-deps:
 - http2-grpc-proto3-wire-0.1.0.0
 - warp-grpc-0.3.0.0
 - proto3-wire-1.1.0
-- language-protobuf-1.0
+- language-protobuf-1.0.1
 
 {-# START_FILE Setup.hs #-}
 import Distribution.Simple
