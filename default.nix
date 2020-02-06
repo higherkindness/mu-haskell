@@ -24,4 +24,5 @@ in {
   mu-rpc = hnPkgs.mu-rpc.components.library;
   mu-schema = hnPkgs.mu-schema.components.library;
   mu-optics = hnPkgs.mu-optics.components.library;
+  mu-kafka = hnPkgs.mu-kafka.components.library;
 }

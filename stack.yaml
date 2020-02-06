@@ -8,6 +8,7 @@ packages:
 - adapter/avro
 - adapter/protobuf
 - adapter/persistent
+- adapter/kafka
 - grpc/common
 - grpc/client
 - grpc/server
@@ -38,3 +39,5 @@ extra-deps:
 - AC-Angle-1.0
 - optics-core-0.2
 - indexed-profunctors-0.1
+- hw-kafka-client-3.0.0
+- hw-kafka-conduit-2.6.0
