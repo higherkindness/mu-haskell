@@ -142,6 +142,16 @@
         
         <a
           class=""
+          href="/mu-haskell/wip/serializers/"
+          title="Serialization formats"
+        >
+          Serialization formats
+        </a>
+        
+        
+        
+        <a
+          class=""
           href="/mu-haskell/wip/registry/"
           title="Registry"
         >
@@ -410,7 +420,7 @@
 
 <p>As we have done with the Reader example, we need to define how to handle <code class="highlighter-rouge">MonadLogger</code>. <code class="highlighter-rouge">monad-logger</code> provides <a href="http://hackage.haskell.org/package/monad-logger-0.3.31/docs/Control-Monad-Logger.html#g:3">three different monad transformers</a>, so you can choose whether your logging will be completely ignored, will become a Haskell value, or would fire some <code class="highlighter-rouge">IO</code> action like printing in the console. Each of these monad transformers comes with a <code class="highlighter-rouge">run</code> action which declares how to handle it; the extended function <code class="highlighter-rouge">runGRpcAppTrans</code> takes that handler as argument.</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcAppTrans</span> <span class="mi">8080</span> <span class="n">runStderrLoggingT</span> <span class="n">quickstartServer</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcAppTrans</span> <span class="n">msgSerializer</span> <span class="mi">8080</span> <span class="n">runStderrLoggingT</span> <span class="n">quickstartServer</span>
 </code></pre></div></div>
 
 <p>If you prefer other logging library, this is fine with us! Replacing <code class="highlighter-rouge">monad-logger</code> by <a href="https://github.com/kowainik/co-log"><code class="highlighter-rouge">co-log</code></a> means asking for a different capability in the server. In this case we have to declare the type of the log items as part of the <code class="highlighter-rouge">WithLog</code> constraint:</p>
@@ -426,7 +436,7 @@
 
 <p>In this case, the top-level handler is called <a href="http://hackage.haskell.org/package/co-log/docs/Colog-Monad.html#v:usingLoggerT"><code class="highlighter-rouge">usingLoggerT</code></a>. Its definition is slightly more involved because <code class="highlighter-rouge">co-log</code> gives you maximum customization power on your logging, instead of defining a set of predefined logging mechanisms.</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcAppTrans</span> <span class="mi">8080</span> <span class="n">logger</span> <span class="n">quickstartServer</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcAppTrans</span> <span class="n">msgSerializer</span> <span class="mi">8080</span> <span class="n">logger</span> <span class="n">quickstartServer</span>
   <span class="kr">where</span> <span class="n">logger</span> <span class="o">=</span> <span class="n">usingLoggerT</span> <span class="p">(</span><span class="kt">LogAction</span> <span class="o">$</span> <span class="n">liftIO</span> <span class="n">putStrLn</span><span class="p">)</span>
 </code></pre></div></div>
 

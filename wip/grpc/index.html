@@ -142,6 +142,16 @@
         
         <a
           class=""
+          href="/mu-haskell/wip/serializers/"
+          title="Serialization formats"
+        >
+          Serialization formats
+        </a>
+        
+        
+        
+        <a
+          class=""
           href="/mu-haskell/wip/registry/"
           title="Registry"
         >
@@ -362,9 +372,9 @@
 
 <h2 id="running-the-server-with-mu-grpc">Running the server with <code class="highlighter-rouge">mu-grpc</code></h2>
 
-<p>The combination of the declaration of a service API and a corresponding implementation as a <code class="highlighter-rouge">Server</code> may be served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library <code class="highlighter-rouge">mu-grpc</code>. The following line starts a server at port <code class="highlighter-rouge">8080</code>, where the service can be found under the package name <code class="highlighter-rouge">helloworld</code>:</p>
+<p>The combination of the declaration of a service API and a corresponding implementation as a <code class="highlighter-rouge">Server</code> may be served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library <code class="highlighter-rouge">mu-grpc</code>. The following line starts a server at port <code class="highlighter-rouge">8080</code>, using Protocol Buffers as serialization layer:</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="mi">8080</span> <span class="s">"helloworld"</span> <span class="n">quickstartServer</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="n">msgProtoBuf</span> <span class="mi">8080</span> <span class="n">quickstartServer</span>
 </code></pre></div></div>
 
 <h2 id="building-a-client">Building a client</h2>

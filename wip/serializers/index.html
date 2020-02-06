@@ -5,14 +5,14 @@
 
     
 
-    <title>Mu-Haskell: Streams</title>
+    <title>Mu-Haskell: Serialization formats</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Mu is a purely functional library for building microservices.">
     <meta name="keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory">
 
     <meta property="og:image" content="/mu-haskell/wip/img/poster.png" />
-    <meta property="og:title" content="Mu-Haskell: Streams" />
-    <meta property="og:site_name" content="Mu-Haskell: Streams" />
+    <meta property="og:title" content="Mu-Haskell: Serialization formats" />
+    <meta property="og:site_name" content="Mu-Haskell: Serialization formats" />
     <meta property="og:url" content="https://higherkindess.io/mu-haskell" />
     <meta property="og:type" content="website" />
     <meta property="og:description" content="Mu is a purely functional library for building microservices." />
@@ -124,7 +124,7 @@
 
       
 
-    <div class="sidebar-menu-item  ">
+    <div class="sidebar-menu-item  open">
        
       <a
         href="/mu-haskell/wip/schema/"
@@ -141,7 +141,7 @@
         
         
         <a
-          class=""
+          class="active"
           href="/mu-haskell/wip/serializers/"
           title="Serialization formats"
         >
@@ -176,7 +176,7 @@
 
       
 
-    <div class="sidebar-menu-item  open">
+    <div class="sidebar-menu-item  ">
        
       <a
         href="/mu-haskell/wip/rpc/"
@@ -203,7 +203,7 @@
         
         
         <a
-          class="active"
+          class=""
           href="/mu-haskell/wip/stream/"
           title="Streams"
         >
@@ -366,42 +366,72 @@
 
     </div>
     <div class="doc-content">
-        <h1 id="streams">Streams</h1>
+        <h1 id="serialization-formats">Serialization formats</h1>
 
-<p>In the docs about <a href="rpc.md">service definition</a> we had one single <code class="highlighter-rouge">SayHello</code> method which takes one value and produces one value. However, we can also declare methods which perform streaming, such as:</p>
+<p>Mu supports two serialization formats for messages when defining a gRPC end-point: Protocol Buffers and Avro. That is, the “outer layer” of your network packages uses gRPC, and the “inner data layer” has a choice between the aforementioned formats.</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">service</span> <span class="nc">Greeter</span> <span class="o">{</span>
-  <span class="n">rpc</span> <span class="nf">SayHello</span> <span class="o">(</span><span class="nc">HelloRequest</span><span class="o">)</span> <span class="n">returns</span> <span class="o">(</span><span class="nc">HelloReply</span><span class="o">)</span> <span class="o">{}</span>
-  <span class="n">rpc</span> <span class="nf">SayManyHellos</span> <span class="o">(</span><span class="n">stream</span> <span class="nc">HelloRequest</span><span class="o">)</span> <span class="n">returns</span> <span class="o">(</span><span class="n">stream</span> <span class="nc">HelloReply</span><span class="o">)</span> <span class="o">{}</span>
-<span class="o">}</span>
+<p>There are three places where this choice must be made visible:</p>
+
+<ol>
+  <li>When reading a service definition file,</li>
+  <li>When defining the conversion from Haskell types to schema types,</li>
+  <li>When starting a server or client.</li>
+</ol>
+
+<h2 id="protocol-buffers">Protocol Buffers</h2>
+
+<p>In this case loading the service definition file looks as follows:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TemplateHaskell #-}</span>
+<span class="kr">import</span> <span class="nn">Mu.Quasi.GRpc</span>
+
+<span class="n">grpc</span> <span class="s">"Schema"</span> <span class="n">id</span> <span class="s">"defn.proto"</span>
 </code></pre></div></div>
 
-<p>Adding this method to the service definition should be easy, we just need to use <code class="highlighter-rouge">ArgStream</code> and <code class="highlighter-rouge">RetStream</code> to declare that behavior (of course, this is done automatically if you import the service from a file):</p>
+<p>This asks the compiler to load the <code class="highlighter-rouge">defn.proto</code> file in order to create a series of (Haskell) types. The first one, which is called <code class="highlighter-rouge">"Schema"</code>, as the first argument shows, includes the definition of all the schema types. Then, for every service defined in the file (since <code class="highlighter-rouge">.proto</code> files may have more than one), the second function is applied to obtain the name of the corresponding Haskell type. In this case we want to use the same names, so we use the identity function.</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">QuickstartService</span>
-  <span class="o">=</span> <span class="kt">'Service</span> <span class="s">"Greeter"</span>
-      <span class="sc">'[</span><span class="err"> </span><span class="kt">'Method</span> <span class="s">"SayHello"</span> <span class="o">...</span>
-       <span class="p">,</span> <span class="kt">'Method</span> <span class="s">"SayManyHellos"</span>
-        <span class="sc">'[</span><span class="err"> </span><span class="kt">'ArgStream</span> <span class="p">(</span><span class="kt">'FromSchema</span> <span class="kt">QuickstartSchema</span> <span class="s">"HelloRequest"</span><span class="p">)]</span>
-        <span class="p">(</span><span class="kt">'RetStream</span> <span class="p">(</span><span class="kt">'FromSchema</span> <span class="kt">QuickstartSchema</span> <span class="s">"HelloResponse"</span><span class="p">))</span> <span class="p">]</span>
+<p>When defining the conversion, it is important for <code class="highlighter-rouge">FromSchema</code> and <code class="highlighter-rouge">ToSchema</code> to receive <code class="highlighter-rouge">Maybe</code> as first argument:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">PersonMsg</span>
+  <span class="o">=</span> <span class="kt">PersonMsg</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">Maybe</span> <span class="kt">Text</span><span class="p">,</span> <span class="n">age</span> <span class="o">::</span> <span class="kt">Maybe</span> <span class="kt">Int</span> <span class="p">}</span>
+  <span class="kr">deriving</span> <span class="p">(</span> <span class="kt">Eq</span><span class="p">,</span> <span class="kt">Show</span><span class="p">,</span> <span class="kt">Ord</span><span class="p">,</span> <span class="kt">Generic</span>
+           <span class="p">,</span> <span class="kt">ToSchema</span>   <span class="kt">Maybe</span> <span class="kt">Schema</span> <span class="s">"Person"</span>
+           <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Maybe</span> <span class="kt">Schema</span> <span class="s">"Person"</span> <span class="p">)</span>
 </code></pre></div></div>
 
-<p>To define the implementation of this method we build upon the great <a href="https://github.com/snoyberg/conduit">Conduit</a> library. Your input is now a producer of values, as defined by that library, and you must write the results to the provided sink. Better said with an example:</p>
+<p>This indicates that every field in the record should we wrapped by a <code class="highlighter-rouge">Maybe</code> layer. This is required because Protocol Buffers version 3 mandates all fields to be optional. This also means that every field in your Haskell types must be wrapped in that <code class="highlighter-rouge">Maybe</code> layer.</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sayManyHellos</span>
-  <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span>
-  <span class="o">=&gt;</span> <span class="kt">ConduitT</span> <span class="nb">()</span> <span class="kt">HelloRequest</span> <span class="n">m</span> <span class="nb">()</span>
-  <span class="o">-&gt;</span> <span class="kt">ConduitT</span> <span class="kt">HelloResponse</span> <span class="kt">Void</span> <span class="n">m</span> <span class="nb">()</span>
-  <span class="o">-&gt;</span> <span class="n">m</span> <span class="nb">()</span>
-<span class="n">sayManyHellos</span> <span class="n">source</span> <span class="n">sink</span>
-  <span class="o">=</span> <span class="n">runConduit</span> <span class="o">$</span> <span class="n">source</span> <span class="o">.|</span> <span class="kt">C</span><span class="o">.</span><span class="n">mapM</span> <span class="n">sayHello</span> <span class="o">.|</span> <span class="n">sink</span>
+<p>Finally, when starting a server or client you must provide <code class="highlighter-rouge">msgProtoBuf</code> as argument. For example, a server is started by running:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">runGRpcApp</span> <span class="n">msgProtoBuf</span> <span class="mi">8080</span> <span class="n">server</span>
 </code></pre></div></div>
 
-<p>In this case we are connecting the <code class="highlighter-rouge">source</code> to the <code class="highlighter-rouge">sink</code>, transforming in between each value using the <code class="highlighter-rouge">sayHello</code> function. More complicated pipelines can be built in this form.</p>
+<h2 id="avro">Avro</h2>
 
-<p>Since now the service has more than one method, we need to update our server declaration to bring together this new handler:</p>
+<p>In this case loading the service definition file looks as follows:</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">quickstartServer</span> <span class="o">=</span> <span class="kt">Server</span> <span class="p">(</span><span class="n">sayHello</span> <span class="o">:&lt;|&gt;:</span> <span class="n">sayManyHellos</span> <span class="o">:&lt;|&gt;:</span> <span class="kt">H0</span><span class="p">)</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TemplateHaskell #-}</span>
+<span class="kr">import</span> <span class="nn">Mu.Quasi.Avro</span>
+
+<span class="n">avdl</span> <span class="s">"Schema"</span> <span class="s">"Service"</span> <span class="s">"."</span> <span class="s">"defn.avdl"</span>
+</code></pre></div></div>
+
+<p>Each <code class="highlighter-rouge">.avdl</code> file defines just one protocol, so instead of a function like in the case of Protocol Buffers, the second argument is simply the name of the Haskell type to create. But you might have noticed that there’s an additional argument, which in this case is <code class="highlighter-rouge">"."</code>. The reason for this argument is that <code class="highlighter-rouge">.avdl</code> files routinely <em>import</em> other files. This third argument indicates the <em>base directory</em> to search for those files.</p>
+
+<p>The conversion is almost identical to Protocol Buffers too, except that instead of <code class="highlighter-rouge">Maybe</code> you have to use <code class="highlighter-rouge">Identity</code>. This is because Avro makes fields <em>required</em> by default, so there’s no need to have an additional <code class="highlighter-rouge">Maybe</code> layer. Of course, those fields which are optional (usually specified as a union with <code class="highlighter-rouge">null</code>) must still use <code class="highlighter-rouge">Maybe</code>:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Data.Functor.Identity</span>
+
+<span class="kr">data</span> <span class="kt">PersonMsg</span>
+  <span class="o">=</span> <span class="kt">PersonMsg</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">Text</span><span class="p">,</span> <span class="n">age</span> <span class="o">::</span> <span class="kt">Int</span> <span class="p">}</span>
+  <span class="kr">deriving</span> <span class="p">(</span> <span class="kt">Eq</span><span class="p">,</span> <span class="kt">Show</span><span class="p">,</span> <span class="kt">Ord</span><span class="p">,</span> <span class="kt">Generic</span>
+           <span class="p">,</span> <span class="kt">ToSchema</span>   <span class="kt">Identity</span> <span class="kt">Schema</span> <span class="s">"Person"</span>
+           <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Identity</span> <span class="kt">Schema</span> <span class="s">"Person"</span> <span class="p">)</span>
+</code></pre></div></div>
+
+<p>Finally, when starting a server or client you must provide <code class="highlighter-rouge">msgAvro</code> as argument. For example, a server is started by running:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">runGRpcApp</span> <span class="n">msgAvro</span> <span class="mi">8080</span> <span class="n">server</span>
 </code></pre></div></div>
 
     </div>

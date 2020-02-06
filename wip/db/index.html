@@ -142,6 +142,16 @@
         
         <a
           class=""
+          href="/mu-haskell/wip/serializers/"
+          title="Serialization formats"
+        >
+          Serialization formats
+        </a>
+        
+        
+        
+        <a
+          class=""
           href="/mu-haskell/wip/registry/"
           title="Registry"
         >
@@ -490,7 +500,7 @@ Person json
 <span class="n">main</span> <span class="o">=</span>
   <span class="n">runStderrLoggingT</span> <span class="o">$</span>
     <span class="n">withSqliteConn</span> <span class="o">@</span><span class="p">(</span><span class="kt">LoggingT</span> <span class="kt">IO</span><span class="p">)</span> <span class="s">"example.db"</span> <span class="o">$</span> <span class="nf">\</span><span class="n">conn</span> <span class="o">-&gt;</span>
-      <span class="n">liftIO</span> <span class="o">$</span> <span class="n">runGRpcApp</span> <span class="mi">8080</span> <span class="p">(</span><span class="n">server</span> <span class="n">conn</span><span class="p">)</span>
+      <span class="n">liftIO</span> <span class="o">$</span> <span class="n">runGRpcApp</span> <span class="n">msgProtoBuf</span> <span class="mi">8080</span> <span class="p">(</span><span class="n">server</span> <span class="n">conn</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>We have decided in this example to use <code class="highlighter-rouge">LoggingT</code> from <code class="highlighter-rouge">monad-logger</code> and <code class="highlighter-rouge">runStderrLoggingT</code> to get some basic database logs to the console for free, but this is not a must!</p>
@@ -515,7 +525,7 @@ main =
 <span class="gd">-   withSqliteConn @(LoggingT IO) "example.db" $ \conn -&gt;
 </span><span class="gi">+   withSqliteConn @(LoggingT IO) "example.db" $ \conn -&gt; do
 +     runDb conn $ runMigration migrateAll
-</span>      liftIO $ runGRpcApp 8080 (server conn)
+</span>      liftIO $ runGRpcApp msgProtoBuf 8080 (server conn)
 </code></pre></div></div>
 
 <p>More on that strange <code class="highlighter-rouge">runDb</code> method in the next section! 😇</p>
