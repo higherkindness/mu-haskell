@@ -19,7 +19,7 @@ It's a common task in web servers to send some static content for a subset of UR
 Remember that in our [original code](intro.md) our `main` function looked as follows:
 
 ```haskell
-main = runGRpcApp 8080 server
+main = runGRpcApp msgSerializer 8080 server
 ```
 
 We can split this single line into two phases: first creating the WAI application by means of `gRpcApp`, and then running it using Warp's `run` function.
@@ -27,7 +27,7 @@ We can split this single line into two phases: first creating the WAI applicatio
 ```haskell
 import Network.Wai.Handler.Warp (run)
 
-main = run 8080 $ gRpcApp server
+main = run 8080 $ gRpcApp msgSerializer server
 ```
 
 Right in the middle of the two steps we can inject any middleware we want.
@@ -36,7 +36,7 @@ Right in the middle of the two steps we can inject any middleware we want.
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.Static
 
-main = run 8080 $ static (gRpcApp server)
+main = run 8080 $ static (gRpcApp msgSerializer server)
 ```
 
 With that simple change, our web server now first checks whether a file with the requested name exists in the directory from which the application is running. If that is the case, it's cached and served, otherwise the underlying gRPC application is run. Needless to say, this behavior might not be the desired one, so the library provides [`staticPolicy`](http://hackage.haskell.org/package/wai-middleware-static/docs/Network-Wai-Middleware-Static.html#v:staticPolicy) to customize it.
@@ -55,7 +55,7 @@ main = do
   store <- serverMetricStore <$> forkServer "localhost" 8000
   waiMetrics <- registerWaiMetrics store
   -- Wrap the application and run it
-  run 8080 $ metrics waiMetrics (gRpcApp server)
+  run 8080 $ metrics waiMetrics (gRpcApp msgSerializer server)
 ```
 
 Another possibility is to expose [Prometheus](https://prometheus.io/) metrics. In this case, a specific monitoring process scrapes your servers from time to time. The gathered data can later be analyzed and visualized. Luckily, there's some [middleware](https://github.com/fimad/prometheus-haskell) exposing the require endpoints automatically.
@@ -64,7 +64,7 @@ Another possibility is to expose [Prometheus](https://prometheus.io/) metrics. I
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.Prometheus
 
-main = run 8080 $ prometheus def (gRpcApp server)
+main = run 8080 $ prometheus def (gRpcApp msgSerializer server)
 ```
 
 The usage of `def` indicates that we want the default options: providing the metrics under the route `/metrics`.

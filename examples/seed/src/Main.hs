@@ -45,7 +45,7 @@ newtype PeopleResponse = PeopleResponse
 main :: IO ()
 main = do
   putStrLn "running seed application"
-  runGRpcAppTrans 8080 runStderrLoggingT server
+  runGRpcAppTrans msgProtoBuf 8080 runStderrLoggingT server
 
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/seed/server/modules/process/src/main/scala/example/seed/server/process/ProtoPeopleServiceHandler.scala

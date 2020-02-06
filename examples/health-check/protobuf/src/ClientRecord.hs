@@ -28,11 +28,11 @@ data HealthCall = HealthCall
   } deriving (Generic)
 
 buildHealthCall :: GrpcClient -> HealthCall
-buildHealthCall = buildService @HealthCheckService @""
+buildHealthCall = buildService @'MsgProtoBuf @HealthCheckService @""
 
 main :: IO ()
 main = do -- Setup the client
-  let config = grpcClientConfigSimple "127.0.0.1" 8080 False
+  let config = grpcClientConfigSimple "127.0.0.1" 50051 False
   Right grpcClient <- setupGrpcClient' config
   let client = buildHealthCall grpcClient
   -- Execute command

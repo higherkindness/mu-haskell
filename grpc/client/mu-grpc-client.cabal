@@ -31,7 +31,8 @@ library
                      , http2
                      , http2-client
                      , http2-client-grpc
-                     , http2-grpc-proto3-wire
+                     , http2-grpc-types
+                     , mu-grpc-common
                      , mu-optics
                      , mu-protobuf
                      , mu-rpc

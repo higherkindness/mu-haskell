@@ -144,7 +144,7 @@ main :: IO ()
 main =
   runStderrLoggingT $
     withSqliteConn @(LoggingT IO) "example.db" $ \conn ->
-      liftIO $ runGRpcApp 8080 (server conn)
+      liftIO $ runGRpcApp msgProtoBuf 8080 (server conn)
 ```
 
 We have decided in this example to use `LoggingT` from `monad-logger` and `runStderrLoggingT` to get some basic database logs to the console for free, but this is not a must!
@@ -171,7 +171,7 @@ main =
 -   withSqliteConn @(LoggingT IO) "example.db" $ \conn ->
 +   withSqliteConn @(LoggingT IO) "example.db" $ \conn -> do
 +     runDb conn $ runMigration migrateAll
-      liftIO $ runGRpcApp 8080 (server conn)
+      liftIO $ runGRpcApp msgProtoBuf 8080 (server conn)
 ```
 
 More on that strange `runDb` method in the next section! 😇

@@ -1,5 +1,5 @@
-{ nixpkgs ? (fetchTarball https://github.com/NixOS/nixpkgs/archive/b1844ef5816b0af8bc2f6215054279ea35e29b77.tar.gz)
-, pkgs ? import nixpkgs (import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/674cdf2.tar.gz))
+{ nixpkgs ? (fetchTarball https://github.com/NixOS/nixpkgs/archive/484ea7bbac5bf7f958b0bb314a3c130b6c328800.tar.gz)
+, pkgs ? import nixpkgs (import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/659d80f.tar.gz))
 }:
 
 let
@@ -10,11 +10,13 @@ let
 in {
   compendium-client = hnPkgs.compendium-client.components.library;
   mu-avro = hnPkgs.mu-avro.components.all;
-  mu-example-health-check = hnPkgs.mu-example-health-check.components.all;
+  mu-example-health-check-avro = hnPkgs.mu-example-health-check-avro.components.all;
+  mu-example-health-check-protobuf = hnPkgs.mu-example-health-check-protobuf.components.all;
   mu-example-route-guide = hnPkgs.mu-example-route-guide.components.all;
   mu-example-seed = hnPkgs.mu-example-seed.components.all;
   mu-example-todolist = hnPkgs.mu-example-todolist.components.all;
   mu-example-with-persistent = hnPkgs.mu-example-with-persistent.components.all;
+  mu-grpc-common = hnPkgs.mu-grpc-common.components.library;
   mu-grpc-client = hnPkgs.mu-grpc-client.components.library;
   mu-grpc-server = hnPkgs.mu-grpc-server.components.all;
   mu-persistent = hnPkgs.mu-persistent.components.library;

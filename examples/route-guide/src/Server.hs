@@ -30,7 +30,7 @@ main = do
   putStrLn "running route guide application"
   let features = []
   routeNotes <- newTBMChanIO 100
-  runGRpcApp 8080 (server features routeNotes)
+  runGRpcApp msgProtoBuf 8080 (server features routeNotes)
 
 -- Utilities
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/routeguide/common/src/main/scala/Utils.scala

@@ -21,6 +21,7 @@ module Mu.GRpc.Client.TyApps (
 , setupGrpcClient'
   -- * Call methods from the gRPC service
 , gRpcCall
+, GRpcMessageProtocol(..)
 , CompressMode(..)
 , GRpcReply(..)
 ) where
@@ -31,19 +32,20 @@ import           Network.GRPC.Client.Helpers
 import           Mu.Rpc
 import           Mu.Schema
 
+import           Mu.GRpc.Bridge
 import           Mu.GRpc.Client.Internal
 
 -- | Call a method from a Mu definition.
 --   This method is thought to be used with @TypeApplications@:
 --
---   > gRpcCall @"packageName" @ServiceDeclaration @"method"
+--   > gRpcCall @'MsgFormat @"packageName" @ServiceDeclaration @"method"
 --
 --   The additional arguments you must provide to 'gRpcCall'
 --   depend on the signature of the method itself:
 --   * The resulting value is always wrapped in 'GRpcReply'.
 --   * A single input or output turns into a single value.
 --   * A streaming input or output turns into a Conduit.
-gRpcCall :: forall s methodName h.
-            (GRpcServiceMethodCall s (s :-->: methodName) h)
+gRpcCall :: forall (pro :: GRpcMessageProtocol) s methodName h.
+            (GRpcServiceMethodCall pro s (s :-->: methodName) h)
          => GrpcClient -> h
-gRpcCall = gRpcServiceMethodCall (Proxy @s) (Proxy @(s :-->: methodName))
+gRpcCall = gRpcServiceMethodCall (Proxy @pro) (Proxy @s) (Proxy @(s :-->: methodName))

@@ -22,11 +22,12 @@ library
   exposed-modules:     Mu.GRpc.Server
   build-depends:       base >=4.12 && <5
                      , async
+                     , binary
                      , bytestring
                      , conduit
-                     , http2-grpc-proto3-wire
                      , http2-grpc-types
                      , mtl
+                     , mu-grpc-common
                      , mu-protobuf
                      , mu-rpc
                      , mu-schema
@@ -47,11 +48,12 @@ executable grpc-example-server
   other-modules:       Mu.GRpc.Server
   build-depends:       base >=4.12 && <5
                      , async
+                     , binary
                      , bytestring
                      , conduit
-                     , http2-grpc-proto3-wire
                      , http2-grpc-types
                      , mtl
+                     , mu-grpc-common
                      , mu-protobuf
                      , mu-rpc
                      , mu-schema

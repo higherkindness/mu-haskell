@@ -23,7 +23,7 @@ main = do
   putStrLn "running todolist application"
   todoId <- newTVarIO 0
   todolist <- newTVarIO []
-  runGRpcApp 8080 (server todoId todolist)
+  runGRpcApp msgProtoBuf 8080 (server todoId todolist)
 
 -- Server implementation
 -- https://github.com/frees-io/freestyle/blob/master/modules/examples/todolist-lib/src/main/scala/todo/service/TodoListService.scala

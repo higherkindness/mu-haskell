@@ -8,6 +8,9 @@ options:
   - title: Schemas
     url: schema/
     nested_options:
+    - title: Serialization formats
+      url: serializers/
+
     - title: Registry
       url: registry/
 

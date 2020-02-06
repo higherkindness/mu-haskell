@@ -1,8 +1,9 @@
-{-# language DataKinds       #-}
-{-# language LambdaCase      #-}
-{-# language NamedFieldPuns  #-}
-{-# language TemplateHaskell #-}
-{-# language ViewPatterns    #-}
+{-# language DataKinds         #-}
+{-# language LambdaCase        #-}
+{-# language NamedFieldPuns    #-}
+{-# language OverloadedStrings #-}
+{-# language TemplateHaskell   #-}
+{-# language ViewPatterns      #-}
 {-|
 Description : Quasi-quoters for Avro IDL format
 
@@ -16,13 +17,16 @@ the IDL inline ('avro') and import it from a file
 is supported, not the Java-like one.
 -}
 module Mu.Quasi.Avro (
+  -- * Service generation from @.avdl@ files
+  avdl
   -- * Quasi-quoters for @.avsc@ files
-    avro
-  , avroFile
+, avro
+, avroFile
   -- * Only for internal use
-  , schemaFromAvroType
-  ) where
+, schemaFromAvroType
+) where
 
+import           Control.Monad.IO.Class
 import           Data.Aeson                 (decode)
 import qualified Data.Avro.Schema           as A
 import qualified Data.ByteString            as B
@@ -30,9 +34,12 @@ import           Data.ByteString.Lazy.Char8 (pack)
 import           Data.Int
 import qualified Data.Text                  as T
 import           Data.Vector                (fromList, toList)
+import           Language.Avro.Parser
+import qualified Language.Avro.Types        as A
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
 
+import           Mu.Rpc
 import           Mu.Schema.Definition
 
 -- | Imports an avro definition written in-line as a 'Schema'.
@@ -43,20 +50,50 @@ avro =
     (const $ fail "cannot use as pattern")
     schemaFromAvroString
     (const $ fail "cannot use as declaration")
+  where
+    schemaFromAvroString :: String -> Q Type
+    schemaFromAvroString s =
+      case decode (pack s) of
+        Nothing           -> fail "could not parse avro spec!"
+        Just (A.Union us) -> schemaFromAvro (toList us)
+        Just t            -> schemaFromAvro [t]
 
 -- | Imports an avro definition from a file as a 'Schema'.
 avroFile :: QuasiQuoter
 avroFile = quoteFile avro
 
-schemaFromAvroString :: String -> Q Type
-schemaFromAvroString s =
-  case decode (pack s) of
-    Nothing           -> fail "could not parse avro spec!"
-    Just (A.Union us) -> schemaFromAvro (toList us)
-    Just t            -> schemaFromAvro [t]
+-- | Reads a @.proto@ file and generates:
+--   * A 'Mu.Schema.Definition.Schema' with all the message
+--     types, using the name given as first argument.
+--   * A 'Service' declaration for each service in the file,
+--     where the name is obtained by applying the function
+--     given as second argument to the name in the file.
+avdl :: String -> String -> FilePath -> FilePath -> Q [Dec]
+avdl schemaName serviceName baseDir initialFile
+  = do r <- liftIO $ readWithImports baseDir initialFile
+       case r of
+         Left e
+           -> fail ("could not parse protocol buffers spec: " ++ show e)
+         Right p
+           -> avdlToDecls schemaName serviceName p
+
+avdlToDecls :: String -> String -> A.Protocol -> Q [Dec]
+avdlToDecls schemaName serviceName protocol
+  = do let schemaName'  = mkName schemaName
+           serviceName' = mkName serviceName
+       schemaDec <- tySynD schemaName' [] (schemaFromAvro (A.types protocol))
+       serviceDec <- tySynD serviceName' []
+         [t| 'Service $(textToStrLit (A.pname protocol)) $(pkgType (A.ns protocol))
+                      $(typesToList <$> mapM (avroMethodToType schemaName') (A.messages protocol)) |]
+       return [schemaDec, serviceDec]
   where
-    schemaFromAvro =
-      (typesToList <$>) . mapM schemaDecFromAvroType . flattenAvroDecls
+    pkgType Nothing = [t| '[] |]
+    pkgType (Just (A.Namespace p))
+                    = [t| '[ Package $(textToStrLit (T.intercalate "." p)) ] |]
+
+schemaFromAvro :: [A.Type] -> Q Type
+schemaFromAvro =
+  (typesToList <$>) . mapM schemaDecFromAvroType . flattenAvroDecls
 
 schemaDecFromAvroType :: A.Type -> Q Type
 schemaDecFromAvroType (A.Record name _ _ _ fields) =
@@ -124,6 +161,26 @@ flattenAvroDecls = concatMap (uncurry (:) . flattenDecl)
     flattenAvroField f =
       let (t, decs) = flattenAvroType (A.fldType f)
        in (f {A.fldType = t}, decs)
+
+avroMethodToType :: Name -> A.Method -> Q Type
+avroMethodToType schemaName m
+  = [t| 'Method $(textToStrLit (A.mname m)) '[]
+                $(typesToList <$> mapM argToType (A.args m))
+                $(retToType (A.result m)) |]
+  where
+    argToType :: A.Argument -> Q Type
+    argToType (A.Argument (A.NamedType a) _)
+      = [t| 'ArgSingle ('ViaSchema $(conT schemaName) $(textToStrLit (A.baseName a))) |]
+    argToType (A.Argument _ _)
+      = fail "only named types may be used as arguments"
+
+    retToType :: A.Type -> Q Type
+    retToType A.Null
+      = [t| 'RetNothing |]
+    retToType (A.NamedType a)
+      = [t| 'RetSingle ('ViaSchema $(conT schemaName) $(textToStrLit (A.baseName a))) |]
+    retToType _
+      = fail "only named types may be used as results"
 
 typesToList :: [Type] -> Type
 typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT

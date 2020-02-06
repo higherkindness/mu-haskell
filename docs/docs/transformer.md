@@ -61,7 +61,7 @@ The most important addition with respect to the [original code](rpc.md) is in th
 As we have done with the Reader example, we need to define how to handle `MonadLogger`. `monad-logger` provides [three different monad transformers](http://hackage.haskell.org/package/monad-logger-0.3.31/docs/Control-Monad-Logger.html#g:3), so you can choose whether your logging will be completely ignored, will become a Haskell value, or would fire some `IO` action like printing in the console. Each of these monad transformers comes with a `run` action which declares how to handle it; the extended function `runGRpcAppTrans` takes that handler as argument.
 
 ```haskell
-main = runGRpcAppTrans 8080 runStderrLoggingT quickstartServer
+main = runGRpcAppTrans msgSerializer 8080 runStderrLoggingT quickstartServer
 ```
 
 If you prefer other logging library, this is fine with us! Replacing `monad-logger` by [`co-log`](https://github.com/kowainik/co-log) means asking for a different capability in the server. In this case we have to declare the type of the log items as part of the `WithLog` constraint:
@@ -79,7 +79,7 @@ sayHello (HelloRequest nm) = do
 In this case, the top-level handler is called [`usingLoggerT`](http://hackage.haskell.org/package/co-log/docs/Colog-Monad.html#v:usingLoggerT). Its definition is slightly more involved because `co-log` gives you maximum customization power on your logging, instead of defining a set of predefined logging mechanisms.
 
 ```haskell
-main = runGRpcAppTrans 8080 logger quickstartServer
+main = runGRpcAppTrans msgSerializer 8080 logger quickstartServer
   where logger = usingLoggerT (LogAction $ liftIO putStrLn)
 ```
 

@@ -4,7 +4,7 @@ import "google/protobuf/empty.proto";
 
 package healthcheck;
 
-service HealthCheckService {
+service HealthCheckServiceFS2 {
   rpc setStatus (HealthStatus) returns (google.protobuf.Empty) {}
   rpc check (HealthCheck) returns (ServerStatus) {}
   rpc clearStatus (HealthCheck) returns (google.protobuf.Empty) {}
