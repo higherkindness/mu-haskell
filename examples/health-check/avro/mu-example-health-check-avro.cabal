@@ -10,12 +10,12 @@ version:             0.1.0.0
 -- bug-reports:
 license:             Apache-2.0
 license-file:        LICENSE
-author:              Alejandro Serrano
+author:              Alejandro Serrano, Flavio Corpa
 maintainer:          alejandro.serrano@47deg.com
 copyright:           Copyright © 2019-2020 47 Degrees. <http://47deg.com>
 category:            Network
 build-type:          Simple
-data-files:          healthcheck.proto
+data-files:          healthcheck.avdl
 
 executable health-server-avro
   main-is:             Server.hs
