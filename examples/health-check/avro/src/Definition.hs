@@ -17,16 +17,14 @@ import           Data.Functor.Identity
 import           Data.Text             as T
 import           GHC.Generics
 
-import           Mu.Quasi.GRpc
+import           Mu.Quasi.Avro
 import           Mu.Schema
 
 #if __GHCIDE__
-grpc "HealthCheckSchema" id "examples/health-check/healthcheck.proto"
+avdl "HealthCheckSchema" "HealthCheckService" "examples/health-check" "healthcheck.proto"
 #else
-grpc "HealthCheckSchema" id "healthcheck.proto"
+avdl "HealthCheckSchema" "HealthCheckService" "." "healthcheck.avdl"
 #endif
-
-type HealthCheckService = HealthCheckServiceFS2
 
 newtype HealthCheckMsg
   = HealthCheckMsg { nameService :: T.Text }

@@ -28,6 +28,7 @@ extra-deps:
 - http2-client-grpc-0.8.0.0
 - avro-0.4.5.4
 - language-protobuf-1.0.1
+- language-avro-0.1.0.0
 # missing in the current LTS
 - primitive-0.7.0.0
 - primitive-extras-0.8

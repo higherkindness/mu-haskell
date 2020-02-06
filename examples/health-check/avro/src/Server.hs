@@ -34,7 +34,7 @@ type StatusUpdates = TBMChan HealthStatusMsg
 
 server :: StatusMap -> StatusUpdates -> ServerIO Identity HealthCheckService _
 server m upd = Server (setStatus_ m upd :<|>: checkH_ m :<|>: clearStatus_ m :<|>:
-  checkAll_ m :<|>: cleanAll_ m :<|>: watch_ upd :<|>: H0)
+  checkAll_ m :<|>: cleanAll_ m :<|>: {- watch_ upd :<|>: -} H0)
 
 setStatus_ :: StatusMap -> StatusUpdates -> HealthStatusMsg -> ServerErrorIO ()
 setStatus_ m upd s@(HealthStatusMsg (HealthCheckMsg nm) (ServerStatusMsg ss))
@@ -71,6 +71,7 @@ cleanAll_ m = alwaysOk $ do
   putStrLn "cleanAll"
   atomically $ M.reset m
 
+{-
 watch_ :: StatusUpdates
        -> HealthCheckMsg
        -> ConduitT ServerStatusMsg Void ServerErrorIO ()
@@ -81,3 +82,4 @@ watch_ upd hcm@(HealthCheckMsg nm) sink = do
             .| C.filter (\(HealthStatusMsg c _) -> hcm == c)
             .| C.map (\(HealthStatusMsg _ s) -> s)
             .| sink
+-}

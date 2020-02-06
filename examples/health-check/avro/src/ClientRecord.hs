@@ -24,7 +24,7 @@ data HealthCall = HealthCall
   , clearStatus :: HealthCheckMsg -> IO (GRpcReply ())
   , checkAll    :: IO (GRpcReply AllStatusMsg)
   , cleanAll    :: IO (GRpcReply ())
-  , watch       :: HealthCheckMsg -> IO (ConduitT () (GRpcReply ServerStatusMsg) IO ())
+  -- , watch       :: HealthCheckMsg -> IO (ConduitT () (GRpcReply ServerStatusMsg) IO ())
   } deriving (Generic)
 
 buildHealthCall :: GrpcClient -> HealthCall
@@ -38,7 +38,7 @@ main = do -- Setup the client
   -- Execute command
   args <- getArgs
   case args of
-    ["watch" , who]            -> watching client who
+    -- ["watch" , who]            -> watching client who
     ["simple", who]            -> simple client who
     ["update", who]            -> update client who "SERVING"
     ["update", who, newstatus] -> update client who newstatus
@@ -65,8 +65,10 @@ update client who newstatus = do
   rstatus <- check client hcm
   putStrLn ("UNARY: Checked the status of " <> who <> ". Obtained: " <> show rstatus)
 
+{-
 watching :: HealthCall -> String -> IO ()
 watching client who = do
   let hcm = HealthCheckMsg (T.pack who)
   stream <- watch client hcm
   runConduit $ stream .| C.mapM_ print
+-}

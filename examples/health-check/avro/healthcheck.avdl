@@ -1,0 +1,14 @@
+@namespace("healthcheck")
+protocol HealthCheckServiceFS2 {
+  record HealthCheck { string nameService; }
+  record ServerStatus { string status; }
+  record HealthStatus { HealthCheck hc; ServerStatus status; }
+  record AllStatus { array<HealthStatus> all; }
+
+  void setStatus(HealthStatus newStatus);
+  ServerStatus check(HealthCheck service);
+  void clearStatus(HealthCheck service);
+  AllStatus checkAll();
+  void cleanAll();
+  // stream ServerStatus watch(HealthCheck service);
+}
