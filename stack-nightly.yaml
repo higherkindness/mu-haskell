@@ -32,3 +32,4 @@ extra-deps:
 - language-avro-0.1.0.0
 - hw-kafka-client-3.0.0
 - hw-kafka-conduit-2.6.0
+- HasBigDecimal-0.1.1

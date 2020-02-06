@@ -22,6 +22,7 @@ library
   exposed-modules:     Mu.Adapter.Avro
                      , Mu.Quasi.Avro
                      , Mu.Quasi.Avro.Example
+                     , Data.Avro.Decimal
   build-depends:       base >=4.12 && <5
                      , mu-schema
                      , mu-rpc
@@ -36,6 +37,9 @@ library
                      , bytestring
                      , template-haskell >= 2.12
                      , language-avro
+                     , HasBigDecimal
+                     , binary
+                     , bytestring
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall

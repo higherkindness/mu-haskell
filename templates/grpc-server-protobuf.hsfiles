@@ -42,6 +42,7 @@ extra-deps:
 - warp-grpc-0.3.0.0
 - proto3-wire-1.1.0
 - language-protobuf-1.0.1
+- HasBigDecimal-0.1.1
 
 {-# START_FILE Setup.hs #-}
 import Distribution.Simple
