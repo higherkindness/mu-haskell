@@ -5,6 +5,7 @@ packages: compendium-client/
           adapter/avro/
           adapter/protobuf/
           adapter/persistent/
+          adapter/kafka/
           grpc/common/
           grpc/client/
           grpc/server/
