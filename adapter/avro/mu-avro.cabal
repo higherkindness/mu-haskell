@@ -24,6 +24,7 @@ library
                      , Mu.Quasi.Avro.Example
   build-depends:       base >=4.12 && <5
                      , mu-schema
+                     , mu-rpc
                      , avro
                      , tagged
                      , aeson
@@ -34,6 +35,7 @@ library
                      , sop-core
                      , bytestring
                      , template-haskell >= 2.12
+                     , language-avro
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall

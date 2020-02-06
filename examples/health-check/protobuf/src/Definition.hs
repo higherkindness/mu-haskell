@@ -13,7 +13,7 @@
 {-# language TypeOperators         #-}
 module Definition where
 
-import           Data.Text     as T
+import           Data.Text             as T
 import           GHC.Generics
 
 import           Mu.Quasi.GRpc
@@ -24,6 +24,8 @@ grpc "HealthCheckSchema" id "examples/health-check/healthcheck.proto"
 #else
 grpc "HealthCheckSchema" id "healthcheck.proto"
 #endif
+
+type HealthCheckService = HealthCheckServiceFS2
 
 newtype HealthCheckMsg
   = HealthCheckMsg { nameService :: Maybe T.Text }

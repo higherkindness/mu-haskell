@@ -10,10 +10,10 @@ Mu-Haskell defines a generic notion of service and server that implements it. Th
 
 ## Running the server with `mu-grpc`
 
-The combination of the declaration of a service API and a corresponding implementation as a `Server` may be served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library `mu-grpc`. The following line starts a server at port `8080`, where the service can be found under the package name `helloworld`:
+The combination of the declaration of a service API and a corresponding implementation as a `Server` may be served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library `mu-grpc`. The following line starts a server at port `8080`, using Protocol Buffers as serialization layer:
 
 ```haskell
-main = runGRpcApp 8080 "helloworld" quickstartServer
+main = runGRpcApp msgProtoBuf 8080 quickstartServer
 ```
 
 ## Building a client

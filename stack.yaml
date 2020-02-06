@@ -1,4 +1,4 @@
-resolver: lts-14.21
+resolver: lts-14.22
 allow-newer: true
 
 packages:
@@ -8,9 +8,11 @@ packages:
 - adapter/avro
 - adapter/protobuf
 - adapter/persistent
+- grpc/common
 - grpc/client
 - grpc/server
-- examples/health-check
+- examples/health-check/avro
+- examples/health-check/protobuf
 - examples/route-guide
 - examples/seed
 - examples/todolist
@@ -25,7 +27,8 @@ extra-deps:
 - warp-grpc-0.3.0.0
 - http2-client-grpc-0.8.0.0
 - avro-0.4.5.4
-- language-protobuf-1.0
+- language-protobuf-1.0.1
+- language-avro-0.1.0.0
 # missing in the current LTS
 - primitive-0.7.0.0
 - primitive-extras-0.8

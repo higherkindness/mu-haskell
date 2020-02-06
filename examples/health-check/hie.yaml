@@ -1,1 +1,0 @@
-cradle: { stack: { component: "mu-example-health-check:exe:health-server" } }
