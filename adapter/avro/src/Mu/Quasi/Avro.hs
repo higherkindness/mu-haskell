@@ -20,11 +20,11 @@ module Mu.Quasi.Avro (
   -- * Service generation from @.avdl@ files
   avdl
   -- * Quasi-quoters for @.avsc@ files
-  , avro
-  , avroFile
+, avro
+, avroFile
   -- * Only for internal use
-  , schemaFromAvroType
-  ) where
+, schemaFromAvroType
+) where
 
 import           Control.Monad.IO.Class
 import           Data.Aeson                 (decode)
