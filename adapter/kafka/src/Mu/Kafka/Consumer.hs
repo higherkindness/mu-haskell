@@ -1,6 +1,16 @@
 {-# language FlexibleContexts #-}
 {-# language TypeFamilies     #-}
 {-# language TypeOperators    #-}
+{-|
+Description : Kafka consumers as streams of Mu terms
+
+This module allows you to receive values from
+a Kafka topic, and treat then as Mu terms, or
+your Haskell types if a conversion exists.
+
+This module is a wrapper over 'Kafka.Conduit.Source'
+from the (awesome) package @hw-kafka-client@.
+-}
 module Mu.Kafka.Consumer (
   kafkaSource
 , kafkaSourceNoClose

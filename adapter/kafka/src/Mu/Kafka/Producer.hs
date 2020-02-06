@@ -2,6 +2,16 @@
 {-# language FlexibleContexts #-}
 {-# language TypeFamilies     #-}
 {-# language TypeOperators    #-}
+{-|
+Description : streams of Mu terms as Kafka producers
+
+This module allows you to open a "sink" to Kafka.
+Every value you sent to the sink will be sent over
+to the corresponding Kafka instance.
+
+This module is a wrapper over 'Kafka.Conduit.Sink'
+from the (awesome) package @hw-kafka-client@.
+-}
 module Mu.Kafka.Producer (
   ProducerRecord'(..)
 , kafkaSink
@@ -29,7 +39,6 @@ import           Kafka.Conduit.Combinators    as X
 import           Kafka.Consumer               as X (KafkaConsumer)
 import           Kafka.Producer               as X (KafkaError, KafkaProducer, ProducePartition,
                                                     ProducerProperties, TopicName)
--- *not* ProducerRecord
 
 import           Mu.Kafka.Internal
 
