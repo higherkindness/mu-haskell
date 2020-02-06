@@ -15,9 +15,9 @@ stack exec --no-ghc-package-path standalone-haddock -- -o ${DOCSDIR} \
   --package-db=$(stack path --snapshot-pkg-db) \
   --package-db=$(stack path --local-pkg-db) \
   --hyperlink-source \
-  core/schema core/rpc \
-  adapter/avro adapter/protobuf adapter/persistent \
-  grpc/client grpc/server
+  core/schema core/rpc core/optics \
+  adapter/avro adapter/protobuf adapter/persistent adapter/kafka \
+  grpc/common grpc/client grpc/server
 
 echo "Setting Linuwial theme on Haddock generated docs"
 find ${DOCSDIR} -name "ocean.css" -exec cp -rf docs/css/linuwial.css {} \;
