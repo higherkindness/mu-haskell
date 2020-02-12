@@ -7,9 +7,7 @@
 {-# language TypeOperators       #-}
 module Main where
 
-import           Data.Conduit
-import qualified Data.Conduit.Combinators as C
-import qualified Data.Text                as T
+import qualified Data.Text             as T
 import           System.Environment
 
 import           Mu.GRpc.Client.TyApps
@@ -23,7 +21,6 @@ main = do -- Setup the client
   -- Execute command
   args <- getArgs
   case args of
-    -- ["watch" , who]            -> watching client who
     ["simple", who]            -> simple client who
     ["update", who]            -> update client who "SERVING"
     ["update", who, newstatus] -> update client who newstatus
@@ -53,11 +50,3 @@ update client who newstatus = do
   rstatus :: GRpcReply ServerStatusMsg
     <- gRpcCall @'MsgAvro @HealthCheckService @"check" client hcm
   putStrLn ("UNARY: Checked the status of " <> who <> ". Obtained: " <> show rstatus)
-
-{-
-watching :: GrpcClient -> String -> IO ()
-watching client who = do
-  let hcm = HealthCheckMsg (T.pack who)
-  replies <- gRpcCall @'MsgAvro @HealthCheckService @"watch" client hcm
-  runConduit $ replies .| C.mapM_ (print :: GRpcReply ServerStatusMsg -> IO ())
--}

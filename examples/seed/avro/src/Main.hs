@@ -9,13 +9,11 @@
 
 module Main where
 
-import           Control.Concurrent       (threadDelay)
-import           Control.Monad.IO.Class   (liftIO)
+import           Control.Concurrent     (threadDelay)
+import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Logger
-import           Data.Conduit
-import           Data.Conduit.Combinators as C
 import           Data.Functor.Identity
-import           Data.Text                as T
+import           Data.Text              as T
 import           Mu.GRpc.Server
 import           Mu.Schema
 import           Mu.Schema.Optics
