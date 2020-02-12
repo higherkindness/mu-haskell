@@ -5,14 +5,12 @@
 module Main where
 
 import           Control.Concurrent.STM
-import           Data.Conduit
-import qualified Data.Conduit.Combinators as C
 import           Data.Conduit.TMChan
 import           Data.Functor.Identity
-import           Data.Maybe               (fromMaybe)
-import qualified Data.Text                as T
+import           Data.Maybe             (fromMaybe)
+import qualified Data.Text              as T
 import           DeferredFolds.UnfoldlM
-import qualified StmContainers.Map        as M
+import qualified StmContainers.Map      as M
 
 import           Mu.GRpc.Server
 import           Mu.Server
@@ -71,7 +69,7 @@ cleanAll_ m = alwaysOk $ do
   putStrLn "cleanAll"
   atomically $ M.reset m
 
-{-
+{- Note: no "streams" in avro
 watch_ :: StatusUpdates
        -> HealthCheckMsg
        -> ConduitT ServerStatusMsg Void ServerErrorIO ()

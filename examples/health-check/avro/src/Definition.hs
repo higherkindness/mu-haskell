@@ -21,7 +21,7 @@ import           Mu.Quasi.Avro
 import           Mu.Schema
 
 #if __GHCIDE__
-avdl "HealthCheckSchema" "HealthCheckService" "examples/health-check" "healthcheck.proto"
+avdl "HealthCheckSchema" "HealthCheckService" "examples/health-check/avro" "healthcheck.avdl"
 #else
 avdl "HealthCheckSchema" "HealthCheckService" "." "healthcheck.avdl"
 #endif

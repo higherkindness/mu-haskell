@@ -13,14 +13,14 @@
 {-# language TypeOperators         #-}
 module Definition where
 
-import           Data.Text             as T
+import           Data.Text     as T
 import           GHC.Generics
 
 import           Mu.Quasi.GRpc
 import           Mu.Schema
 
 #if __GHCIDE__
-grpc "HealthCheckSchema" id "examples/health-check/healthcheck.proto"
+grpc "HealthCheckSchema" id "examples/health-check/protobuf/healthcheck.proto"
 #else
 grpc "HealthCheckSchema" id "healthcheck.proto"
 #endif
