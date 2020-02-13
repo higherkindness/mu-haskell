@@ -52,6 +52,7 @@ instance {-# OVERLAPS #-}
                        r r where
   labelOptic = lens (\(TRecord r) -> runIdentity $ fieldLensGet (Proxy @fieldName) r)
                     (\(TRecord r) x -> TRecord $ fieldLensSet (Proxy @fieldName) r (Identity x))
+
 instance {-# OVERLAPPABLE #-}
          (FieldLabel w sch args fieldName r, t ~ w r)
          => LabelOptic fieldName A_Lens
@@ -69,16 +70,29 @@ class BuildRecord (w :: Type -> Type)
                   (args :: [FieldDef Symbol Symbol])
                   (r :: Type) | w sch args -> r where
   buildR :: r -> NP (Field w sch) args
+
 instance BuildRecord w sch '[] () where
   buildR _ = Nil
-instance (Functor w, TypeLabel w sch t1 r1)
+
+instance {-# OVERLAPPABLE #-} (Functor w, TypeLabel w sch t1 r1)
          => BuildRecord w sch '[ 'FieldDef x1 t1 ] (w r1) where
   buildR v = Field (typeLensSet <$> v) :* Nil
-instance (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2)
+
+instance {-# OVERLAPS #-} (TypeLabel Identity sch t1 r1)
+         => BuildRecord Identity sch '[ 'FieldDef x1 t1 ] r1 where
+  buildR v = Field (typeLensSet <$> Identity v) :* Nil
+
+instance {-# OVERLAPPABLE #-} (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2)
          => BuildRecord w sch '[ 'FieldDef x1 t1, 'FieldDef x2 t2 ] (w r1, w r2) where
   buildR (v1, v2) = Field (typeLensSet <$> v1)
                   :* Field (typeLensSet <$> v2) :* Nil
-instance (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2, TypeLabel w sch t3 r3)
+
+instance {-# OVERLAPS #-} (TypeLabel Identity sch t1 r1, TypeLabel Identity sch t2 r2)
+         => BuildRecord Identity sch '[ 'FieldDef x1 t1, 'FieldDef x2 t2 ] (r1, r2) where
+  buildR (v1, v2) = Field (typeLensSet <$> Identity v1)
+                  :* Field (typeLensSet <$> Identity v2) :* Nil
+
+instance {-# OVERLAPPABLE #-} (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2, TypeLabel w sch t3 r3)
          => BuildRecord w sch
                         '[ 'FieldDef x1 t1, 'FieldDef x2 t2, 'FieldDef x3 t3 ]
                         (w r1, w r2, w r3) where
@@ -86,6 +100,12 @@ instance (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2, TypeLabel w s
                       :* Field (typeLensSet <$> v2)
                       :* Field (typeLensSet <$> v3) :* Nil
 
+instance {-# OVERLAPS #-} (TypeLabel Identity sch t1 r1, TypeLabel Identity sch t2 r2, TypeLabel Identity sch t3 r3)
+         => BuildRecord Identity sch
+                        '[ 'FieldDef x1 t1, 'FieldDef x2 t2, 'FieldDef x3 t3 ] (r1, r2, r3) where
+  buildR (v1, v2, v3) = Field (typeLensSet <$> Identity v1)
+                      :* Field (typeLensSet <$> Identity v2)
+                      :* Field (typeLensSet <$> Identity v3) :* Nil
 
 class FieldLabel (w :: Type -> Type)
                  (sch :: Schema Symbol Symbol)
@@ -118,17 +138,21 @@ class TypeLabel w (sch :: Schema Symbol Symbol) (t :: FieldType Symbol) (r :: Ty
 instance TypeLabel w sch ('TPrimitive t) t where
   typeLensGet (FPrimitive x) = x
   typeLensSet = FPrimitive
+
 instance (r ~ (sch :/: t)) => TypeLabel w sch ('TSchematic t) (Term w sch r) where
   typeLensGet (FSchematic x) = x
   typeLensSet = FSchematic
+
 instance (TypeLabel w sch o r', r ~ Maybe r')
          => TypeLabel w sch ('TOption o) r where
   typeLensGet (FOption x) = typeLensGet <$> x
   typeLensSet new = FOption (typeLensSet <$> new)
+
 instance (TypeLabel w sch o r', r ~ [r'])
          => TypeLabel w sch ('TList o) r where
   typeLensGet (FList x) = typeLensGet <$> x
   typeLensSet new = FList (typeLensSet <$> new)
+
 instance ( TypeLabel w sch k k', TypeLabel w sch v v'
          , r ~ Map k' v', Ord k', Ord (FieldValue w sch k) )
          => TypeLabel w sch ('TMap k v) r where
