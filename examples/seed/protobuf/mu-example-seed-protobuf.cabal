@@ -1,8 +1,8 @@
-name:                mu-example-seed
+name:                mu-example-seed-protobuf
 version:             0.1.0.0
 -- synopsis:
 -- description:
-homepage:            https://github.com/higherkindness/mu-haskell/examples/seed#readme
+homepage:            https://github.com/higherkindness/mu-haskell/examples/seed/protobuf#readme
 license:             Apache-2.0
 license-file:        LICENSE
 author:              Flavio Corpa

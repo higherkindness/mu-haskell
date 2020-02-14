@@ -1,5 +1,8 @@
 {-# language CPP                   #-}
 {-# language DataKinds             #-}
+{-# language DeriveAnyClass        #-}
+{-# language DeriveGeneric         #-}
+{-# language DuplicateRecordFields #-}
 {-# language FlexibleContexts      #-}
 {-# language FlexibleInstances     #-}
 {-# language MultiParamTypeClasses #-}
@@ -7,13 +10,12 @@
 {-# language TemplateHaskell       #-}
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
-
 module Schema where
 
-import           Mu.Quasi.GRpc
+import           Mu.Quasi.Avro
 
 #if __GHCIDE__
-grpc "SeedSchema" id "examples/seed/seed.proto"
+avdl "SeedSchema" "PeopleService" "examples/seed/avro" "seed.avdl"
 #else
-grpc "SeedSchema" id "seed.proto"
+avdl "SeedSchema" "PeopleService" "." "seed.avdl"
 #endif

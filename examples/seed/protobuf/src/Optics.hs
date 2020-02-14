@@ -38,7 +38,7 @@ server :: (MonadServer m, MonadLogger m) => ServerT Maybe PeopleService m _
 server = Server (getPerson :<|>: getPersonStream :<|>: H0)
 
 evolvePerson :: PeopleRequest -> PeopleResponse
-evolvePerson req = record (Just $ record (req ^. #name, Just 18))
+evolvePerson req = record1 (Just $ record (req ^. #name, Just 18))
 
 getPerson :: Monad m => PeopleRequest -> m PeopleResponse
 getPerson = pure . evolvePerson

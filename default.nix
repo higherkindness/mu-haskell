@@ -13,7 +13,8 @@ in {
   mu-example-health-check-avro = hnPkgs.mu-example-health-check-avro.components.all;
   mu-example-health-check-protobuf = hnPkgs.mu-example-health-check-protobuf.components.all;
   mu-example-route-guide = hnPkgs.mu-example-route-guide.components.all;
-  mu-example-seed = hnPkgs.mu-example-seed.components.all;
+  mu-example-seed-avro = hnPkgs.mu-example-seed-avro.components.all;
+  mu-example-seed-protobuf = hnPkgs.mu-example-seed-protobuf.components.all;
   mu-example-todolist = hnPkgs.mu-example-todolist.components.all;
   mu-example-with-persistent = hnPkgs.mu-example-with-persistent.components.all;
   mu-grpc-common = hnPkgs.mu-grpc-common.components.library;

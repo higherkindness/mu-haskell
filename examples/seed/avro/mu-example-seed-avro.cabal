@@ -1,0 +1,30 @@
+name:                mu-example-seed-avro
+version:             0.1.0.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/higherkindness/mu-haskell/examples/seed/avro#readme
+license:             Apache-2.0
+license-file:        LICENSE
+author:              Flavio Corpa
+maintainer:          flavio.corpa@47deg.com
+copyright:           Copyright © 2020 47 Degrees. <http://47deg.com>
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
+extra-source-files:  README.md
+data-files:          seed.avdl
+
+executable mu-example-seed-avro
+  hs-source-dirs:      src
+  main-is:             Main.hs
+  other-modules:       Schema
+  default-language:    Haskell2010
+  build-depends:       base >= 4.12 && < 5
+                     , monad-logger
+                     , mu-avro
+                     , mu-schema
+                     , mu-rpc
+                     , mu-optics
+                     , mu-grpc-server
+                     , text
+  ghc-options:         -Wall -fprint-potential-instances
