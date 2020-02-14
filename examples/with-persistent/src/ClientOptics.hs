@@ -26,7 +26,7 @@ get :: GRpcConnection PersistentService 'MsgProtoBuf -> String -> IO ()
 get client idPerson = do
   let req = readMaybe idPerson
   putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
-  response <- (client ^. #getPerson) (record req)
+  response <- (client ^. #getPerson) (record1 req)
   putStrLn $ "GET: response was: " ++ show response
 
 add :: GRpcConnection PersistentService 'MsgProtoBuf -> String -> String -> IO ()

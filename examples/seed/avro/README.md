@@ -1,11 +1,11 @@
-# Seed RPC example
+# Seed RPC example with Avro!
 
 ## Execution
 
 Running the server:
 
 ```bash
-stack run seed-server
+stack run mu-example-seed-avro
 ```
 
 [comment]: # (Start Copyright)
@@ -13,6 +13,6 @@ stack run seed-server
 
 Mu is designed and developed by 47 Degrees
 
-Copyright (C) 2019-2020 47 Degrees. <http://47deg.com>
+Copyright © 2020 47 Degrees. <http://47deg.com>
 
 [comment]: # (End Copyright)

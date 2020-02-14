@@ -3,6 +3,7 @@
 {-# language FunctionalDependencies #-}
 {-# language GADTs                  #-}
 {-# language KindSignatures         #-}
+{-# language LambdaCase             #-}
 {-# language ScopedTypeVariables    #-}
 {-# language TypeApplications       #-}
 {-# language TypeOperators          #-}
@@ -31,6 +32,8 @@ as values in the schema type.
 module Mu.Schema.Optics (
   -- * Build a term
   record
+, record1
+, _U0, _Next, _U1, _U2, _U3
   -- * Re-exported for convenience.
 , module Optics.Core
 ) where
@@ -52,6 +55,7 @@ instance {-# OVERLAPS #-}
                        r r where
   labelOptic = lens (\(TRecord r) -> runIdentity $ fieldLensGet (Proxy @fieldName) r)
                     (\(TRecord r) x -> TRecord $ fieldLensSet (Proxy @fieldName) r (Identity x))
+
 instance {-# OVERLAPPABLE #-}
          (FieldLabel w sch args fieldName r, t ~ w r)
          => LabelOptic fieldName A_Lens
@@ -64,21 +68,43 @@ instance {-# OVERLAPPABLE #-}
 record :: BuildRecord w sch args r => r -> Term w sch ('DRecord name args)
 record values = TRecord $ buildR values
 
+record1 :: BuildRecord1 w sch arg r => r -> Term w sch ('DRecord name '[arg])
+record1 value = TRecord $ buildR1 value
+
+class BuildRecord1 (w :: Type -> Type)
+                   (sch :: Schema Symbol Symbol)
+                   (arg :: FieldDef Symbol Symbol)
+                   (r :: Type) | w sch arg -> r where
+  buildR1 :: r -> NP (Field w sch) '[arg]
+
+instance {-# OVERLAPPABLE #-} (Functor w, TypeLabel w sch t1 r1)
+         => BuildRecord1 w sch ('FieldDef x1 t1) (w r1) where
+  buildR1 v = Field (typeLensSet <$> v) :* Nil
+
+instance {-# OVERLAPS #-} (TypeLabel Identity sch t1 r1)
+         => BuildRecord1 Identity sch ('FieldDef x1 t1) r1 where
+  buildR1 v = Field (typeLensSet <$> Identity v) :* Nil
+
 class BuildRecord (w :: Type -> Type)
                   (sch :: Schema Symbol Symbol)
                   (args :: [FieldDef Symbol Symbol])
                   (r :: Type) | w sch args -> r where
   buildR :: r -> NP (Field w sch) args
+
 instance BuildRecord w sch '[] () where
   buildR _ = Nil
-instance (Functor w, TypeLabel w sch t1 r1)
-         => BuildRecord w sch '[ 'FieldDef x1 t1 ] (w r1) where
-  buildR v = Field (typeLensSet <$> v) :* Nil
-instance (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2)
+
+instance {-# OVERLAPPABLE #-} (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2)
          => BuildRecord w sch '[ 'FieldDef x1 t1, 'FieldDef x2 t2 ] (w r1, w r2) where
   buildR (v1, v2) = Field (typeLensSet <$> v1)
                   :* Field (typeLensSet <$> v2) :* Nil
-instance (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2, TypeLabel w sch t3 r3)
+
+instance {-# OVERLAPS #-} (TypeLabel Identity sch t1 r1, TypeLabel Identity sch t2 r2)
+         => BuildRecord Identity sch '[ 'FieldDef x1 t1, 'FieldDef x2 t2 ] (r1, r2) where
+  buildR (v1, v2) = Field (typeLensSet <$> Identity v1)
+                  :* Field (typeLensSet <$> Identity v2) :* Nil
+
+instance {-# OVERLAPPABLE #-} (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2, TypeLabel w sch t3 r3)
          => BuildRecord w sch
                         '[ 'FieldDef x1 t1, 'FieldDef x2 t2, 'FieldDef x3 t3 ]
                         (w r1, w r2, w r3) where
@@ -86,6 +112,12 @@ instance (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2, TypeLabel w s
                       :* Field (typeLensSet <$> v2)
                       :* Field (typeLensSet <$> v3) :* Nil
 
+instance {-# OVERLAPS #-} (TypeLabel Identity sch t1 r1, TypeLabel Identity sch t2 r2, TypeLabel Identity sch t3 r3)
+         => BuildRecord Identity sch
+                        '[ 'FieldDef x1 t1, 'FieldDef x2 t2, 'FieldDef x3 t3 ] (r1, r2, r3) where
+  buildR (v1, v2, v3) = Field (typeLensSet <$> Identity v1)
+                      :* Field (typeLensSet <$> Identity v2)
+                      :* Field (typeLensSet <$> Identity v3) :* Nil
 
 class FieldLabel (w :: Type -> Type)
                  (sch :: Schema Symbol Symbol)
@@ -118,22 +150,31 @@ class TypeLabel w (sch :: Schema Symbol Symbol) (t :: FieldType Symbol) (r :: Ty
 instance TypeLabel w sch ('TPrimitive t) t where
   typeLensGet (FPrimitive x) = x
   typeLensSet = FPrimitive
+
 instance (r ~ (sch :/: t)) => TypeLabel w sch ('TSchematic t) (Term w sch r) where
   typeLensGet (FSchematic x) = x
   typeLensSet = FSchematic
+
 instance (TypeLabel w sch o r', r ~ Maybe r')
          => TypeLabel w sch ('TOption o) r where
   typeLensGet (FOption x) = typeLensGet <$> x
   typeLensSet new = FOption (typeLensSet <$> new)
+
 instance (TypeLabel w sch o r', r ~ [r'])
          => TypeLabel w sch ('TList o) r where
   typeLensGet (FList x) = typeLensGet <$> x
   typeLensSet new = FList (typeLensSet <$> new)
+
 instance ( TypeLabel w sch k k', TypeLabel w sch v v'
          , r ~ Map k' v', Ord k', Ord (FieldValue w sch k) )
          => TypeLabel w sch ('TMap k v) r where
   typeLensGet (FMap x) = mapKeys typeLensGet (typeLensGet <$> x)
   typeLensSet new = FMap (mapKeys typeLensSet (typeLensSet <$> new))
+
+instance (r ~ NS (FieldValue w sch) choices)
+         => TypeLabel w sch ('TUnion choices) r where
+  typeLensGet (FUnion x) = x
+  typeLensSet = FUnion
 
 instance (EnumLabel choices choiceName, r ~ ())
          => LabelOptic choiceName A_Prism
@@ -161,3 +202,28 @@ instance {-# OVERLAPPABLE #-} EnumLabel rest c
   enumPrismBuild p = S (enumPrismBuild p)
   enumPrismMatch _ (Z _) = Nothing
   enumPrismMatch p (S x) = enumPrismMatch p x
+
+_U0 :: forall w (sch :: Schema') x xs r. TypeLabel w sch x r
+    => Prism' (NS (FieldValue w sch) (x ': xs)) r
+_U0 = prism' (Z . typeLensSet)
+             (\case (Z x) -> Just $ typeLensGet x
+                    (S _) -> Nothing)
+
+_Next :: forall w (sch :: Schema') x xs.
+         Prism' (NS (FieldValue w sch) (x ': xs))
+                (NS (FieldValue w sch) xs)
+_Next = prism' S
+               (\case (Z _) -> Nothing
+                      (S x) -> Just x)
+
+_U1 :: forall w (sch :: Schema') a b xs r. TypeLabel w sch b r
+    => Prism' (NS (FieldValue w sch) (a ': b ': xs)) r
+_U1 = _Next % _U0
+
+_U2 :: forall w (sch :: Schema') a b c xs r. TypeLabel w sch c r
+    => Prism' (NS (FieldValue w sch) (a ': b ': c ': xs)) r
+_U2 = _Next % _U1
+
+_U3 :: forall w (sch :: Schema') a b c d xs r. TypeLabel w sch d r
+    => Prism' (NS (FieldValue w sch) (a ': b ': c ': d ': xs)) r
+_U3 = _Next % _U2
