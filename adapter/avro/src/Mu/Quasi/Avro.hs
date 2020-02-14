@@ -29,10 +29,13 @@ module Mu.Quasi.Avro (
 import           Control.Monad.IO.Class
 import           Data.Aeson                 (decode)
 import qualified Data.Avro.Schema           as A
+import           Data.Avro.Types.Decimal    as D
 import qualified Data.ByteString            as B
 import           Data.ByteString.Lazy.Char8 (pack)
 import           Data.Int
 import qualified Data.Text                  as T
+import           Data.Time
+import           Data.UUID
 import           Data.Vector                (fromList, toList)
 import           Language.Avro.Parser
 import qualified Language.Avro.Types        as A
@@ -91,11 +94,11 @@ avdlToDecls schemaName serviceName protocol
     pkgType (Just (A.Namespace p))
                     = [t| '[ Package $(textToStrLit (T.intercalate "." p)) ] |]
 
-schemaFromAvro :: [A.Type] -> Q Type
+schemaFromAvro :: [A.Schema] -> Q Type
 schemaFromAvro =
   (typesToList <$>) . mapM schemaDecFromAvroType . flattenAvroDecls
 
-schemaDecFromAvroType :: A.Type -> Q Type
+schemaDecFromAvroType :: A.Schema -> Q Type
 schemaDecFromAvroType (A.Record name _ _ _ fields) =
   [t|'DRecord $(textToStrLit $ A.baseName name)
               $(typesToList <$> mapM avroFieldToType fields)|]
@@ -113,17 +116,22 @@ schemaDecFromAvroType (A.Enum name _ _ symbols) =
 schemaDecFromAvroType t = [t|'DSimple $(schemaFromAvroType t)|]
 
 -- | Turns a schema from Avro into a Template Haskell 'Type'.
-schemaFromAvroType :: A.Type -> Q Type
+schemaFromAvroType :: A.Schema -> Q Type
 schemaFromAvroType =
   \case
     A.Null -> [t|'TPrimitive 'TNull|]
     A.Boolean -> [t|'TPrimitive Bool|]
-    A.Int -> [t|'TPrimitive Int32|]
-    A.Long -> [t|'TPrimitive Int64|]
+    A.Int (Just A.Date) -> [t|'TPrimitive Day|]
+    A.Int _ -> [t|'TPrimitive Int32|]
+    A.Long (Just (A.DecimalL (A.Decimal p s)))
+             -> [t|'TPrimitive (D.Decimal $(litT $ numTyLit p) $(litT $ numTyLit s)) |]
+    A.Long (Just A.TimeMicros) -> [t|'TPrimitive DiffTime|]
+    A.Long _ -> [t|'TPrimitive Int64|]
     A.Float -> [t|'TPrimitive Float|]
     A.Double -> [t|'TPrimitive Double|]
-    A.Bytes -> [t|'TPrimitive B.ByteString|]
-    A.String -> [t|'TPrimitive T.Text|]
+    A.Bytes _ -> [t|'TPrimitive B.ByteString|]
+    A.String (Just A.UUID) -> [t|'TPrimitive UUID|]
+    A.String _ -> [t|'TPrimitive T.Text|]
     A.Array item -> [t|'TList $(schemaFromAvroType item)|]
     A.Map values -> [t|'TMap T.Text $(schemaFromAvroType values)|]
     A.NamedType typeName ->
@@ -139,16 +147,16 @@ schemaFromAvroType =
       where toOption x = [t|'TOption $(schemaFromAvroType x)|]
     A.Fixed {} -> fail "fixed integers are not currently supported"
 
-flattenAvroDecls :: [A.Type] -> [A.Type]
+flattenAvroDecls :: [A.Schema] -> [A.Schema]
 flattenAvroDecls = concatMap (uncurry (:) . flattenDecl)
   where
-    flattenDecl :: A.Type -> (A.Type, [A.Type])
+    flattenDecl :: A.Schema -> (A.Schema, [A.Schema])
     flattenDecl (A.Record name a d o fields) =
       let (flds, tts) = unzip (flattenAvroField <$> fields)
        in (A.Record name a d o flds, concat tts)
     flattenDecl (A.Union _) = error "should never happen, please, file an issue"
     flattenDecl t = (t, [])
-    flattenAvroType :: A.Type -> (A.Type, [A.Type])
+    flattenAvroType :: A.Schema -> (A.Schema, [A.Schema])
     flattenAvroType (A.Record name a d o fields) =
       let (flds, tts) = unzip (flattenAvroField <$> fields)
        in (A.NamedType name, A.Record name a d o flds : concat tts)
@@ -157,7 +165,7 @@ flattenAvroDecls = concatMap (uncurry (:) . flattenDecl)
        in (A.Union $ fromList us, concat tts)
     flattenAvroType e@A.Enum {A.name} = (A.NamedType name, [e])
     flattenAvroType t = (t, [])
-    flattenAvroField :: A.Field -> (A.Field, [A.Type])
+    flattenAvroField :: A.Field -> (A.Field, [A.Schema])
     flattenAvroField f =
       let (t, decs) = flattenAvroType (A.fldType f)
        in (f {A.fldType = t}, decs)
@@ -174,7 +182,7 @@ avroMethodToType schemaName m
     argToType (A.Argument _ _)
       = fail "only named types may be used as arguments"
 
-    retToType :: A.Type -> Q Type
+    retToType :: A.Schema -> Q Type
     retToType A.Null
       = [t| 'RetNothing |]
     retToType (A.NamedType a)
