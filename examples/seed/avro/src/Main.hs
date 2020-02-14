@@ -9,11 +9,9 @@
 
 module Main where
 
-import           Control.Concurrent     (threadDelay)
-import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Logger
+import           Data.Int
 import           Data.Functor.Identity
-import           Data.Text              as T
 import           Mu.GRpc.Server
 import           Mu.Schema
 import           Mu.Schema.Optics
@@ -37,7 +35,7 @@ server :: (MonadServer m, MonadLogger m) => ServerT Identity PeopleService m _
 server = Server (getPerson :<|>: H0)
 
 evolvePerson :: PeopleRequest -> PeopleResponse
-evolvePerson req = record1 $ record (req ^. #name, 18 :: Int)
+evolvePerson req = record1 (review _U0 $ record (req ^. #name, 18 :: Int32))
 
 getPerson :: Monad m => PeopleRequest -> m PeopleResponse
 getPerson = pure . evolvePerson

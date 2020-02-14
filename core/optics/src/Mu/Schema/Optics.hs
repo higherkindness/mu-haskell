@@ -3,6 +3,7 @@
 {-# language FunctionalDependencies #-}
 {-# language GADTs                  #-}
 {-# language KindSignatures         #-}
+{-# language LambdaCase             #-}
 {-# language ScopedTypeVariables    #-}
 {-# language TypeApplications       #-}
 {-# language TypeOperators          #-}
@@ -32,6 +33,7 @@ module Mu.Schema.Optics (
   -- * Build a term
   record
 , record1
+, _U0, _Next, _U1, _U2, _U3
   -- * Re-exported for convenience.
 , module Optics.Core
 ) where
@@ -169,6 +171,11 @@ instance ( TypeLabel w sch k k', TypeLabel w sch v v'
   typeLensGet (FMap x) = mapKeys typeLensGet (typeLensGet <$> x)
   typeLensSet new = FMap (mapKeys typeLensSet (typeLensSet <$> new))
 
+instance (r ~ NS (FieldValue w sch) choices)
+         => TypeLabel w sch ('TUnion choices) r where
+  typeLensGet (FUnion x) = x
+  typeLensSet = FUnion
+
 instance (EnumLabel choices choiceName, r ~ ())
          => LabelOptic choiceName A_Prism
                        (Term w sch ('DEnum name choices))
@@ -195,3 +202,28 @@ instance {-# OVERLAPPABLE #-} EnumLabel rest c
   enumPrismBuild p = S (enumPrismBuild p)
   enumPrismMatch _ (Z _) = Nothing
   enumPrismMatch p (S x) = enumPrismMatch p x
+
+_U0 :: forall w (sch :: Schema') x xs r. TypeLabel w sch x r
+    => Prism' (NS (FieldValue w sch) (x ': xs)) r
+_U0 = prism' (Z . typeLensSet)
+             (\case (Z x) -> Just $ typeLensGet x
+                    (S _) -> Nothing)
+
+_Next :: forall w (sch :: Schema') x xs.
+         Prism' (NS (FieldValue w sch) (x ': xs))
+                (NS (FieldValue w sch) xs)
+_Next = prism' S
+               (\case (Z _) -> Nothing
+                      (S x) -> Just x)
+
+_U1 :: forall w (sch :: Schema') a b xs r. TypeLabel w sch b r
+    => Prism' (NS (FieldValue w sch) (a ': b ': xs)) r
+_U1 = _Next % _U0
+
+_U2 :: forall w (sch :: Schema') a b c xs r. TypeLabel w sch c r
+    => Prism' (NS (FieldValue w sch) (a ': b ': c ': xs)) r
+_U2 = _Next % _U1
+
+_U3 :: forall w (sch :: Schema') a b c d xs r. TypeLabel w sch d r
+    => Prism' (NS (FieldValue w sch) (a ': b ': c ': d ': xs)) r
+_U3 = _Next % _U2
