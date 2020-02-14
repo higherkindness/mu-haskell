@@ -31,6 +31,7 @@ as values in the schema type.
 module Mu.Schema.Optics (
   -- * Build a term
   record
+, record1
   -- * Re-exported for convenience.
 , module Optics.Core
 ) where
@@ -65,6 +66,23 @@ instance {-# OVERLAPPABLE #-}
 record :: BuildRecord w sch args r => r -> Term w sch ('DRecord name args)
 record values = TRecord $ buildR values
 
+record1 :: BuildRecord1 w sch arg r => r -> Term w sch ('DRecord name '[arg])
+record1 value = TRecord $ buildR1 value
+
+class BuildRecord1 (w :: Type -> Type)
+                   (sch :: Schema Symbol Symbol)
+                   (arg :: FieldDef Symbol Symbol)
+                   (r :: Type) | w sch arg -> r where
+  buildR1 :: r -> NP (Field w sch) '[arg]
+
+instance {-# OVERLAPPABLE #-} (Functor w, TypeLabel w sch t1 r1)
+         => BuildRecord1 w sch ('FieldDef x1 t1) (w r1) where
+  buildR1 v = Field (typeLensSet <$> v) :* Nil
+
+instance {-# OVERLAPS #-} (TypeLabel Identity sch t1 r1)
+         => BuildRecord1 Identity sch ('FieldDef x1 t1) r1 where
+  buildR1 v = Field (typeLensSet <$> Identity v) :* Nil
+
 class BuildRecord (w :: Type -> Type)
                   (sch :: Schema Symbol Symbol)
                   (args :: [FieldDef Symbol Symbol])
@@ -73,14 +91,6 @@ class BuildRecord (w :: Type -> Type)
 
 instance BuildRecord w sch '[] () where
   buildR _ = Nil
-
-instance {-# OVERLAPPABLE #-} (Functor w, TypeLabel w sch t1 r1)
-         => BuildRecord w sch '[ 'FieldDef x1 t1 ] (w r1) where
-  buildR v = Field (typeLensSet <$> v) :* Nil
-
-instance {-# OVERLAPS #-} (TypeLabel Identity sch t1 r1)
-         => BuildRecord Identity sch '[ 'FieldDef x1 t1 ] r1 where
-  buildR v = Field (typeLensSet <$> Identity v) :* Nil
 
 instance {-# OVERLAPPABLE #-} (Functor w, TypeLabel w sch t1 r1, TypeLabel w sch t2 r2)
          => BuildRecord w sch '[ 'FieldDef x1 t1, 'FieldDef x2 t2 ] (w r1, w r2) where

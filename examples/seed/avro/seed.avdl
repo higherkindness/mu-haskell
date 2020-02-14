@@ -5,11 +5,11 @@ protocol Service {
     int age;
   }
 
-  record NotFoundError{
+  record NotFoundError {
     string message;
   }
 
-  record DuplicatedPersonError{
+  record DuplicatedPersonError {
     string message;
   }
 
@@ -18,7 +18,7 @@ protocol Service {
   }
 
   record PeopleResponse {
-    union{ Person, NotFoundError, DuplicatedPersonError } result;
+    union { Person, NotFoundError, DuplicatedPersonError } result;
   }
 
   example.seed.server.protocol.avro.PeopleResponse getPerson(example.seed.server.protocol.avro.PeopleRequest request);

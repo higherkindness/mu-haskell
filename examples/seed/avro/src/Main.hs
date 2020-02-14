@@ -37,7 +37,7 @@ server :: (MonadServer m, MonadLogger m) => ServerT Identity PeopleService m _
 server = Server (getPerson :<|>: H0)
 
 evolvePerson :: PeopleRequest -> PeopleResponse
-evolvePerson req = record $ record (req ^. #name, 18 :: Int)
+evolvePerson req = record1 $ record (req ^. #name, 18 :: Int)
 
 getPerson :: Monad m => PeopleRequest -> m PeopleResponse
 getPerson = pure . evolvePerson
