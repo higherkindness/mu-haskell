@@ -5,11 +5,11 @@ protocol Service {
     int age;
   }
 
-  record NotFoundError {
+  error NotFoundError {
     string message;
   }
 
-  record DuplicatedPersonError {
+  error DuplicatedPersonError {
     string message;
   }
 
