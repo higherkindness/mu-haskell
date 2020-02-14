@@ -15,7 +15,8 @@ packages:
 - examples/health-check/avro
 - examples/health-check/protobuf
 - examples/route-guide
-- examples/seed
+- examples/seed/avro
+- examples/seed/protobuf
 - examples/todolist
 - examples/with-persistent
 - compendium-client

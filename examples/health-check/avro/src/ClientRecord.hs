@@ -8,10 +8,8 @@
 {-# language TypeOperators       #-}
 module Main where
 
-import           Data.Conduit
-import qualified Data.Conduit.Combinators as C
-import qualified Data.Text                as T
-import           GHC.Generics             (Generic)
+import qualified Data.Text             as T
+import           GHC.Generics          (Generic)
 import           System.Environment
 
 import           Mu.GRpc.Client.Record
@@ -64,11 +62,3 @@ update client who newstatus = do
   putStrLn ("UNARY: Was setting successful? " <> show r)
   rstatus <- check client hcm
   putStrLn ("UNARY: Checked the status of " <> who <> ". Obtained: " <> show rstatus)
-
-{-
-watching :: HealthCall -> String -> IO ()
-watching client who = do
-  let hcm = HealthCheckMsg (T.pack who)
-  stream <- watch client hcm
-  runConduit $ stream .| C.mapM_ print
--}
