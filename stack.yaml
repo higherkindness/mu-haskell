@@ -1,4 +1,4 @@
-resolver: lts-14.23
+resolver: lts-15.0
 allow-newer: true
 
 packages:
@@ -31,20 +31,9 @@ extra-deps:
 # - avro-0.4.6.0
 - git: https://github.com/haskell-works/avro.git
   commit: 93bc12fdb807e9567ef113ed71c7b3487516a371
-- language-protobuf-1.0.1
 # - language-avro-0.1.0.0
 - git: https://github.com/higherkindness/avro-parser-haskell.git
   commit: c8f7497766d0d1be8579fb03b302340adafeaf49
 - hw-kafka-client-3.0.0
 - hw-kafka-conduit-2.6.0
 - HasBigDecimal-0.1.1
-# missing in the current LTS
-- primitive-0.7.0.0
-- primitive-extras-0.8
-- primitive-unlifted-0.1.2.0
-- stm-hamt-1.2.0.4
-- stm-containers-1.1.0.4
-- AC-Angle-1.0
-- optics-core-0.2
-- indexed-profunctors-0.1
-

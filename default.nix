@@ -1,5 +1,5 @@
-{ nixpkgs ? (fetchTarball https://github.com/NixOS/nixpkgs/archive/484ea7bbac5bf7f958b0bb314a3c130b6c328800.tar.gz)
-, pkgs ? import nixpkgs (import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/659d80f.tar.gz))
+{ nixpkgs ? (fetchTarball https://github.com/NixOS/nixpkgs/archive/497c0a43a5982081f8310e9c0b7fcf91d33c0001.tar.gz)
+, pkgs ? import nixpkgs (import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/90ac0ae.tar.gz))
 }:
 
 let
