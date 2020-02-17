@@ -29,8 +29,8 @@ extra-deps:
 - warp-grpc-0.3.0.0
 - http2-client-grpc-0.8.0.0
 # - avro-0.4.6.0
-- git: https://github.com/serras/avro.git
-  commit: c684139b773c296079a2941fb30ee43a52b66204
+- git: https://github.com/haskell-works/avro.git
+  commit: 93bc12fdb807e9567ef113ed71c7b3487516a371
 - language-protobuf-1.0.1
 # - language-avro-0.1.0.0
 - git: https://github.com/higherkindness/avro-parser-haskell.git
