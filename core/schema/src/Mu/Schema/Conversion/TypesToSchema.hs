@@ -67,7 +67,7 @@ type family FieldsFromType (all :: [FromType tn fn]) (mp :: Mappings Symbol fn) 
   FieldsFromType all mp (x :*: y)
     = ConcatList (FieldsFromType all mp x) (FieldsFromType all mp y)
   FieldsFromType all mp (S1 ('MetaSel ('Just x) u ss ds) (K1 i t))
-    = '[ 'FieldDef (MappingRight mp x) (ChooseFieldType all t) ]
+    = '[ 'FieldDef (MappingRight mp x) '[] (ChooseFieldType all t) ]
   FieldsFromType all mp v
     = TypeError ('Text "unsupported conversion from " ':<>: 'ShowType v ':<>: 'Text " to record schema")
 

@@ -46,6 +46,7 @@ module Mu.Schema.Interpretation (
 ) where
 
 import           Data.Map
+import           Data.Profunctor
 import           Data.Proxy
 import           Data.SOP
 
@@ -63,7 +64,8 @@ data Term w (sch :: Schema typeName fieldName) (t :: TypeDef typeName fieldName)
 -- | Interpretation of a field.
 data Field w (sch :: Schema typeName fieldName) (f :: FieldDef typeName fieldName) where
   -- | A single field. Note that the contents are wrapped in a @w@ type constructor.
-  Field :: w (FieldValue w sch t) -> Field w sch ('FieldDef name t)
+  Field :: w (NP (FieldValue w sch) args) (FieldValue w sch t)
+        -> Field w sch ('FieldDef name args t)
 
 -- | Interpretation of a field type, by giving a value of that type.
 data FieldValue w (sch :: Schema typeName fieldName) (t :: FieldType typeName) where
@@ -91,13 +93,16 @@ data FieldValue w (sch :: Schema typeName fieldName) (t :: FieldType typeName) w
 -- | Change the underlying wrapper of a term.
 transWrap
   :: forall tn fn (sch :: Schema tn fn) t u v.
-     (Functor u, forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k))
-  => (forall a. u a -> v a)
+     ( Profunctor u, Profunctor v
+     , forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k)
+     , forall k. Ord (FieldValue v sch k) => Ord (FieldValue u sch k) )
+  => (forall x a. u x a -> v x a)
+  -> (forall x a. v x a -> u x a)
   -> Term u sch t -> Term v sch t
-transWrap n x = case x of
-  TRecord f -> TRecord (transFields n f)
+transWrap n b x = case x of
+  TRecord f -> TRecord (transFields n b f)
   TEnum   c -> TEnum c
-  TSimple v -> TSimple (transValue n v)
+  TSimple v -> TSimple (transValue n b v)
 
 -- | Change the underlying wrapper of a term.
 --   This version assumes that no field is a map,
@@ -105,70 +110,99 @@ transWrap n x = case x of
 --   If a map is found, an exception is raised.
 transWrapNoMaps
   :: forall tn fn (sch :: Schema tn fn) t u v.
-     (Functor u)
-  => (forall a. u a -> v a)
+     (Profunctor u, Profunctor v)
+  => (forall x a. u x a -> v x a)
+  -> (forall x a. v x a -> u x a)
   -> Term u sch t -> Term v sch t
-transWrapNoMaps n x = case x of
-  TRecord f -> TRecord (transFieldsNoMaps n f)
+transWrapNoMaps n b x = case x of
+  TRecord f -> TRecord (transFieldsNoMaps n b f)
   TEnum   c -> TEnum c
-  TSimple v -> TSimple (transValueNoMaps n v)
+  TSimple v -> TSimple (transValueNoMaps n b v)
 
 -- | Change the underlying wrapper of a list of fields.
 transFields
   :: forall tn fn (sch :: Schema tn fn) args u v.
-     (Functor u, forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k))
-  => (forall a. u a -> v a)
+     ( Profunctor u, Profunctor v
+     , forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k)
+     , forall k. Ord (FieldValue v sch k) => Ord (FieldValue u sch k) )
+  => (forall x a. u x a -> v x a)
+  -> (forall x a. v x a -> u x a)
   -> NP (Field u sch) args -> NP (Field v sch) args
-transFields _ Nil = Nil
-transFields n (Field v :* rest)
-  = Field (n (fmap (transValue n) v)) :* transFields n rest
+transFields _ _ Nil = Nil
+transFields n b (Field v :* rest)
+  = Field (n (dimap (transValues b n) (transValue n b) v)) :* transFields n b rest
 
 -- | Change the underlying wrapper of a list of fields.
 --   This version assumes no maps are present as fields.
 transFieldsNoMaps
   :: forall tn fn (sch :: Schema tn fn) args u v.
-     (Functor u)
-  => (forall a. u a -> v a)
+     (Profunctor u, Profunctor v)
+  => (forall x a. u x a -> v x a)
+  -> (forall x a. v x a -> u x a)
   -> NP (Field u sch) args -> NP (Field v sch) args
-transFieldsNoMaps _ Nil = Nil
-transFieldsNoMaps n (Field v :* rest)
-  = Field (n (fmap (transValueNoMaps n) v)) :* transFieldsNoMaps n rest
+transFieldsNoMaps _ _ Nil = Nil
+transFieldsNoMaps n b (Field v :* rest)
+  = Field (n (dimap (transValuesNoMaps b n) (transValueNoMaps n b) v)) :* transFieldsNoMaps n b rest
+
+transValues
+  :: forall tn fn (sch :: Schema tn fn) l u v.
+     ( Profunctor u, Profunctor v
+     , forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k)
+     , forall k. Ord (FieldValue v sch k) => Ord (FieldValue u sch k) )
+  => (forall x a. u x a -> v x a)
+  -> (forall x a. v x a -> u x a)
+  -> NP (FieldValue u sch) l -> NP (FieldValue v sch) l
+transValues _ _ Nil = Nil
+transValues n b (x :* xs) = transValue n b x :* transValues n b xs
+
+transValuesNoMaps
+  :: forall tn fn (sch :: Schema tn fn) l u v.
+     (Profunctor u, Profunctor v)
+  => (forall x a. u x a -> v x a)
+  -> (forall x a. v x a -> u x a)
+  -> NP (FieldValue u sch) l -> NP (FieldValue v sch) l
+transValuesNoMaps _ _ Nil = Nil
+transValuesNoMaps n b (x :* xs) = transValueNoMaps n b x :* transValuesNoMaps n b xs
 
 -- | Change the underlying wrapper of a value.
 transValue
   :: forall tn fn (sch :: Schema tn fn) l u v.
-     (Functor u, forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k))
-  => (forall a. u a -> v a)
+     ( Profunctor u, Profunctor v
+     , forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k)
+     , forall k. Ord (FieldValue v sch k) => Ord (FieldValue u sch k) )
+  => (forall x a. u x a -> v x a)
+  -> (forall x a. v x a -> u x a)
   -> FieldValue u sch l -> FieldValue v sch l
-transValue _ FNull          = FNull
-transValue _ (FPrimitive y) = FPrimitive y
-transValue n (FSchematic t) = FSchematic (transWrap n t)
-transValue n (FOption    o) = FOption (transValue n <$> o)
-transValue n (FList      l) = FList (transValue n <$> l)
-transValue n (FMap       m) = FMap (mapKeys (transValue n) (transValue n <$> m))
-transValue n (FUnion     u) = FUnion (transUnion u)
+transValue _ _ FNull          = FNull
+transValue _ _ (FPrimitive y) = FPrimitive y
+transValue n b (FSchematic t) = FSchematic (transWrap n b t)
+transValue n b (FOption    o) = FOption (transValue n b <$> o)
+transValue n b (FList      l) = FList (transValue n b <$> l)
+transValue n b (FMap       m) = FMap (mapKeys (transValue n b) (transValue n b <$> m))
+transValue n b (FUnion     u) = FUnion (transUnion u)
   where
     transUnion :: NS (FieldValue u sch) us -> NS (FieldValue v sch) us
-    transUnion (Z z) = Z (transValue n z)
+    transUnion (Z z) = Z (transValue n b z)
     transUnion (S s) = S (transUnion s)
 
 -- | Change the underlying wrapper of a value.
 --   This version assumes that the value is not a map.
 transValueNoMaps
   :: forall tn fn (sch :: Schema tn fn) l u v.
-     (Functor u)
-  => (forall a. u a -> v a)
+     (Profunctor u, Profunctor v)
+  => (forall x a. u x a -> v x a)
+  -> (forall x a. v x a -> u x a)
   -> FieldValue u sch l -> FieldValue v sch l
-transValueNoMaps _ FNull          = FNull
-transValueNoMaps _ (FPrimitive y) = FPrimitive y
-transValueNoMaps n (FSchematic t) = FSchematic (transWrapNoMaps n t)
-transValueNoMaps n (FOption    o) = FOption (transValueNoMaps n <$> o)
-transValueNoMaps n (FList      l) = FList (transValueNoMaps n <$> l)
-transValueNoMaps _ (FMap       _) = error "this should never happen"
-transValueNoMaps n (FUnion     u) = FUnion (transUnion u)
+transValueNoMaps _ _ FNull          = FNull
+transValueNoMaps _ _ (FPrimitive y) = FPrimitive y
+transValueNoMaps n b (FSchematic t) = FSchematic (transWrapNoMaps n b t)
+transValueNoMaps n b (FOption    o) = FOption (transValueNoMaps n b <$> o)
+transValueNoMaps n b (FList      l) = FList (transValueNoMaps n b <$> l)
+transValueNoMaps _ _ (FMap       _) = error "this should never happen"
+transValueNoMaps n b (FUnion     u) = FUnion (transUnion u)
   where
     transUnion :: NS (FieldValue u sch) us -> NS (FieldValue v sch) us
-    transUnion (Z z) = Z (transValueNoMaps n z)
+    transUnion (Z z) = Z (transValueNoMaps n b z)
     transUnion (S s) = S (transUnion s)
 
 -- ===========================
@@ -199,10 +233,11 @@ instance Eq (FieldValue w sch t) => Eq (Term w sch ('DSimple t)) where
 instance Show (FieldValue w sch t) => Show (Term w sch ('DSimple t)) where
   show (TSimple x) = show x
 
-instance (Eq (w (FieldValue w sch t))) => Eq (Field w sch ('FieldDef name t)) where
+instance (Eq (w (NP (FieldValue w sch) args) (FieldValue w sch t)))
+         => Eq (Field w sch ('FieldDef name args t)) where
   Field x == Field y = x == y
-instance (KnownName name, Show (w (FieldValue w sch t)))
-         => Show (Field w sch ('FieldDef name t)) where
+instance (KnownName name, Show (w (NP (FieldValue w sch) args) (FieldValue w sch t)))
+         => Show (Field w sch ('FieldDef name args t)) where
   show (Field x) = nameVal (Proxy @name) ++ ": " ++ show x
 
 instance Eq (FieldValue w sch 'TNull) where

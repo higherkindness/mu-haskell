@@ -4,6 +4,7 @@
 {-# language GADTs                 #-}
 {-# language MultiParamTypeClasses #-}
 {-# language PolyKinds             #-}
+{-# language QuantifiedConstraints #-}
 {-# language ScopedTypeVariables   #-}
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
@@ -22,7 +23,6 @@ import           Control.Applicative                 ((<|>))
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Functor.Contravariant
-import           Data.Functor.Identity
 import qualified Data.HashMap.Strict                 as HM
 import qualified Data.Text                           as T
 import qualified Data.Vector                         as V
@@ -30,13 +30,13 @@ import qualified Data.Vector                         as V
 import           Mu.Schema
 import qualified Mu.Schema.Interpretation.Schemaless as SLess
 
-instance Applicative w => SLess.ToSchemalessTerm Value w where
+instance (forall x. Applicative (w x)) => SLess.ToSchemalessTerm Value w where
   toSchemalessTerm (Object o)
     = SLess.TRecord $ map (\(k,v) -> SLess.Field k (pure $ SLess.toSchemalessValue v))
                     $ HM.toList o
   toSchemalessTerm v = SLess.TSimple (SLess.toSchemalessValue v)
 
-instance Applicative w => SLess.ToSchemalessValue Value w where
+instance (forall x. Applicative (w x)) => SLess.ToSchemalessValue Value w where
   toSchemalessValue r@(Object _)
     = SLess.FSchematic (SLess.toSchemalessTerm r)
   toSchemalessValue Null       = SLess.FNull
@@ -53,28 +53,29 @@ instance (FromSchema w sch sty a, FromJSON (Term w sch (sch :/: sty)))
          => FromJSON (WithSchema w sch sty a) where
   parseJSON v = WithSchema . fromSchema' @_ @_ @sch @w <$> parseJSON v
 
-instance ToJSONFields sch args => ToJSON (Term Identity sch ('DRecord name args)) where
+instance ToJSONFields sch args => ToJSON (Term (->) sch ('DRecord name args)) where
   toJSON (TRecord fields) = Object (toJSONFields fields)
 instance FromJSONFields w sch args => FromJSON (Term w sch ('DRecord name args)) where
   parseJSON (Object v) = TRecord <$> parseJSONFields v
   parseJSON _          = fail "expected object"
 
 class ToJSONFields sch fields where
-  toJSONFields :: NP (Field Identity sch) fields -> Object
+  toJSONFields :: NP (Field (->) sch) fields -> Object
 instance ToJSONFields sch '[] where
   toJSONFields _ = HM.empty
-instance (KnownName name, ToJSON (FieldValue Identity sch t), ToJSONFields sch fs)
-         => ToJSONFields sch ('FieldDef name t ': fs) where
-  toJSONFields (Field (Identity v) :* rest) = HM.insert key value $ toJSONFields rest
+instance (KnownName name, ToJSON (FieldValue (->) sch t), ToJSONFields sch fs)
+         => ToJSONFields sch ('FieldDef name '[] t ': fs) where
+  toJSONFields (Field v :* rest) = HM.insert key value $ toJSONFields rest
     where key = T.pack (nameVal (Proxy @name))
-          value = toJSON v
+          value = toJSON (v Nil)
 
 class FromJSONFields w sch fields where
   parseJSONFields :: Object -> Parser (NP (Field w sch) fields)
 instance FromJSONFields w sch '[] where
   parseJSONFields _ = return Nil
-instance (Applicative w, KnownName name, FromJSON (FieldValue w sch t), FromJSONFields w sch fs)
-         => FromJSONFields w sch ('FieldDef name t ': fs) where
+instance ( forall x. Applicative (w x)
+         , KnownName name, FromJSON (FieldValue w sch t), FromJSONFields w sch fs )
+         => FromJSONFields w sch ('FieldDef name args t ': fs) where
   parseJSONFields v = (:*) <$> (Field <$> (pure <$> v .: key)) <*> parseJSONFields v
     where key = T.pack (nameVal (Proxy @name))
 

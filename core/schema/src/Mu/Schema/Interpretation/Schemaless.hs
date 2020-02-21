@@ -5,6 +5,7 @@
 {-# language GADTs                 #-}
 {-# language MultiParamTypeClasses #-}
 {-# language PolyKinds             #-}
+{-# language QuantifiedConstraints #-}
 {-# language ScopedTypeVariables   #-}
 {-# language StandaloneDeriving    #-}
 {-# language TypeApplications      #-}
@@ -33,6 +34,7 @@ module Mu.Schema.Interpretation.Schemaless (
 import           Control.Applicative      ((<|>))
 import           Data.List                (find)
 import qualified Data.Map                 as M
+import           Data.Profunctor
 import           Data.Proxy
 import           Data.SOP
 import qualified Data.Text                as T
@@ -43,7 +45,7 @@ import           Mu.Schema.Definition
 import qualified Mu.Schema.Interpretation as S
 
 -- | Interpretation of a type in a schema.
-data Term (w :: * -> *) where
+data Term (w :: * -> * -> *) where
   -- | A record given by the value of its fields.
   TRecord :: [Field w]    -> Term w
   -- | An enumeration given by one choice.
@@ -51,22 +53,22 @@ data Term (w :: * -> *) where
   -- | A primitive value.
   TSimple :: FieldValue w -> Term w
 
-deriving instance Eq   (w (FieldValue w)) => Eq   (Term w)
-deriving instance Ord  (w (FieldValue w)) => Ord  (Term w)
-deriving instance Show (w (FieldValue w)) => Show (Term w)
+deriving instance Eq   (w [FieldValue w] (FieldValue w)) => Eq   (Term w)
+deriving instance Ord  (w [FieldValue w] (FieldValue w)) => Ord  (Term w)
+deriving instance Show (w [FieldValue w] (FieldValue w)) => Show (Term w)
 
 -- | Interpretation of a field.
-data Field (w :: * -> *) where
+data Field (w :: * -> * -> *) where
   -- | A single field given by its name and its value.
   --   Note that the contents are wrapped in a @w@ type constructor.
-  Field :: T.Text -> w (FieldValue w) -> Field w
+  Field :: T.Text -> w [FieldValue w] (FieldValue w) -> Field w
 
-deriving instance Eq   (w (FieldValue w)) => Eq   (Field w)
-deriving instance Ord  (w (FieldValue w)) => Ord  (Field w)
-deriving instance Show (w (FieldValue w)) => Show (Field w)
+deriving instance Eq   (w [FieldValue w] (FieldValue w)) => Eq   (Field w)
+deriving instance Ord  (w [FieldValue w] (FieldValue w)) => Ord  (Field w)
+deriving instance Show (w [FieldValue w] (FieldValue w)) => Show (Field w)
 
 -- | Interpretation of a field type, by giving a value of that type.
-data FieldValue (w :: * -> *) where
+data FieldValue (w :: * -> * -> *) where
   FNull      :: FieldValue w
   FPrimitive :: (Typeable t, Eq t, Ord t, Show t) => t -> FieldValue w
   FSchematic :: Term w -> FieldValue w
@@ -82,8 +84,8 @@ data FieldValue (w :: * -> *) where
 --   Use this function to check a schemaless terms
 --   at the "borders" of your application.
 checkSchema
-  :: forall (s :: Schema tn fn) (t :: tn) (w :: * -> *).
-     (Traversable w, CheckSchema s (s :/: t))
+  :: forall (s :: Schema tn fn) (t :: tn) (w :: * -> * -> *).
+     (Profunctor w, forall x. Traversable (w x), CheckSchema s (s :/: t))
   => Proxy t -> Term w -> Maybe (S.Term w s (s :/: t))
 checkSchema _ = checkSchema'
 
@@ -91,7 +93,7 @@ checkSchema _ = checkSchema'
 --   by going through the corresponding schema type.
 fromSchemalessTerm
   :: forall sch w t sty.
-     (Traversable w, FromSchema w sch sty t, CheckSchema sch (sch :/: sty))
+     (Profunctor w, forall x. Traversable (w x), FromSchema w sch sty t, CheckSchema sch (sch :/: sty))
   => Term w -> Maybe t
 fromSchemalessTerm t = fromSchema @_ @_ @w @sch <$> checkSchema (Proxy @sty) t
 
@@ -112,16 +114,20 @@ class ToSchemalessValue t w where
 --   Exposed for usage in other modules,
 --   in particular 'Mu.Schema.Registry'.
 class CheckSchema (s :: Schema tn fn) (t :: TypeDef tn fn) where
-  checkSchema' :: Traversable w => Term w -> Maybe (S.Term w s t)
+  checkSchema' :: (Profunctor w, forall x. Traversable (w x))
+               => Term w -> Maybe (S.Term w s t)
 class CheckSchemaFields (s :: Schema tn fn) (fields :: [FieldDef tn fn]) where
-  checkSchemaFields :: Traversable w => [Field w] -> Maybe (NP (S.Field w s) fields)
+  checkSchemaFields :: (Profunctor w, forall x. Traversable (w x))
+                    => [Field w] -> Maybe (NP (S.Field w s) fields)
 class CheckSchemaEnum (choices :: [ChoiceDef fn]) where
   checkSchemaEnumInt  :: Int -> Maybe (NS Proxy choices)
   checkSchemaEnumText :: T.Text -> Maybe (NS Proxy choices)
 class CheckSchemaValue (s :: Schema tn fn) (field :: FieldType tn) where
-  checkSchemaValue :: Traversable w => FieldValue w -> Maybe (S.FieldValue w s field)
+  checkSchemaValue :: (Profunctor w, forall x. Traversable (w x))
+                   => FieldValue w -> Maybe (S.FieldValue w s field)
 class CheckSchemaUnion (s :: Schema tn fn) (ts :: [FieldType tn]) where
-  checkSchemaUnion :: Traversable w => FieldValue w -> Maybe (NS (S.FieldValue w s) ts)
+  checkSchemaUnion :: (Profunctor w, forall x. Traversable (w x))
+                   => FieldValue w -> Maybe (NS (S.FieldValue w s) ts)
 
 instance CheckSchemaFields s fields => CheckSchema s ('DRecord nm fields) where
   checkSchema' (TRecord fields) = S.TRecord <$> checkSchemaFields fields
@@ -129,13 +135,13 @@ instance CheckSchemaFields s fields => CheckSchema s ('DRecord nm fields) where
 instance CheckSchemaFields s '[] where
   checkSchemaFields _ = pure Nil
 instance (KnownName nm, CheckSchemaValue s ty, CheckSchemaFields s rest)
-         => CheckSchemaFields s ('FieldDef nm ty ': rest) where
+         => CheckSchemaFields s ('FieldDef nm '[] ty ': rest) where
   checkSchemaFields fs
     = do let name = T.pack (nameVal (Proxy @nm))
          Field _ v <- find (\(Field fieldName _) -> fieldName == name) fs
          v' <- traverse checkSchemaValue v
          r' <- checkSchemaFields @_ @_ @s @rest fs
-         return (S.Field v' :* r')
+         return (S.Field (lmap (const []) v') :* r')
 
 instance CheckSchemaEnum choices => CheckSchema s ('DEnum nm choices) where
   checkSchema' (TEnum n) = S.TEnum <$> checkSchemaEnumInt n
@@ -191,8 +197,8 @@ instance (CheckSchemaValue s t, CheckSchemaUnion s ts)
   checkSchemaUnion x = Z <$> checkSchemaValue @_ @_ @s @t x <|> S <$> checkSchemaUnion x
 
 -- Boring instances
-deriving instance (Show (w (FieldValue w))) => Show (FieldValue w)
-instance (Eq (w (FieldValue w))) => Eq (FieldValue w) where
+deriving instance (Show (w [FieldValue w] (FieldValue w))) => Show (FieldValue w)
+instance (Eq (w [FieldValue w] (FieldValue w))) => Eq (FieldValue w) where
   FNull == FNull = True
   FPrimitive (x :: a) == FPrimitive (y :: b)
     = case eqT @a @b of
@@ -203,7 +209,7 @@ instance (Eq (w (FieldValue w))) => Eq (FieldValue w) where
   FList      x == FList      y = x == y
   FMap       x == FMap       y = x == y
   _            == _            = False
-instance (Ord (w (FieldValue w))) => Ord (FieldValue w) where
+instance (Ord (w [FieldValue w] (FieldValue w))) => Ord (FieldValue w) where
   FNull <= _ = True
   FPrimitive _ <= FNull = False
   FPrimitive (x :: a) <= FPrimitive (y :: b)

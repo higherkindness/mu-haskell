@@ -109,7 +109,7 @@ type FieldDef = FieldDefB Type
 --   parametric on type representations.
 data FieldDefB builtin typeName fieldName
   = -- | One single field in a record.
-    FieldDef fieldName (FieldTypeB builtin typeName)
+    FieldDef fieldName [FieldTypeB builtin typeName] (FieldTypeB builtin typeName)
 
 -- | Types of fields of a record.
 --   References to other types in the same schema
@@ -197,9 +197,11 @@ class ReflectFields (fs :: [FieldDef tn fn]) where
   reflectFields :: Proxy fs -> [FieldDefB TypeRep String String]
 instance ReflectFields '[] where
   reflectFields _ = []
-instance (KnownName name, ReflectFieldType ty, ReflectFields fs)
-         => ReflectFields ('FieldDef name ty ': fs) where
-  reflectFields _ = FieldDef (nameVal (Proxy @name)) (reflectFieldType (Proxy @ty))
+instance (KnownName name, ReflectFieldTypes args, ReflectFieldType ty, ReflectFields fs)
+         => ReflectFields ('FieldDef name args ty ': fs) where
+  reflectFields _ = FieldDef (nameVal (Proxy @name))
+                             (reflectFieldTypes (Proxy @args))
+                             (reflectFieldType (Proxy @ty))
                   : reflectFields (Proxy @fs)
 
 class ReflectChoices (cs :: [ChoiceDef fn]) where

@@ -4,6 +4,7 @@
 {-# language FlexibleInstances     #-}
 {-# language MultiParamTypeClasses #-}
 {-# language PolyKinds             #-}
+{-# language QuantifiedConstraints #-}
 {-# language ScopedTypeVariables   #-}
 {-# language TypeApplications      #-}
 {-# language TypeFamilies          #-}
@@ -30,6 +31,7 @@ module Mu.Schema.Registry (
 
 import           Control.Applicative
 import           Data.Kind
+import           Data.Profunctor
 import           Data.Proxy
 import           GHC.TypeLits
 
@@ -57,12 +59,12 @@ fromRegistry :: forall r t w. FromRegistry w r t
              => SLess.Term w -> Maybe t
 fromRegistry = fromRegistry' (Proxy @r)
 
-class FromRegistry (w :: * -> *) (ms :: Registry) (t :: Type) where
+class FromRegistry (w :: * -> * -> *) (ms :: Registry) (t :: Type) where
   fromRegistry' :: Proxy ms -> SLess.Term w -> Maybe t
 
 instance FromRegistry w '[] t where
   fromRegistry' _ _ = Nothing
-instance ( Traversable w, FromSchema w s sty t
+instance ( Profunctor w, forall x. Traversable (w x), FromSchema w s sty t
          , SLess.CheckSchema s (s :/: sty), FromRegistry w ms t )
          => FromRegistry w ((n ':-> s) ': ms) t where
   fromRegistry' _ t = SLess.fromSchemalessTerm @s @w t <|> fromRegistry' (Proxy @ms) t

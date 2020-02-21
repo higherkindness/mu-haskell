@@ -42,9 +42,9 @@ module Mu.Schema.Class (
 , GToSchemaRecord(..)
 ) where
 
-import           Data.Functor.Identity
 import           Data.Kind
 import           Data.Map                 as M
+import           Data.Profunctor          (Profunctor (..))
 import           Data.SOP
 import           GHC.Generics
 import           GHC.TypeLits
@@ -54,11 +54,11 @@ import           Mu.Schema.Interpretation
 
 -- | Tags a value with its schema.
 --   For usage with @deriving via@.
-newtype WithSchema (w :: Type -> Type) (sch :: Schema tn fn) (sty :: tn) a where
-  WithSchema :: forall tn fn (w :: Type -> Type) (sch :: Schema tn fn) (sty :: tn) a.
+newtype WithSchema (w :: Type -> Type -> Type) (sch :: Schema tn fn) (sty :: tn) a where
+  WithSchema :: forall tn fn (w :: Type -> Type -> Type) (sch :: Schema tn fn) (sty :: tn) a.
                 a -> WithSchema w sch sty a
 
-unWithSchema :: forall tn fn (w :: Type -> Type) (sch :: Schema tn fn) (sty :: tn) a.
+unWithSchema :: forall tn fn (w :: Type -> Type -> Type) (sch :: Schema tn fn) (sty :: tn) a.
                 WithSchema w sch sty a -> a
 unWithSchema (WithSchema x) = x
 
@@ -67,7 +67,9 @@ unWithSchema (WithSchema x) = x
 --   You can give an optional mapping between the
 --   field names of @t@ and that of @sty@
 --   by means of 'CustomFieldMapping'.
-class ToSchema (w :: Type -> Type) (sch :: Schema typeName fieldName) (sty :: typeName) (t :: Type)
+class ToSchema (w :: Type -> Type -> Type)
+               (sch :: Schema typeName fieldName) (sty :: typeName)
+               (t :: Type)
       | sch t -> sty where
   -- | Conversion from Haskell type to schema term.
   toSchema   :: t -> Term w sch (sch :/: sty)
@@ -82,7 +84,9 @@ class ToSchema (w :: Type -> Type) (sch :: Schema typeName fieldName) (sty :: ty
 --   You can give an optional mapping between the
 --   field names of @t@ and that of @sty@
 --   by means of 'CustomFieldMapping'.
-class FromSchema (w :: Type -> Type) (sch :: Schema typeName fieldName) (sty :: typeName) (t :: Type)
+class FromSchema (w :: Type -> Type -> Type)
+                 (sch :: Schema typeName fieldName) (sty :: typeName)
+                 (t :: Type)
       | sch t -> sty where
   -- | Conversion from schema term to Haskell type.
   fromSchema :: Term w sch (sch :/: sty) -> t
@@ -145,9 +149,12 @@ instance (Generic t, GFromSchemaTypeDef w sch fmap (sch :/: sty) (Rep t))
 transSchema
   :: forall fn tn (sch :: Schema tn fn) sty u v a b.
      ( ToSchema u sch sty a, FromSchema v sch sty b
-     , Functor u, forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k) )
-  => (forall x. u x -> v x) -> Proxy sch -> a -> b
-transSchema f _ = fromSchema @_ @_ @v @sch @sty . transWrap f . toSchema @_ @_ @u @sch @sty
+     , Profunctor u, Profunctor v
+     , forall k. Ord (FieldValue u sch k) => Ord (FieldValue v sch k)
+     , forall k. Ord (FieldValue v sch k) => Ord (FieldValue u sch k) )
+  => (forall x y. u x y -> v x y) -> (forall x y. v x y -> u x y)
+  -> Proxy sch -> a -> b
+transSchema f g _ = fromSchema @_ @_ @v @sch @sty . transWrap f g . toSchema @_ @_ @u @sch @sty
 
 -- ======================
 -- CRAZY GENERICS SECTION
@@ -187,16 +194,16 @@ type family FindEnumChoice (xs :: [ChoiceDef fs]) (x :: fs) :: Where where
 
 type family FindField (xs :: [FieldDef ts fs]) (x :: fs) :: Where where
   FindField '[] x = TypeError ('Text "Could not find field " ':<>: 'ShowType x)
-  FindField ('FieldDef name t ': xs) name = 'Here
-  FindField (other            ': xs) name = 'There (FindField xs name)
+  FindField ('FieldDef name args t ': xs) name = 'Here
+  FindField (other                 ': xs) name = 'There (FindField xs name)
 
 -- Generic type definitions
 class GToSchemaTypeDef
-        (w :: * -> *) (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
+        (w :: * -> * -> *) (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
         (t :: TypeDef ts fs) (f :: * -> *) where
   toSchemaTypeDef   :: Proxy fmap -> f a -> Term w sch t
 class GFromSchemaTypeDef
-        (w :: * -> *) (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
+        (w :: * -> * -> *) (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
         (t :: TypeDef ts fs) (f :: * -> *) where
   fromSchemaTypeDef :: Proxy fmap -> Term w sch t -> f a
 
@@ -212,10 +219,10 @@ instance GFromSchemaFieldTypeWrap w sch t f
   fromSchemaTypeDef _ (TSimple x) = fromSchemaFieldTypeW x
 
 class GToSchemaFieldTypeWrap
-        (w :: * -> *) (sch :: Schema ts fs) (t :: FieldType ts) (f :: * -> *) where
+        (w :: * -> * -> *) (sch :: Schema ts fs) (t :: FieldType ts) (f :: * -> *) where
   toSchemaFieldTypeW   :: f a -> FieldValue w sch t
 class GFromSchemaFieldTypeWrap
-        (w :: * -> *) (sch :: Schema ts fs) (t :: FieldType ts) (f :: * -> *) where
+        (w :: * -> * -> *) (sch :: Schema ts fs) (t :: FieldType ts) (f :: * -> *) where
   fromSchemaFieldTypeW :: FieldValue w sch t -> f a
 
 instance GToSchemaFieldType w sch t f
@@ -232,17 +239,24 @@ instance GFromSchemaFieldTypeWrap w sch t f
   fromSchemaFieldTypeW x = M1 (fromSchemaFieldTypeW x)
 
 class GToSchemaFieldType
-        (w :: * -> *) (sch :: Schema ts fs) (t :: FieldType ts) (f :: *) where
+        (w :: * -> * -> *) (sch :: Schema ts fs) (t :: FieldType ts) (f :: *) where
   toSchemaFieldType   :: f -> FieldValue w sch t
 class GFromSchemaFieldType
-        (w :: * -> *) (sch :: Schema ts fs) (t :: FieldType ts) (f :: *) where
+        (w :: * -> * -> *) (sch :: Schema ts fs) (t :: FieldType ts) (f :: *) where
   fromSchemaFieldType :: FieldValue w sch t -> f
 
+class GToSchemaFieldTypes
+        (w :: * -> * -> *) (sch :: Schema ts fs) (t :: [FieldType ts]) (f :: *) where
+  toSchemaFieldTypes   :: f -> NP (FieldValue w sch) t
+class GFromSchemaFieldTypes
+        (w :: * -> * -> *) (sch :: Schema ts fs) (t :: [FieldType ts]) (f :: *) where
+  fromSchemaFieldTypes :: NP (FieldValue w sch) t -> f
+
 class GToSchemaFieldTypeUnion
-        (w :: * -> *) (sch :: Schema ts fs) (t :: [FieldType ts]) (f :: * -> *) where
+        (w :: * -> * -> *) (sch :: Schema ts fs) (t :: [FieldType ts]) (f :: * -> *) where
   toSchemaFieldTypeUnion   :: f a -> NS (FieldValue w sch) t
 class GFromSchemaFieldTypeUnion
-        (w :: * -> *) (sch :: Schema ts fs) (t :: [FieldType ts]) (f :: * -> *) where
+        (w :: * -> * -> *) (sch :: Schema ts fs) (t :: [FieldType ts]) (f :: * -> *) where
   fromSchemaFieldTypeUnion :: NS (FieldValue w sch) t -> f a
 
 -- These instances are straightforward,
@@ -484,47 +498,52 @@ instance {-# OVERLAPS #-}
 -- (see 'HereLeft' and 'HereRight' instances)
 
 -- | For internal use only: generic conversion of a list of fields.
-class GToSchemaRecord (w :: * -> *) (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
+class GToSchemaRecord (w :: * -> * -> *) (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
                       (args :: [FieldDef ts fs]) (f :: * -> *) where
   toSchemaRecord :: Proxy fmap -> f a -> NP (Field w sch) args
 instance GToSchemaRecord w sch fmap '[] f where
   toSchemaRecord _ _ = Nil
 instance ( GToSchemaRecord w sch fmap cs f
-         , GToSchemaRecordSearch w sch t f (FindSel f (MappingLeft fmap name)) )
-         => GToSchemaRecord w sch fmap ('FieldDef name t ': cs) f where
+         , GToSchemaRecordSearch w sch args t f (FindSel f (MappingLeft fmap name)) )
+         => GToSchemaRecord w sch fmap ('FieldDef name args t ': cs) f where
   toSchemaRecord p x = this  :* toSchemaRecord p x
     where this = Field (toSchemaRecordSearch (Proxy @(FindSel f (MappingLeft fmap name))) x)
 
-class GToSchemaRecordSearch (w :: * -> *) (sch :: Schema ts fs)
-                            (t :: FieldType ts) (f :: * -> *) (wh :: Where) where
-  toSchemaRecordSearch :: Proxy wh -> f a -> w (FieldValue w sch t)
-instance {-# OVERLAPS #-} GToSchemaFieldType Identity sch t v
-         => GToSchemaRecordSearch Identity sch t (S1 m (K1 i v)) 'Here where
-  toSchemaRecordSearch _ (M1 (K1 x)) = Identity (toSchemaFieldType x)
-instance {-# OVERLAPPABLE #-} (Functor w, GToSchemaFieldType w sch t v)
-         => GToSchemaRecordSearch w sch t (S1 m (K1 i (w v))) 'Here where
-  toSchemaRecordSearch _ (M1 (K1 x)) = toSchemaFieldType <$> x
-instance {-# OVERLAPS #-} GToSchemaFieldType Identity sch t v
-         => GToSchemaRecordSearch Identity sch t (S1 m (K1 i v) :*: rest) 'Here where
-  toSchemaRecordSearch _ (M1 (K1 x) :*: _) = Identity (toSchemaFieldType x)
-instance {-# OVERLAPPABLE #-} (Functor w, GToSchemaFieldType w sch t v)
-         => GToSchemaRecordSearch w sch t (S1 m (K1 i (w v)) :*: rest) 'Here where
-  toSchemaRecordSearch _ (M1 (K1 x) :*: _) = toSchemaFieldType <$> x
-instance {-# OVERLAPS #-} GToSchemaFieldType Identity sch t v
-         => GToSchemaRecordSearch Identity sch t ((S1 m (K1 i v) :*: other) :*: rest) 'HereLeft where
-  toSchemaRecordSearch _ ((M1 (K1 x) :*: _) :*: _) = Identity (toSchemaFieldType x)
-instance {-# OVERLAPPABLE #-} (Functor w, GToSchemaFieldType w sch t v)
-         => GToSchemaRecordSearch w sch t ((S1 m (K1 i (w v)) :*: other) :*: rest) 'HereLeft where
-  toSchemaRecordSearch _ ((M1 (K1 x) :*: _) :*: _) = toSchemaFieldType <$> x
-instance {-# OVERLAPS #-} GToSchemaFieldType Identity sch t v
-         => GToSchemaRecordSearch Identity sch t ((other :*: S1 m (K1 i v)) :*: rest) 'HereRight where
-  toSchemaRecordSearch _ ((_ :*: M1 (K1 x)) :*: _) = Identity (toSchemaFieldType x)
-instance {-# OVERLAPPABLE #-} (Functor w, GToSchemaFieldType w sch t v)
-         => GToSchemaRecordSearch w sch t ((other :*: S1 m (K1 i (w v))) :*: rest) 'HereRight where
-  toSchemaRecordSearch _ ((_ :*: M1 (K1 x)) :*: _) = toSchemaFieldType <$> x
-instance forall sch t other rest n w.
-         GToSchemaRecordSearch w sch t rest n
-         => GToSchemaRecordSearch w sch t (other :*: rest) ('There n) where
+class GToSchemaRecordSearch (w :: * -> * -> *) (sch :: Schema ts fs)
+                            (args :: [FieldType ts]) (t :: FieldType ts)
+                            (f :: * -> *) (wh :: Where) where
+  toSchemaRecordSearch :: Proxy wh -> f a -> w (NP (FieldValue w sch) args) (FieldValue w sch t)
+instance {-# OVERLAPS #-} GToSchemaFieldType (->) sch t v
+         => GToSchemaRecordSearch (->) sch '[] t (S1 m (K1 i v)) 'Here where
+  toSchemaRecordSearch _ (M1 (K1 x)) = const (toSchemaFieldType x)
+instance {-# OVERLAPPABLE #-}
+         (Profunctor w, GFromSchemaFieldTypes w sch args a, GToSchemaFieldType w sch t v)
+         => GToSchemaRecordSearch w sch args t (S1 m (K1 i (w a v))) 'Here where
+  toSchemaRecordSearch _ (M1 (K1 x)) = dimap fromSchemaFieldTypes toSchemaFieldType x
+instance {-# OVERLAPS #-} GToSchemaFieldType (->) sch t v
+         => GToSchemaRecordSearch (->) sch '[] t (S1 m (K1 i v) :*: rest) 'Here where
+  toSchemaRecordSearch _ (M1 (K1 x) :*: _) = const (toSchemaFieldType x)
+instance {-# OVERLAPPABLE #-}
+         (Profunctor w, GFromSchemaFieldTypes w sch args a, GToSchemaFieldType w sch t v)
+         => GToSchemaRecordSearch w sch args t (S1 m (K1 i (w a v)) :*: rest) 'Here where
+  toSchemaRecordSearch _ (M1 (K1 x) :*: _) = dimap fromSchemaFieldTypes toSchemaFieldType x
+instance {-# OVERLAPS #-} GToSchemaFieldType (->) sch t v
+         => GToSchemaRecordSearch (->) sch '[] t ((S1 m (K1 i v) :*: other) :*: rest) 'HereLeft where
+  toSchemaRecordSearch _ ((M1 (K1 x) :*: _) :*: _) = const (toSchemaFieldType x)
+instance {-# OVERLAPPABLE #-}
+         (Profunctor w, GFromSchemaFieldTypes w sch args a, GToSchemaFieldType w sch t v)
+         => GToSchemaRecordSearch w sch args t ((S1 m (K1 i (w a v)) :*: other) :*: rest) 'HereLeft where
+  toSchemaRecordSearch _ ((M1 (K1 x) :*: _) :*: _) = dimap fromSchemaFieldTypes toSchemaFieldType x
+instance {-# OVERLAPS #-} GToSchemaFieldType (->) sch t v
+         => GToSchemaRecordSearch (->) sch '[] t ((other :*: S1 m (K1 i v)) :*: rest) 'HereRight where
+  toSchemaRecordSearch _ ((_ :*: M1 (K1 x)) :*: _) = const (toSchemaFieldType x)
+instance {-# OVERLAPPABLE #-}
+         (Profunctor w, GFromSchemaFieldTypes w sch args a, GToSchemaFieldType w sch t v)
+         => GToSchemaRecordSearch w sch args t ((other :*: S1 m (K1 i (w a v))) :*: rest) 'HereRight where
+  toSchemaRecordSearch _ ((_ :*: M1 (K1 x)) :*: _) = dimap fromSchemaFieldTypes toSchemaFieldType x
+instance forall sch args t other rest n w.
+         GToSchemaRecordSearch w sch args t rest n
+         => GToSchemaRecordSearch w sch args t (other :*: rest) ('There n) where
   toSchemaRecordSearch _ (_ :*: xs) = toSchemaRecordSearch (Proxy @n) xs
 
 -- 'fromSchema' for records
@@ -535,16 +554,11 @@ instance forall sch t other rest n w.
 --    this is done by 'MappingRight' and 'FindField'
 -- 3. using that location, obtain the value of the field
 --    this is done by 'GFromSchemaRecordSearch'
-class GFromSchemaRecord (w :: * -> *) (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
+class GFromSchemaRecord (w :: * -> * -> *) (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
                         (args :: [FieldDef ts fs]) (f :: * -> *) where
   fromSchemaRecord :: Proxy fmap -> NP (Field w sch) args -> f a
-instance {-# OVERLAPS #-}
-         (GFromSchemaRecordSearch Identity sch v args (FindField args (MappingRight fmap name)))
-         => GFromSchemaRecord Identity sch fmap args (S1 ('MetaSel ('Just name) u ss ds) (K1 i v)) where
-  fromSchemaRecord _ x = M1 $ K1 $ runIdentity $ fromSchemaRecordSearch (Proxy @(FindField args (MappingRight fmap name))) x
-instance {-# OVERLAPPABLE #-}
-         (GFromSchemaRecordSearch w sch v args (FindField args (MappingRight fmap name)))
-         => GFromSchemaRecord w sch fmap args (S1 ('MetaSel ('Just name) u ss ds) (K1 i (w v))) where
+instance (GFromSchemaRecordSearch w sch args t (FindField args (MappingRight fmap name)))
+         => GFromSchemaRecord w sch fmap args (S1 ('MetaSel ('Just name) u ss ds) (K1 i t)) where
   fromSchemaRecord _ x = M1 $ K1 $ fromSchemaRecordSearch (Proxy @(FindField args (MappingRight fmap name))) x
 instance ( GFromSchemaRecord w sch fmap args oneway
          , GFromSchemaRecord w sch fmap args oranother )
@@ -553,13 +567,19 @@ instance ( GFromSchemaRecord w sch fmap args oneway
 instance GFromSchemaRecord w sch fmap args U1 where
   fromSchemaRecord _ _ = U1
 
-class GFromSchemaRecordSearch (w :: * -> *) (sch :: Schema ts fs)
-                              (v :: *) (args :: [FieldDef ts fs]) (wh :: Where) where
-  fromSchemaRecordSearch :: Proxy wh -> NP (Field w sch) args -> w v
-instance (Functor w, GFromSchemaFieldType w sch t v)
-         => GFromSchemaRecordSearch w sch v ('FieldDef name t ': rest) 'Here where
-  fromSchemaRecordSearch _ (Field x :* _) = fromSchemaFieldType <$> x
-instance forall sch v other rest n w.
-         GFromSchemaRecordSearch w sch v rest n
-         => GFromSchemaRecordSearch w sch v (other ': rest) ('There n) where
+class GFromSchemaRecordSearch (w :: * -> * -> *) (sch :: Schema ts fs)
+                              (args :: [FieldDef ts fs])
+                              (t :: *) (wh :: Where) where
+  fromSchemaRecordSearch :: Proxy wh -> NP (Field w sch) args -> t
+instance {-# OVERLAPS #-}
+         (GFromSchemaFieldType (->) sch t v)
+         => GFromSchemaRecordSearch (->) sch ('FieldDef name '[] t ': rest) v 'Here where
+  fromSchemaRecordSearch _ (Field x :* _) = fromSchemaFieldType (x Nil)
+instance {-# OVERLAPPABLE #-}
+         (Profunctor w, GToSchemaFieldTypes w sch args a, GFromSchemaFieldType w sch t v)
+         => GFromSchemaRecordSearch w sch ('FieldDef name args t ': rest) (w a v) 'Here where
+  fromSchemaRecordSearch _ (Field x :* _) = dimap toSchemaFieldTypes fromSchemaFieldType x
+instance forall sch other rest t n w.
+         GFromSchemaRecordSearch w sch rest t n
+         => GFromSchemaRecordSearch w sch (other ': rest) t ('There n) where
   fromSchemaRecordSearch _ (_ :* xs) = fromSchemaRecordSearch (Proxy @n) xs

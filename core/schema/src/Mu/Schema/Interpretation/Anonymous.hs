@@ -24,6 +24,7 @@ with one field, 'V2' for two, and so forth.
 -}
 module Mu.Schema.Interpretation.Anonymous where
 
+import           Data.Profunctor
 import           Data.SOP
 
 import           Mu.Schema
@@ -47,59 +48,61 @@ instance (sch :/: sty ~ 'DRecord nm '[])
 -- | Anonymous term for a record with one field.
 data V1 w sch sty where
   V1 :: (sch :/: sty
-           ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a) ])
-     => w a -> V1 w sch sty
+           ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a) ])
+     => w () a -> V1 w sch sty
 
-deriving instance (Show (w a), sch :/: sty
-                                 ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a) ])
+deriving instance (Show (w () a), sch :/: sty
+                                 ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a) ])
                   => Show (V1 w sch sty)
-deriving instance (Eq (w a), sch :/: sty
-                               ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a) ])
+deriving instance (Eq (w () a), sch :/: sty
+                               ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a) ])
                   => Eq (V1 w sch sty)
-deriving instance (Ord (w a), sch :/: sty
-                                ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a) ])
+deriving instance (Ord (w () a), sch :/: sty
+                                ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a) ])
                   => Ord (V1 w sch sty)
 
-instance ( Functor w
-         , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a) ] )
+instance ( Profunctor w
+         , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a) ] )
          => ToSchema w sch sty (V1 w sch sty) where
-  toSchema (V1 x) = TRecord (Field (FPrimitive <$> x) :* Nil)
-instance ( Functor w
-         , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a) ] )
+  toSchema (V1 x) = TRecord (Field (dimap (const ()) FPrimitive x) :* Nil)
+instance ( Profunctor w
+         , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a) ] )
          => FromSchema w sch sty (V1 w sch sty) where
-  fromSchema (TRecord (Field x :* Nil)) = V1 (unPrimitive <$> x)
+  fromSchema (TRecord (Field x :* Nil)) = V1 (dimap (const Nil) unPrimitive x)
     where unPrimitive :: FieldValue w sch ('TPrimitive t) -> t
           unPrimitive (FPrimitive l) = l
 
 -- | Anonymous term for a record with two fields.
 data V2 w sch sty where
   V2 :: (sch :/: sty
-           ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a)
-                          , 'FieldDef g ('TPrimitive b) ])
-     => w a -> w b -> V2 w sch sty
+           ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a)
+                          , 'FieldDef g '[] ('TPrimitive b) ])
+     => w () a -> w () b -> V2 w sch sty
 
-deriving instance (Show (w a), Show (w b),
-                   sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a)
-                                              , 'FieldDef g ('TPrimitive b) ])
+deriving instance (Show (w () a), Show (w () b),
+                   sch :/: sty ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a)
+                                              , 'FieldDef g '[] ('TPrimitive b) ])
                   => Show (V2 w sch sty)
-deriving instance (Eq (w a), Eq (w b),
-                   sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a)
-                                              , 'FieldDef g ('TPrimitive b) ])
+deriving instance (Eq (w () a), Eq (w () b),
+                   sch :/: sty ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a)
+                                              , 'FieldDef g '[] ('TPrimitive b) ])
                   => Eq (V2 w sch sty)
-deriving instance (Ord (w a), Ord (w b),
-                   sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a)
-                                              , 'FieldDef g ('TPrimitive b) ])
+deriving instance (Ord (w () a), Ord (w () b),
+                   sch :/: sty ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a)
+                                              , 'FieldDef g '[] ('TPrimitive b) ])
                   => Ord (V2 w sch sty)
 
-instance ( Functor w
-         , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a)
-                                      , 'FieldDef g ('TPrimitive b) ] )
+instance ( Profunctor w
+         , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a)
+                                      , 'FieldDef g '[] ('TPrimitive b) ] )
          => ToSchema w sch sty (V2 w sch sty) where
-  toSchema (V2 x y) = TRecord (Field (FPrimitive <$> x) :* Field (FPrimitive <$> y) :* Nil)
-instance ( Functor w
-         , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f ('TPrimitive a)
-                                      , 'FieldDef g ('TPrimitive b) ] )
+  toSchema (V2 x y) = TRecord (Field (dimap (const ()) FPrimitive x)
+                    :* Field (dimap (const ()) FPrimitive y) :* Nil)
+instance ( Profunctor w
+         , sch :/: sty ~ 'DRecord nm '[ 'FieldDef f '[] ('TPrimitive a)
+                                      , 'FieldDef g '[] ('TPrimitive b) ] )
          => FromSchema w sch sty (V2 w sch sty) where
-  fromSchema (TRecord (Field x :* Field y :* Nil)) = V2 (unPrimitive <$> x) (unPrimitive <$> y)
+  fromSchema (TRecord (Field x :* Field y :* Nil))
+    = V2 (dimap (const Nil) unPrimitive x) (dimap (const Nil) unPrimitive y)
     where unPrimitive :: FieldValue w sch ('TPrimitive t) -> t
           unPrimitive (FPrimitive l) = l
