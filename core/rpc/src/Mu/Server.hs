@@ -1,3 +1,4 @@
+{-# LANGUAGE ViewPatterns #-}
 {-# language ConstraintKinds           #-}
 {-# language DataKinds                 #-}
 {-# language ExistentialQuantification #-}
@@ -36,7 +37,7 @@ We recommend you to catch exceptions and return custom
 module Mu.Server (
   -- * Servers and handlers
   MonadServer
-, ServerT(.., Server), ServicesT(..), HandlersT(..)
+, ServerT(.., Server), ServicesT(..), HandlersT(.., (:<|>:))
 , ServiceChain, noContext
   -- ** Simple servers using only IO
 , ServerErrorIO, ServerIO
@@ -123,7 +124,7 @@ data ServicesT (w :: Type -> Type)
           -> ServicesT w chn rest m hss
           -> ServicesT w chn ('Service sname anns methods ': rest) m (hs ': hss)
 
-infixr 4 :<|>:
+infixr 4 :<||>:
 -- | 'HandlersT' is a sequence of handlers.
 --   Note that the handlers for your service
 --   must appear __in the same order__ as they
@@ -147,9 +148,16 @@ data HandlersT (w :: Type -> Type)
                (chn :: ServiceChain snm) (methods :: [Method snm mnm])
                (m :: Type -> Type) (hs :: [Type]) where
   H0 :: HandlersT w chn '[] m '[]
-  (:<|>:) :: Handles w chn args ret m h
-          => (MappingRight chn name -> h) -> HandlersT w chn ms m hs
-          -> HandlersT w chn ('Method name anns args ret ': ms) m (h ': hs)
+  (:<||>:) :: Handles w chn args ret m h
+           => (MappingRight chn name -> h) -> HandlersT w chn ms m hs
+           -> HandlersT w chn ('Method name anns args ret ': ms) m (h ': hs)
+
+infixr 4 :<|>:
+pattern (:<|>:) :: (MappingRight chn name ~ (), Handles w chn args ret m h)
+                => h -> HandlersT w chn ms m hs
+                -> HandlersT w chn ('Method name anns args ret ': ms) m (h ': hs)
+pattern x :<|>: xs <- (($ ()) -> x) :<||>: xs where
+  x :<|>: xs = noContext x :<||>: xs
 
 -- Define a relation for handling
 class Handles (w :: Type -> Type)

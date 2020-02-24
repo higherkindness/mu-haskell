@@ -175,7 +175,7 @@ instance ( KnownName name, MkRPC p
          , MappingRight chn name ~ ()
          , GRpcMethodHandlers p m chn rest hs)
          => GRpcMethodHandlers p m chn ('Method name anns args r ': rest) (h ': hs) where
-  gRpcMethodHandlers f pr p s (h :<|>: rest)
+  gRpcMethodHandlers f pr p s (h :<||>: rest)
     = gRpcMethodHandler f pr (Proxy @args) (Proxy @r) (mkRPC pr p s methodName) (h ())
       : gRpcMethodHandlers f pr p s rest
     where methodName = BS.pack (nameVal (Proxy @name))
