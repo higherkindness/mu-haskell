@@ -44,16 +44,17 @@ type QuickstartSchema
      ]
 
 type QuickStartService
-  = 'Service "Greeter" '[Package "helloworld"]
-      '[ 'Method "SayHello" '[]
-                 '[ 'ArgSingle ('ViaSchema QuickstartSchema "HelloRequest") ]
-                 ('RetSingle ('ViaSchema QuickstartSchema "HelloResponse"))
-       , 'Method "SayHi" '[]
-                 '[ 'ArgSingle ('ViaSchema QuickstartSchema "HiRequest")]
-                 ('RetStream ('ViaSchema QuickstartSchema "HelloResponse"))
-       , 'Method "SayManyHellos" '[]
-                 '[ 'ArgStream ('ViaSchema QuickstartSchema "HelloRequest")]
-                 ('RetStream ('ViaSchema QuickstartSchema "HelloResponse")) ]
+  = 'Package "helloworld"
+      '[ 'Service "Greeter" '[]
+           '[ 'Method "SayHello" '[]
+                      '[ 'ArgSingle ('ViaSchema QuickstartSchema "HelloRequest") ]
+                        ('RetSingle ('ViaSchema QuickstartSchema "HelloResponse"))
+            , 'Method "SayHi" '[]
+                      '[ 'ArgSingle ('ViaSchema QuickstartSchema "HiRequest")]
+                        ('RetStream ('ViaSchema QuickstartSchema "HelloResponse"))
+            , 'Method "SayManyHellos" '[]
+                      '[ 'ArgStream ('ViaSchema QuickstartSchema "HelloRequest")]
+                        ('RetStream ('ViaSchema QuickstartSchema "HelloResponse")) ] ]
 
 newtype HelloRequest f = HelloRequest { name :: f T.Text } deriving (Generic)
 deriving instance Functor f => ToSchema f QuickstartSchema "HelloRequest" (HelloRequest f)
@@ -69,9 +70,9 @@ deriving instance Functor f => FromSchema f QuickstartSchema "HiRequest" (HiRequ
 
 quickstartServer :: forall m f.
                     (MonadServer m, Applicative f, MaybeLike f)
-                 => ServerT f QuickStartService m _
+                 => ServerT f '[] QuickStartService m _
 quickstartServer
-  = Server (sayHello :<|>: sayHi :<|>: sayManyHellos :<|>: H0)
+  = Server ((noContext sayHello :<|>: noContext sayHi :<|>: noContext sayManyHellos :<|>: H0) :<&>: S0)
   where sayHello :: HelloRequest f -> m (HelloResponse f)
         sayHello (HelloRequest nm)
           = return (HelloResponse (("hi, " <>) <$> nm))

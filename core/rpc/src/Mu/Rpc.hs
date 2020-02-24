@@ -14,8 +14,9 @@ RPC-like microservices independently of the transport
 and protocol.
 -}
 module Mu.Rpc (
-  Service', Service(..)
-, ServiceAnnotation, Package, FindPackageName
+  Package', Package(..)
+, Service', Service(..)
+, ServiceAnnotation
 , Method(..), (:-->:)
 , TypeRef(..), Argument(..), Return(..)
 ) where
@@ -27,37 +28,36 @@ import qualified Language.Haskell.TH as TH
 import           Mu.Schema
 import           Mu.Schema.Registry
 
+-- | Packages whose names are given by type-level strings.
+type Package' = Package Symbol Symbol
 -- | Services whose names are given by type-level strings.
 type Service' = Service Symbol Symbol
 -- | Annotations for services. At this moment, such
 --   annotations can be of any type.
 type ServiceAnnotation = Type
 
+-- | A package is a set of services.
+data Package serviceName methodName
+  = Package serviceName [Service serviceName methodName]
+
 -- | A service is a set of methods.
 data Service serviceName methodName
-  = Service serviceName [ServiceAnnotation] [Method methodName]
-
--- | An annotation to define a package name.
---   This is used by some handlers, like gRPC.
-data Package (s :: Symbol)
-
--- | Find the 'Package' for a service, to be found
---   as part of the annotations.
-type family FindPackageName (anns :: [ServiceAnnotation]) :: Symbol where
-  FindPackageName '[] = TypeError ('Text "Cannot find package name for the service")
-  FindPackageName (Package s ': rest) = s
-  FindPackageName (other     ': rest) = FindPackageName rest
+  = Service serviceName
+            [ServiceAnnotation]
+            [Method serviceName methodName]
 
 -- | A method is defined by its name, arguments, and return type.
-data Method methodName
-  = Method methodName [ServiceAnnotation] [Argument] Return
+data Method serviceName methodName
+  = Method methodName [ServiceAnnotation]
+           [Argument serviceName]
+           (Return serviceName)
 
 -- | Look up a method in a service definition using its name.
 --   Useful to declare handlers like @HandlerIO (MyService :-->: "MyMethod")@.
-type family (:-->:) (s :: Service snm mnm) (m :: mnm) :: Method mnm where
+type family (:-->:) (s :: Service snm mnm) (m :: mnm) :: Method snm mnm where
   'Service sname anns methods :-->: m = LookupMethod methods m
 
-type family LookupMethod (s :: [Method mnm]) (m :: snm) :: Method snm where
+type family LookupMethod (s :: [Method snm mnm]) (m :: mnm) :: Method snm mnm where
   LookupMethod '[] m = TypeError ('Text "could not find method " ':<>: 'ShowType m)
   LookupMethod ('Method m anns args r ': ms) m = 'Method m anns args r
   LookupMethod (other                 ': ms) m = LookupMethod ms m
@@ -71,22 +71,24 @@ data TypeRef where
   ViaTH       :: TH.Type -> TypeRef
 
 -- | Defines the way in which arguments are handled.
-data Argument where
+data Argument serviceName where
   -- | Use a single value.
-  ArgSingle :: TypeRef -> Argument
+  ArgSingle :: TypeRef -> Argument serviceName
   -- | Consume a stream of values.
-  ArgStream :: TypeRef -> Argument
+  ArgStream :: TypeRef -> Argument serviceName
 
 -- | Defines the different possibilities for returning
 --   information from a method.
-data Return where
+data Return serviceName where
   -- | Fire and forget.
-  RetNothing :: Return
+  RetNothing :: Return serviceName
   -- | Return a single value.
-  RetSingle :: TypeRef -> Return
+  RetSingle :: TypeRef -> Return serviceName
   -- | Return a value or an error
   --   (this can be found in Avro IDL).
-  RetThrows :: TypeRef -> TypeRef -> Return
+  RetThrows :: TypeRef -> TypeRef -> Return serviceName
   -- | Return a stream of values
   --   (this can be found in gRPC).
-  RetStream :: TypeRef -> Return
+  RetStream :: TypeRef -> Return serviceName
+  -- | Continue with another service.
+  RetService :: serviceName -> Return serviceName

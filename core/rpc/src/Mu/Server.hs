@@ -34,7 +34,9 @@ We recommend you to catch exceptions and return custom
 -}
 module Mu.Server (
   -- * Servers and handlers
-  MonadServer, ServerT(..), HandlersT(..)
+  MonadServer
+, ServerT(..), ServicesT(..), HandlersT(..)
+, noContext
   -- ** Simple servers using only IO
 , ServerErrorIO, ServerIO
   -- * Errors which might be raised
@@ -54,8 +56,10 @@ import           Mu.Schema
 type MonadServer m = (MonadError ServerError m, MonadIO m)
 -- | Simplest monad which satisfies 'MonadServer'.
 type ServerErrorIO = ExceptT ServerError IO
--- | Simple 'ServerT' which uses only 'IO' and errors.
-type ServerIO w srv = ServerT w srv ServerErrorIO
+
+-- | Simple 'ServerT' which uses only 'IO' and errors,
+--   and whose service has no back-references.
+type ServerIO w srv = ServerT w '[] srv ServerErrorIO
 
 -- | Stop the current handler,
 --   returning an error to the client.
@@ -69,6 +73,11 @@ serverError = throwError
 alwaysOk :: (MonadIO m)
          => IO a -> m a
 alwaysOk = liftIO
+
+-- | To declare that the function doesn't use
+--   its context.
+noContext :: b -> a -> b
+noContext = const
 
 -- | Errors raised in a handler.
 data ServerError
@@ -87,9 +96,25 @@ data ServerErrorCode
   | NotFound
   deriving (Eq, Show)
 
+type ServiceChain snm = Mappings snm Type
+
+-- | Definition of a complete server
+--   for a set of services, with possible
+--   references between them.
+data ServerT (w :: Type -> Type)  -- wrapper for data types
+             (chn :: ServiceChain snm) (s :: Package snm mnm)
+             (m :: Type -> Type) (hs :: [[Type]]) where
+  Server :: ServicesT w chn s m hs
+         -> ServerT w chn ('Package pname s) m hs
+
 -- | Definition of a complete server for a service.
-data ServerT (w :: Type -> Type) (s :: Service snm mnm) (m :: Type -> Type) (hs :: [Type]) where
-  Server :: HandlersT w methods m hs -> ServerT w ('Service sname anns methods) m hs
+data ServicesT (w :: Type -> Type)
+               (chn :: ServiceChain snm) (s :: [Service snm mnm])
+               (m :: Type -> Type) (hs :: [[Type]]) where
+  S0 :: ServicesT w chn '[] m '[]
+  (:<&>:) :: HandlersT w chn methods m hs
+          -> ServicesT w chn rest m hss
+          -> ServicesT w chn ('Service sname anns methods ': rest) m (hs ': hss)
 
 infixr 5 :<|>:
 -- | 'HandlersT' is a sequence of handlers.
@@ -111,13 +136,18 @@ infixr 5 :<|>:
 --   * Output streams turn into an __additional argument__
 --     of type @Conduit t Void m ()@. This stream should
 --     be connected to a source to get the elements.
-data HandlersT (w :: Type -> Type) (methods :: [Method mnm]) (m :: Type -> Type) (hs :: [Type]) where
-  H0 :: HandlersT w '[] m '[]
-  (:<|>:) :: Handles w args ret m h => h -> HandlersT w ms m hs
-          -> HandlersT w ('Method name anns args ret ': ms) m (h ': hs)
+data HandlersT (w :: Type -> Type)
+               (chn :: ServiceChain snm) (methods :: [Method snm mnm])
+               (m :: Type -> Type) (hs :: [Type]) where
+  H0 :: HandlersT w chn '[] m '[]
+  (:<|>:) :: Handles w chn args ret m h
+          => (MappingRight chn name -> h) -> HandlersT w chn ms m hs
+          -> HandlersT w chn ('Method name anns args ret ': ms) m (h ': hs)
 
 -- Define a relation for handling
-class Handles (w :: Type -> Type) (args :: [Argument]) (ret :: Return)
+class Handles (w :: Type -> Type)
+              (chn :: ServiceChain snm)
+              (args :: [Argument snm]) (ret :: Return snm)
               (m :: Type -> Type) (h :: Type)
 class ToRef (w :: Type -> Type) (ref :: TypeRef) (t :: Type)
 class FromRef (w :: Type -> Type) (ref :: TypeRef) (t :: Type)
@@ -129,18 +159,21 @@ instance FromSchema w sch sty t => FromRef w ('ViaSchema sch sty) t
 instance FromRef w ('ViaRegistry subject t last) t
 
 -- Arguments
-instance (FromRef w ref t, Handles w args ret m h,
+instance (FromRef w ref t, Handles w chn args ret m h,
           handler ~ (t -> h))
-         => Handles w ('ArgSingle ref ': args) ret m handler
-instance (MonadError ServerError m, FromRef w ref t, Handles w args ret m h,
+         => Handles w chn ('ArgSingle ref ': args) ret m handler
+instance (MonadError ServerError m, FromRef w ref t, Handles w chn args ret m h,
           handler ~ (ConduitT () t m () -> h))
-         => Handles w ('ArgStream ref ': args) ret m handler
+         => Handles w chn ('ArgStream ref ': args) ret m handler
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
-         => Handles w '[] 'RetNothing m handler
+         => Handles w chn '[] 'RetNothing m handler
 instance (MonadError ServerError m, ToRef w eref e, ToRef w vref v, handler ~ m (Either e v))
-         => Handles w '[] ('RetThrows eref vref) m handler
+         => Handles w chn '[] ('RetThrows eref vref) m handler
 instance (MonadError ServerError m, ToRef w ref v, handler ~ m v)
-         => Handles w '[] ('RetSingle ref) m handler
+         => Handles w chn '[] ('RetSingle ref) m handler
 instance (MonadError ServerError m, ToRef w ref v, handler ~ (ConduitT v Void m () -> m ()))
-         => Handles w '[] ('RetStream ref) m handler
+         => Handles w chn '[] ('RetStream ref) m handler
+-- Look up the type to produce in the mapping
+instance (MonadError ServerError m, MappingRight chn ref ~ v, handler ~ m v)
+         => Handles w chn '[] ('RetService ref) m handler
