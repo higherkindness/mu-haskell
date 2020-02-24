@@ -42,6 +42,7 @@ module Mu.Schema.Class (
 , GToSchemaRecord(..)
 ) where
 
+import           Data.Functor.Identity
 import           Data.Kind
 import           Data.Map                 as M
 import           Data.Profunctor          (Profunctor (..))
@@ -49,6 +50,7 @@ import           Data.SOP
 import           GHC.Generics
 import           GHC.TypeLits
 
+import           Data.Functor.Arrows
 import           Mu.Schema.Definition
 import           Mu.Schema.Interpretation
 
@@ -516,6 +518,9 @@ class GToSchemaRecordSearch (w :: * -> * -> *) (sch :: Schema ts fs)
 instance {-# OVERLAPS #-} GToSchemaFieldType (->) sch t v
          => GToSchemaRecordSearch (->) sch '[] t (S1 m (K1 i v)) 'Here where
   toSchemaRecordSearch _ (M1 (K1 x)) = const (toSchemaFieldType x)
+instance {-# OVERLAPS #-} GToSchemaFieldType (Effectful Identity) sch t v
+         => GToSchemaRecordSearch (Effectful Identity) sch '[] t (S1 m (K1 i v)) 'Here where
+  toSchemaRecordSearch _ (M1 (K1 x)) = Effectful $ const (Identity $ toSchemaFieldType x)
 instance {-# OVERLAPPABLE #-}
          (Profunctor w, GFromSchemaFieldTypes w sch args a, GToSchemaFieldType w sch t v)
          => GToSchemaRecordSearch w sch args t (S1 m (K1 i (w a v))) 'Here where
@@ -523,6 +528,9 @@ instance {-# OVERLAPPABLE #-}
 instance {-# OVERLAPS #-} GToSchemaFieldType (->) sch t v
          => GToSchemaRecordSearch (->) sch '[] t (S1 m (K1 i v) :*: rest) 'Here where
   toSchemaRecordSearch _ (M1 (K1 x) :*: _) = const (toSchemaFieldType x)
+instance {-# OVERLAPS #-} GToSchemaFieldType (Effectful Identity) sch t v
+         => GToSchemaRecordSearch (Effectful Identity) sch '[] t (S1 m (K1 i v) :*: rest) 'Here where
+  toSchemaRecordSearch _ (M1 (K1 x) :*: _) = Effectful $ const (Identity $ toSchemaFieldType x)
 instance {-# OVERLAPPABLE #-}
          (Profunctor w, GFromSchemaFieldTypes w sch args a, GToSchemaFieldType w sch t v)
          => GToSchemaRecordSearch w sch args t (S1 m (K1 i (w a v)) :*: rest) 'Here where
@@ -530,6 +538,9 @@ instance {-# OVERLAPPABLE #-}
 instance {-# OVERLAPS #-} GToSchemaFieldType (->) sch t v
          => GToSchemaRecordSearch (->) sch '[] t ((S1 m (K1 i v) :*: other) :*: rest) 'HereLeft where
   toSchemaRecordSearch _ ((M1 (K1 x) :*: _) :*: _) = const (toSchemaFieldType x)
+instance {-# OVERLAPS #-} GToSchemaFieldType (Effectful Identity) sch t v
+         => GToSchemaRecordSearch (Effectful Identity) sch '[] t ((S1 m (K1 i v) :*: other) :*: rest) 'HereLeft where
+  toSchemaRecordSearch _ ((M1 (K1 x) :*: _) :*: _) = Effectful $ const (Identity $ toSchemaFieldType x)
 instance {-# OVERLAPPABLE #-}
          (Profunctor w, GFromSchemaFieldTypes w sch args a, GToSchemaFieldType w sch t v)
          => GToSchemaRecordSearch w sch args t ((S1 m (K1 i (w a v)) :*: other) :*: rest) 'HereLeft where
@@ -537,6 +548,9 @@ instance {-# OVERLAPPABLE #-}
 instance {-# OVERLAPS #-} GToSchemaFieldType (->) sch t v
          => GToSchemaRecordSearch (->) sch '[] t ((other :*: S1 m (K1 i v)) :*: rest) 'HereRight where
   toSchemaRecordSearch _ ((_ :*: M1 (K1 x)) :*: _) = const (toSchemaFieldType x)
+instance {-# OVERLAPS #-} GToSchemaFieldType (Effectful Identity) sch t v
+         => GToSchemaRecordSearch (Effectful Identity) sch '[] t ((other :*: S1 m (K1 i v)) :*: rest) 'HereRight where
+  toSchemaRecordSearch _ ((_ :*: M1 (K1 x)) :*: _) = Effectful $ const (Identity $ toSchemaFieldType x)
 instance {-# OVERLAPPABLE #-}
          (Profunctor w, GFromSchemaFieldTypes w sch args a, GToSchemaFieldType w sch t v)
          => GToSchemaRecordSearch w sch args t ((other :*: S1 m (K1 i (w a v))) :*: rest) 'HereRight where
@@ -575,6 +589,10 @@ instance {-# OVERLAPS #-}
          (GFromSchemaFieldType (->) sch t v)
          => GFromSchemaRecordSearch (->) sch ('FieldDef name '[] t ': rest) v 'Here where
   fromSchemaRecordSearch _ (Field x :* _) = fromSchemaFieldType (x Nil)
+instance {-# OVERLAPS #-}
+         (GFromSchemaFieldType (Effectful Identity) sch t v)
+         => GFromSchemaRecordSearch (Effectful Identity) sch ('FieldDef name '[] t ': rest) v 'Here where
+  fromSchemaRecordSearch _ (Field x :* _) = fromSchemaFieldType (runIdentity $ unEffectful x Nil)
 instance {-# OVERLAPPABLE #-}
          (Profunctor w, GToSchemaFieldTypes w sch args a, GFromSchemaFieldType w sch t v)
          => GFromSchemaRecordSearch w sch ('FieldDef name args t ': rest) (w a v) 'Here where
@@ -583,3 +601,63 @@ instance forall sch other rest t n w.
          GFromSchemaRecordSearch w sch rest t n
          => GFromSchemaRecordSearch w sch (other ': rest) t ('There n) where
   fromSchemaRecordSearch _ (_ :* xs) = fromSchemaRecordSearch (Proxy @n) xs
+
+instance GToSchemaFieldTypes w sch '[] () where
+  toSchemaFieldTypes _ = Nil
+instance GToSchemaFieldType w sch x1 v1
+         => GToSchemaFieldTypes w sch '[x1] v1 where
+  toSchemaFieldTypes x = toSchemaFieldType x :* Nil
+instance ( GToSchemaFieldType w sch x1 v1
+         , GToSchemaFieldType w sch x2 v2 )
+         => GToSchemaFieldTypes w sch '[x1,x2] (v1,v2) where
+  toSchemaFieldTypes (x1,x2)
+    = toSchemaFieldType x1 :* toSchemaFieldType x2 :* Nil
+instance ( GToSchemaFieldType w sch x1 v1
+         , GToSchemaFieldType w sch x2 v2
+         , GToSchemaFieldType w sch x3 v3 )
+         => GToSchemaFieldTypes w sch '[x1,x2,x3] (v1,v2,v3) where
+  toSchemaFieldTypes (x1,x2,x3)
+    = toSchemaFieldType x1 :* toSchemaFieldType x2 :* toSchemaFieldType x3 :* Nil
+instance ( GToSchemaFieldType w sch x1 v1
+         , GToSchemaFieldType w sch x2 v2
+         , GToSchemaFieldType w sch x3 v3
+         , GToSchemaFieldType w sch x4 v4 )
+         => GToSchemaFieldTypes w sch '[x1,x2,x3,x4] (v1,v2,v3,v4) where
+  toSchemaFieldTypes (x1,x2,x3,x4)
+    = toSchemaFieldType x1 :* toSchemaFieldType x2 :* toSchemaFieldType x3 :* toSchemaFieldType x4 :* Nil
+
+instance GToSchemaFieldTypes w sch '[] (NP f '[]) where
+  toSchemaFieldTypes _ = Nil
+instance (GToSchemaFieldType w sch x v, GToSchemaFieldTypes w sch xs (NP Identity vs))
+         => GToSchemaFieldTypes w sch (x ': xs) (NP Identity (v ': vs)) where
+  toSchemaFieldTypes (Identity x :* rest) = toSchemaFieldType x :* toSchemaFieldTypes rest
+
+instance GFromSchemaFieldTypes w sch '[] () where
+  fromSchemaFieldTypes _ = ()
+instance GFromSchemaFieldType w sch x1 v1
+         => GFromSchemaFieldTypes w sch '[x1] v1 where
+  fromSchemaFieldTypes (x :* Nil) = fromSchemaFieldType x
+instance ( GFromSchemaFieldType w sch x1 v1
+         , GFromSchemaFieldType w sch x2 v2 )
+         => GFromSchemaFieldTypes w sch '[x1,x2] (v1,v2) where
+  fromSchemaFieldTypes (x1 :* x2 :* Nil)
+    = (fromSchemaFieldType x1, fromSchemaFieldType x2)
+instance ( GFromSchemaFieldType w sch x1 v1
+         , GFromSchemaFieldType w sch x2 v2
+         , GFromSchemaFieldType w sch x3 v3 )
+         => GFromSchemaFieldTypes w sch '[x1,x2,x3] (v1,v2,v3) where
+  fromSchemaFieldTypes (x1 :* x2 :* x3 :* Nil)
+    = (fromSchemaFieldType x1, fromSchemaFieldType x2, fromSchemaFieldType x3)
+instance ( GFromSchemaFieldType w sch x1 v1
+         , GFromSchemaFieldType w sch x2 v2
+         , GFromSchemaFieldType w sch x3 v3
+         , GFromSchemaFieldType w sch x4 v4 )
+         => GFromSchemaFieldTypes w sch '[x1,x2,x3,x4] (v1,v2,v3,v4) where
+  fromSchemaFieldTypes (x1 :* x2 :* x3 :* x4 :* Nil)
+    = (fromSchemaFieldType x1, fromSchemaFieldType x2, fromSchemaFieldType x3, fromSchemaFieldType x4)
+
+instance GFromSchemaFieldTypes w sch '[] (NP f '[]) where
+  fromSchemaFieldTypes _ = Nil
+instance (GFromSchemaFieldType w sch x v, GFromSchemaFieldTypes w sch xs (NP Identity vs))
+         => GFromSchemaFieldTypes w sch (x ': xs) (NP Identity (v ': vs)) where
+  fromSchemaFieldTypes (x :* rest) = Identity (fromSchemaFieldType x) :* fromSchemaFieldTypes rest

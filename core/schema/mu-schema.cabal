@@ -31,6 +31,7 @@ library
                      , Mu.Schema.Examples
                      , Mu.Schema.Annotations
                      , Mu.Adapter.Json
+                     , Data.Functor.Arrows
                      , Data.Functor.MaybeLike
   -- other-modules:
   -- other-extensions:
