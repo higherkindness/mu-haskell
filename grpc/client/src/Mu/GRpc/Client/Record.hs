@@ -49,35 +49,41 @@ import           Mu.Rpc
 
 -- | Fills in a Haskell record of functions with the corresponding
 --   calls to gRPC services from a Mu 'Service' declaration.
-buildService :: forall (pro :: GRpcMessageProtocol) (s :: Service') (p :: Symbol) t
-                (nm :: Symbol) (anns :: [ServiceAnnotation]) (ms :: [Method Symbol]).
-                (s ~ 'Service nm anns ms, Generic t, BuildService pro s p ms (Rep t))
+buildService :: forall (pro :: GRpcMessageProtocol)
+                (pkg :: Package') (s :: Symbol) (p :: Symbol) t
+                (pkgName :: Symbol) (ss :: [Service'])
+                (anns :: [ServiceAnnotation]) (ms :: [Method Symbol Symbol]).
+                ( pkg ~ 'Package ('Just pkgName) ss
+                , LookupService ss s ~ 'Service s anns ms
+                , Generic t
+                , BuildService pro pkgName s p ms (Rep t) )
              => GrpcClient -> t
-buildService client = to (buildService' (Proxy @pro) (Proxy @s) (Proxy @p) (Proxy @ms) client)
+buildService client
+  = to (buildService' (Proxy @pro) (Proxy @pkgName) (Proxy @s) (Proxy @p) (Proxy @ms) client)
 
-class BuildService (pro :: GRpcMessageProtocol) (s :: Service')
-                   (p :: Symbol) (ms :: [Method Symbol]) (f :: * -> *) where
-  buildService' :: Proxy pro -> Proxy s -> Proxy p -> Proxy ms -> GrpcClient -> f a
+class BuildService (pro :: GRpcMessageProtocol) (pkg :: Symbol) (s :: Symbol)
+                   (p :: Symbol) (ms :: [Method Symbol Symbol]) (f :: * -> *) where
+  buildService' :: Proxy pro -> Proxy pkg -> Proxy s -> Proxy p -> Proxy ms -> GrpcClient -> f a
 
-instance BuildService pro s p ms U1 where
-  buildService' _ _ _ _ _ = U1
-instance BuildService pro s p ms f => BuildService pro s p ms (D1 meta f) where
-  buildService' ppro ps ppr pms client
-    = M1 (buildService' ppro ps ppr pms client)
-instance BuildService pro s p ms f => BuildService pro s p ms (C1 meta f) where
-  buildService' ppro ps ppr pms client
-    = M1 (buildService' ppro ps ppr pms client)
+instance BuildService pro pkg s p ms U1 where
+  buildService' _ _ _ _ _ _ = U1
+instance BuildService pro pkg s p ms f => BuildService pro pkg s p ms (D1 meta f) where
+  buildService' ppro ppkg ps ppr pms client
+    = M1 (buildService' ppro ppkg ps ppr pms client)
+instance BuildService pro pkg s p ms f => BuildService pro pkg s p ms (C1 meta f) where
+  buildService' ppro ppkg ps ppr pms client
+    = M1 (buildService' ppro ppkg ps ppr pms client)
 instance TypeError ('Text "building a service from sums is not supported")
-         => BuildService pro s p ms (f :+: g) where
+         => BuildService pro pkg s p ms (f :+: g) where
   buildService' = error "this should never happen"
-instance (BuildService pro s p ms f, BuildService pro s p ms g)
-         => BuildService pro s p ms (f :*: g) where
-  buildService' ppro ps ppr pms client
-    = buildService' ppro ps ppr pms client :*: buildService' ppro ps ppr pms client
-instance (m ~ AppendSymbol p x, GRpcServiceMethodCall pro s (s :-->: x) h)
-         => BuildService pro s p ms (S1 ('MetaSel ('Just m) u ss ds) (K1 i h)) where
-  buildService' ppro ps _ _ client
-    = M1 $ K1 $ gRpcServiceMethodCall ppro ps (Proxy @(s :-->: x)) client
+instance (BuildService pro pkg s p ms f, BuildService pro pkg s p ms g)
+         => BuildService pro pkg s p ms (f :*: g) where
+  buildService' ppro ppkg ps ppr pms client
+    = buildService' ppro ppkg ps ppr pms client :*: buildService' ppro ppkg ps ppr pms client
+instance (m ~ AppendSymbol p x, GRpcServiceMethodCall pro pkg sname (LookupMethod ms x) h)
+         => BuildService pro pkg sname p ms (S1 ('MetaSel ('Just m) u ss ds) (K1 i h)) where
+  buildService' ppro ppkg ps _ _ client
+    = M1 $ K1 $ gRpcServiceMethodCall ppro ppkg ps (Proxy @(LookupMethod ms x)) client
 
 -- TEMPLATE HASKELL
 -- ================
@@ -111,13 +117,13 @@ serviceDefToDecl serviceTyName complete fieldsPrefix tNamer (Service _ _ methods
                    <*> pure []
        return [d, s, FunD buildName [c]]
 
-methodToDecl :: String -> Namer -> Method String -> Q (Name, Bang, Type)
+methodToDecl :: String -> Namer -> Method String String -> Q (Name, Bang, Type)
 methodToDecl fieldsPrefix tNamer (Method mName _ args ret)
   = do let nm = firstLower (fieldsPrefix ++ mName)
        ty <- computeMethodType tNamer args ret
        return ( mkName nm, Bang NoSourceUnpackedness NoSourceStrictness, ty )
 
-computeMethodType :: Namer -> [Argument] -> Return -> Q Type
+computeMethodType :: Namer -> [Argument String] -> Return String -> Q Type
 computeMethodType _ [] RetNothing
   = [t|IO (GRpcReply ())|]
 computeMethodType n [] (RetSingle r)
@@ -167,7 +173,7 @@ typeToServiceDef toplevelty
                    <*> pure []
                    <*> mapM typeToMethodDef methods'
 
-    typeToMethodDef :: Type -> Maybe (Method String)
+    typeToMethodDef :: Type -> Maybe (Method String String)
     typeToMethodDef ty
       = do (mn, _, args, ret) <- tyD4 'Method ty
            args' <- tyList args
@@ -176,12 +182,12 @@ typeToServiceDef toplevelty
                   <*> mapM typeToArgDef args'
                   <*> typeToRetDef ret
 
-    typeToArgDef :: Type -> Maybe Argument
+    typeToArgDef :: Type -> Maybe (Argument String)
     typeToArgDef ty
       =   ArgSingle <$> (tyD1 'ArgSingle ty >>= typeToTypeRef)
       <|> ArgStream <$> (tyD1 'ArgStream ty >>= typeToTypeRef)
 
-    typeToRetDef :: Type -> Maybe Return
+    typeToRetDef :: Type -> Maybe (Return String)
     typeToRetDef ty
       =   RetNothing <$ tyD0 'RetNothing ty
       <|> RetSingle <$> (tyD1 'RetSingle ty >>= typeToTypeRef)

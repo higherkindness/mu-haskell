@@ -87,13 +87,15 @@ avdlToDecls schemaName serviceName protocol
            serviceName' = mkName serviceName
        schemaDec <- tySynD schemaName' [] (schemaFromAvro $ S.toList (A.types protocol))
        serviceDec <- tySynD serviceName' []
-         [t| 'Service $(textToStrLit (A.pname protocol)) $(pkgType (A.ns protocol))
-                      $(typesToList <$> mapM (avroMethodToType schemaName') (S.toList $ A.messages protocol)) |]
+         [t| 'Package $(pkgType (A.ns protocol))
+                '[ 'Service $(textToStrLit (A.pname protocol)) '[]
+                            $(typesToList <$> mapM (avroMethodToType schemaName')
+                            (S.toList $ A.messages protocol)) ] |]
        return [schemaDec, serviceDec]
   where
-    pkgType Nothing = [t| '[] |]
+    pkgType Nothing = [t| 'Nothing |]
     pkgType (Just (A.Namespace p))
-                    = [t| '[ Package $(textToStrLit (T.intercalate "." p)) ] |]
+                    = [t| 'Just $(textToStrLit (T.intercalate "." p)) |]
 
 schemaFromAvro :: [A.Schema] -> Q Type
 schemaFromAvro =

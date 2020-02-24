@@ -24,6 +24,7 @@ import           Data.Conduit
 import qualified Data.Conduit.Combinators      as C
 import           Data.Conduit.TMChan
 import           Data.Kind
+import           GHC.TypeLits
 import           Network.GRPC.Client           (CompressMode (..), IncomingEvent (..),
                                                 OutgoingEvent (..), RawReply, StreamDone (..))
 import           Network.GRPC.Client.Helpers
@@ -41,14 +42,14 @@ import           Mu.Schema
 setupGrpcClient' :: GrpcClientConfig -> IO (Either ClientError GrpcClient)
 setupGrpcClient' = runExceptT . setupGrpcClient
 
-class GRpcServiceMethodCall (p :: GRpcMessageProtocol) (s :: Service snm mnm) (m :: Method mnm) h where
-  gRpcServiceMethodCall :: Proxy p -> Proxy s -> Proxy m -> GrpcClient -> h
-instance ( KnownName serviceName, KnownName (FindPackageName anns), KnownName mname
+class GRpcServiceMethodCall (p :: GRpcMessageProtocol)
+                            (pkg :: snm) (s :: snm) (m :: Method snm mnm) h where
+  gRpcServiceMethodCall :: Proxy p -> Proxy pkg -> Proxy s -> Proxy m -> GrpcClient -> h
+instance ( KnownName serviceName, KnownName pkg, KnownName mname
          , GRpcMethodCall p ('Method mname manns margs mret) h, MkRPC p )
-         => GRpcServiceMethodCall p ('Service serviceName anns methods)
-                                  ('Method mname manns margs mret) h where
-  gRpcServiceMethodCall pro _ = gRpcMethodCall @p rpc
-    where pkgName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
+         => GRpcServiceMethodCall p pkg serviceName ('Method mname manns margs mret) h where
+  gRpcServiceMethodCall pro _ _ = gRpcMethodCall @p rpc
+    where pkgName = BS.pack (nameVal (Proxy @pkg))
           svrName = BS.pack (nameVal (Proxy @serviceName))
           metName = BS.pack (nameVal (Proxy @mname))
           rpc = mkRPC pro pkgName svrName metName
@@ -121,7 +122,7 @@ instance (GRPCOutput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) r))
 -- IMPLEMENTATION OF THE METHODS
 -- -----------------------------
 
-class GRpcMethodCall (p :: GRpcMessageProtocol) method h where
+class GRpcMethodCall (p :: GRpcMessageProtocol) (method :: Method Symbol Symbol) h where
   gRpcMethodCall :: RPCTy p -> Proxy method -> GrpcClient -> h
 
 instance ( KnownName name

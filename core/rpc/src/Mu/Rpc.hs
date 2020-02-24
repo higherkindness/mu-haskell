@@ -16,8 +16,8 @@ and protocol.
 module Mu.Rpc (
   Package', Package(..)
 , Service', Service(..)
-, ServiceAnnotation
-, Method(..), (:-->:)
+, ServiceAnnotation, Method(..)
+, LookupService, LookupMethod
 , TypeRef(..), Argument(..), Return(..)
 ) where
 
@@ -53,11 +53,12 @@ data Method serviceName methodName
            [Argument serviceName]
            (Return serviceName)
 
--- | Look up a method in a service definition using its name.
---   Useful to declare handlers like @HandlerIO (MyService :-->: "MyMethod")@.
-type family (:-->:) (s :: Service snm mnm) (m :: mnm) :: Method snm mnm where
-  'Service sname anns methods :-->: m = LookupMethod methods m
+type family LookupService (ss :: [Service snm mnm]) (s :: snm) :: Service snm mnm where
+  LookupService '[] s = TypeError ('Text "could not find method " ':<>: 'ShowType s)
+  LookupService ('Service s anns ms ': ss) s = 'Service s anns ms
+  LookupService (other              ': ss) s = LookupService ss s
 
+-- | Look up a method in a service definition using its name.
 type family LookupMethod (s :: [Method snm mnm]) (m :: mnm) :: Method snm mnm where
   LookupMethod '[] m = TypeError ('Text "could not find method " ':<>: 'ShowType m)
   LookupMethod ('Method m anns args r ': ms) m = 'Method m anns args r

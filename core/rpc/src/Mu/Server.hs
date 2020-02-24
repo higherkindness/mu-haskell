@@ -37,6 +37,7 @@ We recommend you to catch exceptions and return custom
 module Mu.Server (
   -- * Servers and handlers
   MonadServer
+, SingleServerT
 , ServerT(.., Server), ServicesT(..), HandlersT(.., (:<|>:))
 , ServiceChain, noContext
   -- ** Simple servers using only IO
@@ -98,7 +99,14 @@ data ServerErrorCode
   | NotFound
   deriving (Eq, Show)
 
+-- | Defines a mapping between outcome of
+--   a service, and its representation as
+--   Haskell type.
 type ServiceChain snm = Mappings snm Type
+
+-- | A server for a single service,
+--   like most RPC ones.
+type SingleServerT w = ServerT w '[]
 
 -- | Definition of a complete server
 --   for a set of services, with possible

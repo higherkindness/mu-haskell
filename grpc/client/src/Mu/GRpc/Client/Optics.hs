@@ -49,8 +49,12 @@ import           Mu.Schema
 import           Mu.Schema.Optics
 
 -- | Represents a connection to the service @s@.
-newtype GRpcConnection (s :: Service Symbol Symbol) (p :: GRpcMessageProtocol)
+newtype GRpcConnection (s :: Package') (p :: GRpcMessageProtocol)
   = GRpcConnection { gcClient  :: G.GrpcClient }
+
+-- | Represents a connection to a specific service @s@
+newtype GRpcConnectionService (pkg :: Package') (srv :: Service') (p :: GRpcMessageProtocol)
+  = GRpcConnectionService { gcsClient  :: G.GrpcClient }
 
 -- | Initializes a connection to a gRPC server.
 --   Usually the service you are connecting to is
@@ -68,24 +72,39 @@ initGRpc config _ = do
     Left e  -> return $ Left e
     Right c -> return $ Right $ GRpcConnection c
 
-instance forall (serviceName :: Symbol) anns (methods :: [Method Symbol]) (m :: Symbol)
-                (t :: *) (p :: GRpcMessageProtocol).
-         ( SearchMethodOptic p methods m t
+instance forall (pkg :: Package') pkgName (services :: [Service'])
+                (s :: Service')
+                (p :: GRpcMessageProtocol) (m :: Symbol).
+         ( pkg ~ 'Package pkgName services, s ~ LookupService services m )
+         => LabelOptic m A_Getter
+                       (GRpcConnection pkg p)
+                       (GRpcConnection pkg p)
+                       (GRpcConnectionService pkg s p)
+                       (GRpcConnectionService pkg s p) where
+  labelOptic = to (GRpcConnectionService . gcClient)
+
+instance forall (pkg :: Package') (pkgName :: Symbol) (services :: [Service'])
+                (service :: Service') (serviceName :: Symbol) (anns :: [ServiceAnnotation])
+                (methods :: [Method Symbol Symbol])
+                (p :: GRpcMessageProtocol) (m :: Symbol) t.
+         ( pkg ~ 'Package ('Just pkgName) services
+         , service ~ 'Service serviceName anns methods
+         , SearchMethodOptic p methods m t
          , KnownName serviceName
-         , KnownName (FindPackageName anns)
+         , KnownName pkgName
          , KnownName m
          , MkRPC p )
          => LabelOptic m A_Getter
-                       (GRpcConnection ('Service serviceName anns methods) p)
-                       (GRpcConnection ('Service serviceName anns methods) p)
+                       (GRpcConnectionService pkg service p)
+                       (GRpcConnectionService pkg service p)
                        t t where
-  labelOptic = to (searchMethodOptic @p (Proxy @methods) (Proxy @m) rpc . gcClient)
-    where pkgName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
+  labelOptic = to (searchMethodOptic @p (Proxy @methods) (Proxy @m) rpc . gcsClient)
+    where pkgName = BS.pack (nameVal (Proxy @pkgName))
           svrName = BS.pack (nameVal (Proxy @serviceName))
           metName = BS.pack (nameVal (Proxy @m))
           rpc = mkRPC (Proxy @p) pkgName svrName metName
 
-class SearchMethodOptic (p :: GRpcMessageProtocol) (methods :: [Method Symbol]) (m :: Symbol) t
+class SearchMethodOptic (p :: GRpcMessageProtocol) (methods :: [Method Symbol Symbol]) (m :: Symbol) t
       | p methods m -> t where
   searchMethodOptic :: Proxy methods -> Proxy m -> RPCTy p -> G.GrpcClient -> t
 
@@ -101,7 +120,7 @@ instance {-# OVERLAPPABLE #-} SearchMethodOptic p rest name t
   searchMethodOptic _ = searchMethodOptic @p (Proxy @rest)
 
 class GRpcMethodCall p method t
-      => MethodOptic (p :: GRpcMessageProtocol) (method :: Method Symbol) t
+      => MethodOptic (p :: GRpcMessageProtocol) (method :: Method Symbol Symbol) t
       | p method -> t where
   methodOptic :: RPCTy p -> Proxy method -> G.GrpcClient -> t
   methodOptic = gRpcMethodCall @p
