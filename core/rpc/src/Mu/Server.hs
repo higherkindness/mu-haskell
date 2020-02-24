@@ -107,6 +107,7 @@ data ServerT (w :: Type -> Type)  -- wrapper for data types
   Server :: ServicesT w chn s m hs
          -> ServerT w chn ('Package pname s) m hs
 
+infixr 3 :<&>:
 -- | Definition of a complete server for a service.
 data ServicesT (w :: Type -> Type)
                (chn :: ServiceChain snm) (s :: [Service snm mnm])
@@ -116,7 +117,7 @@ data ServicesT (w :: Type -> Type)
           -> ServicesT w chn rest m hss
           -> ServicesT w chn ('Service sname anns methods ': rest) m (hs ': hss)
 
-infixr 5 :<|>:
+infixr 4 :<|>:
 -- | 'HandlersT' is a sequence of handlers.
 --   Note that the handlers for your service
 --   must appear __in the same order__ as they

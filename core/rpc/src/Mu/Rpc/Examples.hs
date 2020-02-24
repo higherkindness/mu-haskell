@@ -72,7 +72,7 @@ quickstartServer :: forall m f.
                     (MonadServer m, Applicative f, MaybeLike f)
                  => ServerT f '[] QuickStartService m _
 quickstartServer
-  = Server ((noContext sayHello :<|>: noContext sayHi :<|>: noContext sayManyHellos :<|>: H0) :<&>: S0)
+  = Server (noContext sayHello :<|>: noContext sayHi :<|>: noContext sayManyHellos :<|>: H0 :<&>: S0)
   where sayHello :: HelloRequest f -> m (HelloResponse f)
         sayHello (HelloRequest nm)
           = return (HelloResponse (("hi, " <>) <$> nm))
