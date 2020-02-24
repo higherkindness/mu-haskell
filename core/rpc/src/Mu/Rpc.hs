@@ -38,7 +38,8 @@ type ServiceAnnotation = Type
 
 -- | A package is a set of services.
 data Package serviceName methodName
-  = Package serviceName [Service serviceName methodName]
+  = Package (Maybe serviceName)
+            [Service serviceName methodName]
 
 -- | A service is a set of methods.
 data Service serviceName methodName

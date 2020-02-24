@@ -69,11 +69,12 @@ pbServiceDeclToDec servicePrefix pkg schema srv@(P.Service nm _ _)
 
 pbServiceDeclToType :: Maybe [T.Text] -> Name -> P.ServiceDeclaration -> Q Type
 pbServiceDeclToType pkg schema (P.Service nm _ methods)
-  = [t| 'Service $(textToStrLit nm) $(pkgType pkg)
-                 $(typesToList <$> mapM (pbMethodToType schema) methods) |]
+  = [t| 'Package $(pkgType pkg)
+          '[ 'Service $(textToStrLit nm) '[]
+                      $(typesToList <$> mapM (pbMethodToType schema) methods) ] |]
   where
-    pkgType Nothing  = [t| '[] |]
-    pkgType (Just p) = [t| '[ Package $(textToStrLit (T.intercalate "." p)) ] |]
+    pkgType Nothing  = [t| 'Nothing |]
+    pkgType (Just p) = [t| 'Just $(textToStrLit (T.intercalate "." p)) |]
 
 pbMethodToType :: Name -> P.Method -> Q Type
 pbMethodToType s (P.Method nm vr v rr r _)

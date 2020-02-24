@@ -5,6 +5,7 @@
 {-# language FlexibleInstances         #-}
 {-# language GADTs                     #-}
 {-# language MultiParamTypeClasses     #-}
+{-# language PatternSynonyms           #-}
 {-# language PolyKinds                 #-}
 {-# language RankNTypes                #-}
 {-# language TypeFamilies              #-}
@@ -35,8 +36,8 @@ We recommend you to catch exceptions and return custom
 module Mu.Server (
   -- * Servers and handlers
   MonadServer
-, ServerT(..), ServicesT(..), HandlersT(..)
-, noContext
+, ServerT(.., Server), ServicesT(..), HandlersT(..)
+, ServiceChain, noContext
   -- ** Simple servers using only IO
 , ServerErrorIO, ServerIO
   -- * Errors which might be raised
@@ -104,8 +105,13 @@ type ServiceChain snm = Mappings snm Type
 data ServerT (w :: Type -> Type)  -- wrapper for data types
              (chn :: ServiceChain snm) (s :: Package snm mnm)
              (m :: Type -> Type) (hs :: [[Type]]) where
-  Server :: ServicesT w chn s m hs
-         -> ServerT w chn ('Package pname s) m hs
+  Services :: ServicesT w chn s m hs
+           -> ServerT w chn ('Package pname s) m hs
+
+pattern Server :: ()
+               => HandlersT w chn methods m hs
+               -> ServerT w chn ('Package pname '[ 'Service sname sanns methods ]) m '[hs]
+pattern Server svr = Services (svr :<&>: S0)
 
 infixr 3 :<&>:
 -- | Definition of a complete server for a service.
