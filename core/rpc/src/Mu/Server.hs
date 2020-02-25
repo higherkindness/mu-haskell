@@ -1,4 +1,3 @@
-{-# LANGUAGE ViewPatterns #-}
 {-# language ConstraintKinds           #-}
 {-# language DataKinds                 #-}
 {-# language ExistentialQuantification #-}
@@ -12,6 +11,7 @@
 {-# language TypeFamilies              #-}
 {-# language TypeOperators             #-}
 {-# language UndecidableInstances      #-}
+{-# language ViewPatterns              #-}
 {-|
 Description : Protocol-independent declaration of servers.
 
