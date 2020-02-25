@@ -1,5 +1,6 @@
 {
   "[haskell]": {
+    "editor.formatOnSave": true,
     "editor.defaultFormatter": "vigoo.stylish-haskell"
   }
 }
