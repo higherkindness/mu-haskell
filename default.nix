@@ -17,6 +17,7 @@ in {
   mu-example-seed-protobuf = hnPkgs.mu-example-seed-protobuf.components.all;
   mu-example-todolist = hnPkgs.mu-example-todolist.components.all;
   mu-example-with-persistent = hnPkgs.mu-example-with-persistent.components.all;
+  mu-graphql = hnPkgs.mu-graphql.components.library;
   mu-grpc-client = hnPkgs.mu-grpc-client.components.library;
   mu-grpc-common = hnPkgs.mu-grpc-common.components.library;
   mu-grpc-server = hnPkgs.mu-grpc-server.components.all;

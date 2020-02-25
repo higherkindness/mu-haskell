@@ -16,3 +16,4 @@ packages: compendium-client/
           grpc/common/
           grpc/client/
           grpc/server/
+          graphql/

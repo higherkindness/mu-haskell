@@ -1,0 +1,27 @@
+name:                mu-graphql
+version:             0.1.0.0
+synopsis:            GraphQL support for Mu
+cabal-version:       >=1.10
+-- description:
+-- bug-reports:
+license:             Apache-2.0
+license-file:        LICENSE
+author:              Alejandro Serrano, Flavio Corpa
+maintainer:          alejandro.serrano@47deg.com
+-- copyright:
+category:            Network
+build-type:          Simple
+-- extra-source-files:  CHANGELOG.md
+
+library
+  exposed-modules:     Mu.GraphQL.Query
+  -- other-extensions:
+  build-depends:       base >=4.12 && <5
+                     , aeson
+                     , mtl
+                     , sop-core
+                     , mu-schema
+                     , mu-rpc
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  ghc-options:         -Wall -fprint-potential-instances
