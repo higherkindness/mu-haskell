@@ -17,10 +17,12 @@ import           Mu.Schema
 import           Mu.Server
 
 -- TODO: turn Hasura's ExecutableDefinition into a service query
--- hint: start with the following function, and then move up
---       (OperationDefinition > ExecutableDefinition > ExecutableDocument)
-parseQuery :: forall (p :: Package') (s :: Symbol) pname ss.
-              (p ~ 'Package pname ss)
+-- hint#1: start with the following function, and then move up
+--         (OperationDefinition > ExecutableDefinition > ExecutableDocument)
+-- hint#2: introduce a type class which matches on "methods"
+parseQuery :: forall (p :: Package') (s :: Symbol) pname ss sname sanns methods.
+              ( p ~ 'Package pname ss
+              , LookupService ss s ~ 'Service sname sanns methods )
            => Proxy p -> Proxy s
            -> GraphQL.SelectionSet
            -> Maybe (ServiceQuery p (LookupService ss s))
