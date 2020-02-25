@@ -30,6 +30,7 @@ library
   other-modules:    Mu.GRpc.Client.Internal
   build-depends:
       async
+    , avro
     , base               >=4.12  && <5
     , bytestring
     , conduit

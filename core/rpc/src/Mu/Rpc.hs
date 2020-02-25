@@ -64,20 +64,29 @@ type family LookupMethod (s :: [Method snm mnm]) (m :: mnm) :: Method snm mnm wh
   LookupMethod ('Method m anns args r ': ms) m = 'Method m anns args r
   LookupMethod (other                 ': ms) m = LookupMethod ms m
 
--- | Defines how to handle the type
-data TypeRef where
-  ViaSchema   :: Schema typeName fieldName -> typeName -> TypeRef
+data TypeRef serviceName where
+  -- | A primitive type.
+  PrimitiveRef :: Type -> TypeRef serviceName
+  -- | Chain with another service.
+  ServiceRef   :: serviceName -> TypeRef serviceName
+  -- | Point to schema.
+  SchemaRef    :: Schema typeName fieldName -> typeName -> TypeRef serviceName
   -- | Registry subject, type to convert to, and preferred serialization version
-  ViaRegistry :: Registry -> Type -> Nat -> TypeRef
+  RegistryRef  :: Registry -> Type -> Nat -> TypeRef serviceName
   -- | To be used only during TH generation!
-  ViaTH       :: TH.Type -> TypeRef
+  THRef        :: TH.Type -> TypeRef serviceName
+  -- Combinators found in the gRPC and GraphQL languages.
+  -- | Represents a list of values.
+  ListRef      :: TypeRef serviceName -> TypeRef serviceName
+  -- | Represents a possibly-missing value.
+  OptionalRef  :: TypeRef serviceName -> TypeRef serviceName
 
 -- | Defines the way in which arguments are handled.
 data Argument serviceName where
   -- | Use a single value.
-  ArgSingle :: TypeRef -> Argument serviceName
+  ArgSingle :: TypeRef serviceName -> Argument serviceName
   -- | Consume a stream of values.
-  ArgStream :: TypeRef -> Argument serviceName
+  ArgStream :: TypeRef serviceName -> Argument serviceName
 
 -- | Defines the different possibilities for returning
 --   information from a method.
@@ -85,12 +94,8 @@ data Return serviceName where
   -- | Fire and forget.
   RetNothing :: Return serviceName
   -- | Return a single value.
-  RetSingle :: TypeRef -> Return serviceName
-  -- | Return a value or an error
-  --   (this can be found in Avro IDL).
-  RetThrows :: TypeRef -> TypeRef -> Return serviceName
-  -- | Return a stream of values
-  --   (this can be found in gRPC).
-  RetStream :: TypeRef -> Return serviceName
-  -- | Continue with another service.
-  RetService :: serviceName -> Return serviceName
+  RetSingle  :: TypeRef serviceName -> Return serviceName
+  -- | Return a stream of values.
+  RetStream  :: TypeRef serviceName -> Return serviceName
+  -- | Return a value or an error.
+  RetThrows  :: TypeRef serviceName -> TypeRef serviceName -> Return serviceName

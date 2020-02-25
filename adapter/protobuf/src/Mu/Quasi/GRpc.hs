@@ -84,18 +84,18 @@ pbMethodToType s (P.Method nm vr v rr r _)
     argToType P.Single (P.TOther ["google","protobuf","Empty"])
       = [t| '[ ] |]
     argToType P.Single (P.TOther a)
-      = [t| '[ 'ArgSingle ('ViaSchema $(schemaTy s) $(textToStrLit (last a))) ] |]
+      = [t| '[ 'ArgSingle ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) ] |]
     argToType P.Stream (P.TOther a)
-      = [t| '[ 'ArgStream ('ViaSchema $(schemaTy s) $(textToStrLit (last a))) ] |]
+      = [t| '[ 'ArgStream ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) ] |]
     argToType _ _
       = fail "only message types may be used as arguments"
 
     retToType P.Single (P.TOther ["google","protobuf","Empty"])
       = [t| 'RetNothing |]
     retToType P.Single (P.TOther a)
-      = [t| 'RetSingle ('ViaSchema $(schemaTy s) $(textToStrLit (last a))) |]
+      = [t| 'RetSingle ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) |]
     retToType P.Stream (P.TOther a)
-      = [t| 'RetStream ('ViaSchema $(schemaTy s) $(textToStrLit (last a))) |]
+      = [t| 'RetStream ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) |]
     retToType _ _
       = fail "only message types may be used as results"
 

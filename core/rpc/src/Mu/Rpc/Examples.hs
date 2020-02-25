@@ -47,14 +47,14 @@ type QuickStartService
   = 'Package ('Just "helloworld")
       '[ 'Service "Greeter" '[]
            '[ 'Method "SayHello" '[]
-                      '[ 'ArgSingle ('ViaSchema QuickstartSchema "HelloRequest") ]
-                        ('RetSingle ('ViaSchema QuickstartSchema "HelloResponse"))
+                      '[ 'ArgSingle ('SchemaRef QuickstartSchema "HelloRequest") ]
+                        ('RetSingle ('SchemaRef QuickstartSchema "HelloResponse"))
             , 'Method "SayHi" '[]
-                      '[ 'ArgSingle ('ViaSchema QuickstartSchema "HiRequest")]
-                        ('RetStream ('ViaSchema QuickstartSchema "HelloResponse"))
+                      '[ 'ArgSingle ('SchemaRef QuickstartSchema "HiRequest")]
+                        ('RetStream ('SchemaRef QuickstartSchema "HelloResponse"))
             , 'Method "SayManyHellos" '[]
-                      '[ 'ArgStream ('ViaSchema QuickstartSchema "HelloRequest")]
-                        ('RetStream ('ViaSchema QuickstartSchema "HelloResponse")) ] ]
+                      '[ 'ArgStream ('SchemaRef QuickstartSchema "HelloRequest")]
+                        ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ]
 
 newtype HelloRequest f = HelloRequest { name :: f T.Text } deriving (Generic)
 deriving instance Functor f => ToSchema f QuickstartSchema "HelloRequest" (HelloRequest f)
@@ -88,3 +88,27 @@ quickstartServer
                       -> m ()
         sayManyHellos source sink
           = runConduit $ source .| C.mapM sayHello .| sink
+
+{-
+From https://www.apollographql.com/docs/apollo-server/schema/schema/
+
+type Book {
+  title: String
+  author: Author
+}
+
+type Author {
+  name: String
+  books: [Book]
+}
+-}
+
+type ApolloService
+  = 'Package ('Just "apollo")
+       '[ 'Service "Book" '[]
+             '[ 'Method "title"  '[] '[] ('RetSingle ('PrimitiveRef String))
+              , 'Method "author" '[] '[] ('RetSingle ('ServiceRef "Author")) ]
+        , 'Service "Author" '[]
+             '[ 'Method "name"  '[] '[] ('RetSingle ('PrimitiveRef String))
+              , 'Method "books" '[] '[] ('RetSingle ('ListRef ('ServiceRef "Book"))) ]
+        ]

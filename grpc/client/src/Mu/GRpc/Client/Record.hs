@@ -140,10 +140,10 @@ computeMethodType n [ArgStream v] (RetStream r)
   = [t|CompressMode -> IO (ConduitT $(typeRefToType n v) (GRpcReply $(typeRefToType n r)) IO ())|]
 computeMethodType _ _ _ = fail "method signature not supported"
 
-typeRefToType :: Namer -> TypeRef -> Q Type
-typeRefToType tNamer (ViaTH (LitT (StrTyLit s)))
+typeRefToType :: Namer -> TypeRef snm -> Q Type
+typeRefToType tNamer (THRef (LitT (StrTyLit s)))
   = return $ ConT (mkName $ completeName tNamer s)
-typeRefToType _tNamer (ViaTH ty)
+typeRefToType _tNamer (THRef ty)
   = return ty
 typeRefToType _ _ = error "this should never happen"
 
@@ -195,12 +195,12 @@ typeToServiceDef toplevelty
               RetThrows <$> typeToTypeRef e <*> typeToTypeRef v)
       <|> RetStream <$> (tyD1 'RetStream ty >>= typeToTypeRef)
 
-    typeToTypeRef :: Type -> Maybe TypeRef
+    typeToTypeRef :: Type -> Maybe (TypeRef snm)
     typeToTypeRef ty
-      =   (do (_,innerTy) <- tyD2 'ViaSchema ty
-              return (ViaTH innerTy))
-      <|> (do (_,innerTy,_) <- tyD3 'ViaRegistry ty
-              return (ViaTH innerTy))
+      =   (do (_,innerTy) <- tyD2 'SchemaRef ty
+              return (THRef innerTy))
+      <|> (do (_,innerTy,_) <- tyD3 'RegistryRef ty
+              return (THRef innerTy))
 
 tyString :: Type -> Maybe String
 tyString (SigT t _)

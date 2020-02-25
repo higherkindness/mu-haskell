@@ -181,7 +181,7 @@ avroMethodToType schemaName m
   where
     argToType :: A.Argument -> Q Type
     argToType (A.Argument (A.NamedType a) _)
-      = [t| 'ArgSingle ('ViaSchema $(conT schemaName) $(textToStrLit (A.baseName a))) |]
+      = [t| 'ArgSingle ('SchemaRef $(conT schemaName) $(textToStrLit (A.baseName a))) |]
     argToType (A.Argument _ _)
       = fail "only named types may be used as arguments"
 
@@ -189,7 +189,7 @@ avroMethodToType schemaName m
     retToType A.Null
       = [t| 'RetNothing |]
     retToType (A.NamedType a)
-      = [t| 'RetSingle ('ViaSchema $(conT schemaName) $(textToStrLit (A.baseName a))) |]
+      = [t| 'RetSingle ('SchemaRef $(conT schemaName) $(textToStrLit (A.baseName a))) |]
     retToType _
       = fail "only named types may be used as results"
 
@@ -197,4 +197,4 @@ typesToList :: [Type] -> Type
 typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
 
 textToStrLit :: T.Text -> Q Type
-textToStrLit s = return $ LitT $ StrTyLit $ T.unpack s
+textToStrLit s = litT $ strTyLit $ T.unpack s

@@ -172,31 +172,39 @@ class Handles (w :: Type -> Type)
               (chn :: ServiceChain snm)
               (args :: [Argument snm]) (ret :: Return snm)
               (m :: Type -> Type) (h :: Type)
-class ToRef (w :: Type -> Type) (ref :: TypeRef) (t :: Type)
-class FromRef (w :: Type -> Type) (ref :: TypeRef) (t :: Type)
+class ToRef   (w :: Type -> Type) (chn :: ServiceChain snm)
+              (ref :: TypeRef snm) (t :: Type)
+class FromRef (w :: Type -> Type) (chn :: ServiceChain snm)
+              (ref :: TypeRef snm) (t :: Type)
 
 -- Type references
-instance ToSchema w sch sty t => ToRef w ('ViaSchema sch sty) t
-instance ToRef w ('ViaRegistry subject t last) t
-instance FromSchema w sch sty t => FromRef w ('ViaSchema sch sty) t
-instance FromRef w ('ViaRegistry subject t last) t
+instance t ~ s => ToRef w chn ('PrimitiveRef t) s
+instance ToSchema w sch sty t => ToRef w chn ('SchemaRef sch sty) t
+instance MappingRight chn ref ~ t => ToRef w chn ('ServiceRef ref) t
+instance t ~ s => ToRef w chn ('RegistryRef subject t last) s
+instance (ToRef w chn ref t, [t] ~ s) => ToRef w chn ('ListRef ref) s
+instance (ToRef w chn ref t, Maybe t ~ s) => ToRef w chn ('OptionalRef ref) s
+
+instance t ~ s => FromRef w chn ('PrimitiveRef t) s
+instance FromSchema w sch sty t => FromRef w chn ('SchemaRef sch sty) t
+instance MappingRight chn ref ~ t => FromRef w chn ('ServiceRef ref) t
+instance t ~ s => FromRef w chn ('RegistryRef subject t last) s
+instance (FromRef w chn ref t, [t] ~ s) => FromRef w chn ('ListRef ref) s
+instance (FromRef w chn ref t, Maybe t ~ s) => FromRef w chn ('OptionalRef ref) s
 
 -- Arguments
-instance (FromRef w ref t, Handles w chn args ret m h,
+instance (FromRef w chn ref t, Handles w chn args ret m h,
           handler ~ (t -> h))
          => Handles w chn ('ArgSingle ref ': args) ret m handler
-instance (MonadError ServerError m, FromRef w ref t, Handles w chn args ret m h,
+instance (MonadError ServerError m, FromRef w chn ref t, Handles w chn args ret m h,
           handler ~ (ConduitT () t m () -> h))
          => Handles w chn ('ArgStream ref ': args) ret m handler
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
          => Handles w chn '[] 'RetNothing m handler
-instance (MonadError ServerError m, ToRef w eref e, ToRef w vref v, handler ~ m (Either e v))
+instance (MonadError ServerError m, ToRef w chn eref e, ToRef w chn vref v, handler ~ m (Either e v))
          => Handles w chn '[] ('RetThrows eref vref) m handler
-instance (MonadError ServerError m, ToRef w ref v, handler ~ m v)
+instance (MonadError ServerError m, ToRef w chn ref v, handler ~ m v)
          => Handles w chn '[] ('RetSingle ref) m handler
-instance (MonadError ServerError m, ToRef w ref v, handler ~ (ConduitT v Void m () -> m ()))
+instance (MonadError ServerError m, ToRef w chn ref v, handler ~ (ConduitT v Void m () -> m ()))
          => Handles w chn '[] ('RetStream ref) m handler
--- Look up the type to produce in the mapping
-instance (MonadError ServerError m, MappingRight chn ref ~ v, handler ~ m v)
-         => Handles w chn '[] ('RetService ref) m handler

@@ -11,6 +11,7 @@
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
+{-# OPTIONS_GHC -fprint-explicit-kinds #-}
 -- | Client for gRPC services defined using Mu 'Service'
 module Mu.GRpc.Client.Internal where
 
@@ -19,10 +20,12 @@ import           Control.Concurrent.STM        (atomically)
 import           Control.Concurrent.STM.TMChan
 import           Control.Concurrent.STM.TMVar
 import           Control.Monad.IO.Class
+import           Data.Avro
 import qualified Data.ByteString.Char8         as BS
 import           Data.Conduit
 import qualified Data.Conduit.Combinators      as C
 import           Data.Conduit.TMChan
+import           Data.Functor.Identity
 import           Data.Kind
 import           GHC.TypeLits
 import           Network.GRPC.Client           (CompressMode (..), IncomingEvent (..),
@@ -89,7 +92,7 @@ simplifyResponse reply = do
 -- the choice of message protocol (PB or Avro)
 
 class GRPCInput (RPCTy p) (GRpcIWTy p ref r)
-      => GRpcInputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef) (r :: Type) where
+      => GRpcInputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef snm) (r :: Type) where
   type GRpcIWTy p ref r :: Type
   buildGRpcIWTy :: Proxy p -> Proxy ref -> r -> GRpcIWTy p ref r
 
@@ -98,13 +101,15 @@ instance ToProtoBufTypeRef ref r
   type GRpcIWTy 'MsgProtoBuf ref r = ViaToProtoBufTypeRef ref r
   buildGRpcIWTy _ _ = ViaToProtoBufTypeRef
 
-instance (GRPCInput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) r))
-         => GRpcInputWrapper 'MsgAvro ('ViaSchema sch sty) r where
-  type GRpcIWTy 'MsgAvro ('ViaSchema sch sty) r = ViaToAvroTypeRef ('ViaSchema sch sty) r
+instance forall (sch :: Schema') (sty :: Symbol) (r :: Type).
+         ( ToSchema Identity sch sty r
+         , ToAvro (Term Identity sch (sch :/: sty)) )
+         => GRpcInputWrapper 'MsgAvro ('SchemaRef sch sty) r where
+  type GRpcIWTy 'MsgAvro ('SchemaRef sch sty) r = ViaToAvroTypeRef ('SchemaRef sch sty) r
   buildGRpcIWTy _ _ = ViaToAvroTypeRef
 
 class GRPCOutput (RPCTy p) (GRpcOWTy p ref r)
-      => GRpcOutputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef) (r :: Type) where
+      => GRpcOutputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef snm) (r :: Type) where
   type GRpcOWTy p ref r :: Type
   unGRpcOWTy :: Proxy p -> Proxy ref -> GRpcOWTy p ref r -> r
 
@@ -113,9 +118,11 @@ instance FromProtoBufTypeRef ref r
   type GRpcOWTy 'MsgProtoBuf ref r = ViaFromProtoBufTypeRef ref r
   unGRpcOWTy _ _ = unViaFromProtoBufTypeRef
 
-instance (GRPCOutput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) r))
-         => GRpcOutputWrapper 'MsgAvro ('ViaSchema sch sty) r where
-  type GRpcOWTy 'MsgAvro ('ViaSchema sch sty) r = ViaFromAvroTypeRef ('ViaSchema sch sty) r
+instance forall (sch :: Schema') (sty :: Symbol) (r :: Type).
+         ( FromSchema Identity sch sty r
+         , FromAvro (Term Identity sch (sch :/: sty)) )
+         => GRpcOutputWrapper 'MsgAvro ('SchemaRef sch sty) r where
+  type GRpcOWTy 'MsgAvro ('SchemaRef sch sty) r = ViaFromAvroTypeRef ('SchemaRef sch sty) r
   unGRpcOWTy _ _ = unViaFromAvroTypeRef
 
 -- -----------------------------
