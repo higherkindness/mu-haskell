@@ -21,7 +21,7 @@ library
   exposed-modules:     Mu.GRpc.Avro
                      , Mu.GRpc.Bridge
   build-depends:       base >=4.12 && <5
-                     , avro
+                     , avro >=0.4.7
                      , binary
                      , bytestring
                      , http2-grpc-proto3-wire
