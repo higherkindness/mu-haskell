@@ -1,22 +1,30 @@
-{-# language DataKinds     #-}
-{-# language GADTs         #-}
-{-# language PolyKinds     #-}
-{-# language TypeOperators #-}
+{-# language DataKinds           #-}
+{-# language GADTs               #-}
+{-# language PolyKinds           #-}
+{-# language ScopedTypeVariables #-}
+{-# language TypeOperators       #-}
 module Mu.GraphQL.Query where
 
 import           Control.Monad.Writer
-import           Data.Aeson            as Aeson
+import qualified Data.Aeson                    as Aeson
 import           Data.Functor.Identity
 import           Data.SOP.NP
 import           Data.SOP.NS
+import           GHC.TypeLits
+import qualified Language.GraphQL.Draft.Syntax as GraphQL
 import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
 
 -- TODO: turn Hasura's ExecutableDefinition into a service query
--- parseQuery :: forall (p :: Package') (s :: Symbol).
---               ExecutableDefinition
---            -> Maybe (ServiceQuery p (LookupService p s))
+-- hint: start with the following function, and then move up
+--       (OperationDefinition > ExecutableDefinition > ExecutableDocument)
+parseQuery :: forall (p :: Package') (s :: Symbol) pname ss.
+              (p ~ 'Package pname ss)
+           => Proxy p -> Proxy s
+           -> GraphQL.SelectionSet
+           -> Maybe (ServiceQuery p (LookupService ss s))
+parseQuery = undefined
 
 -- TODO: run the query
 runQuery :: ServerT Identity chn p ServerErrorIO hs
