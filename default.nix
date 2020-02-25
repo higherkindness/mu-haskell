@@ -1,11 +1,12 @@
 { nixpkgs ? (fetchTarball https://github.com/NixOS/nixpkgs/archive/484ea7bbac5bf7f958b0bb314a3c130b6c328800.tar.gz)
 , pkgs ? import nixpkgs (import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/7068b4c.tar.gz))
+, haskellCompiler ? "ghc865"
 }:
 
 let
-  hnPkgs = pkgs.haskell-nix.stackProject {
-   src = ./.;
-   modules = [];
+  hnPkgs = pkgs.haskell-nix.cabalProject {
+    src = pkgs.haskell-nix.haskellLib.cleanGit { src = ./.; };
+    ghc = pkgs.buildPackages.pkgs.haskell-nix.compiler.${haskellCompiler};
   };
 in {
   compendium-client = hnPkgs.compendium-client.components.library;
