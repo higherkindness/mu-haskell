@@ -1,4 +1,3 @@
-{-# LANGUAGE TupleSections #-}
 {-# language DataKinds             #-}
 {-# language DeriveAnyClass        #-}
 {-# language DeriveGeneric         #-}
