@@ -117,8 +117,8 @@ data ServerT (w :: Type -> Type)  -- wrapper for data types
   Services :: ServicesT w chn s m hs
            -> ServerT w chn ('Package pname s) m hs
 
-pattern Server :: ()
-               => HandlersT w chn methods m hs
+pattern Server :: (MappingRight chn sname ~ ())
+               => HandlersT w chn () methods m hs
                -> ServerT w chn ('Package pname '[ 'Service sname sanns methods ]) m '[hs]
 pattern Server svr = Services (svr :<&>: S0)
 
@@ -128,7 +128,7 @@ data ServicesT (w :: Type -> Type)
                (chn :: ServiceChain snm) (s :: [Service snm mnm])
                (m :: Type -> Type) (hs :: [[Type]]) where
   S0 :: ServicesT w chn '[] m '[]
-  (:<&>:) :: HandlersT w chn methods m hs
+  (:<&>:) :: HandlersT w chn (MappingRight chn sname) methods m hs
           -> ServicesT w chn rest m hss
           -> ServicesT w chn ('Service sname anns methods ': rest) m (hs ': hss)
 
@@ -152,18 +152,18 @@ infixr 4 :<||>:
 --   * Output streams turn into an __additional argument__
 --     of type @Conduit t Void m ()@. This stream should
 --     be connected to a source to get the elements.
-data HandlersT (w :: Type -> Type)
-               (chn :: ServiceChain snm) (methods :: [Method snm mnm])
+data HandlersT (w :: Type -> Type) (chn :: ServiceChain snm)
+               (inh :: *) (methods :: [Method snm mnm])
                (m :: Type -> Type) (hs :: [Type]) where
-  H0 :: HandlersT w chn '[] m '[]
+  H0 :: HandlersT w chn inh '[] m '[]
   (:<||>:) :: Handles w chn args ret m h
-           => (MappingRight chn name -> h) -> HandlersT w chn ms m hs
-           -> HandlersT w chn ('Method name anns args ret ': ms) m (h ': hs)
+           => (inh -> h) -> HandlersT w chn inh ms m hs
+           -> HandlersT w chn inh ('Method name anns args ret ': ms) m (h ': hs)
 
 infixr 4 :<|>:
-pattern (:<|>:) :: (MappingRight chn name ~ (), Handles w chn args ret m h)
-                => h -> HandlersT w chn ms m hs
-                -> HandlersT w chn ('Method name anns args ret ': ms) m (h ': hs)
+pattern (:<|>:) :: (Handles w chn args ret m h)
+                => h -> HandlersT w chn () ms m hs
+                -> HandlersT w chn () ('Method name anns args ret ': ms) m (h ': hs)
 pattern x :<|>: xs <- (($ ()) -> x) :<||>: xs where
   x :<|>: xs = noContext x :<||>: xs
 

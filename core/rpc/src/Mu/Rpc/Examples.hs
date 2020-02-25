@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# language DataKinds             #-}
 {-# language DeriveAnyClass        #-}
 {-# language DeriveGeneric         #-}
@@ -112,3 +113,16 @@ type ApolloService
              '[ ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef String))
               , ObjectField "books" '[] '[] ('RetSingle ('ListRef ('ObjectRef "Book"))) ]
         ]
+
+apolloServer :: forall m. (MonadServer m)
+             => ServerT Maybe '[ "Book"   ':-> (String, Integer)
+                               , "Author" ':-> Integer ]
+                        ApolloService m _
+apolloServer
+  = Services $     (return . fst :<||>: return . snd :<||>: H0)
+             :<&>: (authorName :<||>: authorBooks :<||>: H0)
+             :<&>: S0
+  where authorName :: Integer -> m String
+        authorName _ = return "alex"  -- this would run in the DB
+        authorBooks :: Integer -> m [(String, Integer)]
+        authorBooks _ = return []

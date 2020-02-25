@@ -154,7 +154,7 @@ class GRpcServiceHandlers (p :: GRpcMessageProtocol) (m :: Type -> Type)
 
 instance GRpcServiceHandlers p m chn '[] '[] where
   gRpcServiceHandlers _ _ _ S0 = []
-instance ( KnownName name, GRpcMethodHandlers p m chn methods h
+instance ( KnownName name, GRpcMethodHandlers p m chn (MappingRight chn name) methods h
          , GRpcServiceHandlers p m chn rest hs )
          => GRpcServiceHandlers p m chn ('Service name anns methods ': rest) (h ': hs) where
   gRpcServiceHandlers f pr packageName (svr :<&>: rest)
@@ -164,19 +164,18 @@ instance ( KnownName name, GRpcMethodHandlers p m chn methods h
 
 
 class GRpcMethodHandlers (p :: GRpcMessageProtocol) (m :: Type -> Type)
-                         (chn :: ServiceChain snm)
+                         (chn :: ServiceChain snm) (inh :: Type)
                          (ms :: [Method snm mnm]) (hs :: [Type]) where
   gRpcMethodHandlers :: (forall a. m a -> ServerErrorIO a)
                      -> Proxy p -> ByteString -> ByteString
-                     -> HandlersT f chn ms m hs -> [ServiceHandler]
+                     -> HandlersT f chn inh ms m hs -> [ServiceHandler]
 
-instance GRpcMethodHandlers p m chn '[] '[] where
+instance GRpcMethodHandlers p m chn inh '[] '[] where
   gRpcMethodHandlers _ _ _ _ H0 = []
 instance ( KnownName name, MkRPC p
          , GRpcMethodHandler p m args r h
-         , MappingRight chn name ~ ()
-         , GRpcMethodHandlers p m chn rest hs)
-         => GRpcMethodHandlers p m chn ('Method name anns args r ': rest) (h ': hs) where
+         , GRpcMethodHandlers p m chn () rest hs)
+         => GRpcMethodHandlers p m chn () ('Method name anns args r ': rest) (h ': hs) where
   gRpcMethodHandlers f pr p s (h :<||>: rest)
     = gRpcMethodHandler f pr (Proxy @args) (Proxy @r) (mkRPC pr p s methodName) (h ())
       : gRpcMethodHandlers f pr p s rest
