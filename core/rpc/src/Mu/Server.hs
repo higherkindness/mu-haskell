@@ -180,14 +180,14 @@ class FromRef (w :: Type -> Type) (chn :: ServiceChain snm)
 -- Type references
 instance t ~ s => ToRef w chn ('PrimitiveRef t) s
 instance ToSchema w sch sty t => ToRef w chn ('SchemaRef sch sty) t
-instance MappingRight chn ref ~ t => ToRef w chn ('ServiceRef ref) t
+instance MappingRight chn ref ~ t => ToRef w chn ('ObjectRef ref) t
 instance t ~ s => ToRef w chn ('RegistryRef subject t last) s
 instance (ToRef w chn ref t, [t] ~ s) => ToRef w chn ('ListRef ref) s
 instance (ToRef w chn ref t, Maybe t ~ s) => ToRef w chn ('OptionalRef ref) s
 
 instance t ~ s => FromRef w chn ('PrimitiveRef t) s
 instance FromSchema w sch sty t => FromRef w chn ('SchemaRef sch sty) t
-instance MappingRight chn ref ~ t => FromRef w chn ('ServiceRef ref) t
+instance MappingRight chn ref ~ t => FromRef w chn ('ObjectRef ref) t
 instance t ~ s => FromRef w chn ('RegistryRef subject t last) s
 instance (FromRef w chn ref t, [t] ~ s) => FromRef w chn ('ListRef ref) s
 instance (FromRef w chn ref t, Maybe t ~ s) => FromRef w chn ('OptionalRef ref) s

@@ -15,8 +15,8 @@ and protocol.
 -}
 module Mu.Rpc (
   Package', Package(..)
-, Service', Service(..)
-, ServiceAnnotation, Method(..)
+, Service', Service(..), Object
+, ServiceAnnotation, Method(..), ObjectField
 , LookupService, LookupMethod
 , TypeRef(..), Argument(..), Return(..)
 ) where
@@ -53,6 +53,14 @@ data Method serviceName methodName
            [Argument serviceName]
            (Return serviceName)
 
+-- Synonyms for GraphQL
+-- | An object is a set of fields, in GraphQL lingo.
+type Object = 'Service
+-- | A field in an object takes some input objects,
+--   and returns a value or some other object,
+--   in GraphQL lingo.
+type ObjectField = 'Method
+
 type family LookupService (ss :: [Service snm mnm]) (s :: snm) :: Service snm mnm where
   LookupService '[] s = TypeError ('Text "could not find method " ':<>: 'ShowType s)
   LookupService ('Service s anns ms ': ss) s = 'Service s anns ms
@@ -68,7 +76,7 @@ data TypeRef serviceName where
   -- | A primitive type.
   PrimitiveRef :: Type -> TypeRef serviceName
   -- | Chain with another service.
-  ServiceRef   :: serviceName -> TypeRef serviceName
+  ObjectRef    :: serviceName -> TypeRef serviceName
   -- | Point to schema.
   SchemaRef    :: Schema typeName fieldName -> typeName -> TypeRef serviceName
   -- | Registry subject, type to convert to, and preferred serialization version

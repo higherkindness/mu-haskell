@@ -105,10 +105,10 @@ type Author {
 
 type ApolloService
   = 'Package ('Just "apollo")
-       '[ 'Service "Book" '[]
-             '[ 'Method "title"  '[] '[] ('RetSingle ('PrimitiveRef String))
-              , 'Method "author" '[] '[] ('RetSingle ('ServiceRef "Author")) ]
-        , 'Service "Author" '[]
-             '[ 'Method "name"  '[] '[] ('RetSingle ('PrimitiveRef String))
-              , 'Method "books" '[] '[] ('RetSingle ('ListRef ('ServiceRef "Book"))) ]
+       '[ Object "Book" '[]
+             '[ ObjectField "title"  '[] '[] ('RetSingle ('PrimitiveRef String))
+              , ObjectField "author" '[] '[] ('RetSingle ('ObjectRef "Author")) ]
+        , Object "Author" '[]
+             '[ ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef String))
+              , ObjectField "books" '[] '[] ('RetSingle ('ListRef ('ObjectRef "Book"))) ]
         ]
