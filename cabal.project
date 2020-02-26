@@ -6,6 +6,13 @@ packages: compendium-client/
           adapter/protobuf/
           adapter/persistent/
           adapter/kafka/
+          examples/health-check/avro/
+          examples/health-check/protobuf/
+          examples/route-guide/
+          examples/seed/avro/
+          examples/seed/protobuf/
+          examples/todolist/
+          examples/with-persistent/
           grpc/common/
           grpc/client/
           grpc/server/
