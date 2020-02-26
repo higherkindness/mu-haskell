@@ -1,55 +1,62 @@
-cabal-version:       >=1.10
-name:                mu-avro
-version:             0.1.0.0
-synopsis:            Avro serialization support for Mu microservices
-description:         You can use @mu-avro@ to read AVRO Schema Declarations for mu-haskell
-license:             Apache-2.0
-license-file:        LICENSE
-author:              Alejandro Serrano, Flavio Corpa
-maintainer:          alejandro.serrano@47deg.com
-copyright:           Copyright © 2019-2020 <http://47deg.com 47 Degrees>
-category:            Network
-build-type:          Simple
-data-files:          test/avro/*.avsc
-homepage:            https://higherkindness.io/mu-haskell/
-bug-reports:         https://github.com/higherkindness/mu-haskell/issues
+name:          mu-avro
+version:       0.2.0.0
+synopsis:      Avro serialization support for Mu microservices
+description:
+  You can use @mu-avro@ to read AVRO Schema Declarations for mu-haskell
+
+license:       Apache-2.0
+license-file:  LICENSE
+author:        Alejandro Serrano, Flavio Corpa
+maintainer:    alejandro.serrano@47deg.com
+copyright:     Copyright © 2019-2020 <http://47deg.com 47 Degrees>
+category:      Network
+build-type:    Simple
+cabal-version: >=1.10
+data-files:    test/avro/*.avsc
+homepage:      https://higherkindness.io/mu-haskell/
+bug-reports:   https://github.com/higherkindness/mu-haskell/issues
 
 source-repository head
   type:     git
   location: https://github.com/higherkindness/mu-haskell
 
 library
-  exposed-modules:     Mu.Adapter.Avro
-                     , Mu.Quasi.Avro
-                     , Mu.Quasi.Avro.Example
-  build-depends:       base >=4.12 && <5
-                     , mu-schema
-                     , mu-rpc
-                     , avro >=0.4.7
-                     , tagged
-                     , aeson
-                     , text
-                     , vector
-                     , containers
-                     , unordered-containers
-                     , sop-core
-                     , bytestring
-                     , template-haskell >= 2.12
-                     , language-avro
-                     , uuid
-                     , time
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -fprint-potential-instances
+  exposed-modules:
+    Mu.Adapter.Avro
+    Mu.Quasi.Avro
+    Mu.Quasi.Avro.Example
+
+  build-depends:
+      aeson
+    , avro                  >=0.4.7
+    , base                  >=4.12  && <5
+    , bytestring
+    , containers
+    , language-avro         >=0.1.1
+    , mu-rpc                >=0.2.0
+    , mu-schema             >=0.2.0
+    , sop-core
+    , tagged
+    , template-haskell      >=2.12
+    , text
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall -fprint-potential-instances
 
 executable test-avro
-  main-is:             Avro.hs
-  build-depends:       base >=4.12 && <5
-                     , mu-schema
-                     , mu-avro
-                     , avro >=0.4.7
-                     , bytestring
-  hs-source-dirs:      test
-  default-language:    Haskell2010
-  ghc-options:         -Wall
+  main-is:          Avro.hs
+  build-depends:
+      avro        >=0.4.7
+    , base        >=4.12  && <5
+    , bytestring
+    , mu-avro     >=0.2.0
+    , mu-schema   >=0.2.0
+
+  hs-source-dirs:   test
+  default-language: Haskell2010
+  ghc-options:      -Wall

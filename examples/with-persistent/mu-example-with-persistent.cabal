@@ -1,85 +1,95 @@
-name:                mu-example-with-persistent
-version:             0.1.0.0
--- synopsis:
--- description:
-homepage:            https://github.com/higherkindness/mu-haskell/examples/with-persistent#readme
-author:              Flavio Corpa
-maintainer:          flavio.corpa@47deg.com
-copyright:           Copyright © 2019-2020 47 Degrees. <http://47deg.com>
-category:            Network
-build-type:          Simple
-cabal-version:       >=1.10
-extra-source-files:  README.md
-data-files:          with-persistent.proto
+name:               mu-example-with-persistent
+version:            0.2.0.0
+synopsis:           Example of a mu-haskell project integrated with persistent
+description:        Example of a mu-haskell project integrated with persistent.
+author:             Flavio Corpa, Alejandro Serrano
+maintainer:         flavio.corpa@47deg.com
+copyright:          Copyright © 2019-2020 47 Degrees. <http://47deg.com>
+category:           Network
+build-type:         Simple
+cabal-version:      >=1.10
+extra-source-files: README.md
+data-files:         with-persistent.proto
+homepage:
+  https://github.com/higherkindness/mu-haskell/examples/with-persistent#readme
+
+bug-reports:        https://github.com/higherkindness/mu-haskell/issues
 
 executable persistent-server
-  hs-source-dirs:      src
-  main-is:             Server.hs
-  other-modules:       Schema
-  default-language:    Haskell2010
-  build-depends:       base >= 4.12 && < 5
-                     , conduit
-                     , monad-logger
-                     , mu-schema
-                     , mu-rpc
-                     , mu-persistent
-                     , mu-protobuf
-                     , mu-grpc-server
-                     , persistent
-                     , persistent-sqlite
-                     , persistent-template
-                     , text
+  hs-source-dirs:   src
+  main-is:          Server.hs
+  other-modules:    Schema
+  default-language: Haskell2010
+  build-depends:
+      base                 >=4.12  && <5
+    , conduit
+    , monad-logger
+    , mu-grpc-server       >=0.2.0
+    , mu-persistent        >=0.2.0
+    , mu-protobuf          >=0.2.0
+    , mu-rpc               >=0.2.0
+    , mu-schema            >=0.2.0
+    , persistent
+    , persistent-sqlite
+    , persistent-template
+    , text
 
 executable persistent-client
-  main-is:             Client.hs
-  other-modules:       Schema
-  build-depends:       base >=4.12 && <5
-                     , conduit
-                     , mu-schema
-                     , mu-rpc
-                     , mu-persistent
-                     , mu-protobuf
-                     , mu-grpc-client
-                     , persistent
-                     , persistent-sqlite
-                     , persistent-template
-                     , text
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
+  main-is:          Client.hs
+  other-modules:    Schema
+  build-depends:
+      base                 >=4.12  && <5
+    , conduit
+    , mu-grpc-client       >=0.2.0
+    , mu-persistent        >=0.2.0
+    , mu-protobuf          >=0.2.0
+    , mu-rpc               >=0.2.0
+    , mu-schema            >=0.2.0
+    , persistent
+    , persistent-sqlite
+    , persistent-template
+    , text
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall
 
 executable persistent-client-record
-  main-is:             ClientRecord.hs
-  other-modules:       Schema
-  build-depends:       base >=4.12 && <5
-                     , conduit
-                     , mu-schema
-                     , mu-rpc
-                     , mu-persistent
-                     , mu-protobuf
-                     , mu-grpc-client
-                     , persistent
-                     , persistent-sqlite
-                     , persistent-template
-                     , text
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
+  main-is:          ClientRecord.hs
+  other-modules:    Schema
+  build-depends:
+      base                 >=4.12  && <5
+    , conduit
+    , mu-grpc-client       >=0.2.0
+    , mu-persistent        >=0.2.0
+    , mu-protobuf          >=0.2.0
+    , mu-rpc               >=0.2.0
+    , mu-schema            >=0.2.0
+    , persistent
+    , persistent-sqlite
+    , persistent-template
+    , text
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall
 
 executable persistent-client-optics
-  main-is:             ClientOptics.hs
-  other-modules:       Schema
-  build-depends:       base >=4.12 && <5
-                     , conduit
-                     , mu-schema
-                     , mu-rpc
-                     , mu-persistent
-                     , mu-protobuf
-                     , mu-grpc-client
-                     , persistent
-                     , persistent-sqlite
-                     , persistent-template
-                     , text
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
+  main-is:          ClientOptics.hs
+  other-modules:    Schema
+  build-depends:
+      base                 >=4.12  && <5
+    , conduit
+    , mu-grpc-client       >=0.2.0
+    , mu-persistent        >=0.2.0
+    , mu-protobuf          >=0.2.0
+    , mu-rpc               >=0.2.0
+    , mu-schema            >=0.2.0
+    , persistent
+    , persistent-sqlite
+    , persistent-template
+    , text
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall

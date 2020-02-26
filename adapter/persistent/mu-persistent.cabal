@@ -1,30 +1,35 @@
-name:                mu-persistent
-version:             0.1.0.0
-synopsis:            Utilities for interoperation between Mu and Persistent
-description:         Please see the <https://github.com/higherkindness/mu-haskell/persistent#readme readme file>.
-homepage:            https://github.com/higherkindness/mu-haskell/persistent#readme
-license:             Apache-2.0
-license-file:        LICENSE
-author:              Flavio Corpa, Alejandro Serrano
-maintainer:          flavio.corpa@47deg.com
-copyright:           Copyright © 2019-2020 <http://47deg.com 47 Degrees>
-category:            Network
-build-type:          Simple
-cabal-version:       >=1.10
-extra-source-files:  README.md
-bug-reports:         https://github.com/higherkindness/mu-haskell/issues
+name:               mu-persistent
+version:            0.2.0.0
+synopsis:           Utilities for interoperation between Mu and Persistent
+description:
+  Please see the <https://github.com/higherkindness/mu-haskell/persistent#readme readme file>.
+
+homepage:
+  https://github.com/higherkindness/mu-haskell/persistent#readme
+
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Flavio Corpa, Alejandro Serrano
+maintainer:         flavio.corpa@47deg.com
+copyright:          Copyright © 2019-2020 <http://47deg.com 47 Degrees>
+category:           Network
+build-type:         Simple
+cabal-version:      >=1.10
+extra-source-files: README.md
+bug-reports:        https://github.com/higherkindness/mu-haskell/issues
 
 source-repository head
   type:     git
   location: https://github.com/higherkindness/mu-haskell
 
 library
-  exposed-modules:     Mu.Adapter.Persistent
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
-                     , monad-logger
-                     , mu-schema
-                     , persistent
-                     , resourcet
-                     , transformers
+  exposed-modules:  Mu.Adapter.Persistent
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  build-depends:
+      base          >=4.7   && <5
+    , monad-logger
+    , mu-schema     >=0.2.0
+    , persistent
+    , resourcet
+    , transformers
