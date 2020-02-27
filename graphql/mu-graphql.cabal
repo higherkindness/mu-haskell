@@ -17,7 +17,10 @@ build-type:    Simple
 -- extra-source-files:  CHANGELOG.md
 
 library
-  exposed-modules:  Mu.GraphQL.Query
+  exposed-modules:
+      Mu.GraphQL.Query.Definition
+    , Mu.GraphQL.Query.Parse
+    , Mu.GraphQL.Query.Run
 
   -- other-extensions:
   build-depends:

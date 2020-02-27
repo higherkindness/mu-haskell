@@ -3,36 +3,13 @@
 {-# language PolyKinds           #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeOperators       #-}
-module Mu.GraphQL.Query where
+module Mu.GraphQL.Query.Definition where
 
-import           Control.Monad.Writer
-import qualified Data.Aeson                    as Aeson
 import           Data.Functor.Identity
 import           Data.SOP.NP
 import           Data.SOP.NS
-import           GHC.TypeLits
-import qualified Language.GraphQL.Draft.Syntax as GraphQL
 import           Mu.Rpc
 import           Mu.Schema
-import           Mu.Server
-
--- TODO: turn Hasura's ExecutableDefinition into a service query
--- hint#1: start with the following function, and then move up
---         (OperationDefinition > ExecutableDefinition > ExecutableDocument)
--- hint#2: introduce a type class which matches on "methods"
-parseQuery :: forall (p :: Package') (s :: Symbol) pname ss sname sanns methods.
-              ( p ~ 'Package pname ss
-              , LookupService ss s ~ 'Service sname sanns methods )
-           => Proxy p -> Proxy s
-           -> GraphQL.SelectionSet
-           -> Maybe (ServiceQuery p (LookupService ss s))
-parseQuery = undefined
-
--- TODO: run the query
-runQuery :: ServerT Identity chn p ServerErrorIO hs
-         -> ServiceQuery p s
-         -> WriterT ServerError IO Aeson.Value
-runQuery = undefined
 
 type ServiceQuery (p :: Package snm mnm) (s :: Service snm mnm)
   = [OneMethodQuery p s]
