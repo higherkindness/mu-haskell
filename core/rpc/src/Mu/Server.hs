@@ -38,7 +38,7 @@ module Mu.Server (
   -- * Servers and handlers
   MonadServer
 , SingleServerT
-, ServerT(.., Server), ServicesT(..), HandlersT(.., (:<|>:))
+, ServerT(.., Server), ServicesT(..), HandlersT(.., (:<|>:)), Handles
 , ServiceChain, noContext
   -- ** Simple servers using only IO
 , ServerErrorIO, ServerIO

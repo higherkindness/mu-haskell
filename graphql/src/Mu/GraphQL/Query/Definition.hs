@@ -8,6 +8,7 @@ module Mu.GraphQL.Query.Definition where
 import           Data.Functor.Identity
 import           Data.SOP.NP
 import           Data.SOP.NS
+import           Data.Text
 import           Mu.Rpc
 import           Mu.Schema
 
@@ -16,7 +17,7 @@ type ServiceQuery (p :: Package snm mnm) (s :: Service snm mnm)
 
 data OneMethodQuery (p :: Package snm mnm) (s :: Service snm mnm) where
   OneMethodQuery
-    :: Maybe String
+    :: Maybe Text
     -> NS (ChosenMethodQuery p) ms
     -> OneMethodQuery p ('Service nm anns ms)
 
