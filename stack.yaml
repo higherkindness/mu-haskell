@@ -30,9 +30,7 @@ extra-deps:
 - http2-client-grpc-0.8.0.0
 - avro-0.4.7.0
 - language-protobuf-1.0.1
-# - language-avro-0.1.1.0
-- git: https://github.com/higherkindness/avro-parser-haskell.git
-  commit: 586fdac1b906ad06ecef98da15c8fe4b6e791254
+- language-avro-0.1.2.0
 - hw-kafka-client-3.0.0
 - hw-kafka-conduit-2.6.0
 - HasBigDecimal-0.1.1
