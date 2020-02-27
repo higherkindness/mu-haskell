@@ -44,5 +44,5 @@ data ReturnQuery (p :: Package snm mnm) (r :: TypeRef snm) where
   RetSchema    :: ReturnQuery p ('SchemaRef sch sty)
   RetList      :: ReturnQuery p r -> ReturnQuery p ('ListRef r)
   RetOptional  :: ReturnQuery p r -> ReturnQuery p ('OptionalRef r)
-  RetObject    :: ServiceQuery p (LookupService ss s)
+  RetObject    :: ServiceQuery ('Package pname ss) (LookupService ss s)
                -> ReturnQuery ('Package pname ss) ('ObjectRef s)
