@@ -110,18 +110,18 @@ serviceDefToDecl serviceTyName complete fieldsPrefix tNamer (Service _ _ methods
                   [RecC (mkName complete) <$> mapM (methodToDecl fieldsPrefix tNamer) methods]
                   [pure (DerivClause Nothing [ConT ''Generic])]
        let buildName = mkName ("build" ++ complete)
-       s <- SigD buildName <$> [t|GrpcClient -> $(return (ConT (mkName complete)))|]
+       s <- SigD buildName <$> [t|GrpcClient -> $(pure (ConT (mkName complete)))|]
        c <- Clause <$> pure []
-                   <*> (NormalB <$> [e|buildService @($(return $ ConT serviceTyName))
-                                                    @($(return $ LitT (StrTyLit fieldsPrefix)))|])
+                   <*> (NormalB <$> [e|buildService @($(pure $ ConT serviceTyName))
+                                                    @($(pure $ LitT (StrTyLit fieldsPrefix)))|])
                    <*> pure []
-       return [d, s, FunD buildName [c]]
+       pure [d, s, FunD buildName [c]]
 
 methodToDecl :: String -> Namer -> Method String String -> Q (Name, Bang, Type)
 methodToDecl fieldsPrefix tNamer (Method mName _ args ret)
   = do let nm = firstLower (fieldsPrefix ++ mName)
        ty <- computeMethodType tNamer args ret
-       return ( mkName nm, Bang NoSourceUnpackedness NoSourceStrictness, ty )
+       pure ( mkName nm, Bang NoSourceUnpackedness NoSourceStrictness, ty )
 
 computeMethodType :: Namer -> [Argument String] -> Return String -> Q Type
 computeMethodType _ [] RetNothing
@@ -142,9 +142,9 @@ computeMethodType _ _ _ = fail "method signature not supported"
 
 typeRefToType :: Namer -> TypeRef snm -> Q Type
 typeRefToType tNamer (THRef (LitT (StrTyLit s)))
-  = return $ ConT (mkName $ completeName tNamer s)
+  = pure $ ConT (mkName $ completeName tNamer s)
 typeRefToType _tNamer (THRef ty)
-  = return ty
+  = pure ty
 typeRefToType _ _ = error "this should never happen"
 
 completeName :: Namer -> String -> String
@@ -198,9 +198,9 @@ typeToServiceDef toplevelty
     typeToTypeRef :: Type -> Maybe (TypeRef snm)
     typeToTypeRef ty
       =   (do (_,innerTy) <- tyD2 'SchemaRef ty
-              return (THRef innerTy))
+              pure (THRef innerTy))
       <|> (do (_,innerTy,_) <- tyD3 'RegistryRef ty
-              return (THRef innerTy))
+              pure (THRef innerTy))
 
 tyString :: Type -> Maybe String
 tyString (SigT t _)

@@ -36,25 +36,25 @@ import           Mu.Server
 
 type QuickstartSchema
   = '[ 'DRecord "HelloRequest"
-               '[ 'FieldDef "name" ('TPrimitive T.Text) ]
+      '[ 'FieldDef "name" ('TPrimitive T.Text) ]
      , 'DRecord "HelloResponse"
-                '[ 'FieldDef "message" ('TPrimitive T.Text) ]
+      '[ 'FieldDef "message" ('TPrimitive T.Text) ]
      , 'DRecord "HiRequest"
-               '[ 'FieldDef "number" ('TPrimitive Int) ]
+      '[ 'FieldDef "number" ('TPrimitive Int) ]
      ]
 
 type QuickStartService
   = 'Package ('Just "helloworld")
       '[ 'Service "Greeter" '[]
-           '[ 'Method "SayHello" '[]
-                      '[ 'ArgSingle ('SchemaRef QuickstartSchema "HelloRequest") ]
-                        ('RetSingle ('SchemaRef QuickstartSchema "HelloResponse"))
-            , 'Method "SayHi" '[]
-                      '[ 'ArgSingle ('SchemaRef QuickstartSchema "HiRequest")]
-                        ('RetStream ('SchemaRef QuickstartSchema "HelloResponse"))
-            , 'Method "SayManyHellos" '[]
-                      '[ 'ArgStream ('SchemaRef QuickstartSchema "HelloRequest")]
-                        ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ]
+        '[ 'Method "SayHello" '[]
+          '[ 'ArgSingle ('SchemaRef QuickstartSchema "HelloRequest") ]
+            ('RetSingle ('SchemaRef QuickstartSchema "HelloResponse"))
+        , 'Method "SayHi" '[]
+          '[ 'ArgSingle ('SchemaRef QuickstartSchema "HiRequest")]
+            ('RetStream ('SchemaRef QuickstartSchema "HelloResponse"))
+        , 'Method "SayManyHellos" '[]
+          '[ 'ArgStream ('SchemaRef QuickstartSchema "HelloRequest")]
+                ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ]
 
 newtype HelloRequest f = HelloRequest { name :: f T.Text } deriving (Generic)
 deriving instance Functor f => ToSchema f QuickstartSchema "HelloRequest" (HelloRequest f)
@@ -73,21 +73,22 @@ quickstartServer :: forall m f.
                  => ServerT f '[] QuickStartService m _
 quickstartServer
   = Server (sayHello :<|>: sayHi :<|>: sayManyHellos :<|>: H0)
-  where sayHello :: HelloRequest f -> m (HelloResponse f)
-        sayHello (HelloRequest nm)
-          = return (HelloResponse (("hi, " <>) <$> nm))
-        sayHi :: HiRequest f
-              -> ConduitT (HelloResponse f) Void m ()
-              -> m ()
-        sayHi (HiRequest (likeMaybe -> Just n)) sink
-          = runConduit $ C.replicate n (HelloResponse $ pure "hi!") .| sink
-        sayHi (HiRequest _) sink
-          = runConduit $ return () .| sink
-        sayManyHellos :: ConduitT () (HelloRequest f) m ()
-                      -> ConduitT (HelloResponse f) Void m ()
-                      -> m ()
-        sayManyHellos source sink
-          = runConduit $ source .| C.mapM sayHello .| sink
+  where
+    sayHello :: HelloRequest f -> m (HelloResponse f)
+    sayHello (HelloRequest nm)
+      = pure (HelloResponse (("hi, " <>) <$> nm))
+    sayHi :: HiRequest f
+          -> ConduitT (HelloResponse f) Void m ()
+          -> m ()
+    sayHi (HiRequest (likeMaybe -> Just n)) sink
+      = runConduit $ C.replicate n (HelloResponse $ pure "hi!") .| sink
+    sayHi (HiRequest _) sink
+      = runConduit $ pure () .| sink
+    sayManyHellos :: ConduitT () (HelloRequest f) m ()
+                  -> ConduitT (HelloResponse f) Void m ()
+                  -> m ()
+    sayManyHellos source sink
+      = runConduit $ source .| C.mapM sayHello .| sink
 
 {-
 From https://www.apollographql.com/docs/apollo-server/schema/schema/
@@ -105,23 +106,26 @@ type Author {
 
 type ApolloService
   = 'Package ('Just "apollo")
-       '[ Object "Book" '[]
-             '[ ObjectField "title"  '[] '[] ('RetSingle ('PrimitiveRef String))
-              , ObjectField "author" '[] '[] ('RetSingle ('ObjectRef "Author")) ]
-        , Object "Author" '[]
-             '[ ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef String))
-              , ObjectField "books" '[] '[] ('RetSingle ('ListRef ('ObjectRef "Book"))) ]
+      '[ Object "Book" '[]
+        '[ ObjectField "title"  '[] '[] ('RetSingle ('PrimitiveRef String))
+        , ObjectField "author" '[] '[] ('RetSingle ('ObjectRef "Author"))
         ]
+      , Object "Author" '[]
+        '[ ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef String))
+        , ObjectField "books" '[] '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
+        ]
+      ]
 
-apolloServer :: forall m. (MonadServer m)
-             => ServerT Maybe '[ "Book"   ':-> (String, Integer)
-                               , "Author" ':-> Integer ]
-                        ApolloService m _
+type ApolloBookAuthor = '[
+    "Book"   ':-> (String, Integer)
+  , "Author" ':-> Integer
+  ]
+
+apolloServer :: forall m. (MonadServer m) => ServerT Maybe ApolloBookAuthor ApolloService m _
 apolloServer
-  = Services $     (return . fst :<||>: return . snd :<||>: H0)
-             :<&>: (authorName :<||>: authorBooks :<||>: H0)
-             :<&>: S0
-  where authorName :: Integer -> m String
-        authorName _ = return "alex"  -- this would run in the DB
-        authorBooks :: Integer -> m [(String, Integer)]
-        authorBooks _ = return []
+  = Services $ (pure . fst :<||>: pure . snd :<||>: H0) :<&>: (authorName :<||>: authorBooks :<||>: H0) :<&>: S0
+  where
+    authorName :: Integer -> m String
+    authorName _ = pure "alex"  -- this would run in the DB
+    authorBooks :: Integer -> m [(String, Integer)]
+    authorBooks _ = pure []

@@ -91,7 +91,7 @@ avdlToDecls schemaName serviceName protocol
                 '[ 'Service $(textToStrLit (A.pname protocol)) '[]
                             $(typesToList <$> mapM (avroMethodToType schemaName')
                             (S.toList $ A.messages protocol)) ] |]
-       return [schemaDec, serviceDec]
+       pure [schemaDec, serviceDec]
   where
     pkgType Nothing = [t| 'Nothing |]
     pkgType (Just (A.Namespace p))

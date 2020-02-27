@@ -210,7 +210,7 @@ raiseErrors h
   = liftIO $ do
       h' <- runExceptT h
       case h' of
-        Right r -> return r
+        Right r -> pure r
         Left (ServerError code msg)
           -> closeEarly $ GRPCStatus (serverErrorToGRpcError code)
                                      (BS.pack msg)
@@ -303,10 +303,10 @@ instance (GRPCInput (RPCTy p) (), GRpcOutputWrapper p rref r, MonadIO m)
             let readNext _
                   = do nextOutput <- atomically $ takeTMVar var
                        case nextOutput of
-                         Just o  -> return $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
+                         Just o  -> pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
                          Nothing -> do cancel promise
-                                       return Nothing
-            return ((), ServerStream readNext)
+                                       pure Nothing
+            pure ((), ServerStream readNext)
 
 -----
 
@@ -349,7 +349,7 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
                 cstreamFinalizer _
                   = atomically (closeTMChan chan) >> wait promise
             -- Return the information
-            return ((), ClientStream cstreamHandler cstreamFinalizer)
+            pure ((), ClientStream cstreamHandler cstreamFinalizer)
 
 -----
 
@@ -371,10 +371,10 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
             let readNext _
                   = do nextOutput <- atomically $ takeTMVar var
                        case nextOutput of
-                         Just o  -> return $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
+                         Just o  -> pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
                          Nothing -> do cancel promise
-                                       return Nothing
-            return ((), ServerStream readNext)
+                                       pure Nothing
+            pure ((), ServerStream readNext)
 
 -----
 
@@ -402,13 +402,13 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
                   = do nextOutput <- atomically $ tryTakeTMVar var
                        case nextOutput of
                          Just (Just o) ->
-                           return $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
+                           pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
                          Just Nothing  -> do
                            cancel promise
-                           return Nothing
+                           pure Nothing
                          Nothing -> -- no new elements to output
                            readNext ()
-            return ((), IncomingStream cstreamHandler cstreamFinalizer, (), OutgoingStream readNext)
+            pure ((), IncomingStream cstreamHandler cstreamFinalizer, (), OutgoingStream readNext)
 
 -----
 

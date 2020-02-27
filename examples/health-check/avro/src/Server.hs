@@ -53,7 +53,7 @@ checkH_ m (HealthCheckMsg nm) = alwaysOk $ do
   putStr "check: " >> print nm
   ss <- atomically $ M.lookup nm m
   print ss
-  return $ ServerStatusMsg (fromMaybe "<unknown>" ss)
+  pure $ ServerStatusMsg (fromMaybe "<unknown>" ss)
 
 clearStatus_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ()
 clearStatus_ m (HealthCheckMsg nm) = alwaysOk $ do

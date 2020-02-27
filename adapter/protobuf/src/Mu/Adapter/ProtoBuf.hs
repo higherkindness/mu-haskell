@@ -225,7 +225,7 @@ instance ProtoBridgeTerm w sch ('DRecord name args)
     t <- PBDec.embedded (protoToTerm @_ @_ @w @sch @('DRecord name args))
     case t of
       Nothing -> PBDec.Parser (\_ -> Left (PBDec.WireTypeError "expected message"))
-      Just v  -> return v
+      Just v  -> pure v
   embedProtoToOneFieldValue = PBDec.embedded' (protoToTerm @_ @_ @w @sch @('DRecord name args))
 
 -- ENUMERATIONS
@@ -256,7 +256,7 @@ instance (KnownNat (FindProtoBufId sch ty c), ProtoBridgeEnum sch ty cs)
     where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId sch ty c)))
   enumToProto fid (S v) = enumToProto @_ @_ @sch @ty fid v
   protoToEnum n
-    | n == enumValue = return (Z Proxy)
+    | n == enumValue = pure (Z Proxy)
     | otherwise      = S <$> protoToEnum @_ @_ @sch @ty n
     where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId sch ty c)))
 

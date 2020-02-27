@@ -60,7 +60,7 @@ grpcToDecls schemaName servicePrefix p@P.ProtoBuf { P.package = pkg, P.services 
   = do let schemaName' = mkName schemaName
        schemaDec <- protobufToDecls schemaName p
        serviceTy <- mapM (pbServiceDeclToDec servicePrefix pkg schemaName') srvs
-       return (schemaDec ++ serviceTy)
+       pure (schemaDec ++ serviceTy)
 
 pbServiceDeclToDec :: (String -> String) -> Maybe [T.Text] -> Name -> P.ServiceDeclaration -> Q Dec
 pbServiceDeclToDec servicePrefix pkg schema srv@(P.Service nm _ _)
@@ -100,11 +100,11 @@ pbMethodToType s (P.Method nm vr v rr r _)
       = fail "only message types may be used as results"
 
 schemaTy :: Name -> Q Type
-schemaTy schema = return $ ConT schema
+schemaTy schema = pure $ ConT schema
 
 typesToList :: [Type] -> Type
 typesToList
   = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
 textToStrLit :: T.Text -> Q Type
 textToStrLit s
-  = return $ LitT $ StrTyLit $ T.unpack s
+  = pure $ LitT $ StrTyLit $ T.unpack s

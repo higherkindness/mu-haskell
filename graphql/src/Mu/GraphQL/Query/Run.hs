@@ -70,7 +70,7 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod sname ms)
                        -- choose between given name,
                        -- or fallback to method name
                        newVal = fmap (realName,) val
-                   return (newVal, map (updateErrs realName)) )
+                   pure (newVal, map (updateErrs realName)) )
         where -- add the additional path component to the errors
               updateErrs :: T.Text -> GraphQLError -> GraphQLError
               updateErrs methodName (GraphQLError err loc) = GraphQLError err (methodName : loc)

@@ -46,7 +46,7 @@ instance FromProtoBufTypeRef ref t
 
 instance Proto3WireEncoder () where
   proto3WireEncode _ = mempty
-  proto3WireDecode = return ()
+  proto3WireDecode = pure ()
 
 -- | Types which can be parsed from a Protocol Buffers message.
 class FromProtoBufTypeRef (ref :: TypeRef snm) t where

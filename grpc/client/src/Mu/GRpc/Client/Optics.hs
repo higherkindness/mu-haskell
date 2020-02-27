@@ -68,9 +68,9 @@ initGRpc :: G.GrpcClientConfig  -- ^ gRPC configuration
          -> forall s. IO (Either ClientError (GRpcConnection s p))
 initGRpc config _ = do
   setup <- setupGrpcClient' config
-  case setup of
-    Left e  -> return $ Left e
-    Right c -> return $ Right $ GRpcConnection c
+  pure $ case setup of
+    Left e  -> Left e
+    Right c -> Right $ GRpcConnection c
 
 instance forall (pkg :: Package') pkgName (services :: [Service'])
                 (s :: Service')

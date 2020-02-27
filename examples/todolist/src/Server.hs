@@ -41,7 +41,7 @@ reset i t = alwaysOk $ do
   atomically $ do
     writeTVar i 0
     writeTVar t []
-  pure $ MessageId Nothing -- returns nothing
+  pure $ MessageId Nothing
 
 insert :: Id -> TodoList -> TodoListRequest -> ServerErrorIO TodoListResponse
 insert oldId t (TodoListRequest titl tgId) = alwaysOk $ do
@@ -89,5 +89,5 @@ destroy t (MessageId (Just idMsg)) =  do
              modifyTVar t $ filter (/=todo)
              pure $ Just (MessageId (Just idMsg)) -- OK ✅
            Nothing   -> pure Nothing -- did nothing
-  maybe (serverError $ ServerError NotFound "unknown message id") return r
+  maybe (serverError $ ServerError NotFound "unknown message id") pure r
 destroy _ _ = serverError $ ServerError Invalid "missing message id"

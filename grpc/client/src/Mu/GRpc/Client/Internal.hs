@@ -84,9 +84,9 @@ buildGRpcReply3 (Right _)  = GRpcOk ()
 simplifyResponse :: ClientIO (GRpcReply a) -> IO (GRpcReply a)
 simplifyResponse reply = do
   r <- runExceptT reply
-  case r of
-    Left e  -> return $ GRpcClientError e
-    Right v -> return v
+  pure $ case r of
+    Left e  -> GRpcClientError e
+    Right v -> v
 
 -- These type classes allow us to abstract over
 -- the choice of message protocol (PB or Avro)
@@ -178,7 +178,7 @@ instance ( KnownName name
                        GRpcOk _ -> -- no error, everything is fine
                          sourceTMChan chan .| C.map GRpcOk
                        e -> yield $ (\_ -> error "this should never happen") <$> e
-         return go
+         pure go
 
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRPCOutput (RPCTy p) ()
@@ -215,8 +215,8 @@ instance ( KnownName name
             rawStreamClient @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r) rpc client ()
                             (\_ -> do nextVal <- liftIO $ atomically $ readTMChan chan
                                       case nextVal of
-                                        Nothing -> return ((), Left StreamDone)
-                                        Just v  -> return ((), Right (compress, buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
+                                        Nothing -> pure ((), Left StreamDone)
+                                        Just v  -> pure ((), Right (compress, buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
          -- This conduit feeds information to the other thread
          let go = do x <- await
                      case x of
@@ -224,7 +224,7 @@ instance ( KnownName name
                                      go
                        Nothing -> do liftIO $ atomically $ closeTMChan chan
                                      liftIO $ wait promise
-         return go
+         pure go
 
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
@@ -253,7 +253,7 @@ instance ( KnownName name
                        GRpcOk _ -> -- no error, everything is fine
                          sourceTMChan chan .| C.map GRpcOk
                        e -> yield $ (\_ -> error "this should never happen") <$> e
-         return go
+         pure go
 
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
@@ -276,12 +276,12 @@ instance ( KnownName name
                         case ievent of
                           RecvMessage o -> liftIO $ atomically $ writeTMChan inchan (GRpcOk $ unGRpcOWTy(Proxy @p) (Proxy @rref) o)
                           Invalid e -> liftIO $ atomically $ writeTMChan inchan (GRpcErrorString (show e))
-                          _ -> return () )
+                          _ -> pure () )
                    () (\_ -> do
                         nextVal <- liftIO $ atomically $ readTMChan outchan
                         case nextVal of
-                          Nothing -> return ((), Finalize)
-                          Just v  -> return ((), SendMessage compress (buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
+                          Nothing -> pure ((), Finalize)
+                          Just v  -> pure ((), SendMessage compress (buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
             case v of
               GRpcOk () -> liftIO $ atomically $ closeTMChan inchan
               _         -> liftIO $ atomically $ putTMVar var v
@@ -296,7 +296,7 @@ instance ( KnownName name
                                       go2
                         Nothing -> do r <- liftIO $ atomically $ tryReadTMChan inchan
                                       case r of
-                                        Nothing            -> return () -- both are empty, end
+                                        Nothing            -> pure () -- both are empty, end
                                         Just Nothing       -> go2
                                         Just (Just nextIn) -> yield nextIn >> go2
-         return go
+         pure go
