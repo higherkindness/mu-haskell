@@ -1,9 +1,10 @@
+{-# language AllowAmbiguousTypes    #-}
 {-# language DataKinds              #-}
 {-# language FlexibleInstances      #-}
 {-# language FunctionalDependencies #-}
 {-# language GADTs                  #-}
-{-# language KindSignatures         #-}
 {-# language LambdaCase             #-}
+{-# language PolyKinds              #-}
 {-# language ScopedTypeVariables    #-}
 {-# language TypeApplications       #-}
 {-# language TypeOperators          #-}
@@ -31,8 +32,7 @@ as values in the schema type.
 -}
 module Mu.Schema.Optics (
   -- * Build a term
-  record
-, record1
+  record, record1, enum
 , _U0, _Next, _U1, _U2, _U3
   -- * Re-exported for convenience.
 , module Optics.Core
@@ -175,6 +175,11 @@ instance (r ~ NS (FieldValue w sch) choices)
          => TypeLabel w sch ('TUnion choices) r where
   typeLensGet (FUnion x) = x
   typeLensSet = FUnion
+
+enum :: forall (choiceName :: Symbol) choices w sch name.
+        EnumLabel choices choiceName
+     => Term w sch ('DEnum name choices)
+enum = TEnum $ enumPrismBuild (Proxy @choiceName)
 
 instance (EnumLabel choices choiceName, r ~ ())
          => LabelOptic choiceName A_Prism
