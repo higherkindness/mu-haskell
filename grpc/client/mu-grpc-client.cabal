@@ -1,51 +1,56 @@
-cabal-version:       >=1.10
-name:                mu-grpc-client
-version:             0.1.0.0
-synopsis:            gRPC clients from Mu definitions
-description:         With @mu-grpc-client@ you can easily build gRPC clients for mu-haskell!
-license:             Apache-2.0
-license-file:        LICENSE
-author:              Alejandro Serrano, Flavio Corpa
-maintainer:          alejandro.serrano@47deg.com
-copyright:           Copyright © 2019-2020 <http://47deg.com 47 Degrees>
-category:            Network
-build-type:          Simple
-extra-source-files:  CHANGELOG.md
-homepage:            https://higherkindness.io/mu-haskell/
-bug-reports:         https://github.com/higherkindness/mu-haskell/issues
+name:               mu-grpc-client
+version:            0.2.0.0
+synopsis:           gRPC clients from Mu definitions
+description:
+  With @mu-grpc-client@ you can easily build gRPC clients for mu-haskell!
+
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Alejandro Serrano, Flavio Corpa
+maintainer:         alejandro.serrano@47deg.com
+copyright:          Copyright © 2019-2020 <http://47deg.com 47 Degrees>
+category:           Network
+build-type:         Simple
+cabal-version:      >=1.10
+extra-source-files: CHANGELOG.md
+homepage:           https://higherkindness.io/mu-haskell/
+bug-reports:        https://github.com/higherkindness/mu-haskell/issues
 
 source-repository head
   type:     git
   location: https://github.com/higherkindness/mu-haskell
 
 library
-  exposed-modules:     Mu.GRpc.Client.TyApps,
-                       Mu.GRpc.Client.Record,
-                       Mu.GRpc.Client.Optics,
-                       Mu.GRpc.Client.Examples
-  other-modules:       Mu.GRpc.Client.Internal
-  build-depends:       base >=4.12 && <5
-                     , async
-                     , bytestring
-                     , conduit
-                     , http2
-                     , http2-client
-                     , http2-client-grpc
-                     , http2-grpc-types
-                     , mu-grpc-common
-                     , mu-optics
-                     , mu-protobuf
-                     , mu-rpc
-                     , mu-schema
-                     , optics-core
-                     , sop-core
-                     , stm
-                     , stm-chans
-                     , stm-conduit
-                     , template-haskell >= 2.12
-                     , text
-                     , th-abstraction
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -fprint-potential-instances
+  exposed-modules:
+    Mu.GRpc.Client.Examples
+    Mu.GRpc.Client.Optics
+    Mu.GRpc.Client.Record
+    Mu.GRpc.Client.TyApps
+
+  other-modules:    Mu.GRpc.Client.Internal
+  build-depends:
+      async
+    , base               >=4.12  && <5
+    , bytestring
+    , conduit
+    , http2
+    , http2-client
+    , http2-client-grpc
+    , http2-grpc-types
+    , mu-grpc-common     >=0.2.0
+    , mu-optics          >=0.2.0
+    , mu-protobuf        >=0.2.0
+    , mu-rpc             >=0.2.0
+    , mu-schema          >=0.2.0
+    , optics-core
+    , sop-core
+    , stm
+    , stm-chans
+    , stm-conduit
+    , template-haskell   >=2.12
+    , text
+    , th-abstraction
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall -fprint-potential-instances

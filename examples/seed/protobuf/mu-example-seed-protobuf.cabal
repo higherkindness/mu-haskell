@@ -1,47 +1,57 @@
-name:                mu-example-seed-protobuf
-version:             0.1.0.0
--- synopsis:
--- description:
-homepage:            https://github.com/higherkindness/mu-haskell/examples/seed/protobuf#readme
-license:             Apache-2.0
-license-file:        LICENSE
-author:              Flavio Corpa
-maintainer:          flavio.corpa@47deg.com
-copyright:           Copyright © 2019-2020 47 Degrees. <http://47deg.com>
-category:            Network
-build-type:          Simple
-cabal-version:       >=1.10
-extra-source-files:  README.md
-data-files:          seed.proto
+name:               mu-example-seed-protobuf
+version:            0.2.0.0
+synopsis:
+  Example seed project from mu-scala (with protobuf) ported to mu-haskell
+
+description:
+  Example seed project from mu-scala (with protobuf) ported to mu-haskell.
+
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Flavio Corpa, Alejandro Serrano
+maintainer:         flavio.corpa@47deg.com
+copyright:          Copyright © 2019-2020 47 Degrees. <http://47deg.com>
+category:           Network
+build-type:         Simple
+cabal-version:      >=1.10
+extra-source-files: README.md
+data-files:         seed.proto
+homepage:
+  https://github.com/higherkindness/mu-haskell/examples/seed/protobuf#readme
+
+bug-reports:        https://github.com/higherkindness/mu-haskell/issues
 
 executable seed-server
-  hs-source-dirs:      src
-  main-is:             Main.hs
-  other-modules:       Schema
-  default-language:    Haskell2010
-  build-depends:       base >= 4.12 && < 5
-                     , conduit
-                     , monad-logger
-                     , mu-schema
-                     , mu-rpc
-                     , mu-protobuf
-                     , mu-grpc-server
-                     , text
-                     , stm
+  hs-source-dirs:   src
+  main-is:          Main.hs
+  other-modules:    Schema
+  default-language: Haskell2010
+  build-depends:
+      base            >=4.12  && <5
+    , conduit
+    , monad-logger
+    , mu-grpc-server  >=0.2.0
+    , mu-protobuf     >=0.2.0
+    , mu-rpc          >=0.2.0
+    , mu-schema       >=0.2.0
+    , stm
+    , text
 
 executable seed-server-optics
-  hs-source-dirs:      src
-  main-is:             Optics.hs
-  other-modules:       Schema
-  default-language:    Haskell2010
-  build-depends:       base >= 4.12 && < 5
-                     , conduit
-                     , monad-logger
-                     , mu-schema
-                     , mu-rpc
-                     , mu-protobuf
-                     , mu-optics
-                     , mu-grpc-server
-                     , text
-                     , stm
-  ghc-options:         -Wall -fprint-potential-instances
+  hs-source-dirs:   src
+  main-is:          Optics.hs
+  other-modules:    Schema
+  default-language: Haskell2010
+  build-depends:
+      base            >=4.12  && <5
+    , conduit
+    , monad-logger
+    , mu-grpc-server  >=0.2.0
+    , mu-optics       >=0.2.0
+    , mu-protobuf     >=0.2.0
+    , mu-rpc          >=0.2.0
+    , mu-schema       >=0.2.0
+    , stm
+    , text
+
+  ghc-options:      -Wall -fprint-potential-instances

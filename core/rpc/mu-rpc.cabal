@@ -1,35 +1,40 @@
-cabal-version:       >=1.10
-name:                mu-rpc
-version:             0.1.0.0
-synopsis:            Protocol-independent declaration of services and servers
-description:         Protocol-independent declaration of services and servers for mu-haskell
-license:             Apache-2.0
-license-file:        LICENSE
-author:              Alejandro Serrano, Flavio Corpa
-maintainer:          alejandro.serrano@47deg.com
-copyright:           Copyright © 2019-2020 <http://47deg.com 47 Degrees>
-category:            Network
-build-type:          Simple
-extra-source-files:  CHANGELOG.md
-homepage:            https://higherkindness.io/mu-haskell/
-bug-reports:         https://github.com/higherkindness/mu-haskell/issues
+name:               mu-rpc
+version:            0.2.0.0
+synopsis:           Protocol-independent declaration of services and servers.
+description:
+  Protocol-independent declaration of services and servers for mu-haskell.
+
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Alejandro Serrano, Flavio Corpa
+maintainer:         alejandro.serrano@47deg.com
+copyright:          Copyright © 2019-2020 <http://47deg.com 47 Degrees>
+cabal-version:      >=1.10
+category:           Network
+build-type:         Simple
+extra-source-files: CHANGELOG.md
+homepage:           https://higherkindness.io/mu-haskell/
+bug-reports:        https://github.com/higherkindness/mu-haskell/issues
 
 source-repository head
   type:     git
   location: https://github.com/higherkindness/mu-haskell
 
 library
-  exposed-modules:     Mu.Rpc,
-                       Mu.Server,
-                       Mu.Rpc.Examples
-  build-depends:       base >=4.12 && <5
-                     , conduit
-                     , mtl
-                     , mu-schema
-                     , sop-core
-                     , template-haskell
-                     , text
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -fprint-potential-instances
+  exposed-modules:
+    Mu.Rpc
+    Mu.Rpc.Examples
+    Mu.Server
+
+  build-depends:
+      base              >=4.12  && <5
+    , conduit
+    , mtl
+    , mu-schema         >=0.2.0
+    , sop-core
+    , template-haskell
+    , text
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall -fprint-potential-instances

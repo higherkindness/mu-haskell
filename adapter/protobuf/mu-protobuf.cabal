@@ -1,56 +1,64 @@
-cabal-version:       >=1.10
-name:                mu-protobuf
-version:             0.1.0.0
-synopsis:            Protocol Buffers serialization and gRPC schema import for Mu microservices
-description:         You can use @mu-protobuf@ to read Protobuf Schema Declarations and services for mu-haskell
-license:             Apache-2.0
-license-file:        LICENSE
-author:              Alejandro Serrano, Flavio Corpa
-maintainer:          alejandro.serrano@47deg.com
-copyright:           Copyright © 2019-2020 <http://47deg.com 47 Degrees>
-category:            Network
-build-type:          Simple
-data-files:          test/protobuf/*.proto
-homepage:            https://higherkindness.io/mu-haskell/
-bug-reports:         https://github.com/higherkindness/mu-haskell/issues
+name:          mu-protobuf
+version:       0.2.0.0
+synopsis:
+  Protocol Buffers serialization and gRPC schema import for Mu microservices
+
+description:
+  You can use @mu-protobuf@ to read Protobuf Schema Declarations and services for mu-haskell
+
+license:       Apache-2.0
+license-file:  LICENSE
+author:        Alejandro Serrano, Flavio Corpa
+maintainer:    alejandro.serrano@47deg.com
+copyright:     Copyright © 2019-2020 <http://47deg.com 47 Degrees>
+category:      Network
+build-type:    Simple
+cabal-version: >=1.10
+data-files:    test/protobuf/*.proto
+homepage:      https://higherkindness.io/mu-haskell/
+bug-reports:   https://github.com/higherkindness/mu-haskell/issues
 
 source-repository head
   type:     git
   location: https://github.com/higherkindness/mu-haskell
 
 library
-  exposed-modules:     Mu.Adapter.ProtoBuf
-                     , Mu.Adapter.ProtoBuf.Via
-                     , Mu.Quasi.ProtoBuf
-                     , Mu.Quasi.GRpc
-                     , Mu.Quasi.ProtoBuf.Example
-  build-depends:       base >=4.12 && <5
-                     , mu-schema
-                     , mu-rpc
-                     , text
-                     , sop-core
-                     , proto3-wire
-                     , bytestring
-                     , template-haskell >= 2.12
-                     , language-protobuf
-                     , compendium-client
-                     , http-client
-                     , servant-client-core
-                     , http2-grpc-proto3-wire
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -fprint-potential-instances
+  exposed-modules:
+    Mu.Adapter.ProtoBuf
+    Mu.Adapter.ProtoBuf.Via
+    Mu.Quasi.GRpc
+    Mu.Quasi.ProtoBuf
+    Mu.Quasi.ProtoBuf.Example
+
+  build-depends:
+      base                    >=4.12  && <5
+    , bytestring
+    , compendium-client       >=0.2.0
+    , http-client
+    , http2-grpc-proto3-wire
+    , language-protobuf
+    , mu-rpc                  >=0.2.0
+    , mu-schema               >=0.2.0
+    , proto3-wire
+    , servant-client-core
+    , sop-core
+    , template-haskell        >=2.12
+    , text
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall -fprint-potential-instances
 
 executable test-protobuf
-  main-is:             ProtoBuf.hs
-  build-depends:       base >=4.12 && <5
-                     , mu-schema
-                     , mu-protobuf
-                     , bytestring
-                     , text
-                     , proto3-wire
-  hs-source-dirs:      test
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -fprint-explicit-foralls
+  main-is:          ProtoBuf.hs
+  build-depends:
+      base         >=4.12  && <5
+    , bytestring
+    , mu-protobuf  >=0.2.0
+    , mu-schema    >=0.2.0
+    , proto3-wire
+    , text
+
+  hs-source-dirs:   test
+  default-language: Haskell2010
+  ghc-options:      -Wall -fprint-explicit-foralls
