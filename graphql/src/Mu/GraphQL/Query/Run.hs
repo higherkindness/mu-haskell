@@ -29,7 +29,7 @@ data GraphQLError
 
 -- TODO: run the query
 runQuery
-  :: ( RunQueryFindHandler ss s
+  :: ( RunQueryFindHandler chn ss s
      , p ~ 'Package pname ss
      , s ~ 'Service sname sanns ms
      , inh ~ MappingRight chn sname )
@@ -39,7 +39,7 @@ runQuery
   -> WriterT [GraphQLError] IO Aeson.Value
 runQuery whole@(Services ss) = runQueryFindHandler whole ss
 
-class RunQueryFindHandler ss s where
+class RunQueryFindHandler chn ss s where
   runQueryFindHandler
     :: ( p ~  'Package pname wholess
        , s ~ 'Service sname sanns ms
@@ -51,14 +51,14 @@ class RunQueryFindHandler ss s where
     -> WriterT [GraphQLError] IO Aeson.Value
 
 instance TypeError ('Text "Could not find handler for " ':<>: 'ShowType s)
-         => RunQueryFindHandler '[] s where
+         => RunQueryFindHandler chn '[] s where
   runQueryFindHandler = error "this should never be called"
 instance {-# OVERLAPPABLE #-}
-         RunQueryFindHandler ss s
-         => RunQueryFindHandler (other ': ss) s where
+         RunQueryFindHandler chn ss s
+         => RunQueryFindHandler chn (other ': ss) s where
   runQueryFindHandler whole (_ :<&>: that) = runQueryFindHandler whole that
-instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod sname ms)
-         => RunQueryFindHandler (s ': ss) s where
+instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod chn sname ms)
+         => RunQueryFindHandler chn (s ': ss) s where
   runQueryFindHandler whole (this :<&>: _) inh queries
     = Aeson.object . catMaybes <$> mapM runOneQuery queries
     where
@@ -75,7 +75,7 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod sname ms)
               updateErrs :: T.Text -> GraphQLError -> GraphQLError
               updateErrs methodName (GraphQLError err loc) = GraphQLError err (methodName : loc)
 
-class RunMethod sname ms where
+class RunMethod chn sname ms where
   runMethod
     :: ( p ~ 'Package pname wholess
        , inh ~ MappingRight chn sname )
@@ -85,19 +85,29 @@ class RunMethod sname ms where
     -> NS (ChosenMethodQuery p) ms
     -> WriterT [GraphQLError] IO (Maybe Aeson.Value, T.Text)
 
-instance RunMethod s '[] where
+instance RunMethod chn s '[] where
   runMethod = error "this should never be called"
-instance (RunMethod s ms, KnownName mname, RunHandler args r)
-         => RunMethod s ('Method mname anns args ('RetSingle r) ': ms) where
+instance (RunMethod chn s ms, KnownName mname, RunHandler chn args r)
+         => RunMethod chn s ('Method mname anns args ('RetSingle r) ': ms) where
   runMethod whole _ inh (h :<||>: _) (Z (ChosenMethodQuery args ret))
     = (, T.pack $ nameVal (Proxy @mname)) <$> runHandler whole (h inh) args ret
   runMethod whole p inh (_ :<||>: r) (S cont)
     = runMethod whole p inh r cont
 
-class RunHandler args r where
+class RunHandler chn args r where
   runHandler :: Handles Identity chn args ('RetSingle r) ServerErrorIO h
              => ServerT Identity chn p ServerErrorIO whole
              -> h
              -> NP (ArgumentValue p) args
              -> ReturnQuery p r
              -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
+
+instance ArgumentConversion chn ref t
+         => RunHandler chn ('ArgSingle ref ': rest) r where
+  runHandler whole h (one :* rest) = runHandler whole (h one) rest
+
+class FromRef Identity chn ref t
+      => ArgumentConversion chn ref t where
+  convertArg :: Proxy chn -> ArgumentValue' p ref -> t
+instance ArgumentConversion chn ('PrimitiveRef s) s where
+  convertArg _ (ArgPrimitive x) = x

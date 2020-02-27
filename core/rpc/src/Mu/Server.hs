@@ -38,7 +38,7 @@ module Mu.Server (
   -- * Servers and handlers
   MonadServer
 , SingleServerT
-, ServerT(.., Server), ServicesT(..), HandlersT(.., (:<|>:)), Handles
+, ServerT(.., Server), ServicesT(..), HandlersT(.., (:<|>:))
 , ServiceChain, noContext
   -- ** Simple servers using only IO
 , ServerErrorIO, ServerIO
@@ -46,6 +46,8 @@ module Mu.Server (
 , serverError, ServerError(..), ServerErrorCode(..)
   -- ** Useful when you do not want to deal with errors
 , alwaysOk
+  -- * For internal use
+, Handles, FromRef, ToRef
 ) where
 
 import           Control.Monad.Except
