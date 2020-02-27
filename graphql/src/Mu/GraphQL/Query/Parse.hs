@@ -7,7 +7,7 @@ module Mu.GraphQL.Query.Parse where
 
 import           Data.Proxy
 import           GHC.TypeLits
-import qualified Language.GraphQL.Draft.Syntax as GraphQL
+import qualified Language.GraphQL.Draft.Syntax as GQL
 import           Mu.Rpc
 
 import           Mu.GraphQL.Query.Definition
@@ -19,7 +19,8 @@ import           Mu.GraphQL.Query.Definition
 parseQuery :: forall (p :: Package') (s :: Symbol) pname ss sname sanns methods.
               ( p ~ 'Package pname ss
               , LookupService ss s ~ 'Service sname sanns methods )
-           => Proxy p -> Proxy s
-           -> GraphQL.SelectionSet
+           => Proxy p
+           -> Proxy s
+           -> GQL.SelectionSet
            -> Maybe (ServiceQuery p (LookupService ss s))
 parseQuery = undefined
