@@ -36,6 +36,7 @@ import           Data.Int
 import qualified Data.Set                   as S
 import qualified Data.Text                  as T
 import           Data.Time
+import           Data.Time.Millis
 import           Data.UUID
 import qualified Data.Vector                as V
 import           Language.Avro.Parser
@@ -123,6 +124,7 @@ schemaFromAvroType =
     A.Null -> [t|'TPrimitive 'TNull|]
     A.Boolean -> [t|'TPrimitive Bool|]
     A.Int (Just A.Date) -> [t|'TPrimitive Day|]
+    A.Int (Just A.TimeMillis) -> [t|'TPrimitive DiffTimeMs|]
     A.Int _ -> [t|'TPrimitive Int32|]
     A.Long (Just (A.DecimalL (A.Decimal p s)))
              -> [t|'TPrimitive (D.Decimal $(litT $ numTyLit p) $(litT $ numTyLit s)) |]
