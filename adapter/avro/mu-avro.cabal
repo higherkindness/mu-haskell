@@ -22,6 +22,7 @@ source-repository head
 
 library
   exposed-modules:
+    Data.Time.Millis
     Mu.Adapter.Avro
     Mu.Quasi.Avro
     Mu.Quasi.Avro.Example
@@ -32,6 +33,7 @@ library
     , base                  >=4.12  && <5
     , bytestring
     , containers
+    , deepseq
     , language-avro         >=0.1.1
     , mu-rpc                >=0.2.0
     , mu-schema             >=0.2.0
