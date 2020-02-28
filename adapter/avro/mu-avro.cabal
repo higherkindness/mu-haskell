@@ -34,7 +34,7 @@ library
     , bytestring
     , containers
     , deepseq
-    , language-avro         >=0.1.1
+    , language-avro         >=0.1.2
     , mu-rpc                >=0.2.0
     , mu-schema             >=0.2.0
     , sop-core
