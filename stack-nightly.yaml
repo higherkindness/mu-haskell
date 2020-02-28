@@ -1,4 +1,4 @@
-resolver: nightly-2020-02-25
+resolver: nightly-2020-02-28
 allow-newer: true
 
 packages:
@@ -30,7 +30,7 @@ extra-deps:
 - http2-client-grpc-0.8.0.0
 - avro-0.4.7.0
 - language-protobuf-1.0.1
-- language-avro-0.1.1.0
+- language-avro-0.1.2.0
 - hw-kafka-client-3.0.0
 - hw-kafka-conduit-2.6.0
 - HasBigDecimal-0.1.1
