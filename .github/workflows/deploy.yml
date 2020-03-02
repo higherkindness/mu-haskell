@@ -11,6 +11,8 @@ jobs:
     - uses: mstksg/setup-stack@v1
     - name: Get Standalone Haddock
       run: stack install standalone-haddock
+    - name: Get rdkafka
+      run: sudo apt-get install librdkafka-dev
     - name: Get Bundle & Jekyll
       run: |
         sudo apt-get update
