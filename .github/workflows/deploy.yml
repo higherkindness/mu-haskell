@@ -20,7 +20,7 @@ jobs:
         sudo bundle install --gemfile docs/Gemfile --path vendor/bundle
     - name: Build microsite from last release
       run: |
-        LAST_TAG=$(git describe --abbrev=0)
+        LAST_TAG=$(git describe --abbrev=0 --tags)
         git checkout $LAST_TAG
         bash ./generate-haddock-docs.sh
         BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs
