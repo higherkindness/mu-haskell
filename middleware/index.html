@@ -36,7 +36,7 @@
 </head>
 
     <body>
-        <div id="site-sidebar">
+        <div id="site-sidebar" class="site-sidebar">
   <div class="sidebar-brand">
     <a href="/mu-haskell/" class="brand" title="Mu-Haskell">
       <img
@@ -137,6 +137,16 @@
       
 
       <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/serializers/"
+          title="Serialization formats"
+        >
+          Serialization formats
+        </a>
         
         
         
@@ -270,7 +280,7 @@
   </div>
 </div>
 
-        <main id="site-doc">
+        <main id="site-doc" class="site-doc">
     <div class="doc-header">
       <button
         id="menu-toggle"
@@ -281,9 +291,71 @@
       </button>
 
       <div class="link-container">
-        <div class="link-item">
-          <a class="strong" href="/mu-haskell/haddock/" title="API Docs" target="_blank" rel="noopener noreferrer">API Docs</a>
-        </div>
+        
+        <div id="version-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="Version">
+      
+        <i class="nav-item-icon fa fa-lg " aria-hidden="true"></i>
+        <span class="nav-item-text">Version</span>
+      
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Stable" href="https://higherkindness.io/mu-haskell/" target="_blank" rel="noopener noreferrer">
+            <span>
+              Stable
+            </span>
+        </a>
+      </li>
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Next" href="https://higherkindness.io/mu-haskell/wip" target="_blank" rel="noopener noreferrer">
+            <span>
+              Next
+            </span>
+        </a>
+      </li>
+      
+    </ul>
+
+</div>
+
+        
+        <div id="api-docs-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="API Docs">
+      
+        <i class="nav-item-icon fa fa-lg " aria-hidden="true"></i>
+        <span class="nav-item-text">API Docs</span>
+      
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Stable" href="https://higherkindness.io/mu-haskell/haddock" target="_blank" rel="noopener noreferrer">
+            <span>
+              Stable
+            </span>
+        </a>
+      </li>
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Next" href="https://higherkindness.io/mu-haskell/wip/haddock" target="_blank" rel="noopener noreferrer">
+            <span>
+              Next
+            </span>
+        </a>
+      </li>
+      
+    </ul>
+
+</div>
+
+        
         <div class="link-item">
           <a href="https://github.com/higherkindness/mu-haskell" title="GitHub repo" target="_blank" rel="noopener noreferrer">
             <span class="strong">GitHub</span>
@@ -308,14 +380,14 @@
 
 <p>Remember that in our <a href="intro.md">original code</a> our <code class="highlighter-rouge">main</code> function looked as follows:</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="mi">8080</span> <span class="n">server</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="n">msgSerializer</span> <span class="mi">8080</span> <span class="n">server</span>
 </code></pre></div></div>
 
 <p>We can split this single line into two phases: first creating the WAI application by means of <code class="highlighter-rouge">gRpcApp</code>, and then running it using Warp’s <code class="highlighter-rouge">run</code> function.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Network.Wai.Handler.Warp</span> <span class="p">(</span><span class="nf">run</span><span class="p">)</span>
 
-<span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">gRpcApp</span> <span class="n">server</span>
+<span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">gRpcApp</span> <span class="n">msgSerializer</span> <span class="n">server</span>
 </code></pre></div></div>
 
 <p>Right in the middle of the two steps we can inject any middleware we want.</p>
@@ -323,7 +395,7 @@
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Network.Wai.Handler.Warp</span> <span class="p">(</span><span class="nf">run</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Network.Wai.Middleware.Static</span>
 
-<span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">static</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">server</span><span class="p">)</span>
+<span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">static</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">msgSerializer</span> <span class="n">server</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>With that simple change, our web server now first checks whether a file with the requested name exists in the directory from which the application is running. If that is the case, it’s cached and served, otherwise the underlying gRPC application is run. Needless to say, this behavior might not be the desired one, so the library provides <a href="http://hackage.haskell.org/package/wai-middleware-static/docs/Network-Wai-Middleware-Static.html#v:staticPolicy"><code class="highlighter-rouge">staticPolicy</code></a> to customize it.</p>
@@ -341,7 +413,7 @@
   <span class="n">store</span> <span class="o">&lt;-</span> <span class="n">serverMetricStore</span> <span class="o">&lt;$&gt;</span> <span class="n">forkServer</span> <span class="s">"localhost"</span> <span class="mi">8000</span>
   <span class="n">waiMetrics</span> <span class="o">&lt;-</span> <span class="n">registerWaiMetrics</span> <span class="n">store</span>
   <span class="c1">-- Wrap the application and run it</span>
-  <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">metrics</span> <span class="n">waiMetrics</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">server</span><span class="p">)</span>
+  <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">metrics</span> <span class="n">waiMetrics</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">msgSerializer</span> <span class="n">server</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>Another possibility is to expose <a href="https://prometheus.io/">Prometheus</a> metrics. In this case, a specific monitoring process scrapes your servers from time to time. The gathered data can later be analyzed and visualized. Luckily, there’s some <a href="https://github.com/fimad/prometheus-haskell">middleware</a> exposing the require endpoints automatically.</p>
@@ -349,7 +421,7 @@
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Network.Wai.Handler.Warp</span> <span class="p">(</span><span class="nf">run</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Network.Wai.Middleware.Prometheus</span>
 
-<span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">prometheus</span> <span class="n">def</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">server</span><span class="p">)</span>
+<span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">prometheus</span> <span class="n">def</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">msgSerializer</span> <span class="n">server</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>The usage of <code class="highlighter-rouge">def</code> indicates that we want the default options: providing the metrics under the route <code class="highlighter-rouge">/metrics</code>.</p>

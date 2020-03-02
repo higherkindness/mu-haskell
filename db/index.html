@@ -36,7 +36,7 @@
 </head>
 
     <body>
-        <div id="site-sidebar">
+        <div id="site-sidebar" class="site-sidebar">
   <div class="sidebar-brand">
     <a href="/mu-haskell/" class="brand" title="Mu-Haskell">
       <img
@@ -137,6 +137,16 @@
       
 
       <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/serializers/"
+          title="Serialization formats"
+        >
+          Serialization formats
+        </a>
         
         
         
@@ -270,7 +280,7 @@
   </div>
 </div>
 
-        <main id="site-doc">
+        <main id="site-doc" class="site-doc">
     <div class="doc-header">
       <button
         id="menu-toggle"
@@ -281,9 +291,71 @@
       </button>
 
       <div class="link-container">
-        <div class="link-item">
-          <a class="strong" href="/mu-haskell/haddock/" title="API Docs" target="_blank" rel="noopener noreferrer">API Docs</a>
-        </div>
+        
+        <div id="version-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="Version">
+      
+        <i class="nav-item-icon fa fa-lg " aria-hidden="true"></i>
+        <span class="nav-item-text">Version</span>
+      
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Stable" href="https://higherkindness.io/mu-haskell/" target="_blank" rel="noopener noreferrer">
+            <span>
+              Stable
+            </span>
+        </a>
+      </li>
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Next" href="https://higherkindness.io/mu-haskell/wip" target="_blank" rel="noopener noreferrer">
+            <span>
+              Next
+            </span>
+        </a>
+      </li>
+      
+    </ul>
+
+</div>
+
+        
+        <div id="api-docs-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="API Docs">
+      
+        <i class="nav-item-icon fa fa-lg " aria-hidden="true"></i>
+        <span class="nav-item-text">API Docs</span>
+      
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Stable" href="https://higherkindness.io/mu-haskell/haddock" target="_blank" rel="noopener noreferrer">
+            <span>
+              Stable
+            </span>
+        </a>
+      </li>
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Next" href="https://higherkindness.io/mu-haskell/wip/haddock" target="_blank" rel="noopener noreferrer">
+            <span>
+              Next
+            </span>
+        </a>
+      </li>
+      
+    </ul>
+
+</div>
+
+        
         <div class="link-item">
           <a href="https://github.com/higherkindness/mu-haskell" title="GitHub repo" target="_blank" rel="noopener noreferrer">
             <span class="strong">GitHub</span>
@@ -428,7 +500,7 @@ Person json
 <span class="n">main</span> <span class="o">=</span>
   <span class="n">runStderrLoggingT</span> <span class="o">$</span>
     <span class="n">withSqliteConn</span> <span class="o">@</span><span class="p">(</span><span class="kt">LoggingT</span> <span class="kt">IO</span><span class="p">)</span> <span class="s">"example.db"</span> <span class="o">$</span> <span class="nf">\</span><span class="n">conn</span> <span class="o">-&gt;</span>
-      <span class="n">liftIO</span> <span class="o">$</span> <span class="n">runGRpcApp</span> <span class="mi">8080</span> <span class="p">(</span><span class="n">server</span> <span class="n">conn</span><span class="p">)</span>
+      <span class="n">liftIO</span> <span class="o">$</span> <span class="n">runGRpcApp</span> <span class="n">msgProtoBuf</span> <span class="mi">8080</span> <span class="p">(</span><span class="n">server</span> <span class="n">conn</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>We have decided in this example to use <code class="highlighter-rouge">LoggingT</code> from <code class="highlighter-rouge">monad-logger</code> and <code class="highlighter-rouge">runStderrLoggingT</code> to get some basic database logs to the console for free, but this is not a must!</p>
@@ -453,7 +525,7 @@ main =
 <span class="gd">-   withSqliteConn @(LoggingT IO) "example.db" $ \conn -&gt;
 </span><span class="gi">+   withSqliteConn @(LoggingT IO) "example.db" $ \conn -&gt; do
 +     runDb conn $ runMigration migrateAll
-</span>      liftIO $ runGRpcApp 8080 (server conn)
+</span>      liftIO $ runGRpcApp msgProtoBuf 8080 (server conn)
 </code></pre></div></div>
 
 <p>More on that strange <code class="highlighter-rouge">runDb</code> method in the next section! 😇</p>

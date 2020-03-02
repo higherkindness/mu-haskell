@@ -36,7 +36,7 @@
 </head>
 
     <body>
-        <div id="site-sidebar">
+        <div id="site-sidebar" class="site-sidebar">
   <div class="sidebar-brand">
     <a href="/mu-haskell/" class="brand" title="Mu-Haskell">
       <img
@@ -137,6 +137,16 @@
       
 
       <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/serializers/"
+          title="Serialization formats"
+        >
+          Serialization formats
+        </a>
         
         
         
@@ -270,7 +280,7 @@
   </div>
 </div>
 
-        <main id="site-doc">
+        <main id="site-doc" class="site-doc">
     <div class="doc-header">
       <button
         id="menu-toggle"
@@ -281,9 +291,71 @@
       </button>
 
       <div class="link-container">
-        <div class="link-item">
-          <a class="strong" href="/mu-haskell/haddock/" title="API Docs" target="_blank" rel="noopener noreferrer">API Docs</a>
-        </div>
+        
+        <div id="version-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="Version">
+      
+        <i class="nav-item-icon fa fa-lg " aria-hidden="true"></i>
+        <span class="nav-item-text">Version</span>
+      
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Stable" href="https://higherkindness.io/mu-haskell/" target="_blank" rel="noopener noreferrer">
+            <span>
+              Stable
+            </span>
+        </a>
+      </li>
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Next" href="https://higherkindness.io/mu-haskell/wip" target="_blank" rel="noopener noreferrer">
+            <span>
+              Next
+            </span>
+        </a>
+      </li>
+      
+    </ul>
+
+</div>
+
+        
+        <div id="api-docs-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="API Docs">
+      
+        <i class="nav-item-icon fa fa-lg " aria-hidden="true"></i>
+        <span class="nav-item-text">API Docs</span>
+      
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Stable" href="https://higherkindness.io/mu-haskell/haddock" target="_blank" rel="noopener noreferrer">
+            <span>
+              Stable
+            </span>
+        </a>
+      </li>
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Next" href="https://higherkindness.io/mu-haskell/wip/haddock" target="_blank" rel="noopener noreferrer">
+            <span>
+              Next
+            </span>
+        </a>
+      </li>
+      
+    </ul>
+
+</div>
+
+        
         <div class="link-item">
           <a href="https://github.com/higherkindness/mu-haskell" title="GitHub repo" target="_blank" rel="noopener noreferrer">
             <span class="strong">GitHub</span>
@@ -300,9 +372,9 @@
 
 <h2 id="running-the-server-with-mu-grpc">Running the server with <code class="highlighter-rouge">mu-grpc</code></h2>
 
-<p>The combination of the declaration of a service API and a corresponding implementation as a <code class="highlighter-rouge">Server</code> may be served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library <code class="highlighter-rouge">mu-grpc</code>. The following line starts a server at port <code class="highlighter-rouge">8080</code>, where the service can be found under the package name <code class="highlighter-rouge">helloworld</code>:</p>
+<p>The combination of the declaration of a service API and a corresponding implementation as a <code class="highlighter-rouge">Server</code> may be served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library <code class="highlighter-rouge">mu-grpc</code>. The following line starts a server at port <code class="highlighter-rouge">8080</code>, using Protocol Buffers as serialization layer:</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="mi">8080</span> <span class="s">"helloworld"</span> <span class="n">quickstartServer</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="n">msgProtoBuf</span> <span class="mi">8080</span> <span class="n">quickstartServer</span>
 </code></pre></div></div>
 
 <h2 id="building-a-client">Building a client</h2>
@@ -323,7 +395,7 @@
 <span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">main</span> <span class="o">=</span> <span class="kr">do</span>
   <span class="kr">let</span> <span class="n">config</span> <span class="o">=</span> <span class="n">grpcClientConfigSimple</span> <span class="s">"127.0.0.1"</span> <span class="mi">8080</span> <span class="kt">False</span>
-  <span class="kt">Right</span> <span class="n">client</span> <span class="o">&lt;-</span> <span class="n">setupGrpcClient'</span> <span class="n">config</span>
+  <span class="kt">Right</span> <span class="n">client</span> <span class="o">&lt;-</span> <span class="n">setup</span> <span class="n">config</span>
   <span class="n">args</span> <span class="o">&lt;-</span> <span class="n">getArgs</span>
   <span class="kr">case</span> <span class="n">args</span> <span class="kr">of</span>
     <span class="p">[</span><span class="s">"watch"</span><span class="p">]</span>       <span class="o">-&gt;</span> <span class="n">watching</span> <span class="n">client</span>
@@ -332,11 +404,50 @@
     <span class="kr">_</span>               <span class="o">-&gt;</span> <span class="n">putStrLn</span> <span class="s">"unknown command"</span>
 </code></pre></div></div>
 
-<p>Where <code class="highlighter-rouge">watch</code>, <code class="highlighter-rouge">get</code> and <code class="highlighter-rouge">add</code> are the only valid 3 commands that our CLI is going to accept and call each respective service.</p>
+<p>Where <code class="highlighter-rouge">watch</code>, <code class="highlighter-rouge">get</code> and <code class="highlighter-rouge">add</code> are the only valid 3 commands that our CLI is going to accept and call each respective service. The <code class="highlighter-rouge">setup</code> function is responsible from initializing the</p>
+
+<h3 id="using-optics">Using optics</h3>
+
+<p>The simplest way to call methods is to use the <code class="highlighter-rouge">optics</code>-based API. In that case, your setup is done using <code class="highlighter-rouge">initGRpc</code>, which receives the configuration.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">main</span> <span class="o">=</span> <span class="kr">do</span> <span class="o">...</span>
+  <span class="kr">where</span> <span class="n">setup</span> <span class="n">config</span> <span class="o">=</span> <span class="n">initGRpc</span> <span class="n">config</span>
+</code></pre></div></div>
+
+<p>To call a method, you use the corresponding getter (for those familiar with optics, a version of a lens which does not allow to set). This means that your code reads <code class="highlighter-rouge">client ^. #method</code>, where <code class="highlighter-rouge">client</code> is the value obtained previously in the call to <code class="highlighter-rouge">initGRpc</code>.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language OverloadedLabels #-}</span>
+<span class="kr">import</span> <span class="nn">Text.Read</span> <span class="p">(</span><span class="nf">readMaybe</span><span class="p">)</span>
+
+<span class="n">get</span> <span class="o">::</span> <span class="kt">GRpcConnection</span> <span class="kt">QuickstartService</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">get</span> <span class="n">client</span> <span class="n">idPerson</span> <span class="o">=</span> <span class="kr">do</span>
+  <span class="kr">let</span> <span class="n">req</span> <span class="o">=</span> <span class="n">record</span> <span class="p">(</span><span class="n">readMaybe</span> <span class="n">idPerson</span><span class="p">)</span>
+  <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: is there some person with id: "</span> <span class="o">++</span> <span class="n">idPerson</span> <span class="o">++</span> <span class="s">"?"</span>
+  <span class="n">res</span> <span class="o">&lt;-</span> <span class="p">(</span><span class="n">client</span> <span class="o">^.</span> <span class="o">#</span><span class="n">getPerson</span><span class="p">)</span> <span class="n">req</span>
+  <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: response was: "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">res</span>
+</code></pre></div></div>
+
+<p>Notice the use of <code class="highlighter-rouge">readMaybe</code> to convert the strings to the appropiate type in a safe manner! 👆🏼</p>
+
+<p>Using this approach you must also use the optics-based interface to the terms. As a quick reminder: you use <code class="highlighter-rouge">record</code> to build new values, and use <code class="highlighter-rouge">value ^. #field</code> to access a field. The rest of the methods look as follows:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">add</span> <span class="o">::</span> <span class="kt">GRpcConnection</span> <span class="kt">QuickstartService</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">add</span> <span class="n">client</span> <span class="n">nm</span> <span class="n">ag</span> <span class="o">=</span> <span class="kr">do</span>
+  <span class="kr">let</span> <span class="n">p</span> <span class="o">=</span> <span class="n">record</span> <span class="p">(</span><span class="kt">Nothing</span><span class="p">,</span> <span class="kt">Just</span> <span class="o">$</span> <span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="n">nm</span><span class="p">,</span> <span class="n">readMaybe</span> <span class="n">ag</span><span class="p">)</span>
+  <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: creating new person "</span> <span class="o">++</span> <span class="n">nm</span> <span class="o">++</span> <span class="s">" with age "</span> <span class="o">++</span> <span class="n">ag</span>
+  <span class="n">res</span> <span class="o">&lt;-</span> <span class="p">(</span><span class="n">client</span> <span class="o">^.</span> <span class="o">#</span><span class="n">newPerson</span><span class="p">)</span> <span class="n">p</span>
+  <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: was creating successful? "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">res</span>
+
+<span class="n">watching</span> <span class="o">::</span> <span class="kt">GRpcConnection</span> <span class="kt">QuickstartService</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">watching</span> <span class="n">client</span> <span class="o">=</span> <span class="kr">do</span>
+  <span class="n">replies</span> <span class="o">&lt;-</span> <span class="n">client</span> <span class="o">^.</span> <span class="o">#</span><span class="n">allPeople</span>
+  <span class="n">runConduit</span> <span class="o">$</span> <span class="n">replies</span> <span class="o">.|</span> <span class="kt">C</span><span class="o">.</span><span class="n">mapM_</span> <span class="n">print</span>
+</code></pre></div></div>
 
 <h3 id="using-records">Using records</h3>
 
-<p>This option is a bit more verbose but it’s also more explicit with the types and <em>“a bit more magic”</em> than the one with <code class="highlighter-rouge">TypeApplications</code> (due to the use of Generics).</p>
+<p>This option is a bit more verbose but it’s also more explicit with the types. Furthermore, it allows us to use our Haskell data types, we are not forced to use plain terms. As discussed several times, this is important to ensure that Haskell types are not mere shadows of the schema types.</p>
 
 <p>We need to define a new record type (hence the name) that declares the services our client is going to consume. The names of the fields <strong>must</strong> match the names of the methods in the service, optionally prefixed by a <strong>common</strong> string. The prefix may also be empty, which means that the names in the record are exactly those in the service definition. In this case, we are prepending <code class="highlighter-rouge">call_</code> to each of them:</p>
 
@@ -350,34 +461,27 @@
   <span class="p">}</span> <span class="kr">deriving</span> <span class="kt">Generic</span>
 </code></pre></div></div>
 
-<p>Note that we had to derive <code class="highlighter-rouge">Generic</code>. We also need to tweak our <code class="highlighter-rouge">main</code> function a little bit:</p>
+<p>Note that we had to derive <code class="highlighter-rouge">Generic</code>. We also need to tweak our <code class="highlighter-rouge">setup</code> function a little bit:</p>
 
-<div class="language-diff highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">main :: IO ()
-main = do
-</span>   let config = grpcClientConfigSimple "127.0.0.1" 1234 False
-<span class="gd">-  Right client &lt;- setupGrpcClient' config
-</span><span class="gi">+  Right grpcClient &lt;- setupGrpcClient' config
-+  let client = buildService @Service @"call_" grpcClient
-</span>   args &lt;- getArgs
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TypeApplications #-}</span>
+
+<span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">main</span> <span class="o">=</span> <span class="kr">do</span> <span class="o">...</span>
+  <span class="kr">where</span> <span class="n">setup</span> <span class="n">config</span> <span class="o">=</span> <span class="n">buildService</span> <span class="o">@</span><span class="kt">Service</span> <span class="o">@</span><span class="s">"call_"</span> <span class="o">&lt;$&gt;</span> <span class="n">setupGrpcClient'</span> <span class="n">config</span>
 </code></pre></div></div>
 
 <p>Instead of building our client directly, we need to call <code class="highlighter-rouge">buildService</code> (and enable <code class="highlighter-rouge">TypeApplications</code>) to create the actual gRPC client. There are two type arguments to be explicitly given: the first one is the <code class="highlighter-rouge">Service</code> definition we want a client for, and the second one is the prefix in the record (in our case, this is <code class="highlighter-rouge">call_</code>). In the case you want an empty prefix, you write <code class="highlighter-rouge">@""</code> in that second position.</p>
 
-<p>After that, let’s have a look at an example implementation of the three service calls:</p>
+<p>After that, let’s have a look at an example implementation of the three service calls. Almost as before, except that we use <code class="highlighter-rouge">call_</code> followed by the name of the method.</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Text.Read</span> <span class="p">(</span><span class="nf">readMaybe</span><span class="p">)</span>
-
-<span class="n">get</span> <span class="o">::</span> <span class="kt">Call</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">get</span> <span class="o">::</span> <span class="kt">Call</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">get</span> <span class="n">client</span> <span class="n">idPerson</span> <span class="o">=</span> <span class="kr">do</span>
   <span class="kr">let</span> <span class="n">req</span> <span class="o">=</span> <span class="kt">MPersonRequest</span> <span class="o">$</span> <span class="n">readMaybe</span> <span class="n">idPerson</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: is there some person with id: "</span> <span class="o">++</span> <span class="n">idPerson</span> <span class="o">++</span> <span class="s">"?"</span>
   <span class="n">res</span> <span class="o">&lt;-</span> <span class="n">call_getPerson</span> <span class="n">client</span> <span class="n">req</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: response was: "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">res</span>
-</code></pre></div></div>
 
-<p>Notice the use of <code class="highlighter-rouge">readMaybe</code> to convert the strings to the appropiate type in a safe manner! 👆🏼</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">add</span> <span class="o">::</span> <span class="kt">Call</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">add</span> <span class="o">::</span> <span class="kt">Call</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">add</span> <span class="n">client</span> <span class="n">nm</span> <span class="n">ag</span> <span class="o">=</span> <span class="kr">do</span>
   <span class="kr">let</span> <span class="n">p</span> <span class="o">=</span> <span class="kt">MPerson</span> <span class="kt">Nothing</span> <span class="p">(</span><span class="kt">Just</span> <span class="o">$</span> <span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="n">nm</span><span class="p">)</span> <span class="p">(</span><span class="n">readMaybe</span> <span class="n">ag</span><span class="p">)</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: creating new person "</span> <span class="o">++</span> <span class="n">nm</span> <span class="o">++</span> <span class="s">" with age "</span> <span class="o">++</span> <span class="n">ag</span>
@@ -397,6 +501,9 @@ main = do
 <p>If you are not familiar with <code class="highlighter-rouge">TypeApplications</code>, you can check <a href="https://www.reddit.com/r/haskell/comments/6ufnmr/scrap_your_proxy_arguments_with_typeapplications/">this</a>, <a href="https://blog.sumtypeofway.com/posts/fluent-polymorphism-type-applications.html">that</a> and <a href="https://kseo.github.io/posts/2017-01-08-visible-type-application-ghc8.html">this</a>.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Mu.GRpc.Client.TyApps</span>
+
+<span class="n">main</span> <span class="o">=</span> <span class="kr">do</span> <span class="o">...</span>
+  <span class="kr">where</span> <span class="n">setup</span> <span class="n">config</span> <span class="o">=</span> <span class="n">setupGrpcClient'</span> <span class="n">config</span>
 
 <span class="n">get</span> <span class="o">::</span> <span class="kt">GrpcClient</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">get</span> <span class="n">client</span> <span class="n">idPerson</span> <span class="o">=</span> <span class="kr">do</span>

@@ -36,7 +36,7 @@
 </head>
 
     <body>
-        <div id="site-sidebar">
+        <div id="site-sidebar" class="site-sidebar">
   <div class="sidebar-brand">
     <a href="/mu-haskell/" class="brand" title="Mu-Haskell">
       <img
@@ -137,6 +137,16 @@
       
 
       <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/serializers/"
+          title="Serialization formats"
+        >
+          Serialization formats
+        </a>
         
         
         
@@ -270,7 +280,7 @@
   </div>
 </div>
 
-        <main id="site-doc">
+        <main id="site-doc" class="site-doc">
     <div class="doc-header">
       <button
         id="menu-toggle"
@@ -281,9 +291,71 @@
       </button>
 
       <div class="link-container">
-        <div class="link-item">
-          <a class="strong" href="/mu-haskell/haddock/" title="API Docs" target="_blank" rel="noopener noreferrer">API Docs</a>
-        </div>
+        
+        <div id="version-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="Version">
+      
+        <i class="nav-item-icon fa fa-lg " aria-hidden="true"></i>
+        <span class="nav-item-text">Version</span>
+      
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Stable" href="https://higherkindness.io/mu-haskell/" target="_blank" rel="noopener noreferrer">
+            <span>
+              Stable
+            </span>
+        </a>
+      </li>
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Next" href="https://higherkindness.io/mu-haskell/wip" target="_blank" rel="noopener noreferrer">
+            <span>
+              Next
+            </span>
+        </a>
+      </li>
+      
+    </ul>
+
+</div>
+
+        
+        <div id="api-docs-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="API Docs">
+      
+        <i class="nav-item-icon fa fa-lg " aria-hidden="true"></i>
+        <span class="nav-item-text">API Docs</span>
+      
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Stable" href="https://higherkindness.io/mu-haskell/haddock" target="_blank" rel="noopener noreferrer">
+            <span>
+              Stable
+            </span>
+        </a>
+      </li>
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Next" href="https://higherkindness.io/mu-haskell/wip/haddock" target="_blank" rel="noopener noreferrer">
+            <span>
+              Next
+            </span>
+        </a>
+      </li>
+      
+    </ul>
+
+</div>
+
+        
         <div class="link-item">
           <a href="https://github.com/higherkindness/mu-haskell" title="GitHub repo" target="_blank" rel="noopener noreferrer">
             <span class="strong">GitHub</span>
@@ -348,7 +420,7 @@
 
 <p>As we have done with the Reader example, we need to define how to handle <code class="highlighter-rouge">MonadLogger</code>. <code class="highlighter-rouge">monad-logger</code> provides <a href="http://hackage.haskell.org/package/monad-logger-0.3.31/docs/Control-Monad-Logger.html#g:3">three different monad transformers</a>, so you can choose whether your logging will be completely ignored, will become a Haskell value, or would fire some <code class="highlighter-rouge">IO</code> action like printing in the console. Each of these monad transformers comes with a <code class="highlighter-rouge">run</code> action which declares how to handle it; the extended function <code class="highlighter-rouge">runGRpcAppTrans</code> takes that handler as argument.</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcAppTrans</span> <span class="mi">8080</span> <span class="n">runStderrLoggingT</span> <span class="n">quickstartServer</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcAppTrans</span> <span class="n">msgSerializer</span> <span class="mi">8080</span> <span class="n">runStderrLoggingT</span> <span class="n">quickstartServer</span>
 </code></pre></div></div>
 
 <p>If you prefer other logging library, this is fine with us! Replacing <code class="highlighter-rouge">monad-logger</code> by <a href="https://github.com/kowainik/co-log"><code class="highlighter-rouge">co-log</code></a> means asking for a different capability in the server. In this case we have to declare the type of the log items as part of the <code class="highlighter-rouge">WithLog</code> constraint:</p>
@@ -364,7 +436,7 @@
 
 <p>In this case, the top-level handler is called <a href="http://hackage.haskell.org/package/co-log/docs/Colog-Monad.html#v:usingLoggerT"><code class="highlighter-rouge">usingLoggerT</code></a>. Its definition is slightly more involved because <code class="highlighter-rouge">co-log</code> gives you maximum customization power on your logging, instead of defining a set of predefined logging mechanisms.</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcAppTrans</span> <span class="mi">8080</span> <span class="n">logger</span> <span class="n">quickstartServer</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcAppTrans</span> <span class="n">msgSerializer</span> <span class="mi">8080</span> <span class="n">logger</span> <span class="n">quickstartServer</span>
   <span class="kr">where</span> <span class="n">logger</span> <span class="o">=</span> <span class="n">usingLoggerT</span> <span class="p">(</span><span class="kt">LogAction</span> <span class="o">$</span> <span class="n">liftIO</span> <span class="n">putStrLn</span><span class="p">)</span>
 </code></pre></div></div>
 
