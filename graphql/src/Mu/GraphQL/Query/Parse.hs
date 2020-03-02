@@ -6,6 +6,7 @@
 {-# language TypeApplications     #-}
 {-# language TypeOperators        #-}
 {-# language UndecidableInstances #-}
+{-# language ViewPatterns         #-}
 
 module Mu.GraphQL.Query.Parse where
 
@@ -79,9 +80,25 @@ parseQuery p s = traverse toOneMethod
             ('Package pname ss)
             ('Service sname sanns methods)
         )
-    toOneMethod (GQL.SelectionField flds)          = undefined
-    toOneMethod (GQL.SelectionFragmentSpread frgs) = undefined
-    toOneMethod (GQL.SelectionInlineFragment inls) = undefined
+    toOneMethod (GQL.SelectionField fld)        = fieldToMethod fld
+    toOneMethod (GQL.SelectionFragmentSpread _) = Nothing
+    toOneMethod (GQL.SelectionInlineFragment _) = Nothing
+    fieldToMethod ::
+      GQL.Field ->
+      Maybe
+        ( OneMethodQuery
+            ('Package pname ss)
+            ('Service sname sanns methods)
+        )
+    fieldToMethod (GQL.Field alias name args dirs sels) =
+      Just $ OneMethodQuery (GQL.unName . GQL.unAlias <$> alias) $ toChosenMethod name args dirs sels
+    toChosenMethod ::
+      GQL.Name ->
+      [GQL.Argument] ->
+      [GQL.Directive] ->
+      GQL.SelectionSet ->
+      NS (ChosenMethodQuery ('Package pname ss)) methods
+    toChosenMethod = undefined -- TODO: use here somehow `ParseMethod`...
 
 -- data Field
 --   = Field
@@ -120,7 +137,11 @@ parseQuery p s = traverse toOneMethod
 --   } deriving (Ord, Show, Eq, Lift, Generic)
 
 class ParseMethod (ms :: [Method Symbol Symbol]) where
-  selectMethod :: T.Text -> NS Proxy ms
+  selectMethod ::
+    GQL.Name ->
+    [GQL.Argument] ->
+    GQL.SelectionSet ->
+    NS (ChosenMethodQuery p) ms
 
 instance ParseMethod '[] where
   selectMethod = error "this should not be run"
@@ -129,8 +150,8 @@ instance
   (KnownSymbol mname, ParseMethod ms) =>
   ParseMethod ('Method mname manns args ret ': ms)
   where
-  selectMethod wanted
-    | wanted == mname = Z Proxy
-    | otherwise = S (selectMethod wanted)
+  selectMethod (GQL.unName -> wanted) args sels
+    | wanted == mname = Z undefined -- TODO: ChosenMethodQuery
+    | otherwise = S (selectMethod (GQL.Name wanted) args sels)
     where
       mname = T.pack $ nameVal (Proxy @mname)
