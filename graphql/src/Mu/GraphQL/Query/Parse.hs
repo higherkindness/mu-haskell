@@ -1,12 +1,13 @@
-{-# language DataKinds            #-}
-{-# language FlexibleInstances    #-}
-{-# language GADTs                #-}
-{-# language PolyKinds            #-}
-{-# language ScopedTypeVariables  #-}
-{-# language TypeApplications     #-}
-{-# language TypeOperators        #-}
-{-# language UndecidableInstances #-}
-{-# language ViewPatterns         #-}
+{-# language DataKinds             #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
+{-# language ViewPatterns          #-}
 
 module Mu.GraphQL.Query.Parse where
 
@@ -81,8 +82,8 @@ parseQuery p s = traverse toOneMethod
             ('Service sname sanns methods)
         )
     toOneMethod (GQL.SelectionField fld)        = fieldToMethod fld
-    toOneMethod (GQL.SelectionFragmentSpread _) = Nothing
-    toOneMethod (GQL.SelectionInlineFragment _) = Nothing
+    toOneMethod (GQL.SelectionFragmentSpread _) = Nothing -- FIXME:
+    toOneMethod (GQL.SelectionInlineFragment _) = Nothing -- FIXME:
     fieldToMethod ::
       GQL.Field ->
       Maybe
@@ -136,22 +137,26 @@ parseQuery p s = traverse toOneMethod
 --   , _aValue :: !Value
 --   } deriving (Ord, Show, Eq, Lift, Generic)
 
-class ParseMethod (ms :: [Method Symbol Symbol]) where
+class ParseMethod (p :: Package') (ms :: [Method Symbol Symbol]) where
   selectMethod ::
     GQL.Name ->
     [GQL.Argument] ->
     GQL.SelectionSet ->
     NS (ChosenMethodQuery p) ms
 
-instance ParseMethod '[] where
+instance ParseMethod p '[] where
   selectMethod = error "this should not be run"
 
 instance
-  (KnownSymbol mname, ParseMethod ms) =>
-  ParseMethod ('Method mname manns args ret ': ms)
+  (p ~ 'Package pname ss, KnownSymbol mname, ParseMethod p ms) =>
+  ParseMethod p ('Method mname manns args ret ': ms)
   where
   selectMethod (GQL.unName -> wanted) args sels
-    | wanted == mname = Z undefined -- TODO: ChosenMethodQuery
+    | wanted == mname = Z undefined -- TODO: $ ChosenMethodQuery (parseArgs args) (parseReturn ret)
     | otherwise = S (selectMethod (GQL.Name wanted) args sels)
     where
       mname = T.pack $ nameVal (Proxy @mname)
+      -- parseArgs :: [GQL.Argument] -> NP (ArgumentValue ('Package pname ss)) args
+      -- parseArgs = error "not implemented"
+      -- parseReturn :: t0 -> ReturnQuery ('Package pname ss) r0
+      -- parseReturn = error "not implemented"
