@@ -153,6 +153,7 @@ instance ParseArgs p '[] where
 
 instance (ParseArg p a, ParseArgs p as) => ParseArgs p ('ArgSingle a ': as) where
   parseArgs (GQL.Argument _ x : xs) = (:*) <$> (ArgumentValue <$> parseArg x) <*> parseArgs xs
+  parseArgs _                       = Nothing
 
 class ParseArg (p :: Package') (a :: TypeRef Symbol) where
   parseArg :: GQL.Value -> Maybe (ArgumentValue' p a)
