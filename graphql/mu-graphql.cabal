@@ -18,14 +18,14 @@ build-type:    Simple
 
 library
   exposed-modules:
-      Mu.GraphQL.Query.Definition
-    , Mu.GraphQL.Query.Parse
-    , Mu.GraphQL.Query.Run
+    Mu.GraphQL.Query.Definition
+    Mu.GraphQL.Query.Parse
+    Mu.GraphQL.Query.Run
 
   -- other-extensions:
   build-depends:
       aeson
-    , base            >=4.12 && <5
+    , base                  >=4.12 && <5
     , graphql-parser
     , mtl
     , mu-rpc
