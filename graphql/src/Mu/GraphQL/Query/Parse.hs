@@ -1,4 +1,5 @@
 {-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
 {-# language FlexibleInstances     #-}
 {-# language GADTs                 #-}
 {-# language MultiParamTypeClasses #-}
@@ -11,6 +12,7 @@
 
 module Mu.GraphQL.Query.Parse where
 
+import           Data.Int                      (Int32)
 import           Data.Proxy
 import           Data.SOP.NS
 import qualified Data.Text                     as T
@@ -66,40 +68,26 @@ import           Mu.Schema
 parseQuery ::
   forall (p :: Package') (s :: Symbol) pname ss sname sanns methods.
   ( p ~ 'Package pname ss,
-    LookupService ss s ~ 'Service sname sanns methods
+    LookupService ss s ~ 'Service sname sanns methods,
+    ParseMethod p methods
   ) =>
   Proxy p ->
   Proxy s ->
   GQL.SelectionSet ->
   Maybe (ServiceQuery p (LookupService ss s))
-parseQuery p s = traverse toOneMethod
+parseQuery _ _ = traverse toOneMethod
   where
     toOneMethod ::
       GQL.Selection ->
-      Maybe
-        ( OneMethodQuery
-            ('Package pname ss)
-            ('Service sname sanns methods)
-        )
+      Maybe ( OneMethodQuery p ('Service sname sanns methods) )
     toOneMethod (GQL.SelectionField fld)        = fieldToMethod fld
     toOneMethod (GQL.SelectionFragmentSpread _) = Nothing -- FIXME:
     toOneMethod (GQL.SelectionInlineFragment _) = Nothing -- FIXME:
     fieldToMethod ::
       GQL.Field ->
-      Maybe
-        ( OneMethodQuery
-            ('Package pname ss)
-            ('Service sname sanns methods)
-        )
-    fieldToMethod (GQL.Field alias name args dirs sels) =
-      Just $ OneMethodQuery (GQL.unName . GQL.unAlias <$> alias) $ toChosenMethod name args dirs sels
-    toChosenMethod ::
-      GQL.Name ->
-      [GQL.Argument] ->
-      [GQL.Directive] ->
-      GQL.SelectionSet ->
-      NS (ChosenMethodQuery ('Package pname ss)) methods
-    toChosenMethod = undefined -- TODO: use here somehow `ParseMethod`...
+      Maybe ( OneMethodQuery p ('Service sname sanns methods) )
+    fieldToMethod (GQL.Field alias name args _ sels) =
+      OneMethodQuery (GQL.unName . GQL.unAlias <$> alias) <$> selectMethod name args sels
 
 -- data Field
 --   = Field
@@ -142,21 +130,90 @@ class ParseMethod (p :: Package') (ms :: [Method Symbol Symbol]) where
     GQL.Name ->
     [GQL.Argument] ->
     GQL.SelectionSet ->
-    NS (ChosenMethodQuery p) ms
+    Maybe (NS (ChosenMethodQuery p) ms)
 
 instance ParseMethod p '[] where
-  selectMethod = error "this should not be run"
+  selectMethod _ _ _ = Nothing
 
 instance
-  (p ~ 'Package pname ss, KnownSymbol mname, ParseMethod p ms) =>
-  ParseMethod p ('Method mname manns args ret ': ms)
+  (KnownSymbol mname, ParseMethod p ms, ParseArgs p args, ParseReturn p r) =>
+  ParseMethod p ('Method mname manns args ('RetSingle r) ': ms)
   where
   selectMethod (GQL.unName -> wanted) args sels
-    | wanted == mname = Z undefined -- TODO: $ ChosenMethodQuery (parseArgs args) (parseReturn ret)
-    | otherwise = S (selectMethod (GQL.Name wanted) args sels)
+    | wanted == mname = Z <$> (ChosenMethodQuery <$> parseArgs args <*> parseReturn sels)
+    | otherwise = S <$> selectMethod (GQL.Name wanted) args sels
     where
       mname = T.pack $ nameVal (Proxy @mname)
-      -- parseArgs :: [GQL.Argument] -> NP (ArgumentValue ('Package pname ss)) args
-      -- parseArgs = error "not implemented"
-      -- parseReturn :: t0 -> ReturnQuery ('Package pname ss) r0
-      -- parseReturn = error "not implemented"
+
+class ParseArgs (p :: Package') (args :: [Argument Symbol]) where
+  parseArgs :: [GQL.Argument] -> Maybe (NP (ArgumentValue p) args)
+
+instance ParseArgs p '[] where
+  parseArgs _ = pure Nil
+
+instance (ParseArg p a, ParseArgs p as) => ParseArgs p ('ArgSingle a ': as) where
+  parseArgs (GQL.Argument _ x : xs) = (:*) <$> (ArgumentValue <$> parseArg x) <*> parseArgs xs
+
+class ParseArg (p :: Package') (a :: TypeRef Symbol) where
+  parseArg :: GQL.Value -> Maybe (ArgumentValue' p a)
+
+instance (ParseArg p r) => ParseArg p ('ListRef r) where
+  parseArg (GQL.VList (GQL.ListValueG xs)) = ArgList <$> traverse parseArg xs
+  parseArg _                               = Nothing
+
+instance ParseArg p ('PrimitiveRef Bool) where
+  parseArg (GQL.VBoolean b) = pure (ArgPrimitive b)
+  parseArg _                = Nothing
+
+instance ParseArg p ('PrimitiveRef Int32) where
+  parseArg (GQL.VInt b) = pure (ArgPrimitive b)
+  parseArg _            = Nothing
+
+instance ParseArg p ('PrimitiveRef Integer) where
+  parseArg (GQL.VInt b) = pure $ ArgPrimitive $ fromIntegral b
+  parseArg _            = Nothing
+
+instance ParseArg p ('PrimitiveRef Double) where
+  parseArg (GQL.VFloat b) = pure (ArgPrimitive b)
+  parseArg _              = Nothing
+
+instance ParseArg p ('PrimitiveRef T.Text) where
+  parseArg (GQL.VString (GQL.StringValue b)) = pure $ ArgPrimitive b
+  parseArg _                                 = Nothing
+
+instance ParseArg p ('PrimitiveRef String) where
+  parseArg (GQL.VString (GQL.StringValue b)) = pure $ ArgPrimitive $ T.unpack b
+  parseArg _                                 = Nothing
+
+instance ParseArg p ('PrimitiveRef ()) where
+  parseArg GQL.VNull = pure $ ArgPrimitive ()
+  parseArg _         = Nothing
+
+-- newtype ListValueG a
+--   = ListValueG {unListValue :: [a]}
+
+-- data Value
+--   = VVariable !Variable
+--   | VInt !Int32
+--   | VFloat !Double
+--   | VString !StringValue
+--   | VBoolean !Bool
+--   | VNull
+--   | VEnum !EnumValue
+--   | VList !ListValue
+--   | VObject !ObjectValue
+--   deriving (Ord, Show, Eq, Lift, Generic)
+
+-- newtype ObjectValueG a
+--   = ObjectValueG {unObjectValue :: [ObjectFieldG a]}
+--   deriving (Ord, Show, Eq, Lift, Hashable)
+-- type ObjectValue = ObjectValueG Value
+-- type ObjectValueC = ObjectValueG ValueConst
+-- data ObjectFieldG a
+--   = ObjectFieldG
+--   { _ofName  :: Name
+--   , _ofValue :: a
+--   } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+
+class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
+  parseReturn :: GQL.SelectionSet -> Maybe (ReturnQuery p r)
