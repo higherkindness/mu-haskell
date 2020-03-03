@@ -12,7 +12,9 @@
 
 module Mu.GraphQL.Query.Parse where
 
+import           Data.Functor.Identity
 import           Data.Int                      (Int32)
+import           Data.List                     (find)
 import           Data.Proxy
 import           Data.SOP.NS
 import qualified Data.Text                     as T
@@ -22,49 +24,9 @@ import           Mu.GraphQL.Query.Definition
 import           Mu.Rpc
 import           Mu.Schema
 
--- data Package serviceName methodName
---   = Package (Maybe serviceName)
---             [Service serviceName methodName]
-
--- data Service serviceName methodName
---   = Service serviceName
---             [ServiceAnnotation]
---             [Method serviceName methodName]
-
--- type family LookupService (ss :: [Service snm mnm]) (s :: snm) :: Service snm mnm where
---   LookupService '[] s = TypeError ('Text "could not find method " ':<>: 'ShowType s)
---   LookupService ('Service s anns ms ': ss) s = 'Service s anns ms
---   LookupService (other              ': ss) s = LookupService ss s
-
--- type ServiceQuery (p :: Package snm mnm) (s :: Service snm mnm)
---   = [OneMethodQuery p s]
-
--- type SelectionSet = [Selection]
-
--- data Selection
---   = SelectionField !Field
---   | SelectionFragmentSpread !FragmentSpread
---   | SelectionInlineFragment !InlineFragment
---   deriving (Ord, Show, Eq, Lift, Generic)
-
--- type ServiceQuery (p :: Package snm mnm) (s :: Service snm mnm)
---   = [OneMethodQuery p s]
-
--- data OneMethodQuery (p :: Package snm mnm) (s :: Service snm mnm) where
---   OneMethodQuery
---     :: Maybe Text
---     -> NS (ChosenMethodQuery p) ms
---     -> OneMethodQuery p ('Service nm anns ms)
-
--- data ChosenMethodQuery (p :: Package snm mnm) (m :: Method snm mnm) where
---   ChosenMethodQuery
---     :: NP (ArgumentValue p) args
---     -> ReturnQuery p r
---     -> ChosenMethodQuery p ('Method mname anns args ('RetSingle r))
-
--- TODO: turn Hasura's ExecutableDefinition into a service query
--- hint#1: start with the following function, and then move up
---         (OperationDefinition > ExecutableDefinition > ExecutableDocument)
+-- TODO: turn Hasura's `ExecutableDefinition` into a service query
+-- Hint: start with the following function, and then move up
+-- (OperationDefinition -> ExecutableDefinition -> ExecutableDocument)
 parseQuery ::
   forall (p :: Package') (s :: Symbol) pname ss sname sanns methods.
   ( p ~ 'Package pname ss,
@@ -77,53 +39,13 @@ parseQuery ::
   Maybe (ServiceQuery p (LookupService ss s))
 parseQuery _ _ = traverse toOneMethod
   where
-    toOneMethod ::
-      GQL.Selection ->
-      Maybe ( OneMethodQuery p ('Service sname sanns methods) )
+    toOneMethod :: GQL.Selection -> Maybe (OneMethodQuery p ('Service sname sanns methods))
     toOneMethod (GQL.SelectionField fld)        = fieldToMethod fld
     toOneMethod (GQL.SelectionFragmentSpread _) = Nothing -- FIXME:
     toOneMethod (GQL.SelectionInlineFragment _) = Nothing -- FIXME:
-    fieldToMethod ::
-      GQL.Field ->
-      Maybe ( OneMethodQuery p ('Service sname sanns methods) )
+    fieldToMethod :: GQL.Field -> Maybe (OneMethodQuery p ('Service sname sanns methods))
     fieldToMethod (GQL.Field alias name args _ sels) =
       OneMethodQuery (GQL.unName . GQL.unAlias <$> alias) <$> selectMethod name args sels
-
--- data Field
---   = Field
---   { _fAlias        :: !(Maybe Alias)
---   , _fName         :: !Name
---   , _fArguments    :: ![Argument]
---   , _fDirectives   :: ![Directive]
---   , _fSelectionSet :: !SelectionSet
---   } deriving (Ord, Show, Eq, Lift, Generic)
-
--- data FragmentSpread
---   = FragmentSpread
---   { _fsName       :: !Name
---   , _fsDirectives :: ![Directive]
---   } deriving (Ord, Show, Eq, Lift, Generic)
-
--- data InlineFragment
---   = InlineFragment
---   { _ifTypeCondition :: !(Maybe TypeCondition)
---   , _ifDirectives    :: ![Directive]
---   , _ifSelectionSet  :: !SelectionSet
---   } deriving (Ord, Show, Eq, Lift, Generic)
-
----
-
--- data Directive
---   = Directive
---   { _dName      :: !Name
---   , _dArguments :: ![Argument]
---   } deriving (Ord, Show, Eq, Lift, Generic)
-
--- data Argument
---   = Argument
---   { _aName  :: !Name
---   , _aValue :: !Value
---   } deriving (Ord, Show, Eq, Lift, Generic)
 
 class ParseMethod (p :: Package') (ms :: [Method Symbol Symbol]) where
   selectMethod ::
@@ -190,6 +112,29 @@ instance ParseArg p ('PrimitiveRef ()) where
   parseArg GQL.VNull = pure $ ArgPrimitive ()
   parseArg _         = Nothing
 
+instance ParseArg p ('SchemaRef sch sty) where
+  parseArg (GQL.VObject (GQL.ObjectValueG _)) = undefined -- TODO: ArgSchema <$> (TRecord <$> objectParser vs)
+  parseArg _                                  = Nothing
+
+class ObjectParser sch args where
+  objectParser :: [GQL.ObjectFieldG GQL.Value] -> Maybe (NP (Field Identity sch) args)
+
+instance ObjectParser sch '[] where
+  objectParser _ = pure Nil
+
+instance
+  (ObjectParser sch args, ValueParser v, KnownName nm) =>
+  ObjectParser sch ('FieldDef nm v ': args)
+  where
+  objectParser args = do
+    GQL.ObjectFieldG _ v <- find ((== nameVal (Proxy @nm)) . T.unpack . GQL.unName . GQL._ofName) args
+    (:*) <$> valueParser v <*> objectParser args
+
+class ValueParser v where
+  valueParser :: GQL.Value -> Maybe (Field Identity sch ('FieldDef nm v))
+
+-- TODO: define instances for ValueParser!
+
 -- newtype ListValueG a
 --   = ListValueG {unListValue :: [a]}
 
@@ -215,6 +160,12 @@ instance ParseArg p ('PrimitiveRef ()) where
 --   { _ofName  :: Name
 --   , _ofValue :: a
 --   } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+
+-- data Argument
+--   = Argument
+--   { _aName  :: !Name
+--   , _aValue :: !Value
+--   } deriving (Ord, Show, Eq, Lift, Generic)
 
 class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
   parseReturn :: GQL.SelectionSet -> Maybe (ReturnQuery p r)
