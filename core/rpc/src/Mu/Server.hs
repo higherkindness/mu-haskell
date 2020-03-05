@@ -114,7 +114,7 @@ type SingleServerT w = ServerT w '[]
 --   for a set of services, with possible
 --   references between them.
 data ServerT (w :: Type -> Type)  -- wrapper for data types
-             (chn :: ServiceChain snm) (s :: Package snm mnm)
+             (chn :: ServiceChain snm) (s :: Package snm mnm anm)
              (m :: Type -> Type) (hs :: [[Type]]) where
   Services :: ServicesT w chn s m hs
            -> ServerT w chn ('Package pname s) m hs
@@ -127,7 +127,7 @@ pattern Server svr = Services (svr :<&>: S0)
 infixr 3 :<&>:
 -- | Definition of a complete server for a service.
 data ServicesT (w :: Type -> Type)
-               (chn :: ServiceChain snm) (s :: [Service snm mnm])
+               (chn :: ServiceChain snm) (s :: [Service snm mnm anm])
                (m :: Type -> Type) (hs :: [[Type]]) where
   S0 :: ServicesT w chn '[] m '[]
   (:<&>:) :: HandlersT w chn (MappingRight chn sname) methods m hs
@@ -155,7 +155,7 @@ infixr 4 :<||>:
 --     of type @Conduit t Void m ()@. This stream should
 --     be connected to a source to get the elements.
 data HandlersT (w :: Type -> Type) (chn :: ServiceChain snm)
-               (inh :: *) (methods :: [Method snm mnm])
+               (inh :: *) (methods :: [Method snm mnm anm])
                (m :: Type -> Type) (hs :: [Type]) where
   H0 :: HandlersT w chn inh '[] m '[]
   (:<||>:) :: Handles w chn args ret m h
@@ -172,7 +172,7 @@ pattern x :<|>: xs <- (($ ()) -> x) :<||>: xs where
 -- Define a relation for handling
 class Handles (w :: Type -> Type)
               (chn :: ServiceChain snm)
-              (args :: [Argument snm]) (ret :: Return snm)
+              (args :: [Argument snm anm]) (ret :: Return snm)
               (m :: Type -> Type) (h :: Type)
 class ToRef   (w :: Type -> Type) (chn :: ServiceChain snm)
               (ref :: TypeRef snm) (t :: Type)
@@ -197,10 +197,10 @@ instance (FromRef w chn ref t, Maybe t ~ s) => FromRef w chn ('OptionalRef ref) 
 -- Arguments
 instance (FromRef w chn ref t, Handles w chn args ret m h,
           handler ~ (t -> h))
-         => Handles w chn ('ArgSingle ref ': args) ret m handler
+         => Handles w chn ('ArgSingle aname ref ': args) ret m handler
 instance (MonadError ServerError m, FromRef w chn ref t, Handles w chn args ret m h,
           handler ~ (ConduitT () t m () -> h))
-         => Handles w chn ('ArgStream ref ': args) ret m handler
+         => Handles w chn ('ArgStream aname ref ': args) ret m handler
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
          => Handles w chn '[] 'RetNothing m handler

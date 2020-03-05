@@ -46,7 +46,7 @@ setupGrpcClient' :: GrpcClientConfig -> IO (Either ClientError GrpcClient)
 setupGrpcClient' = runExceptT . setupGrpcClient
 
 class GRpcServiceMethodCall (p :: GRpcMessageProtocol)
-                            (pkg :: snm) (s :: snm) (m :: Method snm mnm) h where
+                            (pkg :: snm) (s :: snm) (m :: Method snm mnm anm) h where
   gRpcServiceMethodCall :: Proxy p -> Proxy pkg -> Proxy s -> Proxy m -> GrpcClient -> h
 instance ( KnownName serviceName, KnownName pkg, KnownName mname
          , GRpcMethodCall p ('Method mname manns margs mret) h, MkRPC p )
@@ -129,7 +129,7 @@ instance forall (sch :: Schema') (sty :: Symbol) (r :: Type).
 -- IMPLEMENTATION OF THE METHODS
 -- -----------------------------
 
-class GRpcMethodCall (p :: GRpcMessageProtocol) (method :: Method Symbol Symbol) h where
+class GRpcMethodCall (p :: GRpcMessageProtocol) (method :: Method') h where
   gRpcMethodCall :: RPCTy p -> Proxy method -> GrpcClient -> h
 
 instance ( KnownName name
@@ -183,7 +183,7 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRPCOutput (RPCTy p) ()
          , handler ~ (v -> IO (GRpcReply ())) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle vref ] 'RetNothing) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname vref ] 'RetNothing) handler where
   gRpcMethodCall rpc _ client x
     = simplifyResponse $
       buildGRpcReply1 <$>
@@ -192,7 +192,7 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (v -> IO (GRpcReply r)) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle vref ] ('RetSingle rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname vref ] ('RetSingle rref)) handler where
   gRpcMethodCall rpc _ client x
     = fmap (fmap (unGRpcOWTy (Proxy @p) (Proxy @rref))) $
       simplifyResponse $
@@ -203,7 +203,7 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (CompressMode -> IO (ConduitT v Void IO (GRpcReply r))) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgStream vref ] ('RetSingle rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname vref ] ('RetSingle rref)) handler where
   gRpcMethodCall rpc _ client compress
     = do -- Create a new TMChan
          chan <- newTMChanIO :: IO (TMChan v)
@@ -229,7 +229,7 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (v -> IO (ConduitT () (GRpcReply r) IO ())) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle vref ] ('RetStream rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname vref ] ('RetStream rref)) handler where
   gRpcMethodCall rpc _ client x
     = do -- Create a new TMChan
          chan <- newTMChanIO :: IO (TMChan r)
@@ -258,7 +258,7 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (CompressMode -> IO (ConduitT v (GRpcReply r) IO ())) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgStream vref ] ('RetStream rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname vref ] ('RetStream rref)) handler where
   gRpcMethodCall rpc _ client compress
     = do -- Create a new TMChan
          inchan <- newTMChanIO :: IO (TMChan (GRpcReply r))

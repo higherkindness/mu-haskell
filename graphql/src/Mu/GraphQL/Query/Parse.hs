@@ -79,7 +79,7 @@ parseQuery _ _ = traverse toOneMethod
     fieldToMethod (GQL.Field alias name args _ sels) =
       OneMethodQuery (GQL.unName . GQL.unAlias <$> alias) <$> selectMethod name args sels
 
-class ParseMethod (p :: Package') (ms :: [Method Symbol Symbol]) where
+class ParseMethod (p :: Package') (ms :: [Method']) where
   selectMethod ::
     Alternative f =>
     GQL.Name ->
@@ -99,12 +99,12 @@ instance
     where
       mname = T.pack $ nameVal (Proxy @mname)
 
-class ParseArgs (p :: Package') (args :: [Argument Symbol]) where
+class ParseArgs (p :: Package') (args :: [Argument']) where
   parseArgs :: Alternative f => [GQL.Argument] -> f (NP (ArgumentValue p) args)
 
 instance ParseArgs p '[] where
   parseArgs _ = pure Nil
-instance (ParseArg p a, ParseArgs p as) => ParseArgs p ('ArgSingle a ': as) where
+instance (ParseArg p a, ParseArgs p as) => ParseArgs p ('ArgSingle aname a ': as) where
   parseArgs (GQL.Argument _ x : xs) = (:*) <$> (ArgumentValue <$> parseArg x) <*> parseArgs xs
   parseArgs _                       = empty
 
