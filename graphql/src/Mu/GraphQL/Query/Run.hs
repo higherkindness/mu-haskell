@@ -144,3 +144,4 @@ instance ( MappingRight chn ref ~ t
          => ResultConversion ('Package pname ss) whole chn ('ObjectRef ref) t where
   convertResult whole (RetObject q) h
     = Just <$> runQuery @('Package pname ss) @(LookupService ss ref) whole h q
+-- TODO: be able to return enums

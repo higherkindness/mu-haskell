@@ -63,9 +63,9 @@ instance
   (KnownSymbol mname, ParseMethod p ms, ParseArgs p args, ParseReturn p r) =>
   ParseMethod p ('Method mname manns args ('RetSingle r) ': ms)
   where
-  selectMethod (GQL.unName -> wanted) args sels
+  selectMethod w@(GQL.unName -> wanted) args sels
     | wanted == mname = Z <$> (ChosenMethodQuery <$> parseArgs args <*> parseReturn sels)
-    | otherwise = S <$> selectMethod (GQL.Name wanted) args sels
+    | otherwise = S <$> selectMethod w args sels
     where
       mname = T.pack $ nameVal (Proxy @mname)
 
@@ -85,99 +85,109 @@ class ParseArg (p :: Package') (a :: TypeRef Symbol) where
 instance (ParseArg p r) => ParseArg p ('ListRef r) where
   parseArg (GQL.VList (GQL.ListValueG xs)) = ArgList <$> traverse parseArg xs
   parseArg _                               = Nothing
-
 instance ParseArg p ('PrimitiveRef Bool) where
   parseArg (GQL.VBoolean b) = pure (ArgPrimitive b)
   parseArg _                = Nothing
-
 instance ParseArg p ('PrimitiveRef Int32) where
   parseArg (GQL.VInt b) = pure (ArgPrimitive b)
   parseArg _            = Nothing
-
 instance ParseArg p ('PrimitiveRef Integer) where
   parseArg (GQL.VInt b) = pure $ ArgPrimitive $ fromIntegral b
   parseArg _            = Nothing
-
 instance ParseArg p ('PrimitiveRef Double) where
   parseArg (GQL.VFloat b) = pure (ArgPrimitive b)
   parseArg _              = Nothing
-
 instance ParseArg p ('PrimitiveRef T.Text) where
   parseArg (GQL.VString (GQL.StringValue b)) = pure $ ArgPrimitive b
   parseArg _                                 = Nothing
-
 instance ParseArg p ('PrimitiveRef String) where
   parseArg (GQL.VString (GQL.StringValue b)) = pure $ ArgPrimitive $ T.unpack b
   parseArg _                                 = Nothing
-
 instance ParseArg p ('PrimitiveRef ()) where
   parseArg GQL.VNull = pure $ ArgPrimitive ()
   parseArg _         = Nothing
+instance (ObjectOrEnumParser sch (sch :/: sty))
+         => ParseArg p ('SchemaRef sch sty) where
+  parseArg v = ArgSchema <$> parseObjectOrEnum v
 
-instance ParseArg p ('SchemaRef sch sty) where
-  parseArg (GQL.VObject (GQL.ObjectValueG _)) = undefined -- TODO: ArgSchema <$> (TRecord <$> objectParser vs)
-  parseArg _                                  = Nothing
+class ObjectOrEnumParser sch (t :: TypeDef Symbol Symbol) where
+  parseObjectOrEnum :: GQL.Value -> Maybe (Term Identity sch t)
+
+instance (ObjectParser sch args)
+         => ObjectOrEnumParser sch ('DRecord name args) where
+  parseObjectOrEnum (GQL.VObject (GQL.ObjectValueG vs)) = TRecord <$> objectParser vs
+  parseObjectOrEnum _                                   = Nothing
+
+instance (EnumParser choices)
+         => ObjectOrEnumParser sch ('DEnum name choices) where
+  parseObjectOrEnum (GQL.VEnum (GQL.EnumValue nm)) = TEnum <$> enumParser nm
+  parseObjectOrEnum _                              = Nothing
 
 class ObjectParser sch args where
   objectParser :: [GQL.ObjectFieldG GQL.Value] -> Maybe (NP (Field Identity sch) args)
 
 instance ObjectParser sch '[] where
   objectParser _ = pure Nil
-
 instance
-  (ObjectParser sch args, ValueParser v, KnownName nm) =>
+  (ObjectParser sch args, ValueParser sch v, KnownName nm) =>
   ObjectParser sch ('FieldDef nm v ': args)
   where
   objectParser args = do
     GQL.ObjectFieldG _ v <- find ((== nameVal (Proxy @nm)) . T.unpack . GQL.unName . GQL._ofName) args
-    (:*) <$> valueParser v <*> objectParser args
+    (:*) <$> (Field . Identity <$> valueParser v) <*> objectParser args
 
-class ValueParser v where
-  valueParser :: GQL.Value -> Maybe (Field Identity sch ('FieldDef nm v))
+class EnumParser (choices :: [ChoiceDef Symbol]) where
+  enumParser :: GQL.Name -> Maybe (NS Proxy choices)
 
--- TODO: define instances for ValueParser!
+instance EnumParser '[] where
+  enumParser _ = empty
+instance (KnownName name, EnumParser choices)
+         => EnumParser ('ChoiceDef name ': choices) where
+  enumParser w@(GQL.unName -> wanted)
+    | wanted == mname = pure (Z Proxy)
+    | otherwise = S <$> enumParser w
+    where
+      mname = T.pack $ nameVal (Proxy @name)
 
--- newtype ListValueG a
---   = ListValueG {unListValue :: [a]}
+class ValueParser sch v where
+  valueParser :: GQL.Value -> Maybe (FieldValue Identity sch v)
 
--- data Value
---   = VVariable !Variable
---   | VInt !Int32
---   | VFloat !Double
---   | VString !StringValue
---   | VBoolean !Bool
---   | VNull
---   | VEnum !EnumValue
---   | VList !ListValue
---   | VObject !ObjectValue
---   deriving (Ord, Show, Eq, Lift, Generic)
-
--- newtype ObjectValueG a
---   = ObjectValueG {unObjectValue :: [ObjectFieldG a]}
---   deriving (Ord, Show, Eq, Lift, Hashable)
--- type ObjectValue = ObjectValueG Value
--- type ObjectValueC = ObjectValueG ValueConst
--- data ObjectFieldG a
---   = ObjectFieldG
---   { _ofName  :: Name
---   , _ofValue :: a
---   } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
-
--- data Argument
---   = Argument
---   { _aName  :: !Name
---   , _aValue :: !Value
---   } deriving (Ord, Show, Eq, Lift, Generic)
+instance ValueParser sch 'TNull where
+  valueParser GQL.VNull = pure FNull
+  valueParser _         = empty
+instance ValueParser sch ('TPrimitive Bool) where
+  valueParser (GQL.VBoolean b) = pure (FPrimitive b)
+  valueParser _                = Nothing
+instance ValueParser sch ('TPrimitive Int32) where
+  valueParser (GQL.VInt b) = pure (FPrimitive b)
+  valueParser _            = Nothing
+instance ValueParser sch ('TPrimitive Integer) where
+  valueParser (GQL.VInt b) = pure $ FPrimitive $ fromIntegral b
+  valueParser _            = Nothing
+instance ValueParser sch ('TPrimitive Double) where
+  valueParser (GQL.VFloat b) = pure (FPrimitive b)
+  valueParser _              = Nothing
+instance ValueParser sch ('TPrimitive T.Text) where
+  valueParser (GQL.VString (GQL.StringValue b)) = pure $ FPrimitive b
+  valueParser _                                 = Nothing
+instance ValueParser sch ('TPrimitive String) where
+  valueParser (GQL.VString (GQL.StringValue b)) = pure $ FPrimitive $ T.unpack b
+  valueParser _                                 = Nothing
+instance (ValueParser sch r) => ValueParser sch ('TList r) where
+  valueParser (GQL.VList (GQL.ListValueG xs)) = FList <$> traverse valueParser xs
+  valueParser _                               = Nothing
+instance (sch :/: sty ~ 'DRecord name args, ObjectParser sch args)
+         => ValueParser sch ('TSchematic sty) where
+  valueParser (GQL.VObject (GQL.ObjectValueG vs)) = FSchematic <$> (TRecord <$> objectParser vs)
+  valueParser _                                   = Nothing
 
 class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
   parseReturn :: GQL.SelectionSet -> Maybe (ReturnQuery p r)
 
 instance ParseReturn p ('PrimitiveRef t) where
   parseReturn s = guard (null s) >> pure RetPrimitive
--- TODO: devolver enums
-instance TypeError ('Text "returning schemas is not yet supported")
-         => ParseReturn p ('SchemaRef sch sty) where
-  parseReturn _ = error "this should never be called"
+instance ParseReturn p ('SchemaRef sch sty) where
+  parseReturn _ = pure RetSchema
 instance ParseReturn p r
          => ParseReturn p ('ListRef r) where
   parseReturn s = RetList <$> parseReturn s
