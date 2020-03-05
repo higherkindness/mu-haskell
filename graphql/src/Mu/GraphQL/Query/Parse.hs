@@ -12,6 +12,8 @@
 
 module Mu.GraphQL.Query.Parse where
 
+import           Control.Applicative
+import           Control.Monad
 import           Data.Functor.Identity
 import           Data.Int                      (Int32)
 import           Data.List                     (find)
@@ -169,3 +171,21 @@ class ValueParser v where
 
 class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
   parseReturn :: GQL.SelectionSet -> Maybe (ReturnQuery p r)
+
+instance ParseReturn p ('PrimitiveRef t) where
+  parseReturn s = guard (null s) >> pure RetPrimitive
+-- TODO: devolver enums
+instance TypeError ('Text "returning schemas is not yet supported")
+         => ParseReturn p ('SchemaRef sch sty) where
+  parseReturn _ = error "this should never be called"
+instance ParseReturn p r
+         => ParseReturn p ('ListRef r) where
+  parseReturn s = RetList <$> parseReturn s
+instance ParseReturn p r
+         => ParseReturn p ('OptionalRef r) where
+  parseReturn s = RetOptional <$> parseReturn s
+instance ( p ~ 'Package pname ss,
+           LookupService ss s ~ 'Service sname sanns methods,
+           ParseMethod p methods
+         ) => ParseReturn p ('ObjectRef s) where
+  parseReturn s = RetObject <$> parseQuery (Proxy @p) (Proxy @s) s
