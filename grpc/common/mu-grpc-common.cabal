@@ -1,7 +1,9 @@
 name:          mu-grpc-common
 version:       0.2.0.0
 synopsis:      gRPC for Mu, common modules for client and server
-description:   Use @mu-grpc-server@ or @mu-grpc-client@ (the common parts).
+description:
+  Use @mu-grpc-server@ or @mu-grpc-client@ (the common parts).
+
 license:       Apache-2.0
 license-file:  LICENSE
 author:        Alejandro Serrano, Flavio Corpa

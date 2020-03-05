@@ -135,7 +135,7 @@ instance (KnownName nm, CheckSchemaValue s ty, CheckSchemaFields s rest)
          Field _ v <- find (\(Field fieldName _) -> fieldName == name) fs
          v' <- traverse checkSchemaValue v
          r' <- checkSchemaFields @_ @_ @s @rest fs
-         return (S.Field v' :* r')
+         pure (S.Field v' :* r')
 
 instance CheckSchemaEnum choices => CheckSchema s ('DEnum nm choices) where
   checkSchema' (TEnum n) = S.TEnum <$> checkSchemaEnumInt n

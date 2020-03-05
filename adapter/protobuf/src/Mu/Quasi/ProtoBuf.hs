@@ -26,8 +26,8 @@ import           Language.ProtocolBuffers.Parser
 import qualified Language.ProtocolBuffers.Types  as P
 
 import           Mu.Adapter.ProtoBuf
-import           Mu.Schema.Definition
 import           Mu.Schema.Annotations
+import           Mu.Schema.Definition
 
 -- | Reads a @.proto@ file and generates a 'Mu.Schema.Definition.Schema'
 --   with all the message types, using the name given
@@ -46,22 +46,22 @@ protobufToDecls :: String -> P.ProtoBuf -> Q [Dec]
 protobufToDecls schemaName p
   = do let schemaName' = mkName schemaName
        (schTy, annTy) <- schemaFromProtoBuf p
-       schemaDec <- tySynD schemaName' [] (return schTy)
+       schemaDec <- tySynD schemaName' [] (pure schTy)
 #if MIN_VERSION_template_haskell(2,15,0)
        annDec <- tySynInstD (tySynEqn Nothing
                                [t| AnnotatedSchema ProtoBufAnnotation $(conT schemaName') |]
-                               (return annTy))
+                               (pure annTy))
 #else
        annDec <- tySynInstD ''AnnotatedSchema
-                   (tySynEqn [ [t| ProtoBufAnnotation |], conT schemaName' ] (return annTy))
+                   (tySynEqn [ [t| ProtoBufAnnotation |], conT schemaName' ] (pure annTy))
 #endif
-       return [schemaDec, annDec]
+       pure [schemaDec, annDec]
 
 schemaFromProtoBuf :: P.ProtoBuf -> Q (Type, Type)
 schemaFromProtoBuf P.ProtoBuf {P.types = tys} = do
   let decls = flattenDecls tys
   (schTys, anns) <- unzip <$> mapM pbTypeDeclToType decls
-  return (typesToList schTys, typesToList (concat anns))
+  pure (typesToList schTys, typesToList (concat anns))
 
 flattenDecls :: [P.TypeDeclaration] -> [P.TypeDeclaration]
 flattenDecls = concatMap flattenDecl
@@ -73,7 +73,7 @@ flattenDecls = concatMap flattenDecl
 pbTypeDeclToType :: P.TypeDeclaration -> Q (Type, [Type])
 pbTypeDeclToType (P.DEnum name _ fields) = do
   (tys, anns) <- unzip <$> mapM pbChoiceToType fields
-  (,) <$> [t|'DEnum $(textToStrLit name) $(return $ typesToList tys)|] <*> pure anns
+  (,) <$> [t|'DEnum $(textToStrLit name) $(pure $ typesToList tys)|] <*> pure anns
   where
     pbChoiceToType :: P.EnumField -> Q (Type, Type)
     pbChoiceToType (P.EnumField nm number _)
@@ -138,7 +138,7 @@ typesToList :: [Type] -> Type
 typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
 
 textToStrLit :: T.Text -> Q Type
-textToStrLit s = return $ LitT $ StrTyLit $ T.unpack s
+textToStrLit s = pure $ LitT $ StrTyLit $ T.unpack s
 
 intToLit :: Int -> Q Type
-intToLit n = return $ LitT $ NumTyLit $ toInteger n
+intToLit n = pure $ LitT $ NumTyLit $ toInteger n

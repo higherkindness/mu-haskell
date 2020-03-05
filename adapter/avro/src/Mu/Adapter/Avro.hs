@@ -197,7 +197,7 @@ instance (HasAvroSchema' (FieldValue f sch t), A.FromAvro (FieldValue f sch t))
   fromAvro v = TSimple <$> A.fromAvro v
 
 instance A.FromAvro (FieldValue f sch 'TNull) where
-  fromAvro AVal.Null = return FNull
+  fromAvro AVal.Null = pure FNull
   fromAvro v         = A.badValue v "null"
 instance A.FromAvro t => A.FromAvro (FieldValue f sch ('TPrimitive t)) where
   fromAvro v = FPrimitive <$> A.fromAvro v
@@ -228,7 +228,7 @@ class FromAvroEnum (vs :: [ChoiceDef fn]) where
 instance FromAvroEnum '[] where
   fromAvroEnum v _ = A.badValue v "element not found"
 instance FromAvroEnum vs => FromAvroEnum (v ': vs) where
-  fromAvroEnum _ 0 = return (Z Proxy)
+  fromAvroEnum _ 0 = pure (Z Proxy)
   fromAvroEnum v n = S <$> fromAvroEnum v (n-1)
 
 class FromAvroUnion f sch choices where
@@ -246,7 +246,7 @@ instance (A.FromAvro (FieldValue f sch u), FromAvroUnion f sch us)
 class FromAvroFields f sch (fs :: [FieldDef Symbol Symbol]) where
   fromAvroF :: HM.HashMap T.Text (AVal.Value ASch.Schema) -> A.Result (NP (Field f sch) fs)
 instance FromAvroFields f sch '[] where
-  fromAvroF _ = return Nil
+  fromAvroF _ = pure Nil
 instance (Applicative f, KnownName name, A.FromAvro (FieldValue f sch t), FromAvroFields f sch fs)
          => FromAvroFields f sch ('FieldDef name t ': fs) where
   fromAvroF v = case HM.lookup fieldName v of

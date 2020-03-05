@@ -5,11 +5,13 @@
 {-# language FlexibleInstances         #-}
 {-# language GADTs                     #-}
 {-# language MultiParamTypeClasses     #-}
+{-# language PatternSynonyms           #-}
 {-# language PolyKinds                 #-}
 {-# language RankNTypes                #-}
 {-# language TypeFamilies              #-}
 {-# language TypeOperators             #-}
 {-# language UndecidableInstances      #-}
+{-# language ViewPatterns              #-}
 {-|
 Description : Protocol-independent declaration of servers.
 
@@ -34,13 +36,18 @@ We recommend you to catch exceptions and return custom
 -}
 module Mu.Server (
   -- * Servers and handlers
-  MonadServer, ServerT(..), HandlersT(..)
+  MonadServer
+, SingleServerT
+, ServerT(.., Server), ServicesT(..), HandlersT(.., (:<|>:))
+, ServiceChain, noContext
   -- ** Simple servers using only IO
 , ServerErrorIO, ServerIO
   -- * Errors which might be raised
 , serverError, ServerError(..), ServerErrorCode(..)
   -- ** Useful when you do not want to deal with errors
 , alwaysOk
+  -- * For internal use
+, Handles, FromRef, ToRef
 ) where
 
 import           Control.Monad.Except
@@ -54,8 +61,10 @@ import           Mu.Schema
 type MonadServer m = (MonadError ServerError m, MonadIO m)
 -- | Simplest monad which satisfies 'MonadServer'.
 type ServerErrorIO = ExceptT ServerError IO
--- | Simple 'ServerT' which uses only 'IO' and errors.
-type ServerIO w srv = ServerT w srv ServerErrorIO
+
+-- | Simple 'ServerT' which uses only 'IO' and errors,
+--   and whose service has no back-references.
+type ServerIO w srv = ServerT w '[] srv ServerErrorIO
 
 -- | Stop the current handler,
 --   returning an error to the client.
@@ -69,6 +78,11 @@ serverError = throwError
 alwaysOk :: (MonadIO m)
          => IO a -> m a
 alwaysOk = liftIO
+
+-- | To declare that the function doesn't use
+--   its context.
+noContext :: b -> a -> b
+noContext = const
 
 -- | Errors raised in a handler.
 data ServerError
@@ -87,11 +101,40 @@ data ServerErrorCode
   | NotFound
   deriving (Eq, Show)
 
--- | Definition of a complete server for a service.
-data ServerT (w :: Type -> Type) (s :: Service snm mnm) (m :: Type -> Type) (hs :: [Type]) where
-  Server :: HandlersT w methods m hs -> ServerT w ('Service sname anns methods) m hs
+-- | Defines a mapping between outcome of
+--   a service, and its representation as
+--   Haskell type.
+type ServiceChain snm = Mappings snm Type
 
-infixr 5 :<|>:
+-- | A server for a single service,
+--   like most RPC ones.
+type SingleServerT w = ServerT w '[]
+
+-- | Definition of a complete server
+--   for a set of services, with possible
+--   references between them.
+data ServerT (w :: Type -> Type)  -- wrapper for data types
+             (chn :: ServiceChain snm) (s :: Package snm mnm)
+             (m :: Type -> Type) (hs :: [[Type]]) where
+  Services :: ServicesT w chn s m hs
+           -> ServerT w chn ('Package pname s) m hs
+
+pattern Server :: (MappingRight chn sname ~ ())
+               => HandlersT w chn () methods m hs
+               -> ServerT w chn ('Package pname '[ 'Service sname sanns methods ]) m '[hs]
+pattern Server svr = Services (svr :<&>: S0)
+
+infixr 3 :<&>:
+-- | Definition of a complete server for a service.
+data ServicesT (w :: Type -> Type)
+               (chn :: ServiceChain snm) (s :: [Service snm mnm])
+               (m :: Type -> Type) (hs :: [[Type]]) where
+  S0 :: ServicesT w chn '[] m '[]
+  (:<&>:) :: HandlersT w chn (MappingRight chn sname) methods m hs
+          -> ServicesT w chn rest m hss
+          -> ServicesT w chn ('Service sname anns methods ': rest) m (hs ': hss)
+
+infixr 4 :<||>:
 -- | 'HandlersT' is a sequence of handlers.
 --   Note that the handlers for your service
 --   must appear __in the same order__ as they
@@ -111,36 +154,59 @@ infixr 5 :<|>:
 --   * Output streams turn into an __additional argument__
 --     of type @Conduit t Void m ()@. This stream should
 --     be connected to a source to get the elements.
-data HandlersT (w :: Type -> Type) (methods :: [Method mnm]) (m :: Type -> Type) (hs :: [Type]) where
-  H0 :: HandlersT w '[] m '[]
-  (:<|>:) :: Handles w args ret m h => h -> HandlersT w ms m hs
-          -> HandlersT w ('Method name anns args ret ': ms) m (h ': hs)
+data HandlersT (w :: Type -> Type) (chn :: ServiceChain snm)
+               (inh :: *) (methods :: [Method snm mnm])
+               (m :: Type -> Type) (hs :: [Type]) where
+  H0 :: HandlersT w chn inh '[] m '[]
+  (:<||>:) :: Handles w chn args ret m h
+           => (inh -> h) -> HandlersT w chn inh ms m hs
+           -> HandlersT w chn inh ('Method name anns args ret ': ms) m (h ': hs)
+
+infixr 4 :<|>:
+pattern (:<|>:) :: (Handles w chn args ret m h)
+                => h -> HandlersT w chn () ms m hs
+                -> HandlersT w chn () ('Method name anns args ret ': ms) m (h ': hs)
+pattern x :<|>: xs <- (($ ()) -> x) :<||>: xs where
+  x :<|>: xs = noContext x :<||>: xs
 
 -- Define a relation for handling
-class Handles (w :: Type -> Type) (args :: [Argument]) (ret :: Return)
+class Handles (w :: Type -> Type)
+              (chn :: ServiceChain snm)
+              (args :: [Argument snm]) (ret :: Return snm)
               (m :: Type -> Type) (h :: Type)
-class ToRef (w :: Type -> Type) (ref :: TypeRef) (t :: Type)
-class FromRef (w :: Type -> Type) (ref :: TypeRef) (t :: Type)
+class ToRef   (w :: Type -> Type) (chn :: ServiceChain snm)
+              (ref :: TypeRef snm) (t :: Type)
+class FromRef (w :: Type -> Type) (chn :: ServiceChain snm)
+              (ref :: TypeRef snm) (t :: Type)
 
 -- Type references
-instance ToSchema w sch sty t => ToRef w ('ViaSchema sch sty) t
-instance ToRef w ('ViaRegistry subject t last) t
-instance FromSchema w sch sty t => FromRef w ('ViaSchema sch sty) t
-instance FromRef w ('ViaRegistry subject t last) t
+instance t ~ s => ToRef w chn ('PrimitiveRef t) s
+instance ToSchema w sch sty t => ToRef w chn ('SchemaRef sch sty) t
+instance MappingRight chn ref ~ t => ToRef w chn ('ObjectRef ref) t
+instance t ~ s => ToRef w chn ('RegistryRef subject t last) s
+instance (ToRef w chn ref t, [t] ~ s) => ToRef w chn ('ListRef ref) s
+instance (ToRef w chn ref t, Maybe t ~ s) => ToRef w chn ('OptionalRef ref) s
+
+instance t ~ s => FromRef w chn ('PrimitiveRef t) s
+instance FromSchema w sch sty t => FromRef w chn ('SchemaRef sch sty) t
+instance MappingRight chn ref ~ t => FromRef w chn ('ObjectRef ref) t
+instance t ~ s => FromRef w chn ('RegistryRef subject t last) s
+instance (FromRef w chn ref t, [t] ~ s) => FromRef w chn ('ListRef ref) s
+instance (FromRef w chn ref t, Maybe t ~ s) => FromRef w chn ('OptionalRef ref) s
 
 -- Arguments
-instance (FromRef w ref t, Handles w args ret m h,
+instance (FromRef w chn ref t, Handles w chn args ret m h,
           handler ~ (t -> h))
-         => Handles w ('ArgSingle ref ': args) ret m handler
-instance (MonadError ServerError m, FromRef w ref t, Handles w args ret m h,
+         => Handles w chn ('ArgSingle ref ': args) ret m handler
+instance (MonadError ServerError m, FromRef w chn ref t, Handles w chn args ret m h,
           handler ~ (ConduitT () t m () -> h))
-         => Handles w ('ArgStream ref ': args) ret m handler
+         => Handles w chn ('ArgStream ref ': args) ret m handler
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
-         => Handles w '[] 'RetNothing m handler
-instance (MonadError ServerError m, ToRef w eref e, ToRef w vref v, handler ~ m (Either e v))
-         => Handles w '[] ('RetThrows eref vref) m handler
-instance (MonadError ServerError m, ToRef w ref v, handler ~ m v)
-         => Handles w '[] ('RetSingle ref) m handler
-instance (MonadError ServerError m, ToRef w ref v, handler ~ (ConduitT v Void m () -> m ()))
-         => Handles w '[] ('RetStream ref) m handler
+         => Handles w chn '[] 'RetNothing m handler
+instance (MonadError ServerError m, ToRef w chn eref e, ToRef w chn vref v, handler ~ m (Either e v))
+         => Handles w chn '[] ('RetThrows eref vref) m handler
+instance (MonadError ServerError m, ToRef w chn ref v, handler ~ m v)
+         => Handles w chn '[] ('RetSingle ref) m handler
+instance (MonadError ServerError m, ToRef w chn ref v, handler ~ (ConduitT v Void m () -> m ()))
+         => Handles w chn '[] ('RetStream ref) m handler

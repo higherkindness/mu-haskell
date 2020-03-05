@@ -12,6 +12,7 @@ packages:
 - grpc/common
 - grpc/client
 - grpc/server
+- graphql
 - examples/health-check/avro
 - examples/health-check/protobuf
 - examples/route-guide
@@ -34,3 +35,5 @@ extra-deps:
 - hw-kafka-client-3.0.0
 - hw-kafka-conduit-2.6.0
 - HasBigDecimal-0.1.1
+- git: https://github.com/hasura/graphql-parser-hs.git
+  commit: 1380495a7b3269b70a7ab3081d745a5f54171a9c
