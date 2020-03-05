@@ -12,6 +12,14 @@ import           Data.Text
 import           Mu.Rpc
 import           Mu.Schema
 
+data Document (p :: Package snm mnm) (qr :: snm) (mut :: snm) where
+  QueryDoc    :: LookupService ss qr ~ 'Service qr qanns qms
+              => ServiceQuery ('Package pname ss) (LookupService ss qr)
+              -> Document ('Package pname ss) qr mut
+  MutationDoc :: LookupService ss mut ~ 'Service mut manns mms
+              => ServiceQuery ('Package pname ss) (LookupService ss mut)
+              -> Document ('Package pname ss) qr mut
+
 type ServiceQuery (p :: Package snm mnm) (s :: Service snm mnm)
   = [OneMethodQuery p s]
 

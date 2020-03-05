@@ -13,7 +13,6 @@
 module Mu.GraphQL.Query.Parse where
 
 import           Control.Applicative
-import           Control.Monad                 (guard)
 import           Data.Functor.Identity
 import           Data.Int                      (Int32)
 import           Data.List                     (find)
@@ -22,43 +21,74 @@ import           Data.SOP.NS
 import qualified Data.Text                     as T
 import           GHC.TypeLits
 import qualified Language.GraphQL.Draft.Syntax as GQL
+
 import           Mu.GraphQL.Query.Definition
 import           Mu.Rpc
 import           Mu.Schema
+
+parseDoc ::
+  ( Alternative f, p ~ 'Package pname ss,
+    LookupService ss qr ~ 'Service qr qanns qmethods,
+    ParseMethod p qmethods,
+    LookupService ss mut ~ 'Service mut manns mmethods,
+    ParseMethod p mmethods
+  ) =>
+  GQL.ExecutableDocument ->
+  f (Document p qr mut)
+parseDoc (GQL.ExecutableDocument defns)
+  = case GQL.partitionExDefs defns of
+      ([unnamed], [], _) -> QueryDoc <$> parseQuery Proxy Proxy unnamed
+      ([], [named], _)   -> parseTypedDoc named
+      _                  -> empty
+
+parseTypedDoc ::
+  ( Alternative f, p ~ 'Package pname ss,
+    LookupService ss qr ~ 'Service qr qanns qmethods,
+    ParseMethod p qmethods,
+    LookupService ss mut ~ 'Service mut manns mmethods,
+    ParseMethod p mmethods
+  ) =>
+  GQL.TypedOperationDefinition ->
+  f (Document p qr mut)
+parseTypedDoc tod@GQL.TypedOperationDefinition { GQL._todType = GQL.OperationTypeQuery }
+  = QueryDoc <$> parseQuery Proxy Proxy (GQL._todSelectionSet tod)
+parseTypedDoc tod@GQL.TypedOperationDefinition { GQL._todType = GQL.OperationTypeMutation }
+  = MutationDoc <$> parseQuery Proxy Proxy (GQL._todSelectionSet tod)
+parseTypedDoc _ = empty
 
 -- TODO: turn Hasura's `ExecutableDefinition` into a service query
 -- Hint: start with the following function, and then move up
 -- (OperationDefinition -> ExecutableDefinition -> ExecutableDocument)
 parseQuery ::
-  forall (p :: Package') (s :: Symbol) pname ss sname sanns methods.
-  ( p ~ 'Package pname ss,
-    LookupService ss s ~ 'Service sname sanns methods,
+  forall (p :: Package') (s :: Symbol) pname ss sanns methods f.
+  ( Alternative f, p ~ 'Package pname ss,
+    LookupService ss s ~ 'Service s sanns methods,
     ParseMethod p methods
   ) =>
   Proxy p ->
   Proxy s ->
   GQL.SelectionSet ->
-  Maybe (ServiceQuery p (LookupService ss s))
+  f (ServiceQuery p (LookupService ss s))
 parseQuery _ _ = traverse toOneMethod
   where
-    toOneMethod :: GQL.Selection -> Maybe (OneMethodQuery p ('Service sname sanns methods))
+    toOneMethod :: GQL.Selection -> f (OneMethodQuery p ('Service sname sanns methods))
     toOneMethod (GQL.SelectionField fld)        = fieldToMethod fld
     toOneMethod (GQL.SelectionFragmentSpread _) = empty -- FIXME:
     toOneMethod (GQL.SelectionInlineFragment _) = empty -- FIXME:
-    fieldToMethod :: GQL.Field -> Maybe (OneMethodQuery p ('Service sname sanns methods))
+    fieldToMethod :: GQL.Field -> f (OneMethodQuery p ('Service sname sanns methods))
     fieldToMethod (GQL.Field alias name args _ sels) =
       OneMethodQuery (GQL.unName . GQL.unAlias <$> alias) <$> selectMethod name args sels
 
 class ParseMethod (p :: Package') (ms :: [Method Symbol Symbol]) where
   selectMethod ::
+    Alternative f =>
     GQL.Name ->
     [GQL.Argument] ->
     GQL.SelectionSet ->
-    Maybe (NS (ChosenMethodQuery p) ms)
+    f (NS (ChosenMethodQuery p) ms)
 
 instance ParseMethod p '[] where
   selectMethod _ _ _ = empty
-
 instance
   (KnownSymbol mname, ParseMethod p ms, ParseArgs p args, ParseReturn p r) =>
   ParseMethod p ('Method mname manns args ('RetSingle r) ': ms)
@@ -70,17 +100,16 @@ instance
       mname = T.pack $ nameVal (Proxy @mname)
 
 class ParseArgs (p :: Package') (args :: [Argument Symbol]) where
-  parseArgs :: [GQL.Argument] -> Maybe (NP (ArgumentValue p) args)
+  parseArgs :: Alternative f => [GQL.Argument] -> f (NP (ArgumentValue p) args)
 
 instance ParseArgs p '[] where
   parseArgs _ = pure Nil
-
 instance (ParseArg p a, ParseArgs p as) => ParseArgs p ('ArgSingle a ': as) where
   parseArgs (GQL.Argument _ x : xs) = (:*) <$> (ArgumentValue <$> parseArg x) <*> parseArgs xs
   parseArgs _                       = empty
 
 class ParseArg (p :: Package') (a :: TypeRef Symbol) where
-  parseArg :: GQL.Value -> Maybe (ArgumentValue' p a)
+  parseArg :: Alternative f => GQL.Value -> f (ArgumentValue' p a)
 
 instance (ParseArg p r) => ParseArg p ('ListRef r) where
   parseArg (GQL.VList (GQL.ListValueG xs)) = ArgList <$> traverse parseArg xs
@@ -111,20 +140,23 @@ instance (ObjectOrEnumParser sch (sch :/: sty))
   parseArg v = ArgSchema <$> parseObjectOrEnum v
 
 class ObjectOrEnumParser sch (t :: TypeDef Symbol Symbol) where
-  parseObjectOrEnum :: GQL.Value -> Maybe (Term Identity sch t)
+  parseObjectOrEnum :: Alternative f
+                    => GQL.Value
+                    -> f (Term Identity sch t)
 
 instance (ObjectParser sch args)
          => ObjectOrEnumParser sch ('DRecord name args) where
   parseObjectOrEnum (GQL.VObject (GQL.ObjectValueG vs)) = TRecord <$> objectParser vs
   parseObjectOrEnum _                                   = empty
-
 instance (EnumParser choices)
          => ObjectOrEnumParser sch ('DEnum name choices) where
   parseObjectOrEnum (GQL.VEnum (GQL.EnumValue nm)) = TEnum <$> enumParser nm
   parseObjectOrEnum _                              = empty
 
 class ObjectParser sch args where
-  objectParser :: [GQL.ObjectFieldG GQL.Value] -> Maybe (NP (Field Identity sch) args)
+  objectParser :: Alternative f
+               => [GQL.ObjectFieldG GQL.Value]
+               -> f (NP (Field Identity sch) args)
 
 instance ObjectParser sch '[] where
   objectParser _ = pure Nil
@@ -132,12 +164,14 @@ instance
   (ObjectParser sch args, ValueParser sch v, KnownName nm) =>
   ObjectParser sch ('FieldDef nm v ': args)
   where
-  objectParser args = do
-    GQL.ObjectFieldG _ v <- find ((== nameVal (Proxy @nm)) . T.unpack . GQL.unName . GQL._ofName) args
-    (:*) <$> (Field . Identity <$> valueParser v) <*> objectParser args
+  objectParser args
+    = case find ((== nameVal (Proxy @nm)) . T.unpack . GQL.unName . GQL._ofName) args of
+        Just (GQL.ObjectFieldG _ v)
+          -> (:*) <$> (Field . Identity <$> valueParser v) <*> objectParser args
+        Nothing -> empty
 
 class EnumParser (choices :: [ChoiceDef Symbol]) where
-  enumParser :: GQL.Name -> Maybe (NS Proxy choices)
+  enumParser :: Alternative f => GQL.Name -> f (NS Proxy choices)
 
 instance EnumParser '[] where
   enumParser _ = empty
@@ -150,7 +184,9 @@ instance (KnownName name, EnumParser choices)
       mname = T.pack $ nameVal (Proxy @name)
 
 class ValueParser sch v where
-  valueParser :: GQL.Value -> Maybe (FieldValue Identity sch v)
+  valueParser :: Alternative f
+              => GQL.Value
+              -> f (FieldValue Identity sch v)
 
 instance ValueParser sch 'TNull where
   valueParser GQL.VNull = pure FNull
@@ -182,10 +218,13 @@ instance (sch :/: sty ~ 'DRecord name args, ObjectParser sch args)
   valueParser _                                   = empty
 
 class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
-  parseReturn :: GQL.SelectionSet -> Maybe (ReturnQuery p r)
+  parseReturn :: Alternative f
+              => GQL.SelectionSet
+              -> f (ReturnQuery p r)
 
 instance ParseReturn p ('PrimitiveRef t) where
-  parseReturn s = guard (null s) >> pure RetPrimitive
+  parseReturn [] = pure RetPrimitive
+  parseReturn _  = empty
 instance ParseReturn p ('SchemaRef sch sty) where
   parseReturn _ = pure RetSchema
 instance ParseReturn p r
@@ -195,7 +234,7 @@ instance ParseReturn p r
          => ParseReturn p ('OptionalRef r) where
   parseReturn s = RetOptional <$> parseReturn s
 instance ( p ~ 'Package pname ss,
-           LookupService ss s ~ 'Service sname sanns methods,
+           LookupService ss s ~ 'Service s sanns methods,
            ParseMethod p methods
          ) => ParseReturn p ('ObjectRef s) where
   parseReturn s = RetObject <$> parseQuery (Proxy @p) (Proxy @s) s

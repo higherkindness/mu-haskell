@@ -28,6 +28,21 @@ import           Mu.GraphQL.Query.Definition
 data GraphQLError
   = GraphQLError ServerError [T.Text]
 
+runDocument
+  :: ( p ~ 'Package pname ss
+     , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
+     , MappingRight chn qr ~ ()
+     , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
+     , MappingRight chn mut ~ ()
+     )
+  => ServerT Identity chn p ServerErrorIO hs
+  -> Document p qr mut
+  -> WriterT [GraphQLError] IO Aeson.Value
+runDocument svr (QueryDoc q)
+  = runQuery svr () q
+runDocument svr (MutationDoc q)
+  = runQuery svr () q
+
 runQuery
   :: forall p s pname ss hs sname sanns ms chn inh.
      ( RunQueryFindHandler p hs chn ss s hs
