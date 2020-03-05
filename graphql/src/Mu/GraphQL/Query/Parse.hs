@@ -13,7 +13,7 @@
 module Mu.GraphQL.Query.Parse where
 
 import           Control.Applicative
-import           Control.Monad
+import           Control.Monad                 (guard)
 import           Data.Functor.Identity
 import           Data.Int                      (Int32)
 import           Data.List                     (find)
@@ -43,8 +43,8 @@ parseQuery _ _ = traverse toOneMethod
   where
     toOneMethod :: GQL.Selection -> Maybe (OneMethodQuery p ('Service sname sanns methods))
     toOneMethod (GQL.SelectionField fld)        = fieldToMethod fld
-    toOneMethod (GQL.SelectionFragmentSpread _) = Nothing -- FIXME:
-    toOneMethod (GQL.SelectionInlineFragment _) = Nothing -- FIXME:
+    toOneMethod (GQL.SelectionFragmentSpread _) = empty -- FIXME:
+    toOneMethod (GQL.SelectionInlineFragment _) = empty -- FIXME:
     fieldToMethod :: GQL.Field -> Maybe (OneMethodQuery p ('Service sname sanns methods))
     fieldToMethod (GQL.Field alias name args _ sels) =
       OneMethodQuery (GQL.unName . GQL.unAlias <$> alias) <$> selectMethod name args sels
@@ -57,7 +57,7 @@ class ParseMethod (p :: Package') (ms :: [Method Symbol Symbol]) where
     Maybe (NS (ChosenMethodQuery p) ms)
 
 instance ParseMethod p '[] where
-  selectMethod _ _ _ = Nothing
+  selectMethod _ _ _ = empty
 
 instance
   (KnownSymbol mname, ParseMethod p ms, ParseArgs p args, ParseReturn p r) =>
@@ -77,35 +77,35 @@ instance ParseArgs p '[] where
 
 instance (ParseArg p a, ParseArgs p as) => ParseArgs p ('ArgSingle a ': as) where
   parseArgs (GQL.Argument _ x : xs) = (:*) <$> (ArgumentValue <$> parseArg x) <*> parseArgs xs
-  parseArgs _                       = Nothing
+  parseArgs _                       = empty
 
 class ParseArg (p :: Package') (a :: TypeRef Symbol) where
   parseArg :: GQL.Value -> Maybe (ArgumentValue' p a)
 
 instance (ParseArg p r) => ParseArg p ('ListRef r) where
   parseArg (GQL.VList (GQL.ListValueG xs)) = ArgList <$> traverse parseArg xs
-  parseArg _                               = Nothing
+  parseArg _                               = empty
 instance ParseArg p ('PrimitiveRef Bool) where
   parseArg (GQL.VBoolean b) = pure (ArgPrimitive b)
-  parseArg _                = Nothing
+  parseArg _                = empty
 instance ParseArg p ('PrimitiveRef Int32) where
   parseArg (GQL.VInt b) = pure (ArgPrimitive b)
-  parseArg _            = Nothing
+  parseArg _            = empty
 instance ParseArg p ('PrimitiveRef Integer) where
   parseArg (GQL.VInt b) = pure $ ArgPrimitive $ fromIntegral b
-  parseArg _            = Nothing
+  parseArg _            = empty
 instance ParseArg p ('PrimitiveRef Double) where
   parseArg (GQL.VFloat b) = pure (ArgPrimitive b)
-  parseArg _              = Nothing
+  parseArg _              = empty
 instance ParseArg p ('PrimitiveRef T.Text) where
   parseArg (GQL.VString (GQL.StringValue b)) = pure $ ArgPrimitive b
-  parseArg _                                 = Nothing
+  parseArg _                                 = empty
 instance ParseArg p ('PrimitiveRef String) where
   parseArg (GQL.VString (GQL.StringValue b)) = pure $ ArgPrimitive $ T.unpack b
-  parseArg _                                 = Nothing
+  parseArg _                                 = empty
 instance ParseArg p ('PrimitiveRef ()) where
   parseArg GQL.VNull = pure $ ArgPrimitive ()
-  parseArg _         = Nothing
+  parseArg _         = empty
 instance (ObjectOrEnumParser sch (sch :/: sty))
          => ParseArg p ('SchemaRef sch sty) where
   parseArg v = ArgSchema <$> parseObjectOrEnum v
@@ -116,12 +116,12 @@ class ObjectOrEnumParser sch (t :: TypeDef Symbol Symbol) where
 instance (ObjectParser sch args)
          => ObjectOrEnumParser sch ('DRecord name args) where
   parseObjectOrEnum (GQL.VObject (GQL.ObjectValueG vs)) = TRecord <$> objectParser vs
-  parseObjectOrEnum _                                   = Nothing
+  parseObjectOrEnum _                                   = empty
 
 instance (EnumParser choices)
          => ObjectOrEnumParser sch ('DEnum name choices) where
   parseObjectOrEnum (GQL.VEnum (GQL.EnumValue nm)) = TEnum <$> enumParser nm
-  parseObjectOrEnum _                              = Nothing
+  parseObjectOrEnum _                              = empty
 
 class ObjectParser sch args where
   objectParser :: [GQL.ObjectFieldG GQL.Value] -> Maybe (NP (Field Identity sch) args)
@@ -157,29 +157,29 @@ instance ValueParser sch 'TNull where
   valueParser _         = empty
 instance ValueParser sch ('TPrimitive Bool) where
   valueParser (GQL.VBoolean b) = pure (FPrimitive b)
-  valueParser _                = Nothing
+  valueParser _                = empty
 instance ValueParser sch ('TPrimitive Int32) where
   valueParser (GQL.VInt b) = pure (FPrimitive b)
-  valueParser _            = Nothing
+  valueParser _            = empty
 instance ValueParser sch ('TPrimitive Integer) where
   valueParser (GQL.VInt b) = pure $ FPrimitive $ fromIntegral b
-  valueParser _            = Nothing
+  valueParser _            = empty
 instance ValueParser sch ('TPrimitive Double) where
   valueParser (GQL.VFloat b) = pure (FPrimitive b)
-  valueParser _              = Nothing
+  valueParser _              = empty
 instance ValueParser sch ('TPrimitive T.Text) where
   valueParser (GQL.VString (GQL.StringValue b)) = pure $ FPrimitive b
-  valueParser _                                 = Nothing
+  valueParser _                                 = empty
 instance ValueParser sch ('TPrimitive String) where
   valueParser (GQL.VString (GQL.StringValue b)) = pure $ FPrimitive $ T.unpack b
-  valueParser _                                 = Nothing
+  valueParser _                                 = empty
 instance (ValueParser sch r) => ValueParser sch ('TList r) where
   valueParser (GQL.VList (GQL.ListValueG xs)) = FList <$> traverse valueParser xs
-  valueParser _                               = Nothing
+  valueParser _                               = empty
 instance (sch :/: sty ~ 'DRecord name args, ObjectParser sch args)
          => ValueParser sch ('TSchematic sty) where
   valueParser (GQL.VObject (GQL.ObjectValueG vs)) = FSchematic <$> (TRecord <$> objectParser vs)
-  valueParser _                                   = Nothing
+  valueParser _                                   = empty
 
 class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
   parseReturn :: GQL.SelectionSet -> Maybe (ReturnQuery p r)
