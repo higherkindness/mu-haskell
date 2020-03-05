@@ -52,10 +52,6 @@ import           Mu.Schema.Optics
 newtype GRpcConnection (s :: Package') (p :: GRpcMessageProtocol)
   = GRpcConnection { gcClient  :: G.GrpcClient }
 
--- | Represents a connection to a specific service @s@
-newtype GRpcConnectionService (pkg :: Package') (srv :: Service') (p :: GRpcMessageProtocol)
-  = GRpcConnectionService { gcsClient  :: G.GrpcClient }
-
 -- | Initializes a connection to a gRPC server.
 --   Usually the service you are connecting to is
 --   inferred from the usage later on.
@@ -72,22 +68,11 @@ initGRpc config _ = do
     Left e  -> Left e
     Right c -> Right $ GRpcConnection c
 
-instance forall (pkg :: Package') pkgName (services :: [Service'])
-                (s :: Service')
-                (p :: GRpcMessageProtocol) (m :: Symbol).
-         ( pkg ~ 'Package pkgName services, s ~ LookupService services m )
-         => LabelOptic m A_Getter
-                       (GRpcConnection pkg p)
-                       (GRpcConnection pkg p)
-                       (GRpcConnectionService pkg s p)
-                       (GRpcConnectionService pkg s p) where
-  labelOptic = to (GRpcConnectionService . gcClient)
-
-instance forall (pkg :: Package') (pkgName :: Symbol) (services :: [Service'])
+instance forall (pkg :: Package') (pkgName :: Symbol)
                 (service :: Service') (serviceName :: Symbol) (anns :: [ServiceAnnotation])
                 (methods :: [Method Symbol Symbol])
                 (p :: GRpcMessageProtocol) (m :: Symbol) t.
-         ( pkg ~ 'Package ('Just pkgName) services
+         ( pkg ~ 'Package ('Just pkgName) '[service]
          , service ~ 'Service serviceName anns methods
          , SearchMethodOptic p methods m t
          , KnownName serviceName
@@ -95,10 +80,10 @@ instance forall (pkg :: Package') (pkgName :: Symbol) (services :: [Service'])
          , KnownName m
          , MkRPC p )
          => LabelOptic m A_Getter
-                       (GRpcConnectionService pkg service p)
-                       (GRpcConnectionService pkg service p)
+                       (GRpcConnection pkg p)
+                       (GRpcConnection pkg p)
                        t t where
-  labelOptic = to (searchMethodOptic @p (Proxy @methods) (Proxy @m) rpc . gcsClient)
+  labelOptic = to (searchMethodOptic @p (Proxy @methods) (Proxy @m) rpc . gcClient)
     where pkgName = BS.pack (nameVal (Proxy @pkgName))
           svrName = BS.pack (nameVal (Proxy @serviceName))
           metName = BS.pack (nameVal (Proxy @m))
