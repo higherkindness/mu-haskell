@@ -26,6 +26,7 @@ module Mu.GRpc.Client.TyApps (
 , GRpcReply(..)
 ) where
 
+import           GHC.TypeLits
 import           Network.GRPC.Client         (CompressMode (..))
 import           Network.GRPC.Client.Helpers
 
@@ -45,7 +46,12 @@ import           Mu.GRpc.Client.Internal
 --   * The resulting value is always wrapped in 'GRpcReply'.
 --   * A single input or output turns into a single value.
 --   * A streaming input or output turns into a Conduit.
-gRpcCall :: forall (pro :: GRpcMessageProtocol) s methodName h.
-            (GRpcServiceMethodCall pro s (s :-->: methodName) h)
+gRpcCall :: forall (pro :: GRpcMessageProtocol) (pkg :: Package')
+                   (srvName :: Symbol) (methodName :: Symbol) h pkgName services anns methods.
+            ( pkg ~  'Package ('Just pkgName) services
+            , LookupService services srvName ~ 'Service srvName anns methods
+            , GRpcServiceMethodCall pro pkgName srvName (LookupMethod methods methodName) h)
          => GrpcClient -> h
-gRpcCall = gRpcServiceMethodCall (Proxy @pro) (Proxy @s) (Proxy @(s :-->: methodName))
+gRpcCall
+  = gRpcServiceMethodCall (Proxy @pro) (Proxy @pkgName) (Proxy @srvName)
+                          (Proxy @(LookupMethod methods methodName))

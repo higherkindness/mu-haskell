@@ -50,7 +50,7 @@ main = do
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/seed/server/modules/process/src/main/scala/example/seed/server/process/ProtoPeopleServiceHandler.scala
 
-server :: (MonadServer m, MonadLogger m) => ServerT Maybe PeopleService m _
+server :: (MonadServer m, MonadLogger m) => SingleServerT Maybe PeopleService m _
 server = Server (getPerson :<|>: getPersonStream :<|>: H0)
 
 evolvePerson :: PeopleRequest -> PeopleResponse

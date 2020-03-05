@@ -31,22 +31,22 @@ simple client who = do
   let hcm = HealthCheckMsg (T.pack who)
   putStrLn ("UNARY: Is there some server named " <> who <> "?")
   rknown :: GRpcReply ServerStatusMsg
-    <- gRpcCall @'MsgAvro @HealthCheckService @"check" client hcm
+    <- gRpcCall @'MsgAvro @HealthCheckService @"HealthCheckServiceFS2" @"check" client hcm
   putStrLn ("UNARY: Actually the status is " <> show rknown)
   update client who "SERVING"
-  r <- gRpcCall @'MsgAvro @HealthCheckService @"clearStatus" client hcm
+  r <- gRpcCall @'MsgAvro @HealthCheckService @"HealthCheckServiceFS2" @"clearStatus" client hcm
   putStrLn ("UNARY: Was clearing successful? " <> show r)
   runknown :: GRpcReply ServerStatusMsg
-    <- gRpcCall @'MsgAvro @HealthCheckService @"check" client hcm
+    <- gRpcCall @'MsgAvro @HealthCheckService @"HealthCheckServiceFS2" @"check" client hcm
   putStrLn ("UNARY: Current status of " <> who <> ": " <> show runknown)
 
 update :: GrpcClient -> String -> String -> IO ()
 update client who newstatus = do
   let hcm = HealthCheckMsg (T.pack who)
   putStrLn ("UNARY: Setting " <> who <> " service to " <> newstatus)
-  r <- gRpcCall @'MsgAvro @HealthCheckService @"setStatus" client
+  r <- gRpcCall @'MsgAvro @HealthCheckService @"HealthCheckServiceFS2" @"setStatus" client
                 (HealthStatusMsg hcm (ServerStatusMsg (T.pack newstatus)))
   putStrLn ("UNARY: Was setting successful? " <> show r)
   rstatus :: GRpcReply ServerStatusMsg
-    <- gRpcCall @'MsgAvro @HealthCheckService @"check" client hcm
+    <- gRpcCall @'MsgAvro @HealthCheckService @"HealthCheckServiceFS2" @"check" client hcm
   putStrLn ("UNARY: Checked the status of " <> who <> ". Obtained: " <> show rstatus)

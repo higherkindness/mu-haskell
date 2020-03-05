@@ -2,9 +2,9 @@
 {-# language DataKinds             #-}
 {-# language FlexibleContexts      #-}
 {-# language FlexibleInstances     #-}
-{-# language KindSignatures        #-}
 {-# language MultiParamTypeClasses #-}
 {-# language OverloadedStrings     #-}
+{-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
@@ -34,7 +34,7 @@ import           Network.GRPC.HTTP2.Types
 import           Data.Monoid                 ((<>))
 #endif
 
-import           Mu.Adapter.Avro ()
+import           Mu.Adapter.Avro             ()
 import           Mu.Rpc
 import           Mu.Schema
 
@@ -45,9 +45,9 @@ instance IsRPC AvroRPC where
   path rpc = "/" <> pkg rpc <> "." <> srv rpc <> "/" <> meth rpc
   {-# INLINE path #-}
 
-newtype ViaFromAvroTypeRef (ref :: TypeRef) t
+newtype ViaFromAvroTypeRef (ref :: TypeRef snm) t
   = ViaFromAvroTypeRef { unViaFromAvroTypeRef :: t }
-newtype ViaToAvroTypeRef (ref :: TypeRef) t
+newtype ViaToAvroTypeRef (ref :: TypeRef snm) t
   = ViaToAvroTypeRef { unViaToAvroTypeRef :: t }
 
 instance GRPCInput AvroRPC () where
@@ -61,21 +61,21 @@ instance GRPCOutput AvroRPC () where
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          ( FromSchema Identity sch sty i
          , FromAvro (Term Identity sch (sch :/: sty)) )
-         => GRPCInput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) i) where
+         => GRPCInput AvroRPC (ViaFromAvroTypeRef ('SchemaRef sch sty) i) where
   encodeInput = error "eif/you should not call this"
   decodeInput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch @Identity <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          ( FromSchema Identity sch sty i
          , FromAvro (Term Identity sch (sch :/: sty)) )
-         => GRPCOutput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) i) where
+         => GRPCOutput AvroRPC (ViaFromAvroTypeRef ('SchemaRef sch sty) i) where
   encodeOutput = error "eof/you should not call this"
   decodeOutput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch @Identity <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
          ( ToSchema Identity sch sty o
          , ToAvro (Term Identity sch (sch :/: sty)) )
-         => GRPCInput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) o) where
+         => GRPCInput AvroRPC (ViaToAvroTypeRef ('SchemaRef sch sty) o) where
   encodeInput _ compression
     = encoder compression . toSchema' @_ @_ @sch @Identity . unViaToAvroTypeRef
   decodeInput = error "dit/you should not call this"
@@ -83,7 +83,7 @@ instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
          ( ToSchema Identity sch sty o
          , ToAvro (Term Identity sch (sch :/: sty)) )
-         => GRPCOutput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) o) where
+         => GRPCOutput AvroRPC (ViaToAvroTypeRef ('SchemaRef sch sty) o) where
   encodeOutput _ compression
     = encoder compression . toSchema' @_ @_ @sch @Identity . unViaToAvroTypeRef
   decodeOutput = error "dot/you should not call this"

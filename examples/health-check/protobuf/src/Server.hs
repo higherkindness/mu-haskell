@@ -48,14 +48,14 @@ checkH_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ServerStatusMsg
 checkH_ m (HealthCheckMsg (Just nm)) = alwaysOk $ do
   putStr "check: " >> print nm
   ss <- atomically $ M.lookup nm m
-  return $ ServerStatusMsg ss
+  pure $ ServerStatusMsg ss
 checkH_ _ _ = serverError (ServerError Invalid "no server name given")
 
 clearStatus_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ()
 clearStatus_ m (HealthCheckMsg (Just nm)) = alwaysOk $ do
   putStr "clearStatus: " >> print nm
   atomically $ M.delete nm m
-clearStatus_ _ _ = return ()
+clearStatus_ _ _ = pure ()
 
 checkAll_ :: StatusMap -> ServerErrorIO AllStatusMsg
 checkAll_ m = alwaysOk $ do
@@ -87,4 +87,4 @@ watch_ upd hcm@(HealthCheckMsg nm) sink = do
                     case x of
                       Just (Just y) -> yield y >> catMaybesC
                       Just Nothing  -> catMaybesC
-                      Nothing       -> return ()
+                      Nothing       -> pure ()
