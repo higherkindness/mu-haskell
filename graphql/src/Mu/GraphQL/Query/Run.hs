@@ -3,6 +3,7 @@
 {-# language FlexibleInstances     #-}
 {-# language GADTs                 #-}
 {-# language MultiParamTypeClasses #-}
+{-# language OverloadedLists       #-}
 {-# language OverloadedStrings     #-}
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
@@ -11,11 +12,16 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fprint-explicit-foralls #-}
-module Mu.GraphQL.Query.Run where
+module Mu.GraphQL.Query.Run (
+  runPipeline
+, runDocument
+, runQuery
+) where
 
 import           Control.Monad.Except          (runExceptT)
 import           Control.Monad.Writer
 import qualified Data.Aeson                    as Aeson
+import qualified Data.Aeson.Types              as Aeson
 import           Data.Functor.Identity
 import           Data.Maybe
 import qualified Data.Text                     as T
@@ -48,10 +54,23 @@ runPipeline
   -> IO Aeson.Value
 runPipeline svr _ _ doc
   = case parseDoc doc of
-      Nothing                       -> undefined
+      Nothing ->
+        return $
+          Aeson.object [
+            ("errors", Aeson.Array [
+              Aeson.object [ ("message", Aeson.String "cannot parse document") ] ])]
       Just (d :: Document p qr mut) -> do
         (data_, errors) <- runWriterT (runDocument svr d)
-        return $ Aeson.object [ ("data", data_) ]
+        case errors of
+          [] -> return $ Aeson.object [ ("data", data_) ]
+          _  -> return $ Aeson.object [ ("data", data_), ("errors", Aeson.listValue errValue errors) ]
+    where
+      errValue :: GraphQLError -> Aeson.Value
+      errValue (GraphQLError (ServerError _ msg) path)
+        = Aeson.object [
+            ("message", Aeson.String $ T.pack msg)
+          , ("path", Aeson.toJSON path)
+          ]
 
 
 runDocument
