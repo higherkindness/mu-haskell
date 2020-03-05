@@ -3,6 +3,7 @@
 {-# language FlexibleInstances     #-}
 {-# language GADTs                 #-}
 {-# language MultiParamTypeClasses #-}
+{-# language OverloadedStrings     #-}
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
 {-# language TupleSections         #-}
@@ -12,21 +13,46 @@
 {-# OPTIONS_GHC -fprint-explicit-foralls #-}
 module Mu.GraphQL.Query.Run where
 
+import           Control.Monad.Except          (runExceptT)
 import           Control.Monad.Writer
-import qualified Data.Aeson                  as Aeson
+import qualified Data.Aeson                    as Aeson
 import           Data.Functor.Identity
 import           Data.Maybe
-import qualified Data.Text                   as T
+import qualified Data.Text                     as T
 import           GHC.TypeLits
+import qualified Language.GraphQL.Draft.Syntax as GQL
+
+import           Mu.GraphQL.Query.Definition
+import           Mu.GraphQL.Query.Parse
 import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
 
-import           Control.Monad.Except        (runExceptT)
-import           Mu.GraphQL.Query.Definition
-
 data GraphQLError
   = GraphQLError ServerError [T.Text]
+
+runPipeline
+  :: forall qr mut (p :: Package') pname ss hs chn qanns qmethods manns mmethods.
+     ( p ~ 'Package pname ss
+     , LookupService ss qr ~ 'Service qr qanns qmethods
+     , ParseMethod p qmethods
+     , LookupService ss mut ~ 'Service mut manns mmethods
+     , ParseMethod p mmethods
+     , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
+     , MappingRight chn qr ~ ()
+     , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
+     , MappingRight chn mut ~ ()
+     )
+  => ServerT Identity chn p ServerErrorIO hs
+  -> Proxy qr -> Proxy mut -> GQL.ExecutableDocument
+  -> IO Aeson.Value
+runPipeline svr _ _ doc
+  = case parseDoc doc of
+      Nothing                       -> undefined
+      Just (d :: Document p qr mut) -> do
+        (data_, errors) <- runWriterT (runDocument svr d)
+        return $ Aeson.object [ ("data", data_) ]
+
 
 runDocument
   :: ( p ~ 'Package pname ss
