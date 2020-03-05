@@ -137,6 +137,10 @@ class ToRef Identity chn r l => ResultConversion p whole chn r l where
 
 instance Aeson.ToJSON t => ResultConversion p whole chn ('PrimitiveRef t) t where
   convertResult _ RetPrimitive = return . Just . Aeson.toJSON
+instance ( ToSchema Identity sch l r
+         , Aeson.ToJSON (Term Identity sch (sch :/: l)) )
+         => ResultConversion p whole chn ('SchemaRef sch l) r where
+  convertResult _ RetSchema = return . Just . Aeson.toJSON . toSchema' @_ @_ @sch @Identity @r
 instance ( MappingRight chn ref ~ t
          , MappingRight chn sname ~ t
          , LookupService ss ref ~ 'Service sname sanns ms
