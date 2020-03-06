@@ -25,6 +25,7 @@ library
       aeson
     , base                  >=4.12 && <5
     , graphql-parser
+    , http-types
     , mtl
     , mu-rpc
     , mu-schema
