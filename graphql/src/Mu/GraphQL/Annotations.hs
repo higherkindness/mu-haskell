@@ -9,11 +9,11 @@
 module Mu.GraphQL.Annotations (
   ValueConst(..)
 , DefaultValue
-, reflectValueConst
+, ReflectValueConst(..)
 , fromGQLValueConst
 ) where
 
-import           Control.Applicative           (Alternative)
+import           Control.Applicative           (Alternative (..))
 import           Data.Coerce
 import           Data.Proxy
 import qualified Data.Text                     as T
@@ -57,6 +57,7 @@ fromGQLValueConst (GQL.VCObject (coerce -> o))
                      -> f (String, ValueConst Integer String)
         fromGQLField (GQL.ObjectFieldG (coerce -> n) v)
           = (T.unpack n,) <$> fromGQLValueConst v
+fromGQLValueConst _ = empty
 
 class ReflectValueConst (v :: ValueConst nat symbol) where
   -- | Obtain the GraphQL constant corresponding
