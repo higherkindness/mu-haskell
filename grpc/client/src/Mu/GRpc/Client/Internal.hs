@@ -183,7 +183,8 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRPCOutput (RPCTy p) ()
          , handler ~ (v -> IO (GRpcReply ())) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname vref ] 'RetNothing) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname aanns vref ]
+                                      'RetNothing) handler where
   gRpcMethodCall rpc _ client x
     = simplifyResponse $
       buildGRpcReply1 <$>
@@ -192,7 +193,8 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (v -> IO (GRpcReply r)) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname vref ] ('RetSingle rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname aanns vref ]
+                                      ('RetSingle rref)) handler where
   gRpcMethodCall rpc _ client x
     = fmap (fmap (unGRpcOWTy (Proxy @p) (Proxy @rref))) $
       simplifyResponse $
@@ -203,7 +205,8 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (CompressMode -> IO (ConduitT v Void IO (GRpcReply r))) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname vref ] ('RetSingle rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname aanns vref ]
+                                      ('RetSingle rref)) handler where
   gRpcMethodCall rpc _ client compress
     = do -- Create a new TMChan
          chan <- newTMChanIO :: IO (TMChan v)
@@ -229,7 +232,8 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (v -> IO (ConduitT () (GRpcReply r) IO ())) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname vref ] ('RetStream rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname aanns vref ]
+                                      ('RetStream rref)) handler where
   gRpcMethodCall rpc _ client x
     = do -- Create a new TMChan
          chan <- newTMChanIO :: IO (TMChan r)
@@ -258,7 +262,8 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (CompressMode -> IO (ConduitT v (GRpcReply r) IO ())) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname vref ] ('RetStream rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname aans vref ]
+                                      ('RetStream rref)) handler where
   gRpcMethodCall rpc _ client compress
     = do -- Create a new TMChan
          inchan <- newTMChanIO :: IO (TMChan (GRpcReply r))

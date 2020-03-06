@@ -18,6 +18,7 @@ build-type:    Simple
 
 library
   exposed-modules:
+    Mu.GraphQL.Annotations
     Mu.GraphQL.Query.Definition
     Mu.GraphQL.Query.Parse
     Mu.GraphQL.Query.Run
