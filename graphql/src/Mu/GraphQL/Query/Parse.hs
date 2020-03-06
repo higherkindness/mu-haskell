@@ -127,8 +127,7 @@ parseQuery _ _ vmap = (catMaybes <$>) . traverse toOneMethod
       = case valueParser' @'[] @('TPrimitive Bool) vmap v of
           Just (FPrimitive b) -> not b
           Nothing             -> False
-      | otherwise
-      = False
+    shouldSkip _ = False
 
 class ParseMethod (p :: Package') (ms :: [Method']) where
   selectMethod ::
@@ -304,7 +303,6 @@ instance (ValueParser sch r) => ValueParser sch ('TList r) where
 instance (ObjectOrEnumParser sch (sch :/: sty))
          => ValueParser sch ('TSchematic sty) where
   valueParser vmap v = FSchematic <$> parseObjectOrEnum' vmap v
-  valueParser _    _ = empty
 
 class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
   parseReturn :: Alternative f
