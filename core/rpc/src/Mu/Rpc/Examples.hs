@@ -47,13 +47,13 @@ type QuickStartService
   = 'Package ('Just "helloworld")
       '[ 'Service "Greeter" '[]
         '[ 'Method "SayHello" '[]
-          '[ 'ArgSingle ('SchemaRef QuickstartSchema "HelloRequest") ]
+          '[ 'ArgSingle 'Nothing ('SchemaRef QuickstartSchema "HelloRequest") ]
             ('RetSingle ('SchemaRef QuickstartSchema "HelloResponse"))
         , 'Method "SayHi" '[]
-          '[ 'ArgSingle ('SchemaRef QuickstartSchema "HiRequest")]
+          '[ 'ArgSingle 'Nothing ('SchemaRef QuickstartSchema "HiRequest")]
             ('RetStream ('SchemaRef QuickstartSchema "HelloResponse"))
         , 'Method "SayManyHellos" '[]
-          '[ 'ArgStream ('SchemaRef QuickstartSchema "HelloRequest")]
+          '[ 'ArgStream 'Nothing ('SchemaRef QuickstartSchema "HelloRequest")]
                 ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ]
 
 newtype HelloRequest f = HelloRequest { name :: f T.Text } deriving (Generic)
