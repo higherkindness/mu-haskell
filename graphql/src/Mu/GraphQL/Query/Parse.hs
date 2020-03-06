@@ -31,6 +31,7 @@ import           Mu.Schema
 
 type VariableMapC = HM.HashMap T.Text GQL.ValueConst
 type VariableMap = HM.HashMap T.Text GQL.Value
+type FragmentMap = HM.HashMap T.Text GQL.FragmentDefinition
 
 parseDoc ::
   ( Alternative f, p ~ 'Package pname ss,
@@ -45,16 +46,23 @@ parseDoc ::
 -- If there's no operation name, there must be only one query
 parseDoc Nothing _ (GQL.ExecutableDocument defns)
   = case GQL.partitionExDefs defns of
-      ([unnamed], [], _) -> QueryDoc <$> parseQuery Proxy Proxy HM.empty unnamed
-      ([], [named], _)   -> parseTypedDoc HM.empty named
-      _                  -> empty
+      ([unnamed], [], frs)
+        -> QueryDoc <$> parseQuery Proxy Proxy HM.empty (fragmentsToMap frs) unnamed
+      ([], [named], frs)
+        -> parseTypedDoc HM.empty (fragmentsToMap frs) named
+      _ -> empty
 -- If there's an operation name, look in the named queries
 parseDoc (Just operationName) vmap (GQL.ExecutableDocument defns)
   = case GQL.partitionExDefs defns of
-      (_, named, _) -> maybe empty (parseTypedDoc vmap) (find isThis named)
+      (_, named, frs) -> maybe empty (parseTypedDoc vmap (fragmentsToMap frs)) (find isThis named)
     where isThis (GQL._todName -> Just nm)
             = GQL.unName nm == operationName
           isThis _ = False
+
+fragmentsToMap :: [GQL.FragmentDefinition] -> FragmentMap
+fragmentsToMap = HM.fromList . map fragmentToThingy
+  where fragmentToThingy :: GQL.FragmentDefinition -> (T.Text, GQL.FragmentDefinition)
+        fragmentToThingy f = (GQL.unName $ GQL._fdName f, f)
 
 parseTypedDoc ::
   ( Alternative f, p ~ 'Package pname ss,
@@ -63,17 +71,17 @@ parseTypedDoc ::
     LookupService ss mut ~ 'Service mut manns mmethods,
     ParseMethod p mmethods
   ) =>
-  VariableMapC ->
+  VariableMapC -> FragmentMap ->
   GQL.TypedOperationDefinition ->
   f (Document p qr mut)
-parseTypedDoc vmap tod
+parseTypedDoc vmap frmap tod
   = let defVmap = parseVariableMap (GQL._todVariableDefinitions tod)
         finalVmap = constToValue <$> HM.union vmap defVmap  -- first one takes precedence
     in case GQL._todType tod of
          GQL.OperationTypeQuery
-           -> QueryDoc <$> parseQuery Proxy Proxy finalVmap (GQL._todSelectionSet tod)
+           -> QueryDoc <$> parseQuery Proxy Proxy finalVmap frmap (GQL._todSelectionSet tod)
          GQL.OperationTypeMutation
-           -> MutationDoc <$> parseQuery Proxy Proxy finalVmap (GQL._todSelectionSet tod)
+           -> MutationDoc <$> parseQuery Proxy Proxy finalVmap frmap (GQL._todSelectionSet tod)
          _ -> empty
 
 parseVariableMap :: [GQL.VariableDefinition] -> VariableMapC
@@ -102,51 +110,66 @@ parseQuery ::
   ) =>
   Proxy p ->
   Proxy s ->
-  VariableMap -> GQL.SelectionSet ->
+  VariableMap -> FragmentMap -> GQL.SelectionSet ->
   f (ServiceQuery p (LookupService ss s))
-parseQuery _ _ vmap = (catMaybes <$>) . traverse toOneMethod
+parseQuery _ _ _ _ [] = pure []
+parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
+  = (++) <$> (maybeToList <$> fieldToMethod fld)
+         <*> parseQuery pp ps vmap frmap ss
   where
-    toOneMethod :: GQL.Selection -> f (Maybe (OneMethodQuery p ('Service sname sanns methods)))
-    toOneMethod (GQL.SelectionField fld)        = fieldToMethod fld
-    toOneMethod (GQL.SelectionFragmentSpread _) = empty -- FIXME:
-    toOneMethod (GQL.SelectionInlineFragment _) = empty -- FIXME:
     fieldToMethod :: GQL.Field -> f (Maybe (OneMethodQuery p ('Service sname sanns methods)))
     fieldToMethod (GQL.Field alias name args dirs sels)
-      | any shouldSkip dirs
+      | any (shouldSkip vmap) dirs
       = pure Nothing
       | otherwise
       = Just . OneMethodQuery (GQL.unName . GQL.unAlias <$> alias)
-         <$> selectMethod vmap name args sels
-    shouldSkip :: GQL.Directive -> Bool
-    shouldSkip (GQL.Directive (GQL.unName -> nm) [GQL.Argument (GQL.unName -> ifn) v])
-      | nm == "skip", ifn == "if"
-      = case valueParser' @'[] @('TPrimitive Bool) vmap v of
-          Just (FPrimitive b) -> b
-          Nothing             -> False
-      | nm == "include", ifn == "if"
-      = case valueParser' @'[] @('TPrimitive Bool) vmap v of
-          Just (FPrimitive b) -> not b
-          Nothing             -> False
-    shouldSkip _ = False
+         <$> selectMethod vmap frmap name args sels
+parseQuery pp ps vmap frmap (GQL.SelectionFragmentSpread (GQL.FragmentSpread nm dirs) : ss)
+  | Just fr <- HM.lookup (GQL.unName nm) frmap
+  = if not (any (shouldSkip vmap) dirs) && not (any (shouldSkip vmap) $ GQL._fdDirectives fr)
+       then (++) <$> parseQuery pp ps vmap frmap (GQL._fdSelectionSet fr)
+                 <*> parseQuery pp ps vmap frmap ss
+       else parseQuery pp ps vmap frmap ss
+  | otherwise  -- the fragment definition was not found
+  = empty
+parseQuery _ _ _ _ (_ : _)  -- Inline fragments are not yet supported
+  = empty
+
+
+shouldSkip :: VariableMap -> GQL.Directive -> Bool
+shouldSkip vmap (GQL.Directive (GQL.unName -> nm) [GQL.Argument (GQL.unName -> ifn) v])
+  | nm == "skip", ifn == "if"
+  = case valueParser' @'[] @('TPrimitive Bool) vmap v of
+      Just (FPrimitive b) -> b
+      Nothing             -> False
+  | nm == "include", ifn == "if"
+  = case valueParser' @'[] @('TPrimitive Bool) vmap v of
+      Just (FPrimitive b) -> not b
+      Nothing             -> False
+shouldSkip _ _ = False
 
 class ParseMethod (p :: Package') (ms :: [Method']) where
   selectMethod ::
     Alternative f =>
     VariableMap ->
+    FragmentMap ->
     GQL.Name ->
     [GQL.Argument] ->
     GQL.SelectionSet ->
     f (NS (ChosenMethodQuery p) ms)
 
 instance ParseMethod p '[] where
-  selectMethod _ _ _ _ = empty
+  selectMethod _ _ _ _ _ = empty
 instance
   (KnownSymbol mname, ParseMethod p ms, ParseArgs p args, ParseReturn p r) =>
   ParseMethod p ('Method mname manns args ('RetSingle r) ': ms)
   where
-  selectMethod vmap w@(GQL.unName -> wanted) args sels
-    | wanted == mname = Z <$> (ChosenMethodQuery <$> parseArgs vmap args <*> parseReturn vmap sels)
-    | otherwise = S <$> selectMethod vmap w args sels
+  selectMethod vmap frmap w@(GQL.unName -> wanted) args sels
+    | wanted == mname
+    = Z <$> (ChosenMethodQuery <$> parseArgs vmap args
+                               <*> parseReturn vmap frmap sels)
+    | otherwise
+    = S <$> selectMethod vmap frmap w args sels
     where
       mname = T.pack $ nameVal (Proxy @mname)
 
@@ -171,7 +194,9 @@ parseArg' :: (ParseArg p a, Alternative f)
           -> GQL.Value
           -> f (ArgumentValue' p a)
 parseArg' vmap (GQL.VVariable x)
-  = parseArg vmap (vmap HM.! GQL.unName (GQL.unVariable x))
+  = case HM.lookup (GQL.unName (GQL.unVariable x)) vmap of
+      Nothing -> empty
+      Just v  -> parseArg vmap v
 parseArg' vmap v = parseArg vmap v
 
 class ParseArg (p :: Package') (a :: TypeRef Symbol) where
@@ -213,7 +238,9 @@ parseObjectOrEnum' :: (ObjectOrEnumParser sch t, Alternative f)
           -> GQL.Value
           -> f (Term Identity sch t)
 parseObjectOrEnum' vmap (GQL.VVariable x)
-  = parseObjectOrEnum vmap (vmap HM.! GQL.unName (GQL.unVariable x))
+  = case HM.lookup (GQL.unName (GQL.unVariable x)) vmap of
+      Nothing -> empty
+      Just v  -> parseObjectOrEnum vmap v
 parseObjectOrEnum' vmap v = parseObjectOrEnum vmap v
 
 class ObjectOrEnumParser (sch :: Schema') (t :: TypeDef Symbol Symbol) where
@@ -267,7 +294,9 @@ valueParser' :: (ValueParser sch v, Alternative f)
              -> GQL.Value
              -> f (FieldValue Identity sch v)
 valueParser' vmap (GQL.VVariable x)
-  = valueParser vmap (vmap HM.! GQL.unName (GQL.unVariable x))
+  = case HM.lookup (GQL.unName (GQL.unVariable x)) vmap of
+      Nothing -> empty
+      Just v  -> valueParser vmap v
 valueParser' vmap v = valueParser vmap v
 
 class ValueParser (sch :: Schema') (v :: FieldType Symbol) where
@@ -307,22 +336,23 @@ instance (ObjectOrEnumParser sch (sch :/: sty))
 class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
   parseReturn :: Alternative f
               => VariableMap
+              -> FragmentMap
               -> GQL.SelectionSet
               -> f (ReturnQuery p r)
 
 instance ParseReturn p ('PrimitiveRef t) where
-  parseReturn _ [] = pure RetPrimitive
-  parseReturn _ _  = empty
+  parseReturn _ _ [] = pure RetPrimitive
+  parseReturn _ _ _  = empty
 instance ParseReturn p ('SchemaRef sch sty) where
-  parseReturn _ _ = pure RetSchema
+  parseReturn _ _ _ = pure RetSchema
 instance ParseReturn p r
          => ParseReturn p ('ListRef r) where
-  parseReturn vmap s = RetList <$> parseReturn vmap s
+  parseReturn vmap frmap s = RetList <$> parseReturn vmap frmap s
 instance ParseReturn p r
          => ParseReturn p ('OptionalRef r) where
-  parseReturn vmap s = RetOptional <$> parseReturn vmap s
+  parseReturn vmap frmap s = RetOptional <$> parseReturn vmap frmap s
 instance ( p ~ 'Package pname ss,
            LookupService ss s ~ 'Service s sanns methods,
            ParseMethod p methods
          ) => ParseReturn p ('ObjectRef s) where
-  parseReturn vmap s = RetObject <$> parseQuery (Proxy @p) (Proxy @s) vmap s
+  parseReturn vmap frmap s = RetObject <$> parseQuery (Proxy @p) (Proxy @s) vmap frmap s
