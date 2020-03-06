@@ -28,9 +28,7 @@ extra-deps:
 - http2-grpc-proto3-wire-0.1.0.0
 - warp-grpc-0.3.0.0
 - http2-client-grpc-0.8.0.0
-# - avro-0.4.6.0
-- git: https://github.com/haskell-works/avro.git
-  commit: 93bc12fdb807e9567ef113ed71c7b3487516a371
+- avro-0.4.7.0
 - language-protobuf-1.0.1
 # - language-avro-0.1.0.0
 - git: https://github.com/higherkindness/avro-parser-haskell.git
@@ -47,4 +45,3 @@ extra-deps:
 - AC-Angle-1.0
 - optics-core-0.2
 - indexed-profunctors-0.1
-
