@@ -3,6 +3,7 @@
 {-# language FlexibleInstances     #-}
 {-# language GADTs                 #-}
 {-# language MultiParamTypeClasses #-}
+{-# language OverloadedStrings     #-}
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
 {-# language TypeApplications      #-}
@@ -17,6 +18,7 @@ import           Data.Functor.Identity
 import qualified Data.HashMap.Strict           as HM
 import           Data.Int                      (Int32)
 import           Data.List                     (find)
+import           Data.Maybe
 import           Data.Proxy
 import           Data.SOP.NS
 import qualified Data.Text                     as T
@@ -102,15 +104,31 @@ parseQuery ::
   Proxy s ->
   VariableMap -> GQL.SelectionSet ->
   f (ServiceQuery p (LookupService ss s))
-parseQuery _ _ vmap = traverse toOneMethod
+parseQuery _ _ vmap = (catMaybes <$>) . traverse toOneMethod
   where
-    toOneMethod :: GQL.Selection -> f (OneMethodQuery p ('Service sname sanns methods))
+    toOneMethod :: GQL.Selection -> f (Maybe (OneMethodQuery p ('Service sname sanns methods)))
     toOneMethod (GQL.SelectionField fld)        = fieldToMethod fld
     toOneMethod (GQL.SelectionFragmentSpread _) = empty -- FIXME:
     toOneMethod (GQL.SelectionInlineFragment _) = empty -- FIXME:
-    fieldToMethod :: GQL.Field -> f (OneMethodQuery p ('Service sname sanns methods))
-    fieldToMethod (GQL.Field alias name args _ sels) =
-      OneMethodQuery (GQL.unName . GQL.unAlias <$> alias) <$> selectMethod vmap name args sels
+    fieldToMethod :: GQL.Field -> f (Maybe (OneMethodQuery p ('Service sname sanns methods)))
+    fieldToMethod (GQL.Field alias name args dirs sels)
+      | any shouldSkip dirs
+      = pure Nothing
+      | otherwise
+      = Just . OneMethodQuery (GQL.unName . GQL.unAlias <$> alias)
+         <$> selectMethod vmap name args sels
+    shouldSkip :: GQL.Directive -> Bool
+    shouldSkip (GQL.Directive (GQL.unName -> nm) [GQL.Argument (GQL.unName -> ifn) v])
+      | nm == "skip", ifn == "if"
+      = case valueParser' @'[] @('TPrimitive Bool) vmap v of
+          Just (FPrimitive b) -> b
+          Nothing             -> False
+      | nm == "include", ifn == "if"
+      = case valueParser' @'[] @('TPrimitive Bool) vmap v of
+          Just (FPrimitive b) -> not b
+          Nothing             -> False
+      | otherwise
+      = False
 
 class ParseMethod (p :: Package') (ms :: [Method']) where
   selectMethod ::
@@ -199,7 +217,7 @@ parseObjectOrEnum' vmap (GQL.VVariable x)
   = parseObjectOrEnum vmap (vmap HM.! GQL.unName (GQL.unVariable x))
 parseObjectOrEnum' vmap v = parseObjectOrEnum vmap v
 
-class ObjectOrEnumParser sch (t :: TypeDef Symbol Symbol) where
+class ObjectOrEnumParser (sch :: Schema') (t :: TypeDef Symbol Symbol) where
   parseObjectOrEnum :: Alternative f
                     => VariableMap
                     -> GQL.Value
@@ -214,7 +232,7 @@ instance (EnumParser choices)
   parseObjectOrEnum _ (GQL.VEnum (GQL.EnumValue nm)) = TEnum <$> enumParser nm
   parseObjectOrEnum _ _                              = empty
 
-class ObjectParser sch args where
+class ObjectParser (sch :: Schema') (args :: [FieldDef Symbol Symbol]) where
   objectParser :: Alternative f
                => VariableMap
                -> [GQL.ObjectFieldG GQL.Value]
@@ -253,7 +271,7 @@ valueParser' vmap (GQL.VVariable x)
   = valueParser vmap (vmap HM.! GQL.unName (GQL.unVariable x))
 valueParser' vmap v = valueParser vmap v
 
-class ValueParser sch v where
+class ValueParser (sch :: Schema') (v :: FieldType Symbol) where
   valueParser :: Alternative f
               => VariableMap
               -> GQL.Value
