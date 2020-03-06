@@ -56,9 +56,6 @@ parseTypedDoc tod@GQL.TypedOperationDefinition { GQL._todType = GQL.OperationTyp
   = MutationDoc <$> parseQuery Proxy Proxy (GQL._todSelectionSet tod)
 parseTypedDoc _ = empty
 
--- TODO: turn Hasura's `ExecutableDefinition` into a service query
--- Hint: start with the following function, and then move up
--- (OperationDefinition -> ExecutableDefinition -> ExecutableDocument)
 parseQuery ::
   forall (p :: Package') (s :: Symbol) pname ss sanns methods f.
   ( Alternative f, p ~ 'Package pname ss,
@@ -79,7 +76,7 @@ parseQuery _ _ = traverse toOneMethod
     fieldToMethod (GQL.Field alias name args _ sels) =
       OneMethodQuery (GQL.unName . GQL.unAlias <$> alias) <$> selectMethod name args sels
 
-class ParseMethod (p :: Package') (ms :: [Method Symbol Symbol]) where
+class ParseMethod (p :: Package') (ms :: [Method']) where
   selectMethod ::
     Alternative f =>
     GQL.Name ->
@@ -99,14 +96,18 @@ instance
     where
       mname = T.pack $ nameVal (Proxy @mname)
 
-class ParseArgs (p :: Package') (args :: [Argument Symbol]) where
+class ParseArgs (p :: Package') (args :: [Argument']) where
   parseArgs :: Alternative f => [GQL.Argument] -> f (NP (ArgumentValue p) args)
 
 instance ParseArgs p '[] where
   parseArgs _ = pure Nil
-instance (ParseArg p a, ParseArgs p as) => ParseArgs p ('ArgSingle a ': as) where
-  parseArgs (GQL.Argument _ x : xs) = (:*) <$> (ArgumentValue <$> parseArg x) <*> parseArgs xs
-  parseArgs _                       = empty
+instance (KnownName aname, ParseArg p a, ParseArgs p as)
+         => ParseArgs p ('ArgSingle aname a ': as) where
+  parseArgs args
+    = case find ((== nameVal (Proxy @aname)) . T.unpack . GQL.unName . GQL._aName) args of
+        Just (GQL.Argument _ x)
+          -> (:*) <$> (ArgumentValue <$> parseArg x) <*> parseArgs args
+        Nothing -> empty
 
 class ParseArg (p :: Package') (a :: TypeRef Symbol) where
   parseArg :: Alternative f => GQL.Value -> f (ArgumentValue' p a)

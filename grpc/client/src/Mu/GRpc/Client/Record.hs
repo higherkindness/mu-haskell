@@ -52,7 +52,7 @@ import           Mu.Rpc
 buildService :: forall (pro :: GRpcMessageProtocol)
                 (pkg :: Package') (s :: Symbol) (p :: Symbol) t
                 (pkgName :: Symbol) (ss :: [Service'])
-                (anns :: [ServiceAnnotation]) (ms :: [Method Symbol Symbol]).
+                (anns :: [ServiceAnnotation]) (ms :: [Method']).
                 ( pkg ~ 'Package ('Just pkgName) ss
                 , LookupService ss s ~ 'Service s anns ms
                 , Generic t
@@ -62,7 +62,7 @@ buildService client
   = to (buildService' (Proxy @pro) (Proxy @pkgName) (Proxy @s) (Proxy @p) (Proxy @ms) client)
 
 class BuildService (pro :: GRpcMessageProtocol) (pkg :: Symbol) (s :: Symbol)
-                   (p :: Symbol) (ms :: [Method Symbol Symbol]) (f :: * -> *) where
+                   (p :: Symbol) (ms :: [Method']) (f :: * -> *) where
   buildService' :: Proxy pro -> Proxy pkg -> Proxy s -> Proxy p -> Proxy ms -> GrpcClient -> f a
 
 instance BuildService pro pkg s p ms U1 where
@@ -101,7 +101,7 @@ generateRecordFromService newRecordName fieldsPrefix tNamer serviceTyName
 
 type Namer = String -> String
 
-serviceDefToDecl :: Name -> String -> String -> Namer -> Service String String -> Q [Dec]
+serviceDefToDecl :: Name -> String -> String -> Namer -> Service String String String -> Q [Dec]
 serviceDefToDecl serviceTyName complete fieldsPrefix tNamer (Service _ _ methods)
   = do d <- dataD (pure [])
                   (mkName complete)
@@ -117,26 +117,26 @@ serviceDefToDecl serviceTyName complete fieldsPrefix tNamer (Service _ _ methods
                    <*> pure []
        pure [d, s, FunD buildName [c]]
 
-methodToDecl :: String -> Namer -> Method String String -> Q (Name, Bang, Type)
+methodToDecl :: String -> Namer -> Method String String String -> Q (Name, Bang, Type)
 methodToDecl fieldsPrefix tNamer (Method mName _ args ret)
   = do let nm = firstLower (fieldsPrefix ++ mName)
        ty <- computeMethodType tNamer args ret
        pure ( mkName nm, Bang NoSourceUnpackedness NoSourceStrictness, ty )
 
-computeMethodType :: Namer -> [Argument String] -> Return String -> Q Type
+computeMethodType :: Namer -> [Argument String String] -> Return String -> Q Type
 computeMethodType _ [] RetNothing
   = [t|IO (GRpcReply ())|]
 computeMethodType n [] (RetSingle r)
   = [t|IO (GRpcReply $(typeRefToType n r))|]
-computeMethodType n [ArgSingle v] RetNothing
+computeMethodType n [ArgSingle _ v] RetNothing
   = [t|$(typeRefToType n v) -> IO (GRpcReply ())|]
-computeMethodType n [ArgSingle v] (RetSingle r)
+computeMethodType n [ArgSingle _ v] (RetSingle r)
   = [t|$(typeRefToType n v) -> IO (GRpcReply $(typeRefToType n r))|]
-computeMethodType n [ArgStream v] (RetSingle r)
+computeMethodType n [ArgStream _ v] (RetSingle r)
   = [t|CompressMode -> IO (ConduitT $(typeRefToType n v) Void IO (GRpcReply $(typeRefToType n r)))|]
-computeMethodType n [ArgSingle v] (RetStream r)
+computeMethodType n [ArgSingle _ v] (RetStream r)
   = [t|$(typeRefToType n v) -> IO (ConduitT () (GRpcReply $(typeRefToType n r)) IO ())|]
-computeMethodType n [ArgStream v] (RetStream r)
+computeMethodType n [ArgStream _ v] (RetStream r)
   = [t|CompressMode -> IO (ConduitT $(typeRefToType n v) (GRpcReply $(typeRefToType n r)) IO ())|]
 computeMethodType _ _ _ = fail "method signature not supported"
 
@@ -161,11 +161,11 @@ firstLower (x:rest) = toLower x : rest
 -- Parsing
 -- =======
 
-typeToServiceDef :: Type -> Q (Maybe (Service String String))
+typeToServiceDef :: Type -> Q (Maybe (Service String String String))
 typeToServiceDef toplevelty
   = typeToServiceDef' <$> resolveTypeSynonyms toplevelty
   where
-    typeToServiceDef' :: Type -> Maybe (Service String String)
+    typeToServiceDef' :: Type -> Maybe (Service String String String)
     typeToServiceDef' expanded
       = do (sn, _, methods) <- tyD3 'Service expanded
            methods' <- tyList methods
@@ -173,7 +173,7 @@ typeToServiceDef toplevelty
                    <*> pure []
                    <*> mapM typeToMethodDef methods'
 
-    typeToMethodDef :: Type -> Maybe (Method String String)
+    typeToMethodDef :: Type -> Maybe (Method String String String)
     typeToMethodDef ty
       = do (mn, _, args, ret) <- tyD4 'Method ty
            args' <- tyList args
@@ -182,10 +182,12 @@ typeToServiceDef toplevelty
                   <*> mapM typeToArgDef args'
                   <*> typeToRetDef ret
 
-    typeToArgDef :: Type -> Maybe (Argument String)
+    typeToArgDef :: Type -> Maybe (Argument String String)
     typeToArgDef ty
-      =   ArgSingle <$> (tyD1 'ArgSingle ty >>= typeToTypeRef)
-      <|> ArgStream <$> (tyD1 'ArgStream ty >>= typeToTypeRef)
+      =   (do (n, t) <- tyD2 'ArgSingle ty
+              ArgSingle <$> tyMaybeString n <*> typeToTypeRef t)
+      <|> (do (n, t) <- tyD2 'ArgStream ty
+              ArgStream <$> tyMaybeString n <*> typeToTypeRef t)
 
     typeToRetDef :: Type -> Maybe (Return String)
     typeToRetDef ty
@@ -201,6 +203,16 @@ typeToServiceDef toplevelty
               pure (THRef innerTy))
       <|> (do (_,innerTy,_) <- tyD3 'RegistryRef ty
               pure (THRef innerTy))
+
+tyMaybeString :: Type -> Maybe (Maybe String)
+tyMaybeString (PromotedT c)
+  | c == 'Nothing
+  = pure Nothing
+tyMaybeString (AppT (PromotedT c) r)
+  | c == 'Just
+  = Just <$> tyString r
+tyMaybeString _
+  = Nothing
 
 tyString :: Type -> Maybe String
 tyString (SigT t _)

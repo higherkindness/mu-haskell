@@ -16,9 +16,9 @@ and protocol.
 module Mu.Rpc (
   Package', Package(..)
 , Service', Service(..), Object
-, ServiceAnnotation, Method(..), ObjectField
+, ServiceAnnotation, Method', Method(..), ObjectField
 , LookupService, LookupMethod
-, TypeRef(..), Argument(..), Return(..)
+, TypeRef(..), Argument', Argument(..), Return(..)
 ) where
 
 import           Data.Kind
@@ -29,28 +29,32 @@ import           Mu.Schema
 import           Mu.Schema.Registry
 
 -- | Packages whose names are given by type-level strings.
-type Package' = Package Symbol Symbol
+type Package' = Package Symbol Symbol Symbol
 -- | Services whose names are given by type-level strings.
-type Service' = Service Symbol Symbol
+type Service' = Service Symbol Symbol Symbol
+-- | Methods whose names are given by type-level strings.
+type Method' = Method Symbol Symbol Symbol
+-- | Arguments whose names are given by type-level strings.
+type Argument' = Argument Symbol Symbol
 -- | Annotations for services. At this moment, such
 --   annotations can be of any type.
 type ServiceAnnotation = Type
 
 -- | A package is a set of services.
-data Package serviceName methodName
+data Package serviceName methodName argName
   = Package (Maybe serviceName)
-            [Service serviceName methodName]
+            [Service serviceName methodName argName]
 
 -- | A service is a set of methods.
-data Service serviceName methodName
+data Service serviceName methodName argName
   = Service serviceName
             [ServiceAnnotation]
-            [Method serviceName methodName]
+            [Method serviceName methodName argName]
 
 -- | A method is defined by its name, arguments, and return type.
-data Method serviceName methodName
+data Method serviceName methodName argName
   = Method methodName [ServiceAnnotation]
-           [Argument serviceName]
+           [Argument serviceName argName]
            (Return serviceName)
 
 -- Synonyms for GraphQL
@@ -61,13 +65,13 @@ type Object = 'Service
 --   in GraphQL lingo.
 type ObjectField = 'Method
 
-type family LookupService (ss :: [Service snm mnm]) (s :: snm) :: Service snm mnm where
+type family LookupService (ss :: [Service snm mnm anm]) (s :: snm) :: Service snm mnm anm where
   LookupService '[] s = TypeError ('Text "could not find method " ':<>: 'ShowType s)
   LookupService ('Service s anns ms ': ss) s = 'Service s anns ms
   LookupService (other              ': ss) s = LookupService ss s
 
 -- | Look up a method in a service definition using its name.
-type family LookupMethod (s :: [Method snm mnm]) (m :: mnm) :: Method snm mnm where
+type family LookupMethod (s :: [Method snm mnm anm]) (m :: mnm) :: Method snm mnm anm where
   LookupMethod '[] m = TypeError ('Text "could not find method " ':<>: 'ShowType m)
   LookupMethod ('Method m anns args r ': ms) m = 'Method m anns args r
   LookupMethod (other                 ': ms) m = LookupMethod ms m
@@ -90,11 +94,11 @@ data TypeRef serviceName where
   OptionalRef  :: TypeRef serviceName -> TypeRef serviceName
 
 -- | Defines the way in which arguments are handled.
-data Argument serviceName where
+data Argument serviceName argName where
   -- | Use a single value.
-  ArgSingle :: TypeRef serviceName -> Argument serviceName
+  ArgSingle :: Maybe argName -> TypeRef serviceName -> Argument serviceName argName
   -- | Consume a stream of values.
-  ArgStream :: TypeRef serviceName -> Argument serviceName
+  ArgStream :: Maybe argName -> TypeRef serviceName -> Argument serviceName argName
 
 -- | Defines the different possibilities for returning
 --   information from a method.
