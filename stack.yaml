@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 resolver: lts-15.0
-=======
-resolver: lts-14.27
->>>>>>> master
 allow-newer: true
 
 packages:
