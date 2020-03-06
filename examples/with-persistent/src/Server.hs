@@ -3,6 +3,7 @@
 {-# language PartialTypeSignatures #-}
 {-# language TypeApplications      #-}
 {-# language TypeFamilies          #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 
 module Main where
 

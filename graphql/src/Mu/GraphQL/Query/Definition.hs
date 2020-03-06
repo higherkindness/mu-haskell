@@ -36,7 +36,7 @@ data ChosenMethodQuery (p :: Package snm mnm anm) (m :: Method snm mnm anm) wher
     -> ChosenMethodQuery p ('Method mname anns args ('RetSingle r))
 
 data ArgumentValue (p :: Package snm mnm anm) (a :: Argument snm anm) where
-  ArgumentValue :: ArgumentValue' p r -> ArgumentValue p ('ArgSingle aname r)
+  ArgumentValue :: ArgumentValue' p r -> ArgumentValue p ('ArgSingle aname anns r)
 
 data ArgumentValue' (p :: Package snm mnm anm) (r :: TypeRef snm) where
   ArgPrimitive :: t -> ArgumentValue' p ('PrimitiveRef t)
