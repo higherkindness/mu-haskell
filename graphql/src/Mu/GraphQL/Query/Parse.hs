@@ -99,7 +99,7 @@ constToValue (GQL.VCEnum n)    = GQL.VEnum n
 constToValue (GQL.VCList (GQL.ListValueG n))
   = GQL.VList $ GQL.ListValueG $ constToValue <$> n
 constToValue (GQL.VCObject (GQL.ObjectValueG n))
-  = GQL.VObject $ GQL.ObjectValueG $
+  = GQL.VObject $ GQL.ObjectValueG
       [ GQL.ObjectFieldG a (constToValue v) | GQL.ObjectFieldG a v <- n ]
 
 parseQuery ::
