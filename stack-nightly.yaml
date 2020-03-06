@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-resolver: nightly-2020-02-17
-=======
-resolver: nightly-2020-02-28
->>>>>>> master
+resolver: nightly-2020-03-04
 allow-newer: true
 
 packages:
