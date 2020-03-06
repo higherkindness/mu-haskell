@@ -165,7 +165,7 @@ class Handles Identity chn args ('RetSingle r) ServerErrorIO h
              -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
 
 instance (ArgumentConversion chn ref t, RunHandler p whole chn rest r h)
-         => RunHandler p whole chn ('ArgSingle ref ': rest) r (t -> h) where
+         => RunHandler p whole chn ('ArgSingle aname ref ': rest) r (t -> h) where
   runHandler whole h (ArgumentValue one :* rest)
     = runHandler whole (h (convertArg (Proxy @chn) one)) rest
 instance (ResultConversion p whole chn r l)

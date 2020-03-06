@@ -183,7 +183,7 @@ avroMethodToType schemaName m
   where
     argToType :: A.Argument -> Q Type
     argToType (A.Argument (A.NamedType a) _)
-      = [t| 'ArgSingle ('SchemaRef $(conT schemaName) $(textToStrLit (A.baseName a))) |]
+      = [t| 'ArgSingle 'Nothing ('SchemaRef $(conT schemaName) $(textToStrLit (A.baseName a))) |]
     argToType (A.Argument _ _)
       = fail "only named types may be used as arguments"
 

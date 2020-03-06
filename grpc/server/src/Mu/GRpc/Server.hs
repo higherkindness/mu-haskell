@@ -147,7 +147,7 @@ gRpcServerHandlers pr f (Services svr) = gRpcServiceHandlers f pr packageName sv
 
 class GRpcServiceHandlers (p :: GRpcMessageProtocol) (m :: Type -> Type)
                           (chn :: ServiceChain snm)
-                          (ss :: [Service snm mnm]) (hs :: [[Type]]) where
+                          (ss :: [Service snm mnm anm]) (hs :: [[Type]]) where
   gRpcServiceHandlers :: (forall a. m a -> ServerErrorIO a)
                       -> Proxy p -> ByteString
                       -> ServicesT f chn ss m hs -> [ServiceHandler]
@@ -165,7 +165,7 @@ instance ( KnownName name, GRpcMethodHandlers p m chn (MappingRight chn name) me
 
 class GRpcMethodHandlers (p :: GRpcMessageProtocol) (m :: Type -> Type)
                          (chn :: ServiceChain snm) (inh :: Type)
-                         (ms :: [Method snm mnm]) (hs :: [Type]) where
+                         (ms :: [Method snm mnm anm]) (hs :: [Type]) where
   gRpcMethodHandlers :: (forall a. m a -> ServerErrorIO a)
                      -> Proxy p -> ByteString -> ByteString
                      -> HandlersT f chn inh ms m hs -> [ServiceHandler]
@@ -311,7 +311,7 @@ instance (GRPCInput (RPCTy p) (), GRpcOutputWrapper p rref r, MonadIO m)
 -----
 
 instance (GRpcInputWrapper p vref v, GRPCOutput (RPCTy p) ())
-         => GRpcMethodHandler p m '[ 'ArgSingle vref ] 'RetNothing (v -> m ()) where
+         => GRpcMethodHandler p m '[ 'ArgSingle aname vref ] 'RetNothing (v -> m ()) where
   gRpcMethodHandler f _ _ _ rpc h
     = unary @_ @(GRpcIWTy p vref v) @()
             rpc (\_ -> raiseErrors . f . h . unGRpcIWTy (Proxy @p) (Proxy @vref))
@@ -319,7 +319,7 @@ instance (GRpcInputWrapper p vref v, GRPCOutput (RPCTy p) ())
 -----
 
 instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r)
-         => GRpcMethodHandler p m '[ 'ArgSingle vref ] ('RetSingle rref) (v -> m r) where
+         => GRpcMethodHandler p m '[ 'ArgSingle aname vref ] ('RetSingle rref) (v -> m r) where
   gRpcMethodHandler f _ _ _ rpc h
     = unary @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
             rpc (\_ -> (buildGRpcOWTy (Proxy @p) (Proxy @rref) <$>)
@@ -329,7 +329,7 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r)
 -----
 
 instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
-         => GRpcMethodHandler p m '[ 'ArgStream vref ] ('RetSingle rref)
+         => GRpcMethodHandler p m '[ 'ArgStream aname vref ] ('RetSingle rref)
                               (ConduitT () v m () -> m r) where
   gRpcMethodHandler f _ _ _ rpc h
     = clientStream @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
@@ -354,7 +354,7 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
 -----
 
 instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
-         => GRpcMethodHandler p m '[ 'ArgSingle vref ] ('RetStream rref)
+         => GRpcMethodHandler p m '[ 'ArgSingle aname vref ] ('RetStream rref)
                               (v -> ConduitT r Void m () -> m ()) where
   gRpcMethodHandler f _ _ _ rpc h
     = serverStream @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
@@ -379,7 +379,7 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
 -----
 
 instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
-         => GRpcMethodHandler p m '[ 'ArgStream vref ] ('RetStream rref)
+         => GRpcMethodHandler p m '[ 'ArgStream aname vref ] ('RetStream rref)
                               (ConduitT () v m () -> ConduitT r Void m () -> m ()) where
   gRpcMethodHandler f _ _ _ rpc h
     = generalStream @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
