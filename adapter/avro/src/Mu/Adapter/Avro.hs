@@ -88,7 +88,7 @@ instance ( ToSchema Identity sch sty t
 -- HasAvroSchema instances
 
 class HasAvroSchema' x where
-  schema' :: [ASch.TypeName] -> Tagged x ASch.Type
+  schema' :: [ASch.TypeName] -> Tagged x ASch.Schema
 
 instance HasAvroSchema' (Term f sch t)
          => A.HasAvroSchema (Term f sch t) where
@@ -153,7 +153,7 @@ instance HasAvroSchema' (FieldValue f sch v)
     where iSchema = unTagged $ schema' @(FieldValue f sch v) visited
 
 class HasAvroSchemaUnion (f :: k -> *) (xs :: [k]) where
-  schemaU :: Proxy f -> Proxy xs -> [ASch.TypeName] -> NonEmpty ASch.Type
+  schemaU :: Proxy f -> Proxy xs -> [ASch.TypeName] -> NonEmpty ASch.Schema
 instance HasAvroSchema' (f v) => HasAvroSchemaUnion f '[v] where
   schemaU _ _ visited = vSchema :| []
     where vSchema = unTagged (schema' @(f v) visited)
@@ -197,7 +197,7 @@ instance (HasAvroSchema' (FieldValue f sch t), A.FromAvro (FieldValue f sch t))
   fromAvro v = TSimple <$> A.fromAvro v
 
 instance A.FromAvro (FieldValue f sch 'TNull) where
-  fromAvro AVal.Null = return FNull
+  fromAvro AVal.Null = pure FNull
   fromAvro v         = A.badValue v "null"
 instance A.FromAvro t => A.FromAvro (FieldValue f sch ('TPrimitive t)) where
   fromAvro v = FPrimitive <$> A.fromAvro v
@@ -224,15 +224,15 @@ instance (HasAvroSchema' (FieldValue f sch v), A.FromAvro (FieldValue f sch v))
   fromAvro v = FMap . M.mapKeys (FPrimitive . T.unpack) <$> A.fromAvro v
 
 class FromAvroEnum (vs :: [ChoiceDef fn]) where
-  fromAvroEnum :: AVal.Value ASch.Type -> Int -> A.Result (NS Proxy vs)
+  fromAvroEnum :: AVal.Value ASch.Schema -> Int -> A.Result (NS Proxy vs)
 instance FromAvroEnum '[] where
   fromAvroEnum v _ = A.badValue v "element not found"
 instance FromAvroEnum vs => FromAvroEnum (v ': vs) where
-  fromAvroEnum _ 0 = return (Z Proxy)
+  fromAvroEnum _ 0 = pure (Z Proxy)
   fromAvroEnum v n = S <$> fromAvroEnum v (n-1)
 
 class FromAvroUnion f sch choices where
-  fromAvroU :: ASch.Type -> AVal.Value ASch.Type -> ASch.Result (NS (FieldValue f sch) choices)
+  fromAvroU :: ASch.Schema -> AVal.Value ASch.Schema -> ASch.Result (NS (FieldValue f sch) choices)
 instance FromAvroUnion f sch '[] where
   fromAvroU _ v = A.badValue v "union choice not found"
 instance (A.FromAvro (FieldValue f sch u), FromAvroUnion f sch us)
@@ -244,9 +244,9 @@ instance (A.FromAvro (FieldValue f sch u), FromAvroUnion f sch us)
     = S <$> fromAvroU branch v
 
 class FromAvroFields f sch (fs :: [FieldDef Symbol Symbol]) where
-  fromAvroF :: HM.HashMap T.Text (AVal.Value ASch.Type) -> A.Result (NP (Field f sch) fs)
+  fromAvroF :: HM.HashMap T.Text (AVal.Value ASch.Schema) -> A.Result (NP (Field f sch) fs)
 instance FromAvroFields f sch '[] where
-  fromAvroF _ = return Nil
+  fromAvroF _ = pure Nil
 instance (Applicative f, KnownName name, A.FromAvro (FieldValue f sch t), FromAvroFields f sch fs)
          => FromAvroFields f sch ('FieldDef name t ': fs) where
   fromAvroF v = case HM.lookup fieldName v of
@@ -299,7 +299,7 @@ instance (HasAvroSchema' (FieldValue Identity sch v), A.ToAvro (FieldValue Ident
   toAvro (FMap v) = A.toAvro $ M.mapKeys (\(FPrimitive k) -> k) v
 
 class ToAvroUnion sch choices where
-  toAvroU :: NS (FieldValue Identity sch) choices -> (ASch.Type, AVal.Value ASch.Type)
+  toAvroU :: NS (FieldValue Identity sch) choices -> (ASch.Schema, AVal.Value ASch.Schema)
 instance ToAvroUnion sch '[] where
   toAvroU _ = error "ToAvro in an empty union"
 instance forall sch u us.
@@ -318,7 +318,7 @@ instance (KnownName u, ToAvroEnum us)
   toAvroE (S v) = let (n, t) = toAvroE v in (n + 1, t)
 
 class ToAvroFields sch (fs :: [FieldDef Symbol Symbol]) where
-  toAvroF :: NP (Field Identity sch) fs -> HM.HashMap T.Text (AVal.Value ASch.Type)
+  toAvroF :: NP (Field Identity sch) fs -> HM.HashMap T.Text (AVal.Value ASch.Schema)
 instance ToAvroFields sch '[] where
   toAvroF _ = HM.empty
 instance (KnownName name, A.ToAvro (FieldValue Identity sch t), ToAvroFields sch fs)

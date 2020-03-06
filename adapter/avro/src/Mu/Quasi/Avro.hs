@@ -33,10 +33,12 @@ import           Data.Avro.Types.Decimal    as D
 import qualified Data.ByteString            as B
 import           Data.ByteString.Lazy.Char8 (pack)
 import           Data.Int
+import qualified Data.Set                   as S
 import qualified Data.Text                  as T
 import           Data.Time
+import           Data.Time.Millis
 import           Data.UUID
-import           Data.Vector                (fromList, toList)
+import qualified Data.Vector                as V
 import           Language.Avro.Parser
 import qualified Language.Avro.Types        as A
 import           Language.Haskell.TH
@@ -58,7 +60,7 @@ avro =
     schemaFromAvroString s =
       case decode (pack s) of
         Nothing           -> fail "could not parse avro spec!"
-        Just (A.Union us) -> schemaFromAvro (toList us)
+        Just (A.Union us) -> schemaFromAvro (V.toList us)
         Just t            -> schemaFromAvro [t]
 
 -- | Imports an avro definition from a file as a 'Schema'.
@@ -84,15 +86,17 @@ avdlToDecls :: String -> String -> A.Protocol -> Q [Dec]
 avdlToDecls schemaName serviceName protocol
   = do let schemaName'  = mkName schemaName
            serviceName' = mkName serviceName
-       schemaDec <- tySynD schemaName' [] (schemaFromAvro (A.types protocol))
+       schemaDec <- tySynD schemaName' [] (schemaFromAvro $ S.toList (A.types protocol))
        serviceDec <- tySynD serviceName' []
-         [t| 'Service $(textToStrLit (A.pname protocol)) $(pkgType (A.ns protocol))
-                      $(typesToList <$> mapM (avroMethodToType schemaName') (A.messages protocol)) |]
-       return [schemaDec, serviceDec]
+         [t| 'Package $(pkgType (A.ns protocol))
+                '[ 'Service $(textToStrLit (A.pname protocol)) '[]
+                            $(typesToList <$> mapM (avroMethodToType schemaName')
+                            (S.toList $ A.messages protocol)) ] |]
+       pure [schemaDec, serviceDec]
   where
-    pkgType Nothing = [t| '[] |]
+    pkgType Nothing = [t| 'Nothing |]
     pkgType (Just (A.Namespace p))
-                    = [t| '[ Package $(textToStrLit (T.intercalate "." p)) ] |]
+                    = [t| 'Just $(textToStrLit (T.intercalate "." p)) |]
 
 schemaFromAvro :: [A.Schema] -> Q Type
 schemaFromAvro =
@@ -109,7 +113,7 @@ schemaDecFromAvroType (A.Record name _ _ _ fields) =
                    $(schemaFromAvroType $ A.fldType field)|]
 schemaDecFromAvroType (A.Enum name _ _ symbols) =
   [t|'DEnum $(textToStrLit $ A.baseName name)
-            $(typesToList <$> mapM avChoiceToType (toList symbols))|]
+            $(typesToList <$> mapM avChoiceToType (V.toList symbols))|]
   where
     avChoiceToType :: T.Text -> Q Type
     avChoiceToType c = [t|'ChoiceDef $(textToStrLit c)|]
@@ -122,6 +126,7 @@ schemaFromAvroType =
     A.Null -> [t|'TPrimitive 'TNull|]
     A.Boolean -> [t|'TPrimitive Bool|]
     A.Int (Just A.Date) -> [t|'TPrimitive Day|]
+    A.Int (Just A.TimeMillis) -> [t|'TPrimitive DiffTimeMs|]
     A.Int _ -> [t|'TPrimitive Int32|]
     A.Long (Just (A.DecimalL (A.Decimal p s)))
              -> [t|'TPrimitive (D.Decimal $(litT $ numTyLit p) $(litT $ numTyLit s)) |]
@@ -139,11 +144,11 @@ schemaFromAvroType =
     A.Enum {} -> fail "should never happen, please, file an issue"
     A.Record {} -> fail "should never happen, please, file an issue"
     A.Union options ->
-      case toList options of
+      case V.toList options of
         [A.Null, x] -> toOption x
         [x, A.Null] -> toOption x
         _ ->
-          [t|'TUnion $(typesToList <$> mapM schemaFromAvroType (toList options))|]
+          [t|'TUnion $(typesToList <$> mapM schemaFromAvroType (V.toList options))|]
       where toOption x = [t|'TOption $(schemaFromAvroType x)|]
     A.Fixed {} -> fail "fixed integers are not currently supported"
 
@@ -160,9 +165,9 @@ flattenAvroDecls = concatMap (uncurry (:) . flattenDecl)
     flattenAvroType (A.Record name a d o fields) =
       let (flds, tts) = unzip (flattenAvroField <$> fields)
        in (A.NamedType name, A.Record name a d o flds : concat tts)
-    flattenAvroType (A.Union (toList -> ts)) =
+    flattenAvroType (A.Union (V.toList -> ts)) =
       let (us, tts) = unzip (map flattenAvroType ts)
-       in (A.Union $ fromList us, concat tts)
+       in (A.Union $ V.fromList us, concat tts)
     flattenAvroType e@A.Enum {A.name} = (A.NamedType name, [e])
     flattenAvroType t = (t, [])
     flattenAvroField :: A.Field -> (A.Field, [A.Schema])
@@ -178,7 +183,7 @@ avroMethodToType schemaName m
   where
     argToType :: A.Argument -> Q Type
     argToType (A.Argument (A.NamedType a) _)
-      = [t| 'ArgSingle ('ViaSchema $(conT schemaName) $(textToStrLit (A.baseName a))) |]
+      = [t| 'ArgSingle 'Nothing ('SchemaRef $(conT schemaName) $(textToStrLit (A.baseName a))) |]
     argToType (A.Argument _ _)
       = fail "only named types may be used as arguments"
 
@@ -186,7 +191,7 @@ avroMethodToType schemaName m
     retToType A.Null
       = [t| 'RetNothing |]
     retToType (A.NamedType a)
-      = [t| 'RetSingle ('ViaSchema $(conT schemaName) $(textToStrLit (A.baseName a))) |]
+      = [t| 'RetSingle ('SchemaRef $(conT schemaName) $(textToStrLit (A.baseName a))) |]
     retToType _
       = fail "only named types may be used as results"
 
@@ -194,4 +199,4 @@ typesToList :: [Type] -> Type
 typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
 
 textToStrLit :: T.Text -> Q Type
-textToStrLit s = return $ LitT $ StrTyLit $ T.unpack s
+textToStrLit s = litT $ strTyLit $ T.unpack s

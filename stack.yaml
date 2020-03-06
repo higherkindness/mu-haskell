@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 resolver: lts-15.0
+=======
+resolver: lts-14.27
+>>>>>>> master
 allow-newer: true
 
 packages:
@@ -12,6 +16,7 @@ packages:
 - grpc/common
 - grpc/client
 - grpc/server
+- graphql
 - examples/health-check/avro
 - examples/health-check/protobuf
 - examples/route-guide
@@ -28,12 +33,11 @@ extra-deps:
 - http2-grpc-proto3-wire-0.1.0.0
 - warp-grpc-0.3.0.0
 - http2-client-grpc-0.8.0.0
-# - avro-0.4.6.0
-- git: https://github.com/haskell-works/avro.git
-  commit: 93bc12fdb807e9567ef113ed71c7b3487516a371
-# - language-avro-0.1.0.0
-- git: https://github.com/higherkindness/avro-parser-haskell.git
-  commit: c8f7497766d0d1be8579fb03b302340adafeaf49
+- avro-0.4.7.0
+- language-protobuf-1.0.1
+- language-avro-0.1.2.0
 - hw-kafka-client-3.0.0
 - hw-kafka-conduit-2.6.0
 - HasBigDecimal-0.1.1
+- git: https://github.com/hasura/graphql-parser-hs.git
+  commit: 1380495a7b3269b70a7ab3081d745a5f54171a9c

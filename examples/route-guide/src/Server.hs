@@ -73,7 +73,7 @@ server f m = Server
   (getFeature f :<|>: listFeatures f  :<|>: recordRoute f :<|>: routeChat m :<|>: H0)
 
 getFeature :: Features -> Point -> ServerErrorIO Feature
-getFeature fs p = return $ fromMaybe nilFeature (findFeatureIn fs p)
+getFeature fs p = pure $ fromMaybe nilFeature (findFeatureIn fs p)
   where nilFeature = Feature (Just "") (Just (Point (Just 0) (Just 0)))
 
 listFeatures :: Features -> Rectangle
@@ -103,7 +103,7 @@ recordRoute fs ps = do
                                      ((update_feature_count +) <$> feature_count summary)
                                      ((+) <$> distance summary <*> new_distance)
                                      (Just $ floor new_elapsed)
-      return (new_summary, Just point, startTime)
+      pure (new_summary, Just point, startTime)
 
 routeChat :: TBMChan RouteNote
           -> ConduitT () RouteNote ServerErrorIO ()
@@ -117,7 +117,7 @@ routeChat notesMap inS outS = do
                  readStmMap (\l1 (RouteNote _ l2)-> Just l1 == l2) toWatch notesMap .| outS
     res <- liftIO $ concurrently inA outA
     case res of
-      (Right _, Right _) -> return ()
+      (Right _, Right _) -> pure ()
       (Left e, _)        -> serverError e
       (_, Left e)        -> serverError e
   where
@@ -126,7 +126,7 @@ routeChat notesMap inS outS = do
       _ <- tryTakeTMVar toWatch
       putTMVar toWatch loc
       writeTBMChan notesMap newNote
-    addNoteToMap _toWatch _ = return ()
+    addNoteToMap _toWatch _ = pure ()
 
 readStmMap :: (MonadIO m, Show b) => (a -> b -> Bool) -> TMVar a -> TBMChan b -> ConduitT () b m ()
 readStmMap p toWatch m = go
@@ -134,6 +134,6 @@ readStmMap p toWatch m = go
     go = do
       v <- liftIO $ atomically $ (,) <$> readTBMChan m <*> tryReadTMVar toWatch
       case v of
-        (Nothing, _)                 -> return ()
+        (Nothing, _)                 -> pure ()
         (Just v', Just e') | p e' v' -> liftIO (print v') >> yield v' >> go
         _                            -> go

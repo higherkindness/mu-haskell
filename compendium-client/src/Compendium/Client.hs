@@ -79,8 +79,8 @@ obtainProtoBuf m url ident = do
   r <- transformation m url ident Protobuf
   case r of
     Left e
-      -> return $ Left (OPEClient e)
+      -> pure $ Left (OPEClient e)
     Right p
       -> case parseProtoBuf p of
-          Left e   -> return $ Left (OPEParse e)
-          Right pb -> return $ Right pb
+          Left e   -> pure $ Left (OPEParse e)
+          Right pb -> pure $ Right pb

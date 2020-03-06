@@ -11,6 +11,7 @@
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
+{-# OPTIONS_GHC -fprint-explicit-kinds #-}
 -- | Client for gRPC services defined using Mu 'Service'
 module Mu.GRpc.Client.Internal where
 
@@ -19,11 +20,14 @@ import           Control.Concurrent.STM        (atomically)
 import           Control.Concurrent.STM.TMChan
 import           Control.Concurrent.STM.TMVar
 import           Control.Monad.IO.Class
+import           Data.Avro
 import qualified Data.ByteString.Char8         as BS
 import           Data.Conduit
 import qualified Data.Conduit.Combinators      as C
 import           Data.Conduit.TMChan
+import           Data.Functor.Identity
 import           Data.Kind
+import           GHC.TypeLits
 import           Network.GRPC.Client           (CompressMode (..), IncomingEvent (..),
                                                 OutgoingEvent (..), RawReply, StreamDone (..))
 import           Network.GRPC.Client.Helpers
@@ -41,14 +45,14 @@ import           Mu.Schema
 setupGrpcClient' :: GrpcClientConfig -> IO (Either ClientError GrpcClient)
 setupGrpcClient' = runExceptT . setupGrpcClient
 
-class GRpcServiceMethodCall (p :: GRpcMessageProtocol) (s :: Service snm mnm) (m :: Method mnm) h where
-  gRpcServiceMethodCall :: Proxy p -> Proxy s -> Proxy m -> GrpcClient -> h
-instance ( KnownName serviceName, KnownName (FindPackageName anns), KnownName mname
+class GRpcServiceMethodCall (p :: GRpcMessageProtocol)
+                            (pkg :: snm) (s :: snm) (m :: Method snm mnm anm) h where
+  gRpcServiceMethodCall :: Proxy p -> Proxy pkg -> Proxy s -> Proxy m -> GrpcClient -> h
+instance ( KnownName serviceName, KnownName pkg, KnownName mname
          , GRpcMethodCall p ('Method mname manns margs mret) h, MkRPC p )
-         => GRpcServiceMethodCall p ('Service serviceName anns methods)
-                                  ('Method mname manns margs mret) h where
-  gRpcServiceMethodCall pro _ = gRpcMethodCall @p rpc
-    where pkgName = BS.pack (nameVal (Proxy @(FindPackageName anns)))
+         => GRpcServiceMethodCall p pkg serviceName ('Method mname manns margs mret) h where
+  gRpcServiceMethodCall pro _ _ = gRpcMethodCall @p rpc
+    where pkgName = BS.pack (nameVal (Proxy @pkg))
           svrName = BS.pack (nameVal (Proxy @serviceName))
           metName = BS.pack (nameVal (Proxy @mname))
           rpc = mkRPC pro pkgName svrName metName
@@ -80,15 +84,15 @@ buildGRpcReply3 (Right _)  = GRpcOk ()
 simplifyResponse :: ClientIO (GRpcReply a) -> IO (GRpcReply a)
 simplifyResponse reply = do
   r <- runExceptT reply
-  case r of
-    Left e  -> return $ GRpcClientError e
-    Right v -> return v
+  pure $ case r of
+    Left e  -> GRpcClientError e
+    Right v -> v
 
 -- These type classes allow us to abstract over
 -- the choice of message protocol (PB or Avro)
 
 class GRPCInput (RPCTy p) (GRpcIWTy p ref r)
-      => GRpcInputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef) (r :: Type) where
+      => GRpcInputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef snm) (r :: Type) where
   type GRpcIWTy p ref r :: Type
   buildGRpcIWTy :: Proxy p -> Proxy ref -> r -> GRpcIWTy p ref r
 
@@ -97,13 +101,15 @@ instance ToProtoBufTypeRef ref r
   type GRpcIWTy 'MsgProtoBuf ref r = ViaToProtoBufTypeRef ref r
   buildGRpcIWTy _ _ = ViaToProtoBufTypeRef
 
-instance (GRPCInput AvroRPC (ViaToAvroTypeRef ('ViaSchema sch sty) r))
-         => GRpcInputWrapper 'MsgAvro ('ViaSchema sch sty) r where
-  type GRpcIWTy 'MsgAvro ('ViaSchema sch sty) r = ViaToAvroTypeRef ('ViaSchema sch sty) r
+instance forall (sch :: Schema') (sty :: Symbol) (r :: Type).
+         ( ToSchema Identity sch sty r
+         , ToAvro (Term Identity sch (sch :/: sty)) )
+         => GRpcInputWrapper 'MsgAvro ('SchemaRef sch sty) r where
+  type GRpcIWTy 'MsgAvro ('SchemaRef sch sty) r = ViaToAvroTypeRef ('SchemaRef sch sty) r
   buildGRpcIWTy _ _ = ViaToAvroTypeRef
 
 class GRPCOutput (RPCTy p) (GRpcOWTy p ref r)
-      => GRpcOutputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef) (r :: Type) where
+      => GRpcOutputWrapper (p :: GRpcMessageProtocol) (ref :: TypeRef snm) (r :: Type) where
   type GRpcOWTy p ref r :: Type
   unGRpcOWTy :: Proxy p -> Proxy ref -> GRpcOWTy p ref r -> r
 
@@ -112,16 +118,18 @@ instance FromProtoBufTypeRef ref r
   type GRpcOWTy 'MsgProtoBuf ref r = ViaFromProtoBufTypeRef ref r
   unGRpcOWTy _ _ = unViaFromProtoBufTypeRef
 
-instance (GRPCOutput AvroRPC (ViaFromAvroTypeRef ('ViaSchema sch sty) r))
-         => GRpcOutputWrapper 'MsgAvro ('ViaSchema sch sty) r where
-  type GRpcOWTy 'MsgAvro ('ViaSchema sch sty) r = ViaFromAvroTypeRef ('ViaSchema sch sty) r
+instance forall (sch :: Schema') (sty :: Symbol) (r :: Type).
+         ( FromSchema Identity sch sty r
+         , FromAvro (Term Identity sch (sch :/: sty)) )
+         => GRpcOutputWrapper 'MsgAvro ('SchemaRef sch sty) r where
+  type GRpcOWTy 'MsgAvro ('SchemaRef sch sty) r = ViaFromAvroTypeRef ('SchemaRef sch sty) r
   unGRpcOWTy _ _ = unViaFromAvroTypeRef
 
 -- -----------------------------
 -- IMPLEMENTATION OF THE METHODS
 -- -----------------------------
 
-class GRpcMethodCall (p :: GRpcMessageProtocol) method h where
+class GRpcMethodCall (p :: GRpcMessageProtocol) (method :: Method') h where
   gRpcMethodCall :: RPCTy p -> Proxy method -> GrpcClient -> h
 
 instance ( KnownName name
@@ -170,12 +178,12 @@ instance ( KnownName name
                        GRpcOk _ -> -- no error, everything is fine
                          sourceTMChan chan .| C.map GRpcOk
                        e -> yield $ (\_ -> error "this should never happen") <$> e
-         return go
+         pure go
 
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRPCOutput (RPCTy p) ()
          , handler ~ (v -> IO (GRpcReply ())) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle vref ] 'RetNothing) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname vref ] 'RetNothing) handler where
   gRpcMethodCall rpc _ client x
     = simplifyResponse $
       buildGRpcReply1 <$>
@@ -184,7 +192,7 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (v -> IO (GRpcReply r)) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle vref ] ('RetSingle rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname vref ] ('RetSingle rref)) handler where
   gRpcMethodCall rpc _ client x
     = fmap (fmap (unGRpcOWTy (Proxy @p) (Proxy @rref))) $
       simplifyResponse $
@@ -195,7 +203,7 @@ instance ( KnownName name
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (CompressMode -> IO (ConduitT v Void IO (GRpcReply r))) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgStream vref ] ('RetSingle rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname vref ] ('RetSingle rref)) handler where
   gRpcMethodCall rpc _ client compress
     = do -- Create a new TMChan
          chan <- newTMChanIO :: IO (TMChan v)
@@ -207,8 +215,8 @@ instance ( KnownName name
             rawStreamClient @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r) rpc client ()
                             (\_ -> do nextVal <- liftIO $ atomically $ readTMChan chan
                                       case nextVal of
-                                        Nothing -> return ((), Left StreamDone)
-                                        Just v  -> return ((), Right (compress, buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
+                                        Nothing -> pure ((), Left StreamDone)
+                                        Just v  -> pure ((), Right (compress, buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
          -- This conduit feeds information to the other thread
          let go = do x <- await
                      case x of
@@ -216,12 +224,12 @@ instance ( KnownName name
                                      go
                        Nothing -> do liftIO $ atomically $ closeTMChan chan
                                      liftIO $ wait promise
-         return go
+         pure go
 
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (v -> IO (ConduitT () (GRpcReply r) IO ())) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle vref ] ('RetStream rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname vref ] ('RetStream rref)) handler where
   gRpcMethodCall rpc _ client x
     = do -- Create a new TMChan
          chan <- newTMChanIO :: IO (TMChan r)
@@ -245,12 +253,12 @@ instance ( KnownName name
                        GRpcOk _ -> -- no error, everything is fine
                          sourceTMChan chan .| C.map GRpcOk
                        e -> yield $ (\_ -> error "this should never happen") <$> e
-         return go
+         pure go
 
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (CompressMode -> IO (ConduitT v (GRpcReply r) IO ())) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgStream vref ] ('RetStream rref)) handler where
+         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname vref ] ('RetStream rref)) handler where
   gRpcMethodCall rpc _ client compress
     = do -- Create a new TMChan
          inchan <- newTMChanIO :: IO (TMChan (GRpcReply r))
@@ -268,12 +276,12 @@ instance ( KnownName name
                         case ievent of
                           RecvMessage o -> liftIO $ atomically $ writeTMChan inchan (GRpcOk $ unGRpcOWTy(Proxy @p) (Proxy @rref) o)
                           Invalid e -> liftIO $ atomically $ writeTMChan inchan (GRpcErrorString (show e))
-                          _ -> return () )
+                          _ -> pure () )
                    () (\_ -> do
                         nextVal <- liftIO $ atomically $ readTMChan outchan
                         case nextVal of
-                          Nothing -> return ((), Finalize)
-                          Just v  -> return ((), SendMessage compress (buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
+                          Nothing -> pure ((), Finalize)
+                          Just v  -> pure ((), SendMessage compress (buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
             case v of
               GRpcOk () -> liftIO $ atomically $ closeTMChan inchan
               _         -> liftIO $ atomically $ putTMVar var v
@@ -288,7 +296,7 @@ instance ( KnownName name
                                       go2
                         Nothing -> do r <- liftIO $ atomically $ tryReadTMChan inchan
                                       case r of
-                                        Nothing            -> return () -- both are empty, end
+                                        Nothing            -> pure () -- both are empty, end
                                         Just Nothing       -> go2
                                         Just (Just nextIn) -> yield nextIn >> go2
-         return go
+         pure go

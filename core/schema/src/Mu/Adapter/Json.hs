@@ -72,7 +72,7 @@ instance (KnownName name, ToJSON (FieldValue Identity sch t), ToJSONFields sch f
 class FromJSONFields w sch fields where
   parseJSONFields :: Object -> Parser (NP (Field w sch) fields)
 instance FromJSONFields w sch '[] where
-  parseJSONFields _ = return Nil
+  parseJSONFields _ = pure Nil
 instance (Applicative w, KnownName name, FromJSON (FieldValue w sch t), FromJSONFields w sch fs)
          => FromJSONFields w sch ('FieldDef name t ': fs) where
   parseJSONFields v = (:*) <$> (Field <$> (pure <$> v .: key)) <*> parseJSONFields v
@@ -100,7 +100,7 @@ instance FromJSONEnum '[] where
 instance (KnownName c, FromJSONEnum cs)
          => FromJSONEnum ('ChoiceDef c ': cs) where
   parseJSONEnum v
-    | v == key  = return (Z Proxy)
+    | v == key  = pure (Z Proxy)
     | otherwise = S <$> parseJSONEnum v
     where key = T.pack (nameVal (Proxy @c))
 
@@ -142,7 +142,7 @@ instance (ToJSON (FieldValue w sch u), ToJSONUnion w sch us)
   unionToJSON (S r) = unionToJSON r
 
 instance FromJSON (FieldValue w sch 'TNull) where
-  parseJSON Null = return FNull
+  parseJSON Null = pure FNull
   parseJSON _    = fail "expected null"
 instance FromJSON t => FromJSON (FieldValue w sch ('TPrimitive t)) where
   parseJSON v = FPrimitive <$> parseJSON v

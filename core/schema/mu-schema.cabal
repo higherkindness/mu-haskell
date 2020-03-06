@@ -1,50 +1,55 @@
-cabal-version:       >=1.10
-name:                mu-schema
-version:             0.1.0.0
-synopsis:            Format-independent schemas for serialization
-description:         With @mu-schema@ you can describe schemas using type-level constructs, and derive serializers from those. See @mu-avro@, @mu-protobuf@ for the actual adapters.
-license:             Apache-2.0
-license-file:        LICENSE
-author:              Alejandro Serrano, Flavio Corpa
-maintainer:          alejandro.serrano@47deg.com
-copyright:           Copyright © 2019-2020 <http://47deg.com 47 Degrees>
-category:            Network
-build-type:          Simple
-extra-source-files:  CHANGELOG.md
-homepage:            https://higherkindness.io/mu-haskell/
-bug-reports:         https://github.com/higherkindness/mu-haskell/issues
+name:               mu-schema
+version:            0.2.0.0
+synopsis:           Format-independent schemas for serialization
+description:
+  With @mu-schema@ you can describe schemas using type-level constructs, and derive serializers from those. See @mu-avro@, @mu-protobuf@ for the actual adapters.
+
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Alejandro Serrano, Flavio Corpa
+maintainer:         alejandro.serrano@47deg.com
+copyright:          Copyright © 2019-2020 <http://47deg.com 47 Degrees>
+cabal-version:      >=1.10
+category:           Network
+build-type:         Simple
+extra-source-files: CHANGELOG.md
+homepage:           https://higherkindness.io/mu-haskell/
+bug-reports:        https://github.com/higherkindness/mu-haskell/issues
 
 source-repository head
   type:     git
   location: https://github.com/higherkindness/mu-haskell
 
 library
-  exposed-modules:     Mu.Schema
-                     , Mu.Schema.Definition
-                     , Mu.Schema.Interpretation
-                     , Mu.Schema.Interpretation.Schemaless
-                     , Mu.Schema.Interpretation.Anonymous
-                     , Mu.Schema.Class
-                     , Mu.Schema.Registry
-                     , Mu.Schema.Conversion.TypesToSchema
-                     , Mu.Schema.Conversion.SchemaToTypes
-                     , Mu.Schema.Examples
-                     , Mu.Schema.Annotations
-                     , Mu.Adapter.Json
-                     , Data.Functor.MaybeLike
+  exposed-modules:
+    Data.Functor.MaybeLike
+    Mu.Adapter.Json
+    Mu.Schema
+    Mu.Schema.Annotations
+    Mu.Schema.Class
+    Mu.Schema.Conversion.SchemaToTypes
+    Mu.Schema.Conversion.TypesToSchema
+    Mu.Schema.Definition
+    Mu.Schema.Examples
+    Mu.Schema.Interpretation
+    Mu.Schema.Interpretation.Anonymous
+    Mu.Schema.Interpretation.Schemaless
+    Mu.Schema.Registry
+
   -- other-modules:
   -- other-extensions:
-  build-depends:       base >=4.12 && <5
-                     , sop-core
-                     , containers
-                     , unordered-containers
-                     , bytestring
-                     , vector
-                     , text
-                     , aeson
-                     , template-haskell >= 2.12
-                     , th-abstraction
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -fprint-potential-instances
+  build-depends:
+      aeson
+    , base                  >=4.12 && <5
+    , bytestring
+    , containers
+    , sop-core
+    , template-haskell      >=2.12
+    , text
+    , th-abstraction
+    , unordered-containers
+    , vector
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall -fprint-potential-instances

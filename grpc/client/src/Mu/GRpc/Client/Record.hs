@@ -49,35 +49,41 @@ import           Mu.Rpc
 
 -- | Fills in a Haskell record of functions with the corresponding
 --   calls to gRPC services from a Mu 'Service' declaration.
-buildService :: forall (pro :: GRpcMessageProtocol) (s :: Service') (p :: Symbol) t
-                (nm :: Symbol) (anns :: [ServiceAnnotation]) (ms :: [Method Symbol]).
-                (s ~ 'Service nm anns ms, Generic t, BuildService pro s p ms (Rep t))
+buildService :: forall (pro :: GRpcMessageProtocol)
+                (pkg :: Package') (s :: Symbol) (p :: Symbol) t
+                (pkgName :: Symbol) (ss :: [Service'])
+                (anns :: [ServiceAnnotation]) (ms :: [Method']).
+                ( pkg ~ 'Package ('Just pkgName) ss
+                , LookupService ss s ~ 'Service s anns ms
+                , Generic t
+                , BuildService pro pkgName s p ms (Rep t) )
              => GrpcClient -> t
-buildService client = to (buildService' (Proxy @pro) (Proxy @s) (Proxy @p) (Proxy @ms) client)
+buildService client
+  = to (buildService' (Proxy @pro) (Proxy @pkgName) (Proxy @s) (Proxy @p) (Proxy @ms) client)
 
-class BuildService (pro :: GRpcMessageProtocol) (s :: Service')
-                   (p :: Symbol) (ms :: [Method Symbol]) (f :: * -> *) where
-  buildService' :: Proxy pro -> Proxy s -> Proxy p -> Proxy ms -> GrpcClient -> f a
+class BuildService (pro :: GRpcMessageProtocol) (pkg :: Symbol) (s :: Symbol)
+                   (p :: Symbol) (ms :: [Method']) (f :: * -> *) where
+  buildService' :: Proxy pro -> Proxy pkg -> Proxy s -> Proxy p -> Proxy ms -> GrpcClient -> f a
 
-instance BuildService pro s p ms U1 where
-  buildService' _ _ _ _ _ = U1
-instance BuildService pro s p ms f => BuildService pro s p ms (D1 meta f) where
-  buildService' ppro ps ppr pms client
-    = M1 (buildService' ppro ps ppr pms client)
-instance BuildService pro s p ms f => BuildService pro s p ms (C1 meta f) where
-  buildService' ppro ps ppr pms client
-    = M1 (buildService' ppro ps ppr pms client)
+instance BuildService pro pkg s p ms U1 where
+  buildService' _ _ _ _ _ _ = U1
+instance BuildService pro pkg s p ms f => BuildService pro pkg s p ms (D1 meta f) where
+  buildService' ppro ppkg ps ppr pms client
+    = M1 (buildService' ppro ppkg ps ppr pms client)
+instance BuildService pro pkg s p ms f => BuildService pro pkg s p ms (C1 meta f) where
+  buildService' ppro ppkg ps ppr pms client
+    = M1 (buildService' ppro ppkg ps ppr pms client)
 instance TypeError ('Text "building a service from sums is not supported")
-         => BuildService pro s p ms (f :+: g) where
+         => BuildService pro pkg s p ms (f :+: g) where
   buildService' = error "this should never happen"
-instance (BuildService pro s p ms f, BuildService pro s p ms g)
-         => BuildService pro s p ms (f :*: g) where
-  buildService' ppro ps ppr pms client
-    = buildService' ppro ps ppr pms client :*: buildService' ppro ps ppr pms client
-instance (m ~ AppendSymbol p x, GRpcServiceMethodCall pro s (s :-->: x) h)
-         => BuildService pro s p ms (S1 ('MetaSel ('Just m) u ss ds) (K1 i h)) where
-  buildService' ppro ps _ _ client
-    = M1 $ K1 $ gRpcServiceMethodCall ppro ps (Proxy @(s :-->: x)) client
+instance (BuildService pro pkg s p ms f, BuildService pro pkg s p ms g)
+         => BuildService pro pkg s p ms (f :*: g) where
+  buildService' ppro ppkg ps ppr pms client
+    = buildService' ppro ppkg ps ppr pms client :*: buildService' ppro ppkg ps ppr pms client
+instance (m ~ AppendSymbol p x, GRpcServiceMethodCall pro pkg sname (LookupMethod ms x) h)
+         => BuildService pro pkg sname p ms (S1 ('MetaSel ('Just m) u ss ds) (K1 i h)) where
+  buildService' ppro ppkg ps _ _ client
+    = M1 $ K1 $ gRpcServiceMethodCall ppro ppkg ps (Proxy @(LookupMethod ms x)) client
 
 -- TEMPLATE HASKELL
 -- ================
@@ -95,7 +101,7 @@ generateRecordFromService newRecordName fieldsPrefix tNamer serviceTyName
 
 type Namer = String -> String
 
-serviceDefToDecl :: Name -> String -> String -> Namer -> Service String String -> Q [Dec]
+serviceDefToDecl :: Name -> String -> String -> Namer -> Service String String String -> Q [Dec]
 serviceDefToDecl serviceTyName complete fieldsPrefix tNamer (Service _ _ methods)
   = do d <- dataD (pure [])
                   (mkName complete)
@@ -104,41 +110,41 @@ serviceDefToDecl serviceTyName complete fieldsPrefix tNamer (Service _ _ methods
                   [RecC (mkName complete) <$> mapM (methodToDecl fieldsPrefix tNamer) methods]
                   [pure (DerivClause Nothing [ConT ''Generic])]
        let buildName = mkName ("build" ++ complete)
-       s <- SigD buildName <$> [t|GrpcClient -> $(return (ConT (mkName complete)))|]
+       s <- SigD buildName <$> [t|GrpcClient -> $(pure (ConT (mkName complete)))|]
        c <- Clause <$> pure []
-                   <*> (NormalB <$> [e|buildService @($(return $ ConT serviceTyName))
-                                                    @($(return $ LitT (StrTyLit fieldsPrefix)))|])
+                   <*> (NormalB <$> [e|buildService @($(pure $ ConT serviceTyName))
+                                                    @($(pure $ LitT (StrTyLit fieldsPrefix)))|])
                    <*> pure []
-       return [d, s, FunD buildName [c]]
+       pure [d, s, FunD buildName [c]]
 
-methodToDecl :: String -> Namer -> Method String -> Q (Name, Bang, Type)
+methodToDecl :: String -> Namer -> Method String String String -> Q (Name, Bang, Type)
 methodToDecl fieldsPrefix tNamer (Method mName _ args ret)
   = do let nm = firstLower (fieldsPrefix ++ mName)
        ty <- computeMethodType tNamer args ret
-       return ( mkName nm, Bang NoSourceUnpackedness NoSourceStrictness, ty )
+       pure ( mkName nm, Bang NoSourceUnpackedness NoSourceStrictness, ty )
 
-computeMethodType :: Namer -> [Argument] -> Return -> Q Type
+computeMethodType :: Namer -> [Argument String String] -> Return String -> Q Type
 computeMethodType _ [] RetNothing
   = [t|IO (GRpcReply ())|]
 computeMethodType n [] (RetSingle r)
   = [t|IO (GRpcReply $(typeRefToType n r))|]
-computeMethodType n [ArgSingle v] RetNothing
+computeMethodType n [ArgSingle _ v] RetNothing
   = [t|$(typeRefToType n v) -> IO (GRpcReply ())|]
-computeMethodType n [ArgSingle v] (RetSingle r)
+computeMethodType n [ArgSingle _ v] (RetSingle r)
   = [t|$(typeRefToType n v) -> IO (GRpcReply $(typeRefToType n r))|]
-computeMethodType n [ArgStream v] (RetSingle r)
+computeMethodType n [ArgStream _ v] (RetSingle r)
   = [t|CompressMode -> IO (ConduitT $(typeRefToType n v) Void IO (GRpcReply $(typeRefToType n r)))|]
-computeMethodType n [ArgSingle v] (RetStream r)
+computeMethodType n [ArgSingle _ v] (RetStream r)
   = [t|$(typeRefToType n v) -> IO (ConduitT () (GRpcReply $(typeRefToType n r)) IO ())|]
-computeMethodType n [ArgStream v] (RetStream r)
+computeMethodType n [ArgStream _ v] (RetStream r)
   = [t|CompressMode -> IO (ConduitT $(typeRefToType n v) (GRpcReply $(typeRefToType n r)) IO ())|]
 computeMethodType _ _ _ = fail "method signature not supported"
 
-typeRefToType :: Namer -> TypeRef -> Q Type
-typeRefToType tNamer (ViaTH (LitT (StrTyLit s)))
-  = return $ ConT (mkName $ completeName tNamer s)
-typeRefToType _tNamer (ViaTH ty)
-  = return ty
+typeRefToType :: Namer -> TypeRef snm -> Q Type
+typeRefToType tNamer (THRef (LitT (StrTyLit s)))
+  = pure $ ConT (mkName $ completeName tNamer s)
+typeRefToType _tNamer (THRef ty)
+  = pure ty
 typeRefToType _ _ = error "this should never happen"
 
 completeName :: Namer -> String -> String
@@ -155,11 +161,11 @@ firstLower (x:rest) = toLower x : rest
 -- Parsing
 -- =======
 
-typeToServiceDef :: Type -> Q (Maybe (Service String String))
+typeToServiceDef :: Type -> Q (Maybe (Service String String String))
 typeToServiceDef toplevelty
   = typeToServiceDef' <$> resolveTypeSynonyms toplevelty
   where
-    typeToServiceDef' :: Type -> Maybe (Service String String)
+    typeToServiceDef' :: Type -> Maybe (Service String String String)
     typeToServiceDef' expanded
       = do (sn, _, methods) <- tyD3 'Service expanded
            methods' <- tyList methods
@@ -167,7 +173,7 @@ typeToServiceDef toplevelty
                    <*> pure []
                    <*> mapM typeToMethodDef methods'
 
-    typeToMethodDef :: Type -> Maybe (Method String)
+    typeToMethodDef :: Type -> Maybe (Method String String String)
     typeToMethodDef ty
       = do (mn, _, args, ret) <- tyD4 'Method ty
            args' <- tyList args
@@ -176,12 +182,14 @@ typeToServiceDef toplevelty
                   <*> mapM typeToArgDef args'
                   <*> typeToRetDef ret
 
-    typeToArgDef :: Type -> Maybe Argument
+    typeToArgDef :: Type -> Maybe (Argument String String)
     typeToArgDef ty
-      =   ArgSingle <$> (tyD1 'ArgSingle ty >>= typeToTypeRef)
-      <|> ArgStream <$> (tyD1 'ArgStream ty >>= typeToTypeRef)
+      =   (do (n, t) <- tyD2 'ArgSingle ty
+              ArgSingle <$> tyMaybeString n <*> typeToTypeRef t)
+      <|> (do (n, t) <- tyD2 'ArgStream ty
+              ArgStream <$> tyMaybeString n <*> typeToTypeRef t)
 
-    typeToRetDef :: Type -> Maybe Return
+    typeToRetDef :: Type -> Maybe (Return String)
     typeToRetDef ty
       =   RetNothing <$ tyD0 'RetNothing ty
       <|> RetSingle <$> (tyD1 'RetSingle ty >>= typeToTypeRef)
@@ -189,12 +197,22 @@ typeToServiceDef toplevelty
               RetThrows <$> typeToTypeRef e <*> typeToTypeRef v)
       <|> RetStream <$> (tyD1 'RetStream ty >>= typeToTypeRef)
 
-    typeToTypeRef :: Type -> Maybe TypeRef
+    typeToTypeRef :: Type -> Maybe (TypeRef snm)
     typeToTypeRef ty
-      =   (do (_,innerTy) <- tyD2 'ViaSchema ty
-              return (ViaTH innerTy))
-      <|> (do (_,innerTy,_) <- tyD3 'ViaRegistry ty
-              return (ViaTH innerTy))
+      =   (do (_,innerTy) <- tyD2 'SchemaRef ty
+              pure (THRef innerTy))
+      <|> (do (_,innerTy,_) <- tyD3 'RegistryRef ty
+              pure (THRef innerTy))
+
+tyMaybeString :: Type -> Maybe (Maybe String)
+tyMaybeString (PromotedT c)
+  | c == 'Nothing
+  = pure Nothing
+tyMaybeString (AppT (PromotedT c) r)
+  | c == 'Just
+  = Just <$> tyString r
+tyMaybeString _
+  = Nothing
 
 tyString :: Type -> Maybe String
 tyString (SigT t _)

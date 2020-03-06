@@ -59,7 +59,7 @@ typeDefToDecl _schemaTy namer (DRecord name [f])
                      [pure (DerivClause Nothing [ConT ''Generic])]
        _wTy <- VarT <$> newName "w"
        -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete [f])
-       return [d] -- , hsi]
+       pure [d] -- , hsi]
 -- Records with more than one field
 typeDefToDecl _schemaTy namer (DRecord name fields)
   = do let complete = completeName namer name
@@ -72,7 +72,7 @@ typeDefToDecl _schemaTy namer (DRecord name fields)
                   [pure (DerivClause Nothing [ConT ''Generic])]
        _wTy <- VarT <$> newName "w"
        -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (fieldMapping complete fields)
-       return [d] -- , hsi]
+       pure [d] -- , hsi]
 -- Enumerations
 typeDefToDecl _schemaTy namer (DEnum name choices)
   = do let complete = completeName namer name
@@ -86,7 +86,7 @@ typeDefToDecl _schemaTy namer (DEnum name choices)
                   [pure (DerivClause Nothing [ConT ''Eq, ConT ''Ord, ConT ''Show, ConT ''Generic])]
        _wTy <- VarT <$> newName "w"
        -- let hsi = generateHasSchemaInstance wTy schemaTy name complete (choiceMapping complete choices)
-       return [d] --, hsi]
+       pure [d] --, hsi]
 -- Simple things
 typeDefToDecl _ _ (DSimple _)
   = fail "DSimple is not supported"

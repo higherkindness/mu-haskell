@@ -1,33 +1,36 @@
-cabal-version:       >=1.10
-name:                compendium-client
-version:             0.1.0.1
-synopsis:            Client for the Compendium schema server
-description:         Client for the <https://github.com/higherkindness/compendium Compendium> schema server
-license:             Apache-2.0
-license-file:        LICENSE
-author:              Alejandro Serrano
-maintainer:          alejandro.serrano@47deg.com
-copyright:           Copyright © 2019-2020 <http://47deg.com 47 Degrees>
-category:            Network
-build-type:          Simple
-homepage:            https://higherkindness.io/mu-haskell/
-bug-reports:         https://github.com/higherkindness/mu-haskell/issues
+name:          compendium-client
+version:       0.2.0.0
+synopsis:      Client for the Compendium schema server
+description:
+  Client for the <https://github.com/higherkindness/compendium Compendium> schema server
+
+license:       Apache-2.0
+license-file:  LICENSE
+author:        Alejandro Serrano, Flavio Corpa
+maintainer:    alejandro.serrano@47deg.com
+copyright:     Copyright © 2019-2020 <http://47deg.com 47 Degrees>
+category:      Network
+build-type:    Simple
+cabal-version: >=1.10
+homepage:      https://higherkindness.io/mu-haskell/
+bug-reports:   https://github.com/higherkindness/mu-haskell/issues
 
 source-repository head
   type:     git
   location: https://github.com/higherkindness/mu-haskell
 
 library
-  exposed-modules:     Compendium.Client
-  build-depends:       base >=4.12 && <5
-                     , aeson
-                     , text
-                     , http-client
-                     , servant
-                     , servant-client
-                     , megaparsec
-                     , language-protobuf
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -fprint-potential-instances
+  exposed-modules:  Compendium.Client
+  build-depends:
+      aeson
+    , base               >=4.12 && <5
+    , http-client
+    , language-protobuf
+    , megaparsec
+    , servant
+    , servant-client
+    , text
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall -fprint-potential-instances

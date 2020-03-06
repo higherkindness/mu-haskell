@@ -31,8 +31,13 @@ type StatusMap = M.Map T.Text T.Text
 type StatusUpdates = TBMChan HealthStatusMsg
 
 server :: StatusMap -> StatusUpdates -> ServerIO Identity HealthCheckService _
-server m upd = Server (setStatus_ m upd :<|>: checkH_ m :<|>: clearStatus_ m :<|>:
-  checkAll_ m :<|>: cleanAll_ m :<|>: {- watch_ upd :<|>: -} H0)
+server m upd = Server (
+  checkH_ m :<|>:
+  checkAll_ m :<|>:
+  cleanAll_ m :<|>:
+  clearStatus_ m :<|>:
+  setStatus_ m upd :<|>:
+  {- watch_ upd :<|>: -} H0)
 
 setStatus_ :: StatusMap -> StatusUpdates -> HealthStatusMsg -> ServerErrorIO ()
 setStatus_ m upd s@(HealthStatusMsg (HealthCheckMsg nm) (ServerStatusMsg ss))
@@ -48,7 +53,7 @@ checkH_ m (HealthCheckMsg nm) = alwaysOk $ do
   putStr "check: " >> print nm
   ss <- atomically $ M.lookup nm m
   print ss
-  return $ ServerStatusMsg (fromMaybe "<unknown>" ss)
+  pure $ ServerStatusMsg (fromMaybe "<unknown>" ss)
 
 clearStatus_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ()
 clearStatus_ m (HealthCheckMsg nm) = alwaysOk $ do

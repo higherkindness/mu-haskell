@@ -159,8 +159,11 @@ type Mappings a b = [Mapping a b]
 -- | Finds the corresponding right value of @v@
 --   in a mapping @ms@. When the kinds are 'Symbol',
 --   return the same value if not found.
+--   When the return type is 'Type', return ' ()'
+--   if the value is not found.
 type family MappingRight (ms :: Mappings a b) (v :: a) :: b where
-  MappingRight '[] (v :: Symbol) = v
+  MappingRight '[] (v :: Symbol) = (v :: Symbol)
+  MappingRight '[] (v :: Symbol) = (() :: Type)
   MappingRight '[] v             = TypeError ('Text "Cannot find value " ':<>: 'ShowType v)
   MappingRight ((x ':-> y) ': rest) x = y
   MappingRight (other      ': rest) x = MappingRight rest x
@@ -168,8 +171,11 @@ type family MappingRight (ms :: Mappings a b) (v :: a) :: b where
 -- | Finds the corresponding left value of @v@
 --   in a mapping @ms@. When the kinds are 'Symbol',
 --   return the same value if not found.
+--   When the return type is 'Type', return ' ()'
+--   if the value is not found.
 type family MappingLeft (ms :: Mappings a b) (v :: b) :: a where
-  MappingLeft '[] (v :: Symbol) = v
+  MappingLeft '[] (v :: Symbol) = (v :: Symbol)
+  MappingLeft '[] (v :: Symbol) = (() :: Type)
   MappingLeft '[] v             = TypeError ('Text "Cannot find value " ':<>: 'ShowType v)
   MappingLeft ((x ':-> y) ': rest) y = x
   MappingLeft (other      ': rest) y = MappingLeft rest y
