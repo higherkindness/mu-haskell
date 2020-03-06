@@ -51,10 +51,10 @@ runPipeline
      )
   => ServerT Identity chn p ServerErrorIO hs
   -> Proxy qr -> Proxy mut
-  -> Maybe T.Text -> GQL.ExecutableDocument
+  -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
   -> IO Aeson.Value
-runPipeline svr _ _ opName doc
-  = case parseDoc opName doc of
+runPipeline svr _ _ opName vmap doc
+  = case parseDoc opName vmap doc of
       Nothing ->
         return $
           Aeson.object [
