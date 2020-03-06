@@ -33,13 +33,22 @@ parseDoc ::
     LookupService ss mut ~ 'Service mut manns mmethods,
     ParseMethod p mmethods
   ) =>
+  Maybe T.Text ->
   GQL.ExecutableDocument ->
   f (Document p qr mut)
-parseDoc (GQL.ExecutableDocument defns)
+-- If there's no operation name, there must be only one query
+parseDoc Nothing (GQL.ExecutableDocument defns)
   = case GQL.partitionExDefs defns of
       ([unnamed], [], _) -> QueryDoc <$> parseQuery Proxy Proxy unnamed
       ([], [named], _)   -> parseTypedDoc named
       _                  -> empty
+-- If there's an operation name, look in the named queries
+parseDoc (Just operationName) (GQL.ExecutableDocument defns)
+  = case GQL.partitionExDefs defns of
+      (_, named, _) -> maybe empty parseTypedDoc (find isThis named)
+    where isThis (GQL._todName -> Just nm)
+            = GQL.unName nm == operationName
+          isThis _ = False
 
 parseTypedDoc ::
   ( Alternative f, p ~ 'Package pname ss,
