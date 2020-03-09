@@ -96,9 +96,11 @@ data TypeRef serviceName where
 -- | Defines the way in which arguments are handled.
 data Argument serviceName argName where
   -- | Use a single value.
-  ArgSingle :: Maybe argName -> TypeRef serviceName -> Argument serviceName argName
+  ArgSingle :: Maybe argName -> [ServiceAnnotation]
+            -> TypeRef serviceName -> Argument serviceName argName
   -- | Consume a stream of values.
-  ArgStream :: Maybe argName -> TypeRef serviceName -> Argument serviceName argName
+  ArgStream :: Maybe argName -> [ServiceAnnotation]
+            -> TypeRef serviceName -> Argument serviceName argName
 
 -- | Defines the different possibilities for returning
 --   information from a method.

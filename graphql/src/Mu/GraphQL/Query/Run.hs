@@ -51,10 +51,10 @@ runPipeline
      )
   => ServerT Identity chn p ServerErrorIO hs
   -> Proxy qr -> Proxy mut
-  -> Maybe T.Text -> GQL.ExecutableDocument
+  -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
   -> IO Aeson.Value
-runPipeline svr _ _ opName doc
-  = case parseDoc opName doc of
+runPipeline svr _ _ opName vmap doc
+  = case parseDoc opName vmap doc of
       Nothing ->
         return $
           Aeson.object [
@@ -165,7 +165,7 @@ class Handles Identity chn args ('RetSingle r) ServerErrorIO h
              -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
 
 instance (ArgumentConversion chn ref t, RunHandler p whole chn rest r h)
-         => RunHandler p whole chn ('ArgSingle aname ref ': rest) r (t -> h) where
+         => RunHandler p whole chn ('ArgSingle aname aanns ref ': rest) r (t -> h) where
   runHandler whole h (ArgumentValue one :* rest)
     = runHandler whole (h (convertArg (Proxy @chn) one)) rest
 instance (ResultConversion p whole chn r l)
