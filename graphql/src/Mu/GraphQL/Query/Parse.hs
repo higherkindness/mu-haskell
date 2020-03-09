@@ -14,7 +14,6 @@
 module Mu.GraphQL.Query.Parse where
 
 import           Control.Applicative
-import           Data.Functor.Identity
 import qualified Data.HashMap.Strict           as HM
 import           Data.Int                      (Int32)
 import           Data.Kind
@@ -254,7 +253,7 @@ instance (ObjectOrEnumParser sch (sch :/: sty))
 parseObjectOrEnum' :: (ObjectOrEnumParser sch t, Alternative f)
           => VariableMap
           -> GQL.Value
-          -> f (Term Identity sch t)
+          -> f (Term sch t)
 parseObjectOrEnum' vmap (GQL.VVariable x)
   = case HM.lookup (GQL.unName (GQL.unVariable x)) vmap of
       Nothing -> empty
@@ -265,7 +264,7 @@ class ObjectOrEnumParser (sch :: Schema') (t :: TypeDef Symbol Symbol) where
   parseObjectOrEnum :: Alternative f
                     => VariableMap
                     -> GQL.Value
-                    -> f (Term Identity sch t)
+                    -> f (Term sch t)
 
 instance (ObjectParser sch args)
          => ObjectOrEnumParser sch ('DRecord name args) where
@@ -280,7 +279,7 @@ class ObjectParser (sch :: Schema') (args :: [FieldDef Symbol Symbol]) where
   objectParser :: Alternative f
                => VariableMap
                -> [GQL.ObjectFieldG GQL.Value]
-               -> f (NP (Field Identity sch) args)
+               -> f (NP (Field sch) args)
 
 instance ObjectParser sch '[] where
   objectParser _ _ = pure Nil
@@ -291,7 +290,7 @@ instance
   objectParser vmap args
     = case find ((== nameVal (Proxy @nm)) . T.unpack . GQL.unName . GQL._ofName) args of
         Just (GQL.ObjectFieldG _ v)
-          -> (:*) <$> (Field . Identity <$> valueParser' vmap v) <*> objectParser vmap args
+          -> (:*) <$> (Field <$> valueParser' vmap v) <*> objectParser vmap args
         Nothing -> empty
 
 class EnumParser (choices :: [ChoiceDef Symbol]) where
@@ -310,7 +309,7 @@ instance (KnownName name, EnumParser choices)
 valueParser' :: (ValueParser sch v, Alternative f)
              => VariableMap
              -> GQL.Value
-             -> f (FieldValue Identity sch v)
+             -> f (FieldValue sch v)
 valueParser' vmap (GQL.VVariable x)
   = case HM.lookup (GQL.unName (GQL.unVariable x)) vmap of
       Nothing -> empty
@@ -321,7 +320,7 @@ class ValueParser (sch :: Schema') (v :: FieldType Symbol) where
   valueParser :: Alternative f
               => VariableMap
               -> GQL.Value
-              -> f (FieldValue Identity sch v)
+              -> f (FieldValue sch v)
 
 instance ValueParser sch 'TNull where
   valueParser _ GQL.VNull = pure FNull

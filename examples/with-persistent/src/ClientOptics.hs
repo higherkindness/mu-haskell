@@ -8,7 +8,6 @@ import qualified Data.Conduit.Combinators as C
 import qualified Data.Text                as T
 import           Mu.GRpc.Client.Optics
 import           System.Environment
-import           Text.Read                (readMaybe)
 
 import           Schema
 
@@ -24,14 +23,14 @@ main = do
 
 get :: GRpcConnection PersistentService 'MsgProtoBuf -> String -> IO ()
 get client idPerson = do
-  let req = readMaybe idPerson
+  let req = read idPerson
   putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
   response <- client ^. #getPerson $ record1 req
   putStrLn $ "GET: response was: " ++ show response
 
 add :: GRpcConnection PersistentService 'MsgProtoBuf -> String -> String -> IO ()
 add client nm ag = do
-  let p = record (Nothing, Just (T.pack nm), readMaybe ag)
+  let p = record (Nothing, T.pack nm, read ag)
   putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
   response <- client ^. #newPerson $ p
   putStrLn $ "ADD: was creating successful? " ++ show response

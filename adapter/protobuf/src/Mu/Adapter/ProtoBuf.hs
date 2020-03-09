@@ -13,7 +13,6 @@
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
-{-# language ViewPatterns          #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-|
 Description : Adapter for Protocol Buffers serialization
@@ -40,7 +39,6 @@ module Mu.Adapter.ProtoBuf (
 
 import           Control.Applicative
 import qualified Data.ByteString          as BS
-import           Data.Functor.MaybeLike
 import           Data.Int
 import           Data.SOP                 (All)
 import qualified Data.Text                as T
@@ -92,16 +90,16 @@ type family FindProtoBufOneOfIds' (t :: tn) (f :: fn) (p :: ProtoBufAnnotation) 
 -- | Represents those 'Schema's which are supported by Protocol Buffers.
 --   Some values which can be represented as 'Term's cannot be so in
 --   Protocol Buffers. For example, you cannot have a list within an option.
-class ProtoBridgeTerm w sch (sch :/: sty) => IsProtoSchema w sch sty
-instance ProtoBridgeTerm w sch (sch :/: sty) => IsProtoSchema w sch sty
+class ProtoBridgeTerm sch (sch :/: sty) => IsProtoSchema sch sty
+instance ProtoBridgeTerm sch (sch :/: sty) => IsProtoSchema sch sty
 
 -- type HasProtoSchema w sch sty a = (HasSchema w sch sty a, IsProtoSchema w sch sty)
 
 -- | Conversion to Protocol Buffers mediated by a schema.
 toProtoViaSchema :: forall t f (sch :: Schema t f) a sty.
-                    (IsProtoSchema Maybe sch sty, ToSchema Maybe sch sty a)
+                    (IsProtoSchema sch sty, ToSchema sch sty a)
                  => a -> PBEnc.MessageBuilder
-toProtoViaSchema = termToProto . toSchema' @_ @_ @sch @Maybe
+toProtoViaSchema = termToProto . toSchema' @_ @_ @sch
 
 -- | Conversion from Protocol Buffers mediated by a schema.
 --   This function requires a 'PBDec.RawMessage', which means
@@ -109,15 +107,15 @@ toProtoViaSchema = termToProto . toSchema' @_ @_ @sch @Maybe
 --   is well-formed. Use 'parseProtoViaSchema' to parse directly
 --   from a 'BS.ByteString'.
 fromProtoViaSchema :: forall t f (sch :: Schema t f) a sty.
-                      (IsProtoSchema Maybe sch sty, FromSchema Maybe sch sty a)
+                      (IsProtoSchema sch sty, FromSchema sch sty a)
                    => PBDec.Parser PBDec.RawMessage a
-fromProtoViaSchema = fromSchema' @_ @_ @sch @Maybe <$> protoToTerm
+fromProtoViaSchema = fromSchema' @_ @_ @sch <$> protoToTerm
 
 -- | Conversion from Protocol Buffers mediated by a schema.
 --   This function receives the 'BS.ByteString' directly,
 --   and parses it as part of its duty.
 parseProtoViaSchema :: forall sch a sty.
-                       (IsProtoSchema Maybe sch sty, FromSchema Maybe sch sty a)
+                       (IsProtoSchema sch sty, FromSchema sch sty a)
                     => BS.ByteString -> Either PBDec.ParseError a
 parseProtoViaSchema = PBDec.parse (fromProtoViaSchema @_ @_ @sch)
 
@@ -152,7 +150,7 @@ class FromProtoBufRegistry (ms :: Mappings Nat Schema') t where
 
 instance FromProtoBufRegistry '[] t where
   fromProtoBufRegistry' _ = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "no schema found in registry"))
-instance (IsProtoSchema Maybe s sty, FromSchema Maybe s sty t, FromProtoBufRegistry ms t)
+instance (IsProtoSchema s sty, FromSchema s sty t, FromProtoBufRegistry ms t)
          => FromProtoBufRegistry ( (n ':-> s) ': ms) t where
   fromProtoBufRegistry' _ = fromProtoViaSchema @_ @_ @s <|> fromProtoBufRegistry' (Proxy @ms)
 
@@ -169,30 +167,27 @@ instance Alternative (PBDec.Parser i) where
                              r@(Right _) -> r
 
 -- Top-level terms
-class ProtoBridgeTerm (w :: * -> *) (sch :: Schema tn fn) (t :: TypeDef tn fn) where
-  termToProto :: Term w sch t -> PBEnc.MessageBuilder
-  protoToTerm :: PBDec.Parser PBDec.RawMessage (Term w sch t)
+class ProtoBridgeTerm (sch :: Schema tn fn) (t :: TypeDef tn fn) where
+  termToProto :: Term sch t -> PBEnc.MessageBuilder
+  protoToTerm :: PBDec.Parser PBDec.RawMessage (Term sch t)
 
 -- Embedded terms
-class ProtoBridgeEmbedTerm (w :: * -> *) (sch :: Schema tn fn) (t :: TypeDef tn fn) where
-  termToEmbedProto :: FieldNumber -> Term w sch t -> PBEnc.MessageBuilder
-  embedProtoToFieldValue :: PBDec.Parser PBDec.RawField (Term w sch t)
-  embedProtoToOneFieldValue :: PBDec.Parser PBDec.RawPrimitive (Term w sch t)
+class ProtoBridgeEmbedTerm (sch :: Schema tn fn) (t :: TypeDef tn fn) where
+  termToEmbedProto :: FieldNumber -> Term sch t -> PBEnc.MessageBuilder
+  embedProtoToOneFieldValue :: PBDec.Parser PBDec.RawPrimitive (Term sch t)
 
-class ProtoBridgeField (w :: * -> *) (sch :: Schema tn fn) (ty :: tn) (f :: FieldDef tn fn) where
-  fieldToProto :: Field w sch f -> PBEnc.MessageBuilder
-  protoToField :: PBDec.Parser PBDec.RawMessage (Field w sch f)
+class ProtoBridgeField (sch :: Schema tn fn) (ty :: tn) (f :: FieldDef tn fn) where
+  fieldToProto :: Field sch f -> PBEnc.MessageBuilder
+  protoToField :: PBDec.Parser PBDec.RawMessage (Field sch f)
 
-class ProtoBridgeFieldValue (w :: * -> *) (sch :: Schema tn fn) (t :: FieldType tn) where
-  fieldValueToProto :: FieldNumber -> FieldValue w sch t -> PBEnc.MessageBuilder
-  protoToFieldValue :: PBDec.Parser PBDec.RawField (FieldValue w sch t)
+class ProtoBridgeOneFieldValue (sch :: Schema tn fn) (t :: FieldType tn) where
+  defaultOneFieldValue :: Maybe (FieldValue sch t)
+  oneFieldValueToProto :: FieldNumber -> FieldValue sch t -> PBEnc.MessageBuilder
+  protoToOneFieldValue :: PBDec.Parser PBDec.RawPrimitive (FieldValue sch t)
 
-class ProtoBridgeOneFieldValue (w :: * -> *) (sch :: Schema tn fn) (t :: FieldType tn) where
-  protoToOneFieldValue :: PBDec.Parser PBDec.RawPrimitive (FieldValue w sch t)
-
-class ProtoBridgeUnionFieldValue (w :: * -> *) (ids :: [Nat]) (sch :: Schema tn fn) (ts :: [FieldType tn]) where
-  unionFieldValueToProto :: NS (FieldValue w sch) ts -> PBEnc.MessageBuilder
-  protoToUnionFieldValue :: PBDec.Parser PBDec.RawMessage (NS (FieldValue w sch) ts)
+class ProtoBridgeUnionFieldValue (ids :: [Nat]) (sch :: Schema tn fn) (ts :: [FieldType tn]) where
+  unionFieldValueToProto :: NS (FieldValue sch) ts -> PBEnc.MessageBuilder
+  protoToUnionFieldValue :: PBDec.Parser PBDec.RawMessage (NS (FieldValue sch) ts)
 
 -- --------
 -- TERMS --
@@ -201,46 +196,39 @@ class ProtoBridgeUnionFieldValue (w :: * -> *) (ids :: [Nat]) (sch :: Schema tn 
 -- RECORDS
 -- -------
 
-instance (All (ProtoBridgeField w sch name) args, ProtoBridgeFields w sch name args)
-         => ProtoBridgeTerm w sch ('DRecord name args) where
+instance (All (ProtoBridgeField sch name) args, ProtoBridgeFields sch name args)
+         => ProtoBridgeTerm sch ('DRecord name args) where
   termToProto (TRecord fields) = go fields
-    where go :: forall fs. All (ProtoBridgeField w sch name) fs
-             => NP (Field w sch) fs -> PBEnc.MessageBuilder
+    where go :: forall fs. All (ProtoBridgeField sch name) fs
+             => NP (Field sch) fs -> PBEnc.MessageBuilder
           go Nil       = mempty
-          go (f :* fs) = fieldToProto @_ @_ @w @sch @name f <> go fs
-  protoToTerm = TRecord <$> protoToFields @_ @_ @w @sch @name
+          go (f :* fs) = fieldToProto @_ @_ @sch @name f <> go fs
+  protoToTerm = TRecord <$> protoToFields @_ @_ @sch @name
 
-class ProtoBridgeFields (w :: * -> *) (sch :: Schema tn fn) (ty :: tn) (fields :: [FieldDef tn fn]) where
-  protoToFields :: PBDec.Parser PBDec.RawMessage (NP (Field w sch) fields)
-instance ProtoBridgeFields w sch ty '[] where
+class ProtoBridgeFields (sch :: Schema tn fn) (ty :: tn) (fields :: [FieldDef tn fn]) where
+  protoToFields :: PBDec.Parser PBDec.RawMessage (NP (Field sch) fields)
+instance ProtoBridgeFields sch ty '[] where
   protoToFields = pure Nil
-instance (ProtoBridgeField w sch ty f, ProtoBridgeFields w sch ty fs)
-         => ProtoBridgeFields w sch ty (f ': fs) where
-  protoToFields = (:*) <$> protoToField @_ @_ @w @sch @ty <*> protoToFields @_ @_ @w @sch @ty
+instance (ProtoBridgeField sch ty f, ProtoBridgeFields sch ty fs)
+         => ProtoBridgeFields sch ty (f ': fs) where
+  protoToFields = (:*) <$> protoToField @_ @_ @sch @ty <*> protoToFields @_ @_ @sch @ty
 
-instance ProtoBridgeTerm w sch ('DRecord name args)
-         => ProtoBridgeEmbedTerm w sch ('DRecord name args) where
+instance ProtoBridgeTerm sch ('DRecord name args)
+         => ProtoBridgeEmbedTerm sch ('DRecord name args) where
   termToEmbedProto fid v = PBEnc.embedded fid (termToProto v)
-  embedProtoToFieldValue = do
-    t <- PBDec.embedded (protoToTerm @_ @_ @w @sch @('DRecord name args))
-    case t of
-      Nothing -> PBDec.Parser (\_ -> Left (PBDec.WireTypeError "expected message"))
-      Just v  -> pure v
-  embedProtoToOneFieldValue = PBDec.embedded' (protoToTerm @_ @_ @w @sch @('DRecord name args))
+  embedProtoToOneFieldValue = PBDec.embedded' (protoToTerm @_ @_ @sch @('DRecord name args))
 
 -- ENUMERATIONS
 -- ------------
 
 instance TypeError ('Text "protobuf requires wrapping enums in a message")
-         => ProtoBridgeTerm w sch ('DEnum name choices) where
+         => ProtoBridgeTerm sch ('DEnum name choices) where
   termToProto = error "protobuf requires wrapping enums in a message"
   protoToTerm = error "protobuf requires wrapping enums in a message"
 
 instance ProtoBridgeEnum sch name choices
-         => ProtoBridgeEmbedTerm w sch ('DEnum name choices) where
+         => ProtoBridgeEmbedTerm sch ('DEnum name choices) where
   termToEmbedProto fid (TEnum v) = enumToProto @_ @_ @sch @name fid v
-  embedProtoToFieldValue    = do n <- PBDec.one PBDec.int32 0
-                                 TEnum <$> protoToEnum @_ @_ @sch @name n
   embedProtoToOneFieldValue = do n <- PBDec.int32
                                  TEnum <$> protoToEnum @_ @_ @sch @name n
 
@@ -264,7 +252,7 @@ instance (KnownNat (FindProtoBufId sch ty c), ProtoBridgeEnum sch ty cs)
 -- ------
 
 instance TypeError ('Text "protobuf requires wrapping primitives in a message")
-         => ProtoBridgeTerm w sch ('DSimple t) where
+         => ProtoBridgeTerm sch ('DSimple t) where
   termToProto = error "protobuf requires wrapping primitives in a message"
   protoToTerm = error "protobuf requires wrapping primitives in a message"
 
@@ -273,23 +261,47 @@ instance TypeError ('Text "protobuf requires wrapping primitives in a message")
 -- ---------
 
 instance {-# OVERLAPPABLE #-}
-         (MaybeLike w, Alternative w, ProtoBridgeFieldValue w sch t, KnownNat (FindProtoBufId sch ty name))
-         => ProtoBridgeField w sch ty ('FieldDef name t) where
-  fieldToProto (Field (likeMaybe -> Just v)) = fieldValueToProto fieldId v
+         (ProtoBridgeOneFieldValue sch t, KnownNat (FindProtoBufId sch ty name))
+         => ProtoBridgeField sch ty ('FieldDef name t) where
+  fieldToProto (Field v) = oneFieldValueToProto fieldId v
     where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
-  fieldToProto (Field _) = mempty
-  protoToField = Field <$> ((pure <$> protoToFieldValue `at` fieldId) <|> pure empty)
+  protoToField
+    = Field <$> case defaultOneFieldValue of
+        Nothing -> do r <- one (Just <$> protoToOneFieldValue) Nothing `at` fieldId
+                      maybe empty pure r
+        Just d  -> one protoToOneFieldValue d `at` fieldId <|> pure d
     where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
 
 instance {-# OVERLAPS #-}
-         (MaybeLike w, Alternative w, ProtoBridgeUnionFieldValue w (FindProtoBufOneOfIds sch ty name) sch ts)
-         => ProtoBridgeField w sch ty ('FieldDef name ('TUnion ts)) where
-  fieldToProto (Field (likeMaybe -> Just (FUnion v)))
-    = unionFieldValueToProto @_ @_ @w @(FindProtoBufOneOfIds sch ty name) v
-  fieldToProto (Field _) = mempty
+         (ProtoBridgeOneFieldValue sch t, KnownNat (FindProtoBufId sch ty name))
+         => ProtoBridgeField sch ty ('FieldDef name ('TOption t)) where
+  fieldToProto (Field (FOption Nothing))  = mempty
+  fieldToProto (Field (FOption (Just v))) = oneFieldValueToProto fieldId v
+    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
+  protoToField = Field . FOption <$>
+                   (PBDec.one (Just <$> protoToOneFieldValue) Nothing `at` fieldId <|> pure Nothing)
+    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
+
+instance {-# OVERLAPS #-}
+         (ProtoBridgeOneFieldValue sch t, KnownNat (FindProtoBufId sch ty name))
+         => ProtoBridgeField sch ty ('FieldDef name ('TList t)) where
+  fieldToProto (Field (FList xs))  = foldMap (oneFieldValueToProto fieldId) xs
+    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
+  protoToField = Field . FList <$> (PBDec.repeated protoToOneFieldValue `at` fieldId <|> pure [])
+    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
+
+instance TypeError ('Text "maps are not currently supported")
+         => ProtoBridgeField sch ty ('FieldDef name ('TMap k v)) where
+  fieldToProto = error "maps are not currently supported"
+  protoToField = error "maps are not currently supported"
+
+instance {-# OVERLAPS #-}
+         (ProtoBridgeUnionFieldValue (FindProtoBufOneOfIds sch ty name) sch ts)
+         => ProtoBridgeField sch ty ('FieldDef name ('TUnion ts)) where
+  fieldToProto (Field (FUnion v))
+    = unionFieldValueToProto @_ @_ @(FindProtoBufOneOfIds sch ty name) v
   protoToField
-    = Field . pure . FUnion <$> protoToUnionFieldValue @_ @_ @w @(FindProtoBufOneOfIds sch ty name)
-    <|> pure (Field empty)
+    = Field . FUnion <$> protoToUnionFieldValue @_ @_ @(FindProtoBufOneOfIds sch ty name)
 
 -- ------------------
 -- TYPES OF FIELDS --
@@ -298,130 +310,115 @@ instance {-# OVERLAPS #-}
 -- SCHEMATIC
 -- ---------
 
-instance ProtoBridgeEmbedTerm w sch (sch :/: t)
-         => ProtoBridgeFieldValue w sch ('TSchematic t) where
-  fieldValueToProto fid (FSchematic v) = termToEmbedProto fid v
-  protoToFieldValue = FSchematic <$> embedProtoToFieldValue
-instance ProtoBridgeEmbedTerm w sch (sch :/: t)
-         => ProtoBridgeOneFieldValue w sch ('TSchematic t) where
+instance ProtoBridgeEmbedTerm sch (sch :/: t)
+         => ProtoBridgeOneFieldValue sch ('TSchematic t) where
+  defaultOneFieldValue = Nothing
+  oneFieldValueToProto fid (FSchematic v) = termToEmbedProto fid v
   protoToOneFieldValue = FSchematic <$> embedProtoToOneFieldValue
 
 -- PRIMITIVE TYPES
 -- ---------------
 
 instance TypeError ('Text "null cannot be converted to protobuf")
-         => ProtoBridgeFieldValue w sch 'TNull where
-  fieldValueToProto = error "null cannot be converted to protobuf"
-  protoToFieldValue = error "null cannot be converted to protobuf"
-instance TypeError ('Text "null cannot be converted to protobuf")
-         => ProtoBridgeOneFieldValue w sch 'TNull where
+         => ProtoBridgeOneFieldValue sch 'TNull where
+  defaultOneFieldValue = error "null cannot be converted to protobuf"
+  oneFieldValueToProto = error "null cannot be converted to protobuf"
   protoToOneFieldValue = error "null cannot be converted to protobuf"
 
-instance ProtoBridgeFieldValue w sch ('TPrimitive Int) where
-  fieldValueToProto fid (FPrimitive n) = PBEnc.int32 fid (fromIntegral n)
-  protoToFieldValue = FPrimitive . fromIntegral <$> PBDec.one PBDec.int32 0
-instance ProtoBridgeOneFieldValue w sch ('TPrimitive Int) where
+instance ProtoBridgeOneFieldValue sch ('TPrimitive Int) where
+  defaultOneFieldValue = Just $ FPrimitive 0
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.int32 fid (fromIntegral n)
   protoToOneFieldValue = FPrimitive . fromIntegral <$> PBDec.int32
 
-instance ProtoBridgeFieldValue w sch ('TPrimitive Int32) where
-  fieldValueToProto fid (FPrimitive n) = PBEnc.int32 fid n
-  protoToFieldValue = FPrimitive <$> PBDec.one PBDec.int32 0
-instance ProtoBridgeOneFieldValue w sch ('TPrimitive Int32) where
+instance ProtoBridgeOneFieldValue sch ('TPrimitive Int32) where
+  defaultOneFieldValue = Just $ FPrimitive 0
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.int32 fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.int32
 
-instance ProtoBridgeFieldValue w sch ('TPrimitive Int64) where
-  fieldValueToProto fid (FPrimitive n) = PBEnc.int64 fid n
-  protoToFieldValue = FPrimitive <$> PBDec.one PBDec.int64 0
-instance ProtoBridgeOneFieldValue w sch ('TPrimitive Int64) where
+instance ProtoBridgeOneFieldValue sch ('TPrimitive Int64) where
+  defaultOneFieldValue = Just $ FPrimitive 0
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.int64 fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.int64
 
 -- WARNING! These instances may go out of bounds
-instance ProtoBridgeFieldValue w sch ('TPrimitive Integer) where
-  fieldValueToProto fid (FPrimitive n) = PBEnc.int64 fid (fromInteger n)
-  protoToFieldValue = FPrimitive . fromIntegral <$> PBDec.one PBDec.int64 0
-instance ProtoBridgeOneFieldValue w sch ('TPrimitive Integer) where
+instance ProtoBridgeOneFieldValue sch ('TPrimitive Integer) where
+  defaultOneFieldValue = Just $ FPrimitive 0
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.int64 fid (fromInteger n)
   protoToOneFieldValue = FPrimitive . fromIntegral <$> PBDec.int64
 
-instance ProtoBridgeFieldValue w sch ('TPrimitive Float) where
-  fieldValueToProto fid (FPrimitive n) = PBEnc.float fid n
-  protoToFieldValue = FPrimitive <$> PBDec.one PBDec.float 0
-instance ProtoBridgeOneFieldValue w sch ('TPrimitive Float) where
+instance ProtoBridgeOneFieldValue sch ('TPrimitive Float) where
+  defaultOneFieldValue = Just $ FPrimitive 0
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.float fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.float
 
-instance ProtoBridgeFieldValue w sch ('TPrimitive Double) where
-  fieldValueToProto fid (FPrimitive n) = PBEnc.double fid n
-  protoToFieldValue = FPrimitive <$> PBDec.one PBDec.double 0
-instance ProtoBridgeOneFieldValue w sch ('TPrimitive Double) where
+instance ProtoBridgeOneFieldValue sch ('TPrimitive Double) where
+  defaultOneFieldValue = Just $ FPrimitive 0
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.double fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.double
 
-instance ProtoBridgeFieldValue w sch ('TPrimitive Bool) where
-  fieldValueToProto fid (FPrimitive n) = PBEnc.enum fid n
-  protoToFieldValue = FPrimitive <$> PBDec.one PBDec.bool False
-instance ProtoBridgeOneFieldValue w sch ('TPrimitive Bool) where
+instance ProtoBridgeOneFieldValue sch ('TPrimitive Bool) where
+  defaultOneFieldValue = Just $ FPrimitive False
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.enum fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.bool
 
-instance ProtoBridgeFieldValue w sch ('TPrimitive T.Text) where
-  fieldValueToProto fid (FPrimitive n) = PBEnc.text fid (LT.fromStrict n)
-  protoToFieldValue = FPrimitive . LT.toStrict <$> PBDec.one PBDec.text ""
-instance ProtoBridgeOneFieldValue w sch ('TPrimitive T.Text) where
+instance ProtoBridgeOneFieldValue sch ('TPrimitive T.Text) where
+  defaultOneFieldValue = Just $ FPrimitive ""
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.text fid (LT.fromStrict n)
   protoToOneFieldValue = FPrimitive . LT.toStrict <$> PBDec.text
 
-instance ProtoBridgeFieldValue w sch ('TPrimitive LT.Text) where
-  fieldValueToProto fid (FPrimitive n) = PBEnc.text fid n
-  protoToFieldValue = FPrimitive <$> PBDec.one PBDec.text ""
-instance ProtoBridgeOneFieldValue w sch ('TPrimitive LT.Text) where
+instance ProtoBridgeOneFieldValue sch ('TPrimitive LT.Text) where
+  defaultOneFieldValue = Just $ FPrimitive ""
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.text fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.text
 
-instance ProtoBridgeFieldValue w sch ('TPrimitive BS.ByteString) where
-  fieldValueToProto fid (FPrimitive n) = PBEnc.byteString fid n
-  protoToFieldValue = FPrimitive <$> PBDec.one PBDec.byteString ""
-instance ProtoBridgeOneFieldValue w sch ('TPrimitive BS.ByteString) where
+instance ProtoBridgeOneFieldValue sch ('TPrimitive BS.ByteString) where
+  defaultOneFieldValue = Just $ FPrimitive ""
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.byteString fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.byteString
 
 -- Note that Maybes and Lists require that we recur on the OneFieldValue class
 
-instance (ProtoBridgeFieldValue w sch t, ProtoBridgeOneFieldValue w sch t)
-         => ProtoBridgeFieldValue w sch ('TOption t) where
-  fieldValueToProto _   (FOption Nothing)  = mempty
-  fieldValueToProto fid (FOption (Just v)) = fieldValueToProto fid v
-  protoToFieldValue = FOption <$> PBDec.one (Just <$> protoToOneFieldValue) Nothing
-
 instance TypeError ('Text "optionals cannot be nested in protobuf")
-         => ProtoBridgeOneFieldValue w sch ('TOption t) where
+         => ProtoBridgeOneFieldValue sch ('TOption t) where
+  defaultOneFieldValue = error "optionals cannot be nested in protobuf"
+  oneFieldValueToProto = error "optionals cannot be nested in protobuf"
   protoToOneFieldValue = error "optionals cannot be nested in protobuf"
 
-instance (ProtoBridgeFieldValue w sch t, ProtoBridgeOneFieldValue w sch t)
-         => ProtoBridgeFieldValue w sch ('TList t) where
-  fieldValueToProto fid (FList xs) = foldMap (fieldValueToProto fid) xs
-  protoToFieldValue = FList <$> PBDec.repeated protoToOneFieldValue
-
 instance TypeError ('Text "lists cannot be nested in protobuf")
-         => ProtoBridgeOneFieldValue w sch ('TList t) where
+         => ProtoBridgeOneFieldValue sch ('TList t) where
+  defaultOneFieldValue = error "lists cannot be nested in protobuf"
+  oneFieldValueToProto = error "lists cannot be nested in protobuf"
   protoToOneFieldValue = error "lists cannot be nested in protobuf"
 
 instance TypeError ('Text "maps are not currently supported")
-         => ProtoBridgeFieldValue w sch ('TMap k v) where
-  fieldValueToProto = error "maps are not currently supported"
-  protoToFieldValue = error "maps are not currently supported"
+         => ProtoBridgeOneFieldValue sch ('TMap k v) where
+  defaultOneFieldValue = error "maps are not currently supported"
+  oneFieldValueToProto = error "maps are not currently supported"
+  protoToOneFieldValue = error "maps are not currently supported"
 
 instance TypeError ('Text "nested unions are not currently supported")
-         => ProtoBridgeFieldValue w sch ('TUnion choices) where
-  fieldValueToProto = error "nested unions are not currently supported"
-  protoToFieldValue = error "nested unions are not currently supported"
+         => ProtoBridgeOneFieldValue sch ('TUnion choices) where
+  defaultOneFieldValue = error "nested unions are not currently supported"
+  oneFieldValueToProto = error "nested unions are not currently supported"
+  protoToOneFieldValue = error "nested unions are not currently supported"
 
 -- UNIONS
 -- ------
 
-instance ProtoBridgeUnionFieldValue w ids sch '[] where
+instance ProtoBridgeUnionFieldValue ids sch '[] where
   unionFieldValueToProto = error "empty list of unions"
   protoToUnionFieldValue = PBDec.Parser (\_ -> Left (PBDec.WireTypeError "unknown type in an union"))
 
-instance ( ProtoBridgeFieldValue w sch t, KnownNat thisId
-         , ProtoBridgeUnionFieldValue w restIds sch ts )
-         => ProtoBridgeUnionFieldValue w (thisId ': restIds) sch (t ': ts) where
-  unionFieldValueToProto (Z v) = fieldValueToProto fieldId v
+instance ( ProtoBridgeOneFieldValue sch t, KnownNat thisId
+         , ProtoBridgeUnionFieldValue restIds sch ts )
+         => ProtoBridgeUnionFieldValue (thisId ': restIds) sch (t ': ts) where
+  unionFieldValueToProto (Z v) = oneFieldValueToProto fieldId v
     where fieldId = fromInteger $ natVal (Proxy @thisId)
-  unionFieldValueToProto (S v) = unionFieldValueToProto @_ @_ @w @restIds v
+  unionFieldValueToProto (S v) = unionFieldValueToProto @_ @_ @restIds v
   protoToUnionFieldValue
-    = Z <$> protoToFieldValue `at` fieldId <|> S <$> protoToUnionFieldValue @_ @_ @w @restIds
+    = Z <$> p <|> S <$> protoToUnionFieldValue @_ @_ @restIds
     where fieldId = fromInteger $ natVal (Proxy @thisId)
+          p = case defaultOneFieldValue of
+            Nothing -> do r <- one (Just <$> protoToOneFieldValue) Nothing `at` fieldId
+                          maybe empty pure r
+            Just d  -> one protoToOneFieldValue d `at` fieldId <|> pure d

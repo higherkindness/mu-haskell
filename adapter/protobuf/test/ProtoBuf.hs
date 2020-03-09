@@ -21,21 +21,21 @@ import           Mu.Schema
 import           Mu.Schema.Examples
 
 data MPerson
-  = MPerson { firstName :: Maybe T.Text
-            , lastName  :: Maybe T.Text
-            , age       :: Maybe (Maybe Int)
-            , gender    :: Maybe (Maybe Gender)
-            , address   :: Maybe MAddress }
+  = MPerson { firstName :: T.Text
+            , lastName  :: T.Text
+            , age       :: Maybe Int
+            , gender    :: Maybe Gender
+            , address   :: MAddress }
   deriving (Eq, Show, Generic)
-  deriving (ToSchema Maybe ExampleSchema "person")
-  deriving (FromSchema Maybe ExampleSchema "person")
+  deriving (ToSchema ExampleSchema "person")
+  deriving (FromSchema ExampleSchema "person")
 
 data MAddress
-  = MAddress { postcode :: Maybe T.Text
-             , country  :: Maybe T.Text }
+  = MAddress { postcode :: T.Text
+             , country  :: T.Text }
   deriving (Eq, Show, Generic)
-  deriving (ToSchema Maybe ExampleSchema "address")
-  deriving (FromSchema Maybe ExampleSchema "address")
+  deriving (ToSchema ExampleSchema "address")
+  deriving (FromSchema ExampleSchema "address")
 
 type instance AnnotatedSchema ProtoBufAnnotation ExampleSchema
   = '[ 'AnnField "gender" "male"   ('ProtoBufId 1)
@@ -50,15 +50,15 @@ type instance AnnotatedSchema ProtoBufAnnotation ExampleSchema
      , 'AnnField "person" "address"   ('ProtoBufId 5) ]
 
 exampleAddress :: MAddress
-exampleAddress = MAddress (Just "1111BB") (Just "Spain")
+exampleAddress = MAddress "1111BB" "Spain"
 
 examplePerson1, examplePerson2 :: MPerson
-examplePerson1 = MPerson (Just "Haskellio") (Just "Gómez")
-                         (Just $ Just 30) (Just $ Just Male)
-                         (Just exampleAddress)
-examplePerson2 = MPerson (Just "Cuarenta") (Just "Siete")
-                         (Just Nothing) (Just Nothing)
-                         (Just exampleAddress)
+examplePerson1 = MPerson "Haskellio" "Gómez"
+                         (Just 30) (Just Male)
+                         exampleAddress
+examplePerson2 = MPerson "Cuarenta" "Siete"
+                         Nothing Nothing
+                         exampleAddress
 
 main :: IO ()
 main = do -- Obtain the filenames

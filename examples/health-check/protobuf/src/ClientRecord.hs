@@ -46,7 +46,7 @@ main = do -- Setup the client
 
 simple :: HealthCall -> String -> IO ()
 simple client who = do
-  let hcm = HealthCheckMsg (Just $ T.pack who)
+  let hcm = HealthCheckMsg $ T.pack who
   putStrLn ("UNARY: Is there some server named " <> who <> "?")
   rknown <- check client hcm
   putStrLn ("UNARY: Actually the status is " <> show rknown)
@@ -58,15 +58,15 @@ simple client who = do
 
 update :: HealthCall -> String -> String -> IO ()
 update client who newstatus = do
-  let hcm = HealthCheckMsg (Just $ T.pack who)
+  let hcm = HealthCheckMsg $ T.pack who
   putStrLn ("UNARY: Setting " <> who <> " service to " <> newstatus)
-  r <- setStatus client (HealthStatusMsg (Just hcm) (Just $ ServerStatusMsg (Just $ T.pack newstatus)))
+  r <- setStatus client (HealthStatusMsg (Just hcm) (Just $ ServerStatusMsg (T.pack newstatus)))
   putStrLn ("UNARY: Was setting successful? " <> show r)
   rstatus <- check client hcm
   putStrLn ("UNARY: Checked the status of " <> who <> ". Obtained: " <> show rstatus)
 
 watching :: HealthCall -> String -> IO ()
 watching client who = do
-  let hcm = HealthCheckMsg (Just $ T.pack who)
+  let hcm = HealthCheckMsg $ T.pack who
   stream <- watch client hcm
   runConduit $ stream .| C.mapM_ print

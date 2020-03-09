@@ -1,5 +1,5 @@
 name:          mu-grpc-common
-version:       0.2.0.0
+version:       0.3.0.0
 synopsis:      gRPC for Mu, common modules for client and server
 description:
   Use @mu-grpc-server@ or @mu-grpc-client@ (the common parts).

@@ -24,7 +24,6 @@ import           Control.Monad.Except          (runExceptT)
 import           Control.Monad.Writer
 import qualified Data.Aeson                    as Aeson
 import qualified Data.Aeson.Types              as Aeson
-import           Data.Functor.Identity
 import           Data.Maybe
 import qualified Data.Text                     as T
 import           GHC.TypeLits
@@ -51,7 +50,7 @@ runPipeline
      , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
      , MappingRight chn mut ~ ()
      )
-  => ServerT Identity chn p ServerErrorIO hs
+  => ServerT chn p ServerErrorIO hs
   -> Proxy qr -> Proxy mut
   -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
   -> IO Aeson.Value
@@ -82,7 +81,7 @@ runDocument
      , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
      , MappingRight chn mut ~ ()
      )
-  => ServerT Identity chn p ServerErrorIO hs
+  => ServerT chn p ServerErrorIO hs
   -> Document p qr mut
   -> WriterT [GraphQLError] IO Aeson.Value
 runDocument svr (QueryDoc q)
@@ -96,7 +95,7 @@ runQuery
      , p ~ 'Package pname ss
      , s ~ 'Service sname sanns ms
      , inh ~ MappingRight chn sname )
-  => ServerT Identity chn p ServerErrorIO hs
+  => ServerT chn p ServerErrorIO hs
   -> inh
   -> ServiceQuery p s
   -> WriterT [GraphQLError] IO Aeson.Value
@@ -107,8 +106,8 @@ class RunQueryFindHandler p whole chn ss s hs where
     :: ( p ~  'Package pname wholess
        , s ~ 'Service sname sanns ms
        , inh ~ MappingRight chn sname )
-    => ServerT Identity chn p ServerErrorIO whole
-    -> ServicesT Identity chn ss ServerErrorIO hs
+    => ServerT chn p ServerErrorIO whole
+    -> ServicesT chn ss ServerErrorIO hs
     -> inh
     -> ServiceQuery p s
     -> WriterT [GraphQLError] IO Aeson.Value
@@ -142,9 +141,9 @@ class RunMethod p whole chn sname ms hs where
   runMethod
     :: ( p ~ 'Package pname wholess
        , inh ~ MappingRight chn sname )
-    => ServerT Identity chn p ServerErrorIO whole
+    => ServerT chn p ServerErrorIO whole
     -> Proxy sname -> inh
-    -> HandlersT Identity chn inh ms ServerErrorIO hs
+    -> HandlersT chn inh ms ServerErrorIO hs
     -> NS (ChosenMethodQuery p) ms
     -> WriterT [GraphQLError] IO (Maybe Aeson.Value, T.Text)
 
@@ -157,9 +156,9 @@ instance (RunMethod p whole chn s ms hs, KnownName mname, RunHandler p whole chn
   runMethod whole p inh (_ :<||>: r) (S cont)
     = runMethod whole p inh r cont
 
-class Handles Identity chn args ('RetSingle r) ServerErrorIO h
+class Handles chn args ('RetSingle r) ServerErrorIO h
       => RunHandler p whole chn args r h where
-  runHandler :: ServerT Identity chn p ServerErrorIO whole
+  runHandler :: ServerT chn p ServerErrorIO whole
              -> h
              -> NP (ArgumentValue p) args
              -> ReturnQuery p r
@@ -177,12 +176,12 @@ instance (ResultConversion p whole chn r l)
       Right v -> convertResult whole q v
       Left e  -> tell [GraphQLError e []] >> pure Nothing
 
-class FromRef Identity chn ref t
+class FromRef chn ref t
       => ArgumentConversion chn ref t where
   convertArg :: Proxy chn -> ArgumentValue' p ref -> t
 instance ArgumentConversion chn ('PrimitiveRef s) s where
   convertArg _ (ArgPrimitive x) = x
-instance FromSchema Identity sch sty t
+instance FromSchema sch sty t
          => ArgumentConversion chn ('SchemaRef sch sty) t where
   convertArg _ (ArgSchema x) = fromSchema x
 instance ArgumentConversion chn ref t
@@ -192,17 +191,17 @@ instance ArgumentConversion chn ref t
          => ArgumentConversion chn ('OptionalRef ref) (Maybe t) where
   convertArg p (ArgOptional x) = convertArg p <$> x
 
-class ToRef Identity chn r l => ResultConversion p whole chn r l where
-  convertResult :: ServerT Identity chn p ServerErrorIO whole
+class ToRef chn r l => ResultConversion p whole chn r l where
+  convertResult :: ServerT chn p ServerErrorIO whole
                 -> ReturnQuery p r
                 -> l -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
 
 instance Aeson.ToJSON t => ResultConversion p whole chn ('PrimitiveRef t) t where
   convertResult _ RetPrimitive = pure . Just . Aeson.toJSON
-instance ( ToSchema Identity sch l r
-         , Aeson.ToJSON (Term Identity sch (sch :/: l)) )
+instance ( ToSchema sch l r
+         , Aeson.ToJSON (Term sch (sch :/: l)) )
          => ResultConversion p whole chn ('SchemaRef sch l) r where
-  convertResult _ RetSchema = pure . Just . Aeson.toJSON . toSchema' @_ @_ @sch @Identity @r
+  convertResult _ RetSchema = pure . Just . Aeson.toJSON . toSchema' @_ @_ @sch @r
 instance ( MappingRight chn ref ~ t
          , MappingRight chn sname ~ t
          , LookupService ss ref ~ 'Service sname sanns ms

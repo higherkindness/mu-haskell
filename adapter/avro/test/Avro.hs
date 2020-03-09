@@ -8,7 +8,6 @@ module Main where
 
 import           Data.Avro
 import qualified Data.ByteString.Lazy as BS
-import           Data.Functor.Identity
 import           System.Environment
 
 import           Mu.Adapter.Avro      ()
@@ -22,9 +21,9 @@ examplePerson1, examplePerson2 :: Person
 examplePerson1 = Person "Haskellio" "Gomez" (Just 30) (Just Male) exampleAddress
 examplePerson2 = Person "Cuarenta" "Siete" Nothing Nothing exampleAddress
 
-deriving via (WithSchema Identity ExampleSchema "person" Person) instance HasAvroSchema Person
-deriving via (WithSchema Identity ExampleSchema "person" Person) instance FromAvro Person
-deriving via (WithSchema Identity ExampleSchema "person" Person) instance ToAvro Person
+deriving via (WithSchema ExampleSchema "person" Person) instance HasAvroSchema Person
+deriving via (WithSchema ExampleSchema "person" Person) instance FromAvro Person
+deriving via (WithSchema ExampleSchema "person" Person) instance ToAvro Person
 
 main :: IO ()
 main = do -- Obtain the filenames

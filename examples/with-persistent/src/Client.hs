@@ -10,7 +10,6 @@ import qualified Data.Conduit.Combinators as C
 import qualified Data.Text                as T
 import           Mu.GRpc.Client.TyApps
 import           System.Environment
-import           Text.Read                (readMaybe)
 
 import           Schema
 
@@ -27,7 +26,7 @@ main = do
 
 get :: GrpcClient -> String -> IO ()
 get client idPerson = do
-  let req = MPersonRequest $ readMaybe idPerson
+  let req = MPersonRequest $ read idPerson
   putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
   response :: GRpcReply MPerson
     <- gRpcCall @'MsgProtoBuf @PersistentService @"PersistentService" @"getPerson" client req
@@ -35,7 +34,7 @@ get client idPerson = do
 
 add :: GrpcClient -> String -> String -> IO ()
 add client nm ag = do
-  let p = MPerson Nothing (Just $ T.pack nm) (readMaybe ag)
+  let p = MPerson Nothing (T.pack nm) (read ag)
   putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
   response :: GRpcReply MPersonRequest
     <- gRpcCall @'MsgProtoBuf @PersistentService @"PersistentService" @"newPerson" client p

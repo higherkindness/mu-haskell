@@ -28,22 +28,22 @@ grpc "HealthCheckSchema" id "healthcheck.proto"
 type HealthCheckService = HealthCheckServiceFS2
 
 newtype HealthCheckMsg
-  = HealthCheckMsg { nameService :: Maybe T.Text }
+  = HealthCheckMsg { nameService :: T.Text }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe HealthCheckSchema "HealthCheck"
-           , FromSchema Maybe HealthCheckSchema "HealthCheck" )
+           , ToSchema   HealthCheckSchema "HealthCheck"
+           , FromSchema HealthCheckSchema "HealthCheck" )
 newtype ServerStatusMsg
-  = ServerStatusMsg { status :: Maybe T.Text }
+  = ServerStatusMsg { status :: T.Text }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe HealthCheckSchema "ServerStatus"
-           , FromSchema Maybe HealthCheckSchema "ServerStatus" )
+           , ToSchema   HealthCheckSchema "ServerStatus"
+           , FromSchema HealthCheckSchema "ServerStatus" )
 data HealthStatusMsg
   = HealthStatusMsg { hc :: Maybe HealthCheckMsg, status :: Maybe ServerStatusMsg }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe HealthCheckSchema "HealthStatus"
-           , FromSchema Maybe HealthCheckSchema "HealthStatus" )
+           , ToSchema   HealthCheckSchema "HealthStatus"
+           , FromSchema HealthCheckSchema "HealthStatus" )
 newtype AllStatusMsg
-  = AllStatusMsg { all :: Maybe [HealthStatusMsg] }
+  = AllStatusMsg { all :: [HealthStatusMsg] }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe HealthCheckSchema "AllStatus"
-           , FromSchema Maybe HealthCheckSchema "AllStatus" )
+           , ToSchema   HealthCheckSchema "AllStatus"
+           , FromSchema HealthCheckSchema "AllStatus" )

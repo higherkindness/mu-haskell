@@ -1,5 +1,5 @@
 name:          mu-optics
-version:       0.2.0.0
+version:       0.3.0.0
 synopsis:      Optics for @mu-schema@ terms
 description:
   With @mu-schema@ you can describe schemas using type-level constructs, and derive serializers from those. This package provides convenient access using @optics@.

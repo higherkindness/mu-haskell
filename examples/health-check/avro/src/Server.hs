@@ -6,7 +6,6 @@ module Main where
 
 import           Control.Concurrent.STM
 import           Data.Conduit.TMChan
-import           Data.Functor.Identity
 import           Data.Maybe             (fromMaybe)
 import qualified Data.Text              as T
 import           DeferredFolds.UnfoldlM
@@ -30,7 +29,7 @@ main = do
 type StatusMap = M.Map T.Text T.Text
 type StatusUpdates = TBMChan HealthStatusMsg
 
-server :: StatusMap -> StatusUpdates -> ServerIO Identity HealthCheckService _
+server :: StatusMap -> StatusUpdates -> ServerIO HealthCheckService _
 server m upd = Server (
   checkH_ m :<|>:
   checkAll_ m :<|>:

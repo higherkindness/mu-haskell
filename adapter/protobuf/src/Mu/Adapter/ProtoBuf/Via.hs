@@ -55,20 +55,20 @@ class FromProtoBufTypeRef (ref :: TypeRef snm) t where
 class ToProtoBufTypeRef (ref :: TypeRef snm) t where
   toProtoBufTypeRef   :: Proxy ref -> t -> PBEnc.MessageBuilder
 
-instance (IsProtoSchema Maybe sch sty, FromSchema Maybe sch sty t)
+instance (IsProtoSchema sch sty, FromSchema sch sty t)
          => FromProtoBufTypeRef ('SchemaRef sch sty) t where
   fromProtoBufTypeRef _ = fromProtoViaSchema @_ @_ @sch
-instance (IsProtoSchema Maybe sch sty, ToSchema Maybe sch sty t)
+instance (IsProtoSchema sch sty, ToSchema sch sty t)
          => ToProtoBufTypeRef ('SchemaRef sch sty) t where
   toProtoBufTypeRef   _ = toProtoViaSchema @_ @_ @sch
 
 instance ( FromProtoBufRegistry r t
-         , IsProtoSchema Maybe (MappingRight r last) sty
-         , FromSchema Maybe (MappingRight r last) sty t )
+         , IsProtoSchema (MappingRight r last) sty
+         , FromSchema (MappingRight r last) sty t )
          => FromProtoBufTypeRef ('RegistryRef r t last) t where
   fromProtoBufTypeRef _ = fromProtoBufWithRegistry @r
 instance ( FromProtoBufRegistry r t
-         , IsProtoSchema Maybe (MappingRight r last) sty
-         , ToSchema Maybe (MappingRight r last) sty t )
+         , IsProtoSchema (MappingRight r last) sty
+         , ToSchema (MappingRight r last) sty t )
          => ToProtoBufTypeRef ('RegistryRef r t last) t where
   toProtoBufTypeRef   _ = toProtoViaSchema @_ @_ @(MappingRight r last)

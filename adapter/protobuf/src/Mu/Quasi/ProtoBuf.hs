@@ -84,6 +84,13 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) = do
   (,) <$> [t|'DRecord $(textToStrLit name) $(pure $ typesToList tys)|] <*> pure anns
   where
     pbMsgFieldToType :: P.MessageField -> Q (Type, Type)
+    -- If we have a field type which is not primitive,
+    -- it's possible to distinguish whether it's missing on wire
+    -- or should be set to the default, so use Option
+    -- +info -> https://github.com/higherkindness/mu-haskell/pull/130#issuecomment-596433307
+    pbMsgFieldToType (P.NormalField P.Single ty@(P.TOther _) nm n _)
+      = (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TOption $(pbFieldTypeToType ty)) |]
+            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n)) |]
     pbMsgFieldToType (P.NormalField P.Single ty nm n _)
       = (,) <$> [t| 'FieldDef $(textToStrLit nm) $(pbFieldTypeToType ty) |]
             <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n)) |]

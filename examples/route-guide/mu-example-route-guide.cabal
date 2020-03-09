@@ -1,5 +1,5 @@
 name:          mu-example-route-guide
-version:       0.2.0.0
+version:       0.3.0.0
 synopsis:
   Example route-guide project from mu-scala ported to mu-haskell
 

@@ -1,5 +1,5 @@
 name:          mu-protobuf
-version:       0.2.0.0
+version:       0.3.0.0
 synopsis:
   Protocol Buffers serialization and gRPC schema import for Mu microservices
 
