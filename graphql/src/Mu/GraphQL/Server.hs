@@ -26,7 +26,7 @@ import           Mu.Server
 import           Network.HTTP.Types.Method     (StdMethod (..), parseMethod)
 import           Network.HTTP.Types.Status     (ok200)
 import           Network.Wai
-import           Network.Wai.Handler.Warp      (Port, Settings, run, runSettings)
+import           Network.Wai.Handler.Warp      (Settings, runSettings)
 
 graphQLApp :: forall pname ss chn (p :: Package') hs qr mut qanns qmethods manns mmethods.
     ( p ~ 'Package pname ss
@@ -64,3 +64,21 @@ graphQLApp server q m req res =
           res $ responseBuilder ok200 [] $ T.encodeUtf8Builder $ AT.encodeToLazyText value
     toJSONValue :: GQL.ExecutableDocument -> IO A.Value
     toJSONValue = runPipeline server q m Nothing HM.empty
+
+runGraphQLApp ::
+  ( p ~ 'Package pname ss
+    , ParseMethod p qmethods
+    , ParseMethod p mmethods
+    , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
+    , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
+    , MappingRight chn qr ~ ()
+    , LookupService ss qr ~ 'Service qr qanns qmethods
+    , LookupService ss mut ~ 'Service mut manns mmethods
+    , MappingRight chn mut ~ ()
+  )
+  => Settings
+  -> ServerT Identity chn p ServerErrorIO hs
+  -> Proxy qr
+  -> Proxy mut
+  -> IO ()
+runGraphQLApp st svr q m = runSettings st (graphQLApp svr q m)
