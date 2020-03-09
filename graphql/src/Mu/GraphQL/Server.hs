@@ -1,9 +1,8 @@
-{-# language DataKinds           #-}
-{-# language FlexibleContexts    #-}
-{-# language GADTs               #-}
-{-# language OverloadedStrings   #-}
-{-# language PolyKinds           #-}
-{-# language ScopedTypeVariables #-}
+{-# language DataKinds         #-}
+{-# language FlexibleContexts  #-}
+{-# language GADTs             #-}
+{-# language OverloadedLists   #-}
+{-# language OverloadedStrings #-}
 
 module Mu.GraphQL.Server where
 
@@ -14,6 +13,7 @@ import qualified Data.ByteString.Lazy          as BL
 import           Data.Functor.Identity
 import qualified Data.HashMap.Strict           as HM
 import           Data.Proxy
+import qualified Data.Text                     as T
 import           Data.Text.Encoding            (decodeUtf8)
 import qualified Data.Text.Lazy.Encoding       as T
 import           Language.GraphQL.Draft.Parser (parseExecutableDoc)
@@ -28,7 +28,7 @@ import           Network.HTTP.Types.Status     (ok200)
 import           Network.Wai
 import           Network.Wai.Handler.Warp      (Settings, runSettings)
 
-graphQLApp :: forall pname ss chn (p :: Package') hs qr mut qanns qmethods manns mmethods.
+graphQLApp ::
     ( p ~ 'Package pname ss
      , LookupService ss qr ~ 'Service qr qanns qmethods
      , ParseMethod p qmethods
@@ -45,25 +45,25 @@ graphQLApp :: forall pname ss chn (p :: Package') hs qr mut qanns qmethods manns
     -> Application
 graphQLApp server q m req res =
   case parseMethod (requestMethod req) of
-    Left err   -> undefined -- FIXME: pure $ A.object [ ("errors", ("message", "Unsupported method")) ]
+    Left err   -> toError $ decodeUtf8 err
     Right GET  ->
       case lookup "query" (queryString req) of
         Just (Just query) -> execQuery query
-        _                 -> undefined -- FIXME: throw error
-    Right POST -> do
-      query <- strictRequestBody req
-      execQuery $ BL.toStrict query
-    _    -> undefined -- FIXME: throw error
+        _                 -> toError "Error parsing query"
+    Right POST -> strictRequestBody req >>= execQuery . BL.toStrict
+    _          -> toError "Unsupported method"
   where
     execQuery :: B.ByteString -> IO ResponseReceived
     execQuery query =
       case parseExecutableDoc $ decodeUtf8 query of
-        Left err  -> undefined -- FIXME: throw error
-        Right doc -> do
-          value <- toJSONValue doc
-          res $ responseBuilder ok200 [] $ T.encodeUtf8Builder $ AT.encodeToLazyText value
+        Left err  -> toError err
+        Right doc -> toJSONValue doc >>= toResponse
     toJSONValue :: GQL.ExecutableDocument -> IO A.Value
     toJSONValue = runPipeline server q m Nothing HM.empty
+    toError :: T.Text -> IO ResponseReceived
+    toError err = toResponse $ A.object [ ("errors", A.Array [ A.object [ ("message", A.String err) ] ])]
+    toResponse :: A.Value -> IO ResponseReceived
+    toResponse = res . responseBuilder ok200 [] . T.encodeUtf8Builder . AT.encodeToLazyText
 
 runGraphQLApp ::
   ( p ~ 'Package pname ss
