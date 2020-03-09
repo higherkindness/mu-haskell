@@ -7,22 +7,23 @@
 module Mu.GraphQL.Server where
 
 import qualified Data.Aeson                    as A
-import qualified Data.Aeson.Text               as AT
+import           Data.Aeson.Text               (encodeToLazyText)
 import qualified Data.ByteString.Internal      as B
-import qualified Data.ByteString.Lazy          as BL
+import           Data.ByteString.Lazy          (toStrict)
 import           Data.Functor.Identity
-import qualified Data.HashMap.Strict           as HM
+import           Data.HashMap.Strict           (empty)
 import           Data.Proxy
 import qualified Data.Text                     as T
 import           Data.Text.Encoding            (decodeUtf8)
 import qualified Data.Text.Lazy.Encoding       as T
 import           Language.GraphQL.Draft.Parser (parseExecutableDoc)
-import qualified Language.GraphQL.Draft.Syntax as GQL
+import           Language.GraphQL.Draft.Syntax (ExecutableDocument)
 import           Mu.GraphQL.Query.Parse
 import           Mu.GraphQL.Query.Run
 import           Mu.Rpc
 import           Mu.Schema.Definition          (MappingRight)
 import           Mu.Server
+import           Network.HTTP.Types.Header     (hContentType)
 import           Network.HTTP.Types.Method     (StdMethod (..), parseMethod)
 import           Network.HTTP.Types.Status     (ok200)
 import           Network.Wai
@@ -50,7 +51,11 @@ graphQLApp server q m req res =
       case lookup "query" (queryString req) of
         Just (Just query) -> execQuery query
         _                 -> toError "Error parsing query"
-    Right POST -> strictRequestBody req >>= execQuery . BL.toStrict
+    Right POST ->
+      case lookup hContentType $ requestHeaders req of
+        Just "application/json"    -> undefined -- TODO: do as with GET reading from json params
+        Just "application/graphql" -> strictRequestBody req >>= execQuery . toStrict
+        _                          -> toError "No `Content-Type` header found!"
     _          -> toError "Unsupported method"
   where
     execQuery :: B.ByteString -> IO ResponseReceived
@@ -58,12 +63,12 @@ graphQLApp server q m req res =
       case parseExecutableDoc $ decodeUtf8 query of
         Left err  -> toError err
         Right doc -> toJSONValue doc >>= toResponse
-    toJSONValue :: GQL.ExecutableDocument -> IO A.Value
-    toJSONValue = runPipeline server q m Nothing HM.empty
+    toJSONValue :: ExecutableDocument -> IO A.Value
+    toJSONValue = runPipeline server q m Nothing empty
     toError :: T.Text -> IO ResponseReceived
     toError err = toResponse $ A.object [ ("errors", A.Array [ A.object [ ("message", A.String err) ] ])]
     toResponse :: A.Value -> IO ResponseReceived
-    toResponse = res . responseBuilder ok200 [] . T.encodeUtf8Builder . AT.encodeToLazyText
+    toResponse = res . responseBuilder ok200 [] . T.encodeUtf8Builder . encodeToLazyText
 
 runGraphQLApp ::
   ( p ~ 'Package pname ss
