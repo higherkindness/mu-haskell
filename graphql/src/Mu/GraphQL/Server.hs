@@ -5,10 +5,11 @@
 module Mu.GraphQL.Server where
 
 import qualified Data.Aeson                    as A
+import qualified Data.ByteString.Internal      as B
+import qualified Data.ByteString.Lazy          as BL
 import           Data.Functor.Identity
 import           Data.Proxy
-import qualified Data.Text.Lazy                as T
-import           Data.Text.Lazy.Encoding       (decodeUtf8)
+import           Data.Text.Encoding            (decodeUtf8)
 import           Language.GraphQL.Draft.Parser (parseExecutableDoc)
 import           Mu.GraphQL.Query.Run          (runPipeline)
 import           Mu.Server
@@ -26,12 +27,16 @@ graphQLApp server _ _ req res =
     Left err   -> undefined -- FIXME: pure $ A.object [ ("errors", ("message", "Unsupported method")) ]
     Right GET  ->
       case lookup "query" (queryString req) of
-        Just (Just query) -> undefined
+        Just (Just query) -> execQuery query
         Nothing           -> undefined -- FIXME: throw error
     Right POST -> do
       query <- strictRequestBody req
-      case parseExecutableDoc $ T.toStrict $ decodeUtf8 query of
+      execQuery $ BL.toStrict query
+    _    -> undefined -- FIXME: throw error
+  where
+    execQuery :: B.ByteString -> IO ResponseReceived
+    execQuery query =
+      case parseExecutableDoc $ decodeUtf8 query of
         Left err  -> undefined -- FIXME: throw error
         Right doc -> undefined -- runPipeline server @qr @mut _ (Just doc)
-    _    -> undefined
 
