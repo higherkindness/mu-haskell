@@ -1,5 +1,5 @@
 name:               mu-persistent
-version:            0.2.0.0
+version:            0.3.0.0
 synopsis:           Utilities for interoperation between Mu and Persistent
 description:
   Please see the <https://github.com/higherkindness/mu-haskell/persistent#readme readme file>.
@@ -33,3 +33,5 @@ library
     , persistent
     , resourcet
     , transformers
+
+  ghc-options:      -Wall

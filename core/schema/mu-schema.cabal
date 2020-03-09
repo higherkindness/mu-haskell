@@ -1,5 +1,5 @@
 name:               mu-schema
-version:            0.2.0.0
+version:            0.3.0.0
 synopsis:           Format-independent schemas for serialization
 description:
   With @mu-schema@ you can describe schemas using type-level constructs, and derive serializers from those. See @mu-avro@, @mu-protobuf@ for the actual adapters.
@@ -22,7 +22,6 @@ source-repository head
 
 library
   exposed-modules:
-    Data.Functor.MaybeLike
     Mu.Adapter.Json
     Mu.Schema
     Mu.Schema.Annotations

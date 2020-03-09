@@ -45,7 +45,6 @@ import           Data.ByteString              (ByteString)
 import qualified Data.ByteString.Char8        as BS
 import           Data.Conduit
 import           Data.Conduit.TMChan
-import           Data.Functor.Identity
 import           Data.Kind
 import           Data.Proxy
 import           Network.GRPC.HTTP2.Encoding  (GRPCInput, GRPCOutput, gzip, uncompressed)
@@ -69,7 +68,7 @@ runGRpcApp
   :: ( KnownName name, GRpcServiceHandlers protocol ServerErrorIO chn services handlers )
   => Proxy protocol
   -> Port
-  -> ServerT f chn ('Package ('Just name) services) ServerErrorIO handlers
+  -> ServerT chn ('Package ('Just name) services) ServerErrorIO handlers
   -> IO ()
 runGRpcApp protocol port = runGRpcAppTrans protocol port id
 
@@ -79,7 +78,7 @@ runGRpcAppTrans
   => Proxy protocol
   -> Port
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT f chn ('Package ('Just name) services) m handlers
+  -> ServerT chn ('Package ('Just name) services) m handlers
   -> IO ()
 runGRpcAppTrans protocol port f svr = run port (gRpcAppTrans protocol f svr)
 
@@ -91,7 +90,7 @@ runGRpcAppSettings
   => Proxy protocol
   -> Settings
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT f chn ('Package ('Just name) services) m handlers
+  -> ServerT chn ('Package ('Just name) services) m handlers
   -> IO ()
 runGRpcAppSettings protocol st f svr = runSettings st (gRpcAppTrans protocol f svr)
 
@@ -104,7 +103,7 @@ runGRpcAppTLS
   => Proxy protocol
   -> TLSSettings -> Settings
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT f chn ('Package ('Just name) services) m handlers
+  -> ServerT chn ('Package ('Just name) services) m handlers
   -> IO ()
 runGRpcAppTLS protocol tls st f svr = runTLS tls st (gRpcAppTrans protocol f svr)
 
@@ -116,7 +115,7 @@ runGRpcAppTLS protocol tls st f svr = runTLS tls st (gRpcAppTrans protocol f svr
 gRpcApp
   :: ( KnownName name, GRpcServiceHandlers protocol ServerErrorIO chn services handlers )
   => Proxy protocol
-  -> ServerT f chn ('Package ('Just name) services) ServerErrorIO handlers
+  -> ServerT chn ('Package ('Just name) services) ServerErrorIO handlers
   -> Application
 gRpcApp protocol = gRpcAppTrans protocol id
 
@@ -129,18 +128,18 @@ gRpcAppTrans
   :: ( KnownName name, GRpcServiceHandlers protocol m chn services handlers )
   => Proxy protocol
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT f chn ('Package ('Just name) services) m handlers
+  -> ServerT chn ('Package ('Just name) services) m handlers
   -> Application
 gRpcAppTrans protocol f svr
   = Wai.grpcApp [uncompressed, gzip]
                 (gRpcServerHandlers protocol f svr)
 
 gRpcServerHandlers
-  :: forall name services handlers m protocol w chn.
+  :: forall name services handlers m protocol chn.
      ( KnownName name, GRpcServiceHandlers protocol m chn services handlers )
   => Proxy protocol
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT w chn ('Package ('Just name) services) m handlers
+  -> ServerT chn ('Package ('Just name) services) m handlers
   -> [ServiceHandler]
 gRpcServerHandlers pr f (Services svr) = gRpcServiceHandlers f pr packageName svr
   where packageName = BS.pack (nameVal (Proxy @name))
@@ -150,7 +149,7 @@ class GRpcServiceHandlers (p :: GRpcMessageProtocol) (m :: Type -> Type)
                           (ss :: [Service snm mnm anm]) (hs :: [[Type]]) where
   gRpcServiceHandlers :: (forall a. m a -> ServerErrorIO a)
                       -> Proxy p -> ByteString
-                      -> ServicesT f chn ss m hs -> [ServiceHandler]
+                      -> ServicesT chn ss m hs -> [ServiceHandler]
 
 instance GRpcServiceHandlers p m chn '[] '[] where
   gRpcServiceHandlers _ _ _ S0 = []
@@ -168,7 +167,7 @@ class GRpcMethodHandlers (p :: GRpcMessageProtocol) (m :: Type -> Type)
                          (ms :: [Method snm mnm anm]) (hs :: [Type]) where
   gRpcMethodHandlers :: (forall a. m a -> ServerErrorIO a)
                      -> Proxy p -> ByteString -> ByteString
-                     -> HandlersT f chn inh ms m hs -> [ServiceHandler]
+                     -> HandlersT chn inh ms m hs -> [ServiceHandler]
 
 instance GRpcMethodHandlers p m chn inh '[] '[] where
   gRpcMethodHandlers _ _ _ _ H0 = []
@@ -247,8 +246,8 @@ instance ToProtoBufTypeRef ref r
   buildGRpcOWTy _ _ = ViaToProtoBufTypeRef
 
 instance forall (sch :: Schema') sty (r :: Type).
-         ( ToSchema Identity sch sty r
-         , ToAvro (Term Identity sch (sch :/: sty)) )
+         ( ToSchema sch sty r
+         , ToAvro (Term sch (sch :/: sty)) )
          => GRpcOutputWrapper 'MsgAvro ('SchemaRef sch sty) r where
   type GRpcOWTy 'MsgAvro ('SchemaRef sch sty) r = ViaToAvroTypeRef ('SchemaRef sch sty) r
   buildGRpcOWTy _ _ = ViaToAvroTypeRef
@@ -264,8 +263,8 @@ instance FromProtoBufTypeRef ref r
   unGRpcIWTy _ _ = unViaFromProtoBufTypeRef
 
 instance forall (sch :: Schema') sty (r :: Type).
-         ( FromSchema Identity sch sty r
-         , FromAvro (Term Identity sch (sch :/: sty)) )
+         ( FromSchema sch sty r
+         , FromAvro (Term sch (sch :/: sty)) )
          => GRpcInputWrapper 'MsgAvro ('SchemaRef sch sty) r where
   type GRpcIWTy 'MsgAvro ('SchemaRef sch sty) r = ViaFromAvroTypeRef ('SchemaRef sch sty) r
   unGRpcIWTy _ _ = unViaFromAvroTypeRef

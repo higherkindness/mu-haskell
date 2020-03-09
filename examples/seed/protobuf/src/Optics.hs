@@ -22,9 +22,9 @@ import           Mu.Server
 
 import           Schema
 
-type Person         = Term Maybe SeedSchema (SeedSchema :/: "Person")
-type PeopleRequest  = Term Maybe SeedSchema (SeedSchema :/: "PeopleRequest")
-type PeopleResponse = Term Maybe SeedSchema (SeedSchema :/: "PeopleResponse")
+type Person         = Term SeedSchema (SeedSchema :/: "Person")
+type PeopleRequest  = Term SeedSchema (SeedSchema :/: "PeopleRequest")
+type PeopleResponse = Term SeedSchema (SeedSchema :/: "PeopleResponse")
 
 main :: IO ()
 main = do
@@ -34,11 +34,11 @@ main = do
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/seed/server/modules/process/src/main/scala/example/seed/server/process/ProtoPeopleServiceHandler.scala
 
-server :: (MonadServer m, MonadLogger m) => SingleServerT Maybe PeopleService m _
+server :: (MonadServer m, MonadLogger m) => SingleServerT PeopleService m _
 server = Server (getPerson :<|>: getPersonStream :<|>: H0)
 
 evolvePerson :: PeopleRequest -> PeopleResponse
-evolvePerson req = record1 (Just $ record (req ^. #name, Just 18))
+evolvePerson req = record1 (Just $ record (req ^. #name, 18))
 
 getPerson :: Monad m => PeopleRequest -> m PeopleResponse
 getPerson = pure . evolvePerson

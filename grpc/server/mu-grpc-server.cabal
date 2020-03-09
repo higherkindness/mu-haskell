@@ -1,5 +1,5 @@
 name:               mu-grpc-server
-version:            0.2.0.0
+version:            0.3.0.0
 synopsis:           gRPC servers for Mu definitions
 description:
   With @mu-grpc-server@ you can easily build gRPC servers for mu-haskell!

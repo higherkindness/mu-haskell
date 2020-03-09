@@ -9,10 +9,8 @@
 {-# language PartialTypeSignatures #-}
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
-{-# language StandaloneDeriving    #-}
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
-{-# language ViewPatterns          #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 {-|
 Description : Examples for service and server definitions
@@ -23,7 +21,6 @@ module Mu.Rpc.Examples where
 
 import           Data.Conduit
 import           Data.Conduit.Combinators as C
-import           Data.Functor.MaybeLike
 import qualified Data.Text                as T
 import           GHC.Generics
 
@@ -56,36 +53,36 @@ type QuickStartService
           '[ 'ArgStream 'Nothing '[] ('SchemaRef QuickstartSchema "HelloRequest")]
                 ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ]
 
-newtype HelloRequest f = HelloRequest { name :: f T.Text } deriving (Generic)
-deriving instance Functor f => ToSchema f QuickstartSchema "HelloRequest" (HelloRequest f)
-deriving instance Functor f => FromSchema f QuickstartSchema "HelloRequest" (HelloRequest f)
+newtype HelloRequest = HelloRequest { name :: T.Text }
+  deriving ( Show, Eq, Generic
+           , ToSchema   QuickstartSchema "HelloRequest"
+           , FromSchema QuickstartSchema "HelloRequest" )
 
-newtype HelloResponse f = HelloResponse { message :: f T.Text } deriving (Generic)
-deriving instance Functor f => ToSchema f QuickstartSchema "HelloResponse" (HelloResponse f)
-deriving instance Functor f => FromSchema f QuickstartSchema "HelloResponse" (HelloResponse f)
+newtype HelloResponse = HelloResponse { message :: T.Text }
+  deriving ( Show, Eq, Generic
+           , ToSchema   QuickstartSchema "HelloResponse"
+           , FromSchema QuickstartSchema "HelloResponse" )
 
-newtype HiRequest f = HiRequest { number :: f Int } deriving (Generic)
-deriving instance Functor f => ToSchema f QuickstartSchema "HiRequest" (HiRequest f)
-deriving instance Functor f => FromSchema f QuickstartSchema "HiRequest" (HiRequest f)
+newtype HiRequest = HiRequest { number :: Int }
+  deriving ( Show, Eq, Generic
+           , ToSchema   QuickstartSchema "HiRequest"
+           , FromSchema QuickstartSchema "HiRequest" )
 
-quickstartServer :: forall m f.
-                    (MonadServer m, Applicative f, MaybeLike f)
-                 => ServerT f '[] QuickStartService m _
+quickstartServer :: forall m. (MonadServer m)
+                 => ServerT '[] QuickStartService m _
 quickstartServer
   = Server (sayHello :<|>: sayHi :<|>: sayManyHellos :<|>: H0)
   where
-    sayHello :: HelloRequest f -> m (HelloResponse f)
+    sayHello :: HelloRequest -> m HelloResponse
     sayHello (HelloRequest nm)
-      = pure (HelloResponse (("hi, " <>) <$> nm))
-    sayHi :: HiRequest f
-          -> ConduitT (HelloResponse f) Void m ()
+      = pure $ HelloResponse $ "hi, " <> nm
+    sayHi :: HiRequest
+          -> ConduitT HelloResponse Void m ()
           -> m ()
-    sayHi (HiRequest (likeMaybe -> Just n)) sink
-      = runConduit $ C.replicate n (HelloResponse $ pure "hi!") .| sink
-    sayHi (HiRequest _) sink
-      = runConduit $ pure () .| sink
-    sayManyHellos :: ConduitT () (HelloRequest f) m ()
-                  -> ConduitT (HelloResponse f) Void m ()
+    sayHi (HiRequest n) sink
+      = runConduit $ C.replicate n (HelloResponse "hi!") .| sink
+    sayManyHellos :: ConduitT () HelloRequest m ()
+                  -> ConduitT HelloResponse Void m ()
                   -> m ()
     sayManyHellos source sink
       = runConduit $ source .| C.mapM sayHello .| sink
@@ -121,9 +118,11 @@ type ApolloBookAuthor = '[
   , "Author" ':-> Integer
   ]
 
-apolloServer :: forall m. (MonadServer m) => ServerT Maybe ApolloBookAuthor ApolloService m _
+apolloServer :: forall m. (MonadServer m) => ServerT ApolloBookAuthor ApolloService m _
 apolloServer
-  = Services $ (pure . fst :<||>: pure . snd :<||>: H0) :<&>: (authorName :<||>: authorBooks :<||>: H0) :<&>: S0
+  = Services $ (pure . fst :<||>: pure . snd :<||>: H0)
+               :<&>: (authorName :<||>: authorBooks :<||>: H0)
+               :<&>: S0
   where
     authorName :: Integer -> m String
     authorName _ = pure "alex"  -- this would run in the DB

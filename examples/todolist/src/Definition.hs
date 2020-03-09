@@ -26,34 +26,34 @@ grpc "TodoListSchema" id "todolist.proto"
 #endif
 
 newtype MessageId = MessageId
-  { value :: Maybe Int32
+  { value :: Int32
   } deriving ( Eq, Show, Ord, Generic
-             , ToSchema   Maybe TodoListSchema "MessageId"
-             , FromSchema Maybe TodoListSchema "MessageId" )
+             , ToSchema   TodoListSchema "MessageId"
+             , FromSchema TodoListSchema "MessageId" )
 
 data TodoListMessage = TodoListMessage
-  { id, tagId :: Maybe Int32
-  , title     :: Maybe Text
-  , completed :: Maybe Bool
+  { id, tagId :: Int32
+  , title     :: Text
+  , completed :: Bool
   } deriving ( Eq, Show, Ord, Generic
-             , ToSchema   Maybe TodoListSchema "TodoListMessage"
-             , FromSchema Maybe TodoListSchema "TodoListMessage" )
+             , ToSchema   TodoListSchema "TodoListMessage"
+             , FromSchema TodoListSchema "TodoListMessage" )
 
 data TodoListRequest = TodoListRequest
-  { title :: Maybe Text
-  , tagId :: Maybe Int32
+  { title :: Text
+  , tagId :: Int32
   } deriving ( Eq, Show, Ord, Generic
-             , ToSchema   Maybe TodoListSchema "TodoListRequest"
-             , FromSchema Maybe TodoListSchema "TodoListRequest" )
+             , ToSchema   TodoListSchema "TodoListRequest"
+             , FromSchema TodoListSchema "TodoListRequest" )
 
 newtype TodoListList = TodoListList
-  { list :: Maybe [TodoListMessage]
+  { list :: [TodoListMessage]
   } deriving ( Eq, Show, Ord, Generic
-             , ToSchema   Maybe TodoListSchema "TodoListList"
-             , FromSchema Maybe TodoListSchema "TodoListList" )
+             , ToSchema   TodoListSchema "TodoListList"
+             , FromSchema TodoListSchema "TodoListList" )
 
 newtype TodoListResponse = TodoListResponse
   { msg :: Maybe TodoListMessage
   } deriving ( Eq, Show, Ord, Generic
-             , ToSchema   Maybe TodoListSchema "TodoListResponse"
-             , FromSchema Maybe TodoListSchema "TodoListResponse" )
+             , ToSchema   TodoListSchema "TodoListResponse"
+             , FromSchema TodoListSchema "TodoListResponse" )

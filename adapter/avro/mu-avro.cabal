@@ -1,5 +1,5 @@
 name:          mu-avro
-version:       0.2.0.0
+version:       0.3.0.0
 synopsis:      Avro serialization support for Mu microservices
 description:
   You can use @mu-avro@ to read AVRO Schema Declarations for mu-haskell

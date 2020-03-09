@@ -8,6 +8,7 @@ import           Control.Concurrent.STM
 import           Data.Conduit
 import qualified Data.Conduit.Combinators as C
 import           Data.Conduit.TMChan
+import           Data.Maybe               (fromMaybe)
 import qualified Data.Text                as T
 import           DeferredFolds.UnfoldlM
 import qualified StmContainers.Map        as M
@@ -30,13 +31,13 @@ main = do
 type StatusMap = M.Map T.Text T.Text
 type StatusUpdates = TBMChan HealthStatusMsg
 
-server :: StatusMap -> StatusUpdates -> ServerIO Maybe HealthCheckService _
+server :: StatusMap -> StatusUpdates -> ServerIO HealthCheckService _
 server m upd = Server (setStatus_ m upd :<|>: checkH_ m :<|>: clearStatus_ m :<|>:
   checkAll_ m :<|>: cleanAll_ m :<|>: watch_ upd :<|>: H0)
 
 setStatus_ :: StatusMap -> StatusUpdates -> HealthStatusMsg -> ServerErrorIO ()
 setStatus_ m upd
-           s@(HealthStatusMsg (Just (HealthCheckMsg (Just nm))) (Just (ServerStatusMsg (Just ss))))
+           s@(HealthStatusMsg (Just (HealthCheckMsg nm)) (Just (ServerStatusMsg ss)))
   = alwaysOk $ do
       putStr "setStatus: " >> print (nm, ss)
       atomically $ do
@@ -45,26 +46,26 @@ setStatus_ m upd
 setStatus_ _ _ _ = serverError (ServerError Invalid "name or status missing")
 
 checkH_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ServerStatusMsg
-checkH_ m (HealthCheckMsg (Just nm)) = alwaysOk $ do
+checkH_ _ (HealthCheckMsg "") = serverError (ServerError Invalid "no server name given")
+checkH_ m (HealthCheckMsg nm) = alwaysOk $ do
   putStr "check: " >> print nm
   ss <- atomically $ M.lookup nm m
-  pure $ ServerStatusMsg ss
-checkH_ _ _ = serverError (ServerError Invalid "no server name given")
+  pure $ ServerStatusMsg (fromMaybe "" ss)
 
 clearStatus_ :: StatusMap -> HealthCheckMsg -> ServerErrorIO ()
-clearStatus_ m (HealthCheckMsg (Just nm)) = alwaysOk $ do
+clearStatus_ _ (HealthCheckMsg "") = serverError (ServerError Invalid "no server name given")
+clearStatus_ m (HealthCheckMsg nm) = alwaysOk $ do
   putStr "clearStatus: " >> print nm
   atomically $ M.delete nm m
-clearStatus_ _ _ = pure ()
 
 checkAll_ :: StatusMap -> ServerErrorIO AllStatusMsg
 checkAll_ m = alwaysOk $ do
     putStrLn "checkAll"
-    AllStatusMsg . Just <$> atomically (consumeValues kvToStatus (M.unfoldlM m))
+    AllStatusMsg <$> atomically (consumeValues kvToStatus (M.unfoldlM m))
   where
     consumeValues :: Monad m => (k -> v -> a) -> UnfoldlM m (k,v) -> m [a]
     consumeValues f = foldlM' (\xs (x,y) -> pure (f x y:xs)) []
-    kvToStatus k v = HealthStatusMsg (Just (HealthCheckMsg (Just k))) (Just (ServerStatusMsg (Just v)))
+    kvToStatus k v = HealthStatusMsg (Just (HealthCheckMsg k)) (Just (ServerStatusMsg v))
 
 cleanAll_ :: StatusMap -> ServerErrorIO ()
 cleanAll_ m = alwaysOk $ do
