@@ -17,6 +17,7 @@ import           Control.Applicative
 import           Data.Functor.Identity
 import qualified Data.HashMap.Strict           as HM
 import           Data.Int                      (Int32)
+import           Data.Kind
 import           Data.List                     (find)
 import           Data.Maybe
 import           Data.Proxy
@@ -25,6 +26,7 @@ import qualified Data.Text                     as T
 import           GHC.TypeLits
 import qualified Language.GraphQL.Draft.Syntax as GQL
 
+import           Mu.GraphQL.Annotations
 import           Mu.GraphQL.Query.Definition
 import           Mu.Rpc
 import           Mu.Schema
@@ -135,7 +137,6 @@ parseQuery pp ps vmap frmap (GQL.SelectionFragmentSpread (GQL.FragmentSpread nm 
 parseQuery _ _ _ _ (_ : _)  -- Inline fragments are not yet supported
   = empty
 
-
 shouldSkip :: VariableMap -> GQL.Directive -> Bool
 shouldSkip vmap (GQL.Directive (GQL.unName -> nm) [GQL.Argument (GQL.unName -> ifn) v])
   | nm == "skip", ifn == "if"
@@ -181,13 +182,30 @@ class ParseArgs (p :: Package') (args :: [Argument']) where
 
 instance ParseArgs p '[] where
   parseArgs _ _ = pure Nil
-instance (KnownName aname, ParseArg p a, ParseArgs p as)
-         => ParseArgs p ('ArgSingle aname a ': as) where
+instance (KnownName aname, ParseArg p a, ParseArgs p as, FindDefaultArgValue aanns)
+         => ParseArgs p ('ArgSingle aname aanns a ': as) where
   parseArgs vmap args
     = case find ((== nameVal (Proxy @aname)) . T.unpack . GQL.unName . GQL._aName) args of
         Just (GQL.Argument _ x)
-          -> (:*) <$> (ArgumentValue <$> parseArg' vmap x) <*> parseArgs vmap args
-        Nothing -> empty
+          -> (:*) <$> (ArgumentValue <$> parseArg' vmap x)
+                  <*> parseArgs vmap args
+        Nothing -> case findDefaultArgValue (Proxy @aanns) of
+                     Just x  -> (:*) <$> (ArgumentValue <$> parseArg' vmap (constToValue x))
+                                     <*> parseArgs vmap args
+                     Nothing -> empty
+
+class FindDefaultArgValue (vs :: [Type]) where
+  findDefaultArgValue :: Alternative f
+                      => Proxy vs
+                      -> f GQL.ValueConst
+instance FindDefaultArgValue '[] where
+  findDefaultArgValue _ = empty
+instance {-# OVERLAPPABLE #-} FindDefaultArgValue xs
+         => FindDefaultArgValue (x ': xs) where
+  findDefaultArgValue _ = findDefaultArgValue (Proxy @xs)
+instance {-# OVERLAPS #-} ReflectValueConst v
+         => FindDefaultArgValue (DefaultValue v ': xs) where
+  findDefaultArgValue _ = pure $ reflectValueConst (Proxy @v)
 
 parseArg' :: (ParseArg p a, Alternative f)
           => VariableMap

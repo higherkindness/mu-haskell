@@ -128,15 +128,15 @@ computeMethodType _ [] RetNothing
   = [t|IO (GRpcReply ())|]
 computeMethodType n [] (RetSingle r)
   = [t|IO (GRpcReply $(typeRefToType n r))|]
-computeMethodType n [ArgSingle _ v] RetNothing
+computeMethodType n [ArgSingle _ _ v] RetNothing
   = [t|$(typeRefToType n v) -> IO (GRpcReply ())|]
-computeMethodType n [ArgSingle _ v] (RetSingle r)
+computeMethodType n [ArgSingle _ _ v] (RetSingle r)
   = [t|$(typeRefToType n v) -> IO (GRpcReply $(typeRefToType n r))|]
-computeMethodType n [ArgStream _ v] (RetSingle r)
+computeMethodType n [ArgStream _ _ v] (RetSingle r)
   = [t|CompressMode -> IO (ConduitT $(typeRefToType n v) Void IO (GRpcReply $(typeRefToType n r)))|]
-computeMethodType n [ArgSingle _ v] (RetStream r)
+computeMethodType n [ArgSingle _ _ v] (RetStream r)
   = [t|$(typeRefToType n v) -> IO (ConduitT () (GRpcReply $(typeRefToType n r)) IO ())|]
-computeMethodType n [ArgStream _ v] (RetStream r)
+computeMethodType n [ArgStream _ _ v] (RetStream r)
   = [t|CompressMode -> IO (ConduitT $(typeRefToType n v) (GRpcReply $(typeRefToType n r)) IO ())|]
 computeMethodType _ _ _ = fail "method signature not supported"
 
@@ -184,10 +184,10 @@ typeToServiceDef toplevelty
 
     typeToArgDef :: Type -> Maybe (Argument String String)
     typeToArgDef ty
-      =   (do (n, t) <- tyD2 'ArgSingle ty
-              ArgSingle <$> tyMaybeString n <*> typeToTypeRef t)
-      <|> (do (n, t) <- tyD2 'ArgStream ty
-              ArgStream <$> tyMaybeString n <*> typeToTypeRef t)
+      =   (do (n, _, t) <- tyD3 'ArgSingle ty
+              ArgSingle <$> tyMaybeString n <*> pure [] <*> typeToTypeRef t)
+      <|> (do (n, _, t) <- tyD3 'ArgStream ty
+              ArgStream <$> tyMaybeString n <*> pure [] <*> typeToTypeRef t)
 
     typeToRetDef :: Type -> Maybe (Return String)
     typeToRetDef ty

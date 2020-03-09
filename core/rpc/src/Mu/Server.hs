@@ -197,10 +197,10 @@ instance (FromRef w chn ref t, Maybe t ~ s) => FromRef w chn ('OptionalRef ref) 
 -- Arguments
 instance (FromRef w chn ref t, Handles w chn args ret m h,
           handler ~ (t -> h))
-         => Handles w chn ('ArgSingle aname ref ': args) ret m handler
+         => Handles w chn ('ArgSingle aname anns ref ': args) ret m handler
 instance (MonadError ServerError m, FromRef w chn ref t, Handles w chn args ret m h,
           handler ~ (ConduitT () t m () -> h))
-         => Handles w chn ('ArgStream aname ref ': args) ret m handler
+         => Handles w chn ('ArgStream aname anns ref ': args) ret m handler
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
          => Handles w chn '[] 'RetNothing m handler

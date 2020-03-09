@@ -15,6 +15,7 @@ bug-reports:   https://github.com/higherkindness/mu-haskell/issues
 
 library
   exposed-modules:
+    Mu.GraphQL.Annotations
     Mu.GraphQL.Query.Definition
     Mu.GraphQL.Query.Parse
     Mu.GraphQL.Query.Run
