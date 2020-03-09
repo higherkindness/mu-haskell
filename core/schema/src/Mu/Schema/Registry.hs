@@ -53,16 +53,16 @@ type Registry = Mappings Nat Schema'
 --   /Implementation note/: schemas are checked
 --   __in the same order__ in which they appear
 --   in the 'Registry' definition.
-fromRegistry :: forall r t w. FromRegistry w r t
-             => SLess.Term w -> Maybe t
+fromRegistry :: forall r t. FromRegistry r t
+             => SLess.Term -> Maybe t
 fromRegistry = fromRegistry' (Proxy @r)
 
-class FromRegistry (w :: * -> *) (ms :: Registry) (t :: Type) where
-  fromRegistry' :: Proxy ms -> SLess.Term w -> Maybe t
+class FromRegistry (ms :: Registry) (t :: Type) where
+  fromRegistry' :: Proxy ms -> SLess.Term -> Maybe t
 
-instance FromRegistry w '[] t where
+instance FromRegistry '[] t where
   fromRegistry' _ _ = Nothing
-instance ( Traversable w, FromSchema w s sty t
-         , SLess.CheckSchema s (s :/: sty), FromRegistry w ms t )
-         => FromRegistry w ((n ':-> s) ': ms) t where
-  fromRegistry' _ t = SLess.fromSchemalessTerm @s @w t <|> fromRegistry' (Proxy @ms) t
+instance ( Traversable w, FromSchema s sty t
+         , SLess.CheckSchema s (s :/: sty), FromRegistry ms t )
+         => FromRegistry ((n ':-> s) ': ms) t where
+  fromRegistry' _ t = SLess.fromSchemalessTerm @s t <|> fromRegistry' (Proxy @ms) t

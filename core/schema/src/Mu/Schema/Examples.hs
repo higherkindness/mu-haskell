@@ -21,7 +21,6 @@ Look at the source code of this module.
 module Mu.Schema.Examples where
 
 import qualified Data.Aeson                         as J
-import           Data.Functor.Identity
 import qualified Data.Text                          as T
 import           GHC.Generics
 
@@ -36,17 +35,17 @@ data Person
            , gender    :: Maybe Gender
            , address   :: Address }
   deriving (Eq, Show, Generic)
-  deriving (ToSchema Identity ExampleSchema "person", FromSchema Identity ExampleSchema "person")
+  deriving (ToSchema ExampleSchema "person", FromSchema ExampleSchema "person")
   deriving (J.ToJSON, J.FromJSON)
-    via (WithSchema Identity ExampleSchema "person" Person)
+    via (WithSchema ExampleSchema "person" Person)
 
 data Address
   = Address { postcode :: T.Text
             , country  :: T.Text }
   deriving (Eq, Show, Generic)
-  deriving (ToSchema Identity ExampleSchema "address", FromSchema Identity ExampleSchema "address")
+  deriving (ToSchema ExampleSchema "address", FromSchema ExampleSchema "address")
   deriving (J.ToJSON, J.FromJSON)
-    via (WithSchema Identity ExampleSchema "address" Address)
+    via (WithSchema ExampleSchema "address" Address)
 
 type GenderFieldMapping
   = '[ "Male"      ':-> "male"
@@ -55,10 +54,10 @@ type GenderFieldMapping
 
 data Gender = Male | Female | NonBinary
   deriving (Eq, Show, Generic)
-  deriving (ToSchema f ExampleSchema "gender", FromSchema f ExampleSchema "gender")
+  deriving (ToSchema ExampleSchema "gender", FromSchema ExampleSchema "gender")
     via (CustomFieldMapping "gender" GenderFieldMapping Gender)
   deriving (J.ToJSON, J.FromJSON)
-    via (WithSchema Identity ExampleSchema "gender" Gender)
+    via (WithSchema ExampleSchema "gender" Gender)
 
 -- Schema for these data types
 type ExampleSchema
