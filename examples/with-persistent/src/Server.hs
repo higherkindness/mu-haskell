@@ -43,7 +43,6 @@ newPerson :: SqlBackend -> MPerson -> ServerErrorIO MPersonRequest
 newPerson conn (MPerson _ name age) = runDb conn $ do
   PersonKey (SqlBackendKey nId) <- insert (Person name age)
   pure $ MPersonRequest nId
-newPerson _ _ = serverError $ ServerError Invalid "missing person data"
 
 allPeople :: SqlBackend -> ConduitT (Entity Person) Void ServerErrorIO () -> ServerErrorIO ()
 allPeople conn sink = runDb conn $
