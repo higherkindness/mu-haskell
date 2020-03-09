@@ -5,7 +5,6 @@
 {-# language TypeOperators       #-}
 module Mu.GraphQL.Query.Definition where
 
-import           Data.Functor.Identity
 import           Data.SOP.NP
 import           Data.SOP.NS
 import           Data.Text
@@ -40,7 +39,7 @@ data ArgumentValue (p :: Package snm mnm anm) (a :: Argument snm anm) where
 
 data ArgumentValue' (p :: Package snm mnm anm) (r :: TypeRef snm) where
   ArgPrimitive :: t -> ArgumentValue' p ('PrimitiveRef t)
-  ArgSchema    :: Term Identity sch (sch :/: sty)
+  ArgSchema    :: Term sch (sch :/: sty)
                -> ArgumentValue' p ('SchemaRef sch sty)
   ArgList      :: [ArgumentValue' p r]
                -> ArgumentValue' p ('ListRef r)
