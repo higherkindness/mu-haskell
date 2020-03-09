@@ -36,11 +36,11 @@ grpc "PersistentSchema" id "with-persistent.proto"
 #endif
 
 newtype MPersonRequest = MPersonRequest
-  { identifier :: Maybe Int64
+  { identifier :: Int64
   } deriving (Eq, Show, Ord, Generic)
 
-instance ToSchema   Maybe PersistentSchema "PersonRequest" MPersonRequest
-instance FromSchema Maybe PersistentSchema "PersonRequest" MPersonRequest
+instance ToSchema   PersistentSchema "PersonRequest" MPersonRequest
+instance FromSchema PersistentSchema "PersonRequest" MPersonRequest
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Person json
@@ -51,14 +51,14 @@ Person json
 
 data MPerson = MPerson
   { pid  :: Maybe MPersonRequest
-  , name :: Maybe T.Text
-  , age  :: Maybe Int32
+  , name :: T.Text
+  , age  :: Int32
   } deriving (Eq, Ord, Show, Generic)
 
-instance ToSchema   Maybe PersistentSchema "Person" MPerson
-instance FromSchema Maybe PersistentSchema "Person" MPerson
+instance ToSchema   PersistentSchema "Person" MPerson
+instance FromSchema PersistentSchema "Person" MPerson
 
 type PersonFieldMapping = '[ "personAge" ':-> "age", "personName" ':-> "name" ]
 
 deriving via (WithEntityNestedId "Person" PersonFieldMapping (Entity Person))
-  instance ToSchema Maybe PersistentSchema "Person" (Entity Person)
+  instance ToSchema PersistentSchema "Person" (Entity Person)

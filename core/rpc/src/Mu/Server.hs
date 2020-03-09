@@ -21,7 +21,7 @@ operation in the corresponding Mu service declaration.
 
 In general, you should declare a server as:
 
-> server :: MonadServer m => ServerT w MyService m _
+> server :: MonadServer m => ServerT MyService m _
 > server = Server (h1 :<|>: h2 :<|>: ... :<|>: H0)
 
 where each of @h1@, @h2@, ... handles each method in
@@ -64,7 +64,7 @@ type ServerErrorIO = ExceptT ServerError IO
 
 -- | Simple 'ServerT' which uses only 'IO' and errors,
 --   and whose service has no back-references.
-type ServerIO w srv = ServerT w '[] srv ServerErrorIO
+type ServerIO srv = ServerT '[] srv ServerErrorIO
 
 -- | Stop the current handler,
 --   returning an error to the client.
@@ -108,31 +108,29 @@ type ServiceChain snm = Mappings snm Type
 
 -- | A server for a single service,
 --   like most RPC ones.
-type SingleServerT w = ServerT w '[]
+type SingleServerT = ServerT '[]
 
 -- | Definition of a complete server
 --   for a set of services, with possible
 --   references between them.
-data ServerT (w :: Type -> Type)  -- wrapper for data types
-             (chn :: ServiceChain snm) (s :: Package snm mnm anm)
+data ServerT (chn :: ServiceChain snm) (s :: Package snm mnm anm)
              (m :: Type -> Type) (hs :: [[Type]]) where
-  Services :: ServicesT w chn s m hs
-           -> ServerT w chn ('Package pname s) m hs
+  Services :: ServicesT chn s m hs
+           -> ServerT chn ('Package pname s) m hs
 
 pattern Server :: (MappingRight chn sname ~ ())
-               => HandlersT w chn () methods m hs
-               -> ServerT w chn ('Package pname '[ 'Service sname sanns methods ]) m '[hs]
+               => HandlersT chn () methods m hs
+               -> ServerT chn ('Package pname '[ 'Service sname sanns methods ]) m '[hs]
 pattern Server svr = Services (svr :<&>: S0)
 
 infixr 3 :<&>:
 -- | Definition of a complete server for a service.
-data ServicesT (w :: Type -> Type)
-               (chn :: ServiceChain snm) (s :: [Service snm mnm anm])
+data ServicesT (chn :: ServiceChain snm) (s :: [Service snm mnm anm])
                (m :: Type -> Type) (hs :: [[Type]]) where
-  S0 :: ServicesT w chn '[] m '[]
-  (:<&>:) :: HandlersT w chn (MappingRight chn sname) methods m hs
-          -> ServicesT w chn rest m hss
-          -> ServicesT w chn ('Service sname anns methods ': rest) m (hs ': hss)
+  S0 :: ServicesT chn '[] m '[]
+  (:<&>:) :: HandlersT chn (MappingRight chn sname) methods m hs
+          -> ServicesT chn rest m hss
+          -> ServicesT chn ('Service sname anns methods ': rest) m (hs ': hss)
 
 infixr 4 :<||>:
 -- | 'HandlersT' is a sequence of handlers.
@@ -154,59 +152,58 @@ infixr 4 :<||>:
 --   * Output streams turn into an __additional argument__
 --     of type @Conduit t Void m ()@. This stream should
 --     be connected to a source to get the elements.
-data HandlersT (w :: Type -> Type) (chn :: ServiceChain snm)
+data HandlersT (chn :: ServiceChain snm)
                (inh :: *) (methods :: [Method snm mnm anm])
                (m :: Type -> Type) (hs :: [Type]) where
-  H0 :: HandlersT w chn inh '[] m '[]
-  (:<||>:) :: Handles w chn args ret m h
-           => (inh -> h) -> HandlersT w chn inh ms m hs
-           -> HandlersT w chn inh ('Method name anns args ret ': ms) m (h ': hs)
+  H0 :: HandlersT chn inh '[] m '[]
+  (:<||>:) :: Handles chn args ret m h
+           => (inh -> h) -> HandlersT chn inh ms m hs
+           -> HandlersT chn inh ('Method name anns args ret ': ms) m (h ': hs)
 
 infixr 4 :<|>:
-pattern (:<|>:) :: (Handles w chn args ret m h)
-                => h -> HandlersT w chn () ms m hs
-                -> HandlersT w chn () ('Method name anns args ret ': ms) m (h ': hs)
+pattern (:<|>:) :: (Handles chn args ret m h)
+                => h -> HandlersT chn () ms m hs
+                -> HandlersT chn () ('Method name anns args ret ': ms) m (h ': hs)
 pattern x :<|>: xs <- (($ ()) -> x) :<||>: xs where
   x :<|>: xs = noContext x :<||>: xs
 
 -- Define a relation for handling
-class Handles (w :: Type -> Type)
-              (chn :: ServiceChain snm)
+class Handles (chn :: ServiceChain snm)
               (args :: [Argument snm anm]) (ret :: Return snm)
               (m :: Type -> Type) (h :: Type)
-class ToRef   (w :: Type -> Type) (chn :: ServiceChain snm)
+class ToRef   (chn :: ServiceChain snm)
               (ref :: TypeRef snm) (t :: Type)
-class FromRef (w :: Type -> Type) (chn :: ServiceChain snm)
+class FromRef (chn :: ServiceChain snm)
               (ref :: TypeRef snm) (t :: Type)
 
 -- Type references
-instance t ~ s => ToRef w chn ('PrimitiveRef t) s
-instance ToSchema w sch sty t => ToRef w chn ('SchemaRef sch sty) t
-instance MappingRight chn ref ~ t => ToRef w chn ('ObjectRef ref) t
-instance t ~ s => ToRef w chn ('RegistryRef subject t last) s
-instance (ToRef w chn ref t, [t] ~ s) => ToRef w chn ('ListRef ref) s
-instance (ToRef w chn ref t, Maybe t ~ s) => ToRef w chn ('OptionalRef ref) s
+instance t ~ s => ToRef chn ('PrimitiveRef t) s
+instance ToSchema sch sty t => ToRef chn ('SchemaRef sch sty) t
+instance MappingRight chn ref ~ t => ToRef chn ('ObjectRef ref) t
+instance t ~ s => ToRef chn ('RegistryRef subject t last) s
+instance (ToRef chn ref t, [t] ~ s) => ToRef chn ('ListRef ref) s
+instance (ToRef chn ref t, Maybe t ~ s) => ToRef chn ('OptionalRef ref) s
 
-instance t ~ s => FromRef w chn ('PrimitiveRef t) s
-instance FromSchema w sch sty t => FromRef w chn ('SchemaRef sch sty) t
-instance MappingRight chn ref ~ t => FromRef w chn ('ObjectRef ref) t
-instance t ~ s => FromRef w chn ('RegistryRef subject t last) s
-instance (FromRef w chn ref t, [t] ~ s) => FromRef w chn ('ListRef ref) s
-instance (FromRef w chn ref t, Maybe t ~ s) => FromRef w chn ('OptionalRef ref) s
+instance t ~ s => FromRef chn ('PrimitiveRef t) s
+instance FromSchema sch sty t => FromRef chn ('SchemaRef sch sty) t
+instance MappingRight chn ref ~ t => FromRef chn ('ObjectRef ref) t
+instance t ~ s => FromRef chn ('RegistryRef subject t last) s
+instance (FromRef chn ref t, [t] ~ s) => FromRef chn ('ListRef ref) s
+instance (FromRef chn ref t, Maybe t ~ s) => FromRef chn ('OptionalRef ref) s
 
 -- Arguments
-instance (FromRef w chn ref t, Handles w chn args ret m h,
+instance (FromRef chn ref t, Handles chn args ret m h,
           handler ~ (t -> h))
-         => Handles w chn ('ArgSingle aname anns ref ': args) ret m handler
-instance (MonadError ServerError m, FromRef w chn ref t, Handles w chn args ret m h,
+         => Handles chn ('ArgSingle aname anns ref ': args) ret m handler
+instance (MonadError ServerError m, FromRef chn ref t, Handles chn args ret m h,
           handler ~ (ConduitT () t m () -> h))
-         => Handles w chn ('ArgStream aname anns ref ': args) ret m handler
+         => Handles chn ('ArgStream aname anns ref ': args) ret m handler
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
-         => Handles w chn '[] 'RetNothing m handler
-instance (MonadError ServerError m, ToRef w chn eref e, ToRef w chn vref v, handler ~ m (Either e v))
-         => Handles w chn '[] ('RetThrows eref vref) m handler
-instance (MonadError ServerError m, ToRef w chn ref v, handler ~ m v)
-         => Handles w chn '[] ('RetSingle ref) m handler
-instance (MonadError ServerError m, ToRef w chn ref v, handler ~ (ConduitT v Void m () -> m ()))
-         => Handles w chn '[] ('RetStream ref) m handler
+         => Handles chn '[] 'RetNothing m handler
+instance (MonadError ServerError m, ToRef chn eref e, ToRef chn vref v, handler ~ m (Either e v))
+         => Handles chn '[] ('RetThrows eref vref) m handler
+instance (MonadError ServerError m, ToRef chn ref v, handler ~ m v)
+         => Handles chn '[] ('RetSingle ref) m handler
+instance (MonadError ServerError m, ToRef chn ref v, handler ~ (ConduitT v Void m () -> m ()))
+         => Handles chn '[] ('RetStream ref) m handler

@@ -1,5 +1,5 @@
 name:               mu-rpc
-version:            0.2.0.0
+version:            0.3.0.0
 synopsis:           Protocol-independent declaration of services and servers.
 description:
   Protocol-independent declaration of services and servers for mu-haskell.

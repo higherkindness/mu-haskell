@@ -24,23 +24,23 @@ import           Mu.Server
 import           Schema
 
 data Person = Person
-  { name :: Maybe T.Text
-  , age  :: Maybe Int32
+  { name :: T.Text
+  , age  :: Int32
   } deriving ( Eq, Show, Ord, Generic
-             , ToSchema   Maybe SeedSchema "Person"
-             , FromSchema Maybe SeedSchema "Person" )
+             , ToSchema   SeedSchema "Person"
+             , FromSchema SeedSchema "Person" )
 
 newtype PeopleRequest = PeopleRequest
-  { name :: Maybe T.Text
+  { name :: T.Text
   } deriving ( Eq, Show, Ord, Generic
-             , ToSchema   Maybe SeedSchema "PeopleRequest"
-             , FromSchema Maybe SeedSchema "PeopleRequest" )
+             , ToSchema   SeedSchema "PeopleRequest"
+             , FromSchema SeedSchema "PeopleRequest" )
 
 newtype PeopleResponse = PeopleResponse
   { person :: Maybe Person
   } deriving ( Eq, Show, Ord, Generic
-             , ToSchema   Maybe SeedSchema "PeopleResponse"
-             , FromSchema Maybe SeedSchema "PeopleResponse" )
+             , ToSchema   SeedSchema "PeopleResponse"
+             , FromSchema SeedSchema "PeopleResponse" )
 
 main :: IO ()
 main = do
@@ -50,11 +50,11 @@ main = do
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/seed/server/modules/process/src/main/scala/example/seed/server/process/ProtoPeopleServiceHandler.scala
 
-server :: (MonadServer m, MonadLogger m) => SingleServerT Maybe PeopleService m _
+server :: (MonadServer m, MonadLogger m) => SingleServerT PeopleService m _
 server = Server (getPerson :<|>: getPersonStream :<|>: H0)
 
 evolvePerson :: PeopleRequest -> PeopleResponse
-evolvePerson (PeopleRequest n) = PeopleResponse $ Just $ Person n (Just 18)
+evolvePerson (PeopleRequest n) = PeopleResponse $ Just $ Person n 18
 
 getPerson :: Monad m => PeopleRequest -> m PeopleResponse
 getPerson = pure . evolvePerson

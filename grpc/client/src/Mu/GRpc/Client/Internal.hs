@@ -25,7 +25,6 @@ import qualified Data.ByteString.Char8         as BS
 import           Data.Conduit
 import qualified Data.Conduit.Combinators      as C
 import           Data.Conduit.TMChan
-import           Data.Functor.Identity
 import           Data.Kind
 import           GHC.TypeLits
 import           Network.GRPC.Client           (CompressMode (..), IncomingEvent (..),
@@ -102,8 +101,8 @@ instance ToProtoBufTypeRef ref r
   buildGRpcIWTy _ _ = ViaToProtoBufTypeRef
 
 instance forall (sch :: Schema') (sty :: Symbol) (r :: Type).
-         ( ToSchema Identity sch sty r
-         , ToAvro (Term Identity sch (sch :/: sty)) )
+         ( ToSchema sch sty r
+         , ToAvro (Term sch (sch :/: sty)) )
          => GRpcInputWrapper 'MsgAvro ('SchemaRef sch sty) r where
   type GRpcIWTy 'MsgAvro ('SchemaRef sch sty) r = ViaToAvroTypeRef ('SchemaRef sch sty) r
   buildGRpcIWTy _ _ = ViaToAvroTypeRef
@@ -119,8 +118,8 @@ instance FromProtoBufTypeRef ref r
   unGRpcOWTy _ _ = unViaFromProtoBufTypeRef
 
 instance forall (sch :: Schema') (sty :: Symbol) (r :: Type).
-         ( FromSchema Identity sch sty r
-         , FromAvro (Term Identity sch (sch :/: sty)) )
+         ( FromSchema sch sty r
+         , FromAvro (Term sch (sch :/: sty)) )
          => GRpcOutputWrapper 'MsgAvro ('SchemaRef sch sty) r where
   type GRpcOWTy 'MsgAvro ('SchemaRef sch sty) r = ViaFromAvroTypeRef ('SchemaRef sch sty) r
   unGRpcOWTy _ _ = unViaFromAvroTypeRef

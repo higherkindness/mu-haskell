@@ -27,7 +27,6 @@ import           Control.Monad.Trans.Resource
 import qualified Data.Avro                    as A
 import           Data.ByteString
 import           Data.Conduit
-import           Data.Functor.Identity
 import           Data.Typeable
 import           GHC.Generics
 import           Mu.Schema
@@ -50,8 +49,8 @@ data ProducerRecord' k v = ProducerRecord'
   } deriving (Eq, Show, Typeable, Generic)
 
 toPR
-  :: ( ToSchema Identity sch sty t
-     , A.ToAvro (Term Identity sch (sch :/: sty)) )
+  :: ( ToSchema sch sty t
+     , A.ToAvro (Term sch (sch :/: sty)) )
   => Proxy sch -> ProducerRecord' ByteString t -> ProducerRecord
 toPR proxy (ProducerRecord' t p k v)
   = ProducerRecord t p k (toBS proxy <$> v)
@@ -63,8 +62,8 @@ toPR proxy (ProducerRecord' t p k v)
 -- 'kafkaSinkAutoClose' or 'kafkaSinkNoClose' can be used.
 kafkaSink
   :: ( MonadResource m
-     , ToSchema Identity sch sty t
-     , A.ToAvro (Term Identity sch (sch :/: sty)) )
+     , ToSchema sch sty t
+     , A.ToAvro (Term sch (sch :/: sty)) )
   => Proxy sch -> X.ProducerProperties
   -> ConduitT (ProducerRecord' ByteString t) Void m (Maybe KafkaError)
 kafkaSink proxy prod
@@ -74,8 +73,8 @@ kafkaSink proxy prod
 -- The producer will be closed when the Sink is closed.
 kafkaSinkAutoClose
   :: ( MonadResource m
-     , ToSchema Identity sch sty t
-     , A.ToAvro (Term Identity sch (sch :/: sty)) )
+     , ToSchema sch sty t
+     , A.ToAvro (Term sch (sch :/: sty)) )
   => Proxy sch -> KafkaProducer
   -> ConduitT (ProducerRecord' ByteString t) Void m (Maybe X.KafkaError)
 kafkaSinkAutoClose proxy prod
@@ -85,8 +84,8 @@ kafkaSinkAutoClose proxy prod
 -- The producer will NOT be closed automatically.
 kafkaSinkNoClose
   :: ( MonadIO m
-     , ToSchema Identity sch sty t
-     , A.ToAvro (Term Identity sch (sch :/: sty)) )
+     , ToSchema sch sty t
+     , A.ToAvro (Term sch (sch :/: sty)) )
   => Proxy sch -> KafkaProducer
   -> ConduitT (ProducerRecord' ByteString t) Void m (Maybe X.KafkaError)
 kafkaSinkNoClose proxy prod
@@ -96,8 +95,8 @@ kafkaSinkNoClose proxy prod
 -- The producer will NOT be closed automatically.
 kafkaBatchSinkNoClose
   :: ( MonadIO m
-     , ToSchema Identity sch sty t
-     , A.ToAvro (Term Identity sch (sch :/: sty)) )
+     , ToSchema sch sty t
+     , A.ToAvro (Term sch (sch :/: sty)) )
   => Proxy sch -> KafkaProducer
   -> ConduitT [ProducerRecord' ByteString t] Void m [(ProducerRecord, KafkaError)]
 kafkaBatchSinkNoClose proxy prod

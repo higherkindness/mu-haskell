@@ -24,7 +24,6 @@ import           Control.Monad.Trans.Resource
 import qualified Data.Avro                    as A
 import           Data.ByteString
 import           Data.Conduit
-import           Data.Functor.Identity
 import           Mu.Schema
 
 import qualified Kafka.Conduit.Source         as S
@@ -35,8 +34,8 @@ import           Kafka.Consumer               as X
 import           Mu.Kafka.Internal
 
 fromCR
-  :: ( FromSchema Identity sch sty t
-     , A.FromAvro (Term Identity sch (sch :/: sty)) )
+  :: ( FromSchema sch sty t
+     , A.FromAvro (Term sch (sch :/: sty)) )
   => Proxy sch
   -> ConsumerRecord (Maybe ByteString) (Maybe ByteString)
   -> ConsumerRecord (Maybe ByteString) (Maybe t)
@@ -50,8 +49,8 @@ fromCR proxy (ConsumerRecord t p o ts k v)
 -- 'kafkaSinkNoClose' or 'kafkaSinkAutoClose' can be used.
 kafkaSource
   :: ( MonadResource m
-     , FromSchema Identity sch sty t
-     , A.FromAvro (Term Identity sch (sch :/: sty)) )
+     , FromSchema sch sty t
+     , A.FromAvro (Term sch (sch :/: sty)) )
   => Proxy sch
   -> ConsumerProperties -> Subscription -> Timeout
   -> ConduitT () (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t))) m ()
@@ -62,8 +61,8 @@ kafkaSource proxy props sub ts =
 -- The consumer will NOT be closed automatically when the `Source` is closed.
 kafkaSourceNoClose
   :: ( MonadIO m
-     , FromSchema Identity sch sty t
-     , A.FromAvro (Term Identity sch (sch :/: sty)) )
+     , FromSchema sch sty t
+     , A.FromAvro (Term sch (sch :/: sty)) )
   => Proxy sch
   -> KafkaConsumer -> Timeout
   -> ConduitT () (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t))) m ()
@@ -75,8 +74,8 @@ kafkaSourceNoClose proxy c t
 -- The consumer will be closed automatically when the `Source` is closed.
 kafkaSourceAutoClose
   :: ( MonadResource m
-     , FromSchema Identity sch sty t
-     , A.FromAvro (Term Identity sch (sch :/: sty)) )
+     , FromSchema sch sty t
+     , A.FromAvro (Term sch (sch :/: sty)) )
   => Proxy sch
   -> KafkaConsumer -> Timeout
   -> ConduitT () (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t))) m ()

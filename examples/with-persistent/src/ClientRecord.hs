@@ -11,7 +11,6 @@ import qualified Data.Text                as T
 import           GHC.Generics             (Generic)
 import           Mu.GRpc.Client.Record
 import           System.Environment
-import           Text.Read                (readMaybe)
 
 import           Schema
 
@@ -35,14 +34,14 @@ main = do
 
 get :: PersistentCall -> String -> IO ()
 get client idPerson = do
-  let req = MPersonRequest $ readMaybe idPerson
+  let req = MPersonRequest $ read idPerson
   putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
   res <- getPerson client req
   putStrLn $ "GET: response was: " ++ show res
 
 add :: PersistentCall -> String -> String -> IO ()
 add client nm ag = do
-  let p = MPerson Nothing (Just $ T.pack nm) (readMaybe ag)
+  let p = MPerson Nothing (T.pack nm) (read ag)
   putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
   res <- newPerson client p
   putStrLn $ "ADD: was creating successful? " ++ show res
