@@ -13,8 +13,7 @@
 {-# language TypeOperators         #-}
 module Definition where
 
-import           Data.Functor.Identity
-import           Data.Text             as T
+import           Data.Text     as T
 import           GHC.Generics
 
 import           Mu.Quasi.Avro
@@ -29,20 +28,20 @@ avdl "HealthCheckSchema" "HealthCheckService" "." "healthcheck.avdl"
 newtype HealthCheckMsg
   = HealthCheckMsg { nameService :: T.Text }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Identity HealthCheckSchema "HealthCheck"
-           , FromSchema Identity HealthCheckSchema "HealthCheck" )
+           , ToSchema   HealthCheckSchema "HealthCheck"
+           , FromSchema HealthCheckSchema "HealthCheck" )
 newtype ServerStatusMsg
   = ServerStatusMsg { status :: T.Text }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Identity HealthCheckSchema "ServerStatus"
-           , FromSchema Identity HealthCheckSchema "ServerStatus" )
+           , ToSchema   HealthCheckSchema "ServerStatus"
+           , FromSchema HealthCheckSchema "ServerStatus" )
 data HealthStatusMsg
   = HealthStatusMsg { hc :: HealthCheckMsg, status :: ServerStatusMsg }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Identity HealthCheckSchema "HealthStatus"
-           , FromSchema Identity HealthCheckSchema "HealthStatus" )
+           , ToSchema   HealthCheckSchema "HealthStatus"
+           , FromSchema HealthCheckSchema "HealthStatus" )
 newtype AllStatusMsg
   = AllStatusMsg { all :: [HealthStatusMsg] }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Identity HealthCheckSchema "AllStatus"
-           , FromSchema Identity HealthCheckSchema "AllStatus" )
+           , ToSchema   HealthCheckSchema "AllStatus"
+           , FromSchema HealthCheckSchema "AllStatus" )

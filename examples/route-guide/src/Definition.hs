@@ -27,64 +27,31 @@ grpc "RouteGuideSchema" id "routeguide.proto"
 #endif
 
 data Point
-  = Point { latitude, longitude :: Maybe Int32 }
+  = Point { latitude, longitude :: Int32 }
   deriving ( Eq, Show, Ord, Generic, Hashable
-           , ToSchema   Maybe RouteGuideSchema "Point"
-           , FromSchema Maybe RouteGuideSchema "Point" )
+           , ToSchema   RouteGuideSchema "Point"
+           , FromSchema RouteGuideSchema "Point" )
 data Rectangle
   = Rectangle { lo, hi :: Maybe Point }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe RouteGuideSchema "Rectangle"
-           , FromSchema Maybe RouteGuideSchema "Rectangle" )
+           , ToSchema   RouteGuideSchema "Rectangle"
+           , FromSchema RouteGuideSchema "Rectangle" )
 data Feature
-  = Feature { name :: Maybe T.Text, location :: Maybe Point }
+  = Feature { name :: T.Text, location :: Maybe Point }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe RouteGuideSchema "Feature"
-           , FromSchema Maybe RouteGuideSchema "Feature" )
+           , ToSchema   RouteGuideSchema "Feature"
+           , FromSchema RouteGuideSchema "Feature" )
 -- Not used in the service
 -- newtype FeatureDb
 --   = FeatureDb { feature :: [Feature] }
 --   deriving (Eq, Show, Ord, Generic, HasSchema RouteGuideSchema "FeatureDatabase")
 data RouteNote
-  = RouteNote { message :: Maybe T.Text, location :: Maybe Point }
+  = RouteNote { message :: T.Text, location :: Maybe Point }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe RouteGuideSchema "RouteNote"
-           , FromSchema Maybe RouteGuideSchema "RouteNote" )
+           , ToSchema   RouteGuideSchema "RouteNote"
+           , FromSchema RouteGuideSchema "RouteNote" )
 data RouteSummary
-  = RouteSummary { point_count, feature_count, distance, elapsed_time :: Maybe Int32 }
+  = RouteSummary { point_count, feature_count, distance, elapsed_time :: Int32 }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe RouteGuideSchema "RouteSummary"
-           , FromSchema Maybe RouteGuideSchema "RouteSummary" )
-
-{-
-type RG = 'FromSchema RouteGuideSchema
-type RouteGuideService
-  = 'Service "RouteGuideService" '[Package "routeguide"]
-      '[ 'Method "GetFeature"   '[] '[ 'ArgSingle (RG "Point") ] ('RetSingle (RG "Feature"))
-       , 'Method "ListFeatures" '[] '[ 'ArgSingle (RG "Rectangle") ] ('RetStream (RG "Feature"))
-       , 'Method "RecordRoute"  '[] '[ 'ArgStream (RG "Point") ] ('RetSingle (RG "RouteSummary"))
-       , 'Method "RouteChat"    '[] '[ 'ArgStream (RG "RouteNote") ] ('RetStream (RG "RouteNote"))
-       ]
-
-type RouteGuideSchema
-  = '[ 'DRecord "Point" '[]
-                '[ 'FieldDef "latitude"  '[ProtoBufId 1] ('TPrimitive Int32)
-                 , 'FieldDef "longitude" '[ProtoBufId 2] ('TPrimitive Int32) ]
-     , 'DRecord "Rectangle" '[]
-                '[ 'FieldDef "lo" '[ProtoBufId 1] ('TSchematic "Point")
-                 , 'FieldDef "hi" '[ProtoBufId 2] ('TSchematic "Point") ]
-     , 'DRecord "Feature" '[]
-                '[ 'FieldDef "name"     '[ProtoBufId 1] ('TPrimitive T.Text)
-                 , 'FieldDef "location" '[ProtoBufId 2] ('TSchematic "Point") ]
-     , 'DRecord "FeatureDatabase" '[]
-                '[ 'FieldDef "feature" '[ProtoBufId 1] ('TList ('TSchematic "Feature")) ]
-     , 'DRecord "RouteNote" '[]
-                '[ 'FieldDef "message"  '[ProtoBufId 2] ('TPrimitive T.Text)
-                 , 'FieldDef "location" '[ProtoBufId 1] ('TSchematic "Point") ]
-     , 'DRecord "RouteSummary" '[]
-                '[ 'FieldDef "point_count"   '[ProtoBufId 1] ('TPrimitive Int32)
-                 , 'FieldDef "feature_count" '[ProtoBufId 2] ('TPrimitive Int32)
-                 , 'FieldDef "distance"      '[ProtoBufId 3] ('TPrimitive Int32)
-                 , 'FieldDef "elapsed_time"  '[ProtoBufId 4] ('TPrimitive Int32) ]
-     ]
--}
+           , ToSchema   RouteGuideSchema "RouteSummary"
+           , FromSchema RouteGuideSchema "RouteSummary" )

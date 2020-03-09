@@ -26,11 +26,11 @@ main = do
       runDb conn $ runMigration migrateAll
       liftIO $ runGRpcApp msgProtoBuf 1234 (server conn)
 
-server :: SqlBackend -> SingleServerT Maybe PersistentService ServerErrorIO _
+server :: SqlBackend -> SingleServerT PersistentService ServerErrorIO _
 server p = Server (getPerson p :<|>: newPerson p :<|>: allPeople p :<|>: H0)
 
 getPerson :: SqlBackend -> MPersonRequest -> ServerErrorIO (Entity Person)
-getPerson conn (MPersonRequest (Just idf)) = do
+getPerson conn (MPersonRequest idf) = do
   r <- runDb conn $ do
     let pId = PersonKey $ SqlBackendKey idf
     maybePerson <- get pId
@@ -38,12 +38,11 @@ getPerson conn (MPersonRequest (Just idf)) = do
   case r of
     Just p  -> pure p
     Nothing -> serverError $ ServerError NotFound "unknown person"
-getPerson _ _ = serverError $ ServerError Invalid "missing person id"
 
 newPerson :: SqlBackend -> MPerson -> ServerErrorIO MPersonRequest
-newPerson conn (MPerson _ (Just name) (Just age)) = runDb conn $ do
+newPerson conn (MPerson _ name age) = runDb conn $ do
   PersonKey (SqlBackendKey nId) <- insert (Person name age)
-  pure $ MPersonRequest (Just nId)
+  pure $ MPersonRequest nId
 newPerson _ _ = serverError $ ServerError Invalid "missing person data"
 
 allPeople :: SqlBackend -> ConduitT (Entity Person) Void ServerErrorIO () -> ServerErrorIO ()

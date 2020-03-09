@@ -11,7 +11,6 @@ module Main where
 
 import           Control.Monad.Logger
 import           Data.Int
-import           Data.Functor.Identity
 import           Mu.GRpc.Server
 import           Mu.Schema
 import           Mu.Schema.Optics
@@ -19,9 +18,9 @@ import           Mu.Server
 
 import           Schema
 
-type Person         = Term Identity SeedSchema (SeedSchema :/: "Person")
-type PeopleRequest  = Term Identity SeedSchema (SeedSchema :/: "PeopleRequest")
-type PeopleResponse = Term Identity SeedSchema (SeedSchema :/: "PeopleResponse")
+type Person         = Term SeedSchema (SeedSchema :/: "Person")
+type PeopleRequest  = Term SeedSchema (SeedSchema :/: "PeopleRequest")
+type PeopleResponse = Term SeedSchema (SeedSchema :/: "PeopleResponse")
 
 main :: IO ()
 main = do
@@ -31,7 +30,7 @@ main = do
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/seed/server/modules/process/src/main/scala/example/seed/server/process/ProtoPeopleServiceHandler.scala
 
-server :: (MonadServer m, MonadLogger m) => SingleServerT Identity PeopleService m _
+server :: (MonadServer m, MonadLogger m) => SingleServerT PeopleService m _
 server = Server (getPerson :<|>: H0)
 
 evolvePerson :: PeopleRequest -> PeopleResponse

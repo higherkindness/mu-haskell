@@ -1,5 +1,5 @@
 name:               mu-example-with-persistent
-version:            0.2.0.0
+version:            0.3.0.0
 synopsis:           Example of a mu-haskell project integrated with persistent
 description:        Example of a mu-haskell project integrated with persistent.
 author:             Flavio Corpa, Alejandro Serrano

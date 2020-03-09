@@ -1,5 +1,5 @@
 name:               mu-kafka
-version:            0.2.0.0
+version:            0.3.0.0
 synopsis:           Utilities for interoperation between Mu and Kafka
 description:
   This package provides simple interoperation between Mu and Kafka using @hw-kafka-client@
@@ -38,3 +38,4 @@ library
     , mu-avro           >=0.2.0
     , mu-schema         >=0.2.0
     , resourcet
+  ghc-options:      -Wall
