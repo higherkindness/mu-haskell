@@ -10,7 +10,6 @@ import qualified Data.Aeson                    as A
 import           Data.Aeson.Text               (encodeToLazyText)
 import qualified Data.ByteString.Internal      as B
 import           Data.ByteString.Lazy          (toStrict)
-import           Data.Functor.Identity
 import           Data.HashMap.Strict           (empty)
 import           Data.Proxy
 import qualified Data.Text                     as T
@@ -40,7 +39,7 @@ graphQLApp ::
      , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
      , MappingRight chn mut ~ ()
      )
-    => ServerT Identity chn p ServerErrorIO hs
+    => ServerT chn p ServerErrorIO hs
     -> Proxy qr
     -> Proxy mut
     -> Application
@@ -82,7 +81,7 @@ runGraphQLApp ::
     , MappingRight chn mut ~ ()
   )
   => Settings
-  -> ServerT Identity chn p ServerErrorIO hs
+  -> ServerT chn p ServerErrorIO hs
   -> Proxy qr
   -> Proxy mut
   -> IO ()
