@@ -16,6 +16,8 @@ module Mu.GraphQL.Query.Run (
   runPipeline
 , runDocument
 , runQuery
+-- * Typeclass to be able to run query handlers
+, RunQueryFindHandler
 ) where
 
 import           Control.Monad.Except          (runExceptT)
@@ -72,7 +74,6 @@ runPipeline svr _ _ opName vmap doc
             ("message", Aeson.String $ T.pack msg)
           , ("path", Aeson.toJSON path)
           ]
-
 
 runDocument
   :: ( p ~ 'Package pname ss
