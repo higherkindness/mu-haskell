@@ -150,7 +150,7 @@ class RunMethod p whole chn sname ms hs where
 instance RunMethod p whole chn s '[] '[] where
   runMethod = error "this should never be called"
 instance (RunMethod p whole chn s ms hs, KnownName mname, RunHandler p whole chn args r h)
-         => RunMethod p whole chn s ('Method ('Just mname) anns args ('RetSingle r) ': ms) (h ': hs) where
+         => RunMethod p whole chn s ('Method mname anns args ('RetSingle r) ': ms) (h ': hs) where
   runMethod whole _ inh (h :<||>: _) (Z (ChosenMethodQuery args ret))
     = (, T.pack $ nameVal (Proxy @mname)) <$> runHandler whole (h inh) args ret
   runMethod whole p inh (_ :<||>: r) (S cont)
