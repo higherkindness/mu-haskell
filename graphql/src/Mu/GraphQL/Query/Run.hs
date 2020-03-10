@@ -150,7 +150,7 @@ class RunMethod p whole chn sname ms hs where
 instance RunMethod p whole chn s '[] '[] where
   runMethod = error "this should never be called"
 instance (RunMethod p whole chn s ms hs, KnownName mname, RunHandler p whole chn args r h)
-         => RunMethod p whole chn s ('Method mname anns args ('RetSingle r) ': ms) (h ': hs) where
+         => RunMethod p whole chn s ('Method ('Just mname) anns args ('RetSingle r) ': ms) (h ': hs) where
   runMethod whole _ inh (h :<||>: _) (Z (ChosenMethodQuery args ret))
     = (, T.pack $ nameVal (Proxy @mname)) <$> runHandler whole (h inh) args ret
   runMethod whole p inh (_ :<||>: r) (S cont)
@@ -209,3 +209,13 @@ instance ( MappingRight chn ref ~ t
          => ResultConversion ('Package pname ss) whole chn ('ObjectRef ref) t where
   convertResult whole (RetObject q) h
     = Just <$> runQuery @('Package pname ss) @(LookupService ss ref) whole h q
+instance ResultConversion p whole chn r s
+        => ResultConversion p whole chn ('OptionalRef r) (Maybe s) where
+  convertResult _ _ Nothing
+    = pure Nothing
+  convertResult whole (RetOptional q) (Just x)
+    = convertResult whole q x
+instance ResultConversion p whole chn r s
+        => ResultConversion p whole chn ('ListRef r) [s] where
+  convertResult whole (RetList q) xs
+    = Just . Aeson.toJSON . catMaybes <$> mapM (convertResult whole q) xs
