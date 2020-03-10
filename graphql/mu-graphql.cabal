@@ -7,7 +7,7 @@ license:       Apache-2.0
 license-file:  LICENSE
 author:        Alejandro Serrano, Flavio Corpa
 maintainer:    alejandro.serrano@47deg.com
-copyright:     Copyright © 2019-2020 <http://47deg.com 47 Degrees>
+copyright:     Copyright © 2020 <http://47deg.com 47 Degrees>
 category:      Network
 build-type:    Simple
 homepage:      https://higherkindness.io/mu-haskell/
@@ -31,6 +31,7 @@ library
     , mtl
     , mu-rpc
     , mu-schema
+    , scientific
     , sop-core
     , text
     , unordered-containers
