@@ -1,5 +1,6 @@
 {-# language DataKinds             #-}
 {-# language FlexibleContexts      #-}
+{-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
@@ -11,6 +12,7 @@ module Main where
 import           Data.List         (find)
 import           Data.Maybe        (fromMaybe)
 import           Data.Proxy
+import           Data.Text         (Text)
 
 import           Mu.GraphQL.Server
 import           Mu.Rpc
@@ -24,17 +26,17 @@ type ServiceDefinition
   = 'Package ('Just "library")
       '[ Object "Book" '[]
         '[ ObjectField "id"     '[] '[] ('RetSingle ('PrimitiveRef Integer))
-         , ObjectField "title"  '[] '[] ('RetSingle ('PrimitiveRef String))
+         , ObjectField "title"  '[] '[] ('RetSingle ('PrimitiveRef Text))
          , ObjectField "author" '[] '[] ('RetSingle ('ObjectRef "Author"))
          ]
       , Object "Author" '[]
         '[ ObjectField "id"    '[] '[] ('RetSingle ('PrimitiveRef Integer))
-         , ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef String))
+         , ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef Text))
          , ObjectField "books" '[] '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
          ]
       , Object "Query" '[]
          '[ ObjectField "author" '[]
-              '[ 'ArgSingle ('Just "name") '[] ('PrimitiveRef String)]
+              '[ 'ArgSingle ('Just "name") '[] ('PrimitiveRef Text)]
               ('RetSingle ('OptionalRef ('ObjectRef "Author")))
           ]
       , Object "Mutation" '[] '[]
@@ -45,7 +47,7 @@ type ServiceMapping = '[
   , "Author" ':-> Integer
   ]
 
-library :: [(Integer, String, [(Integer, String)])]
+library :: [(Integer, Text, [(Integer, Text)])]
 library
   = [ (1, "alex", [(1, "haskell is nice"), (2, "haskell is cool")])
     , (2, "kant", [(3, "critique of pure reason")])]

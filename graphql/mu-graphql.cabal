@@ -53,3 +53,4 @@ executable library-graphql
     , mu-graphql
     , mu-rpc
     , mu-schema
+    , text
