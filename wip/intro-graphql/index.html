@@ -5,14 +5,14 @@
 
     
 
-    <title>Mu-Haskell: Serialization formats</title>
+    <title>Mu-Haskell: Introduction for GraphQL</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Mu is a purely functional library for building microservices.">
     <meta name="keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory">
 
     <meta property="og:image" content="/mu-haskell/wip/img/poster.png" />
-    <meta property="og:title" content="Mu-Haskell: Serialization formats" />
-    <meta property="og:site_name" content="Mu-Haskell: Serialization formats" />
+    <meta property="og:title" content="Mu-Haskell: Introduction for GraphQL" />
+    <meta property="og:site_name" content="Mu-Haskell: Introduction for GraphQL" />
     <meta property="og:url" content="https://higherkindess.io/mu-haskell" />
     <meta property="og:type" content="website" />
     <meta property="og:description" content="Mu is a purely functional library for building microservices." />
@@ -98,7 +98,7 @@
 
       
 
-    <div class="sidebar-menu-item  ">
+    <div class="sidebar-menu-item  open">
        
       <button
         type="button"
@@ -125,7 +125,7 @@
         
         
         <a
-          class=""
+          class="active"
           href="/mu-haskell/wip/intro-graphql/"
           title="For GraphQL"
         >
@@ -150,7 +150,7 @@
 
       
 
-    <div class="sidebar-menu-item  open">
+    <div class="sidebar-menu-item  ">
        
       <a
         href="/mu-haskell/wip/schema/"
@@ -167,7 +167,7 @@
         
         
         <a
-          class="active"
+          class=""
           href="/mu-haskell/wip/serializers/"
           title="Serialization formats"
         >
@@ -392,69 +392,8 @@
 
     </div>
     <div class="doc-content">
-        <h1 id="serialization-formats">Serialization formats</h1>
+        <h1 id="introduction-to-mu-haskell-for-graphql">Introduction to Mu-Haskell for GraphQL</h1>
 
-<p>Mu supports two serialization formats for messages when defining a gRPC end-point: Protocol Buffers and Avro. That is, the “outer layer” of your network packages uses gRPC, and the “inner data layer” has a choice between the aforementioned formats.</p>
-
-<p>There are three places where this choice must be made visible:</p>
-
-<ol>
-  <li>When reading a service definition file,</li>
-  <li>When defining the conversion from Haskell types to schema types,</li>
-  <li>When starting a server or client.</li>
-</ol>
-
-<h2 id="protocol-buffers">Protocol Buffers</h2>
-
-<p>In this case loading the service definition file looks as follows:</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TemplateHaskell #-}</span>
-<span class="kr">import</span> <span class="nn">Mu.Quasi.GRpc</span>
-
-<span class="n">grpc</span> <span class="s">"Schema"</span> <span class="n">id</span> <span class="s">"defn.proto"</span>
-</code></pre></div></div>
-
-<p>This asks the compiler to load the <code class="highlighter-rouge">defn.proto</code> file in order to create a series of (Haskell) types. The first one, which is called <code class="highlighter-rouge">"Schema"</code>, as the first argument shows, includes the definition of all the schema types. Then, for every service defined in the file (since <code class="highlighter-rouge">.proto</code> files may have more than one), the second function is applied to obtain the name of the corresponding Haskell type. In this case we want to use the same names, so we use the identity function.</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">PersonMsg</span>
-  <span class="o">=</span> <span class="kt">PersonMsg</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">Text</span><span class="p">,</span> <span class="n">age</span> <span class="o">::</span> <span class="kt">Int</span> <span class="p">}</span>
-  <span class="kr">deriving</span> <span class="p">(</span> <span class="kt">Eq</span><span class="p">,</span> <span class="kt">Show</span><span class="p">,</span> <span class="kt">Ord</span><span class="p">,</span> <span class="kt">Generic</span>
-           <span class="p">,</span> <span class="kt">ToSchema</span>   <span class="kt">Schema</span> <span class="s">"Person"</span>
-           <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Schema</span> <span class="s">"Person"</span> <span class="p">)</span>
-</code></pre></div></div>
-
-<p>Protocol Buffers version 3 has complicated rules about when a field may or may not appear in the message. For example it is not possible to distinguish whether the empty string is to be transmitted, or that field is missing. In that case, deserialization from a Protocol Buffers message returns the default value. However, for references to other message we can spot the difference, so those references <em>must</em> be wrapped in a <code class="highlighter-rouge">Maybe</code>.</p>
-
-<p>Finally, when starting a server or client you must provide <code class="highlighter-rouge">msgProtoBuf</code> as argument. For example, a server is started by running:</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">runGRpcApp</span> <span class="n">msgProtoBuf</span> <span class="mi">8080</span> <span class="n">server</span>
-</code></pre></div></div>
-
-<h2 id="avro">Avro</h2>
-
-<p>In this case loading the service definition file looks as follows:</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TemplateHaskell #-}</span>
-<span class="kr">import</span> <span class="nn">Mu.Quasi.Avro</span>
-
-<span class="n">avdl</span> <span class="s">"Schema"</span> <span class="s">"Service"</span> <span class="s">"."</span> <span class="s">"defn.avdl"</span>
-</code></pre></div></div>
-
-<p>Each <code class="highlighter-rouge">.avdl</code> file defines just one protocol, so instead of a function like in the case of Protocol Buffers, the second argument is simply the name of the Haskell type to create. But you might have noticed that there’s an additional argument, which in this case is <code class="highlighter-rouge">"."</code>. The reason for this argument is that <code class="highlighter-rouge">.avdl</code> files routinely <em>import</em> other files. This third argument indicates the <em>base directory</em> to search for those files.</p>
-
-<p>The conversion is almost identical to Protocol Buffers too. In Avro fields are required by default, only those fields which are optional (usually specified as a union with <code class="highlighter-rouge">null</code>) must still use <code class="highlighter-rouge">Maybe</code>:</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">PersonMsg</span>
-  <span class="o">=</span> <span class="kt">PersonMsg</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">Text</span><span class="p">,</span> <span class="n">age</span> <span class="o">::</span> <span class="kt">Int</span> <span class="p">}</span>
-  <span class="kr">deriving</span> <span class="p">(</span> <span class="kt">Eq</span><span class="p">,</span> <span class="kt">Show</span><span class="p">,</span> <span class="kt">Ord</span><span class="p">,</span> <span class="kt">Generic</span>
-           <span class="p">,</span> <span class="kt">ToSchema</span>   <span class="kt">Schema</span> <span class="s">"Person"</span>
-           <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Schema</span> <span class="s">"Person"</span> <span class="p">)</span>
-</code></pre></div></div>
-
-<p>Finally, when starting a server or client you must provide <code class="highlighter-rouge">msgAvro</code> as argument. For example, a server is started by running:</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">runGRpcApp</span> <span class="n">msgAvro</span> <span class="mi">8080</span> <span class="n">server</span>
-</code></pre></div></div>
 
     </div>
 </main>

@@ -99,14 +99,40 @@
       
 
     <div class="sidebar-menu-item  ">
-      
-      <a
-        href="/mu-haskell/wip/intro/"
-        class=""
-        title="Introduction"
+       
+      <button
+        type="button"
+        title="Open Introduction"
+        class="button drop-nested"
       >
         Introduction
-      </a>
+      </button>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/intro-rpc/"
+          title="For RPC"
+        >
+          For RPC
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/intro-graphql/"
+          title="For GraphQL"
+        >
+          For GraphQL
+        </a>
+        
+      </div>
       
     </div>
     
@@ -210,16 +236,6 @@
           Streams
         </a>
         
-        
-        
-        <a
-          class=""
-          href="/mu-haskell/wip/db/"
-          title="Databases"
-        >
-          Databases
-        </a>
-        
       </div>
       
     </div>
@@ -251,6 +267,16 @@
       
 
       <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/db/"
+          title="Databases"
+        >
+          Databases
+        </a>
         
         
         
@@ -371,7 +397,12 @@
 <p>Mu-Haskell is a set of packages that help you build both servers and clients for (micro)services. The main goal of Mu-Haskell is to allow you to focus on your domain logic, instead of worrying about format and protocol issues.</p>
 
 <ul>
-  <li><a href="/mu-haskell/wip/intro/">Introduction</a></li>
+  <li>Introduction
+    <ul>
+      <li><a href="/mu-haskell/wip/intro-rpc/">For RPC</a></li>
+      <li><a href="/mu-haskell/wip/intro-graphql/">For GraphQL</a></li>
+    </ul>
+  </li>
   <li><a href="/mu-haskell/wip/schema/">Schemas</a>
     <ul>
       <li><a href="/mu-haskell/wip/serializers/">Serialization formats</a>: Protocol Buffers and Avro</li>
@@ -382,11 +413,11 @@
     <ul>
       <li><a href="/mu-haskell/wip/grpc/">gRPC servers and clients</a></li>
       <li><a href="/mu-haskell/wip/stream/">Streams</a></li>
-      <li><a href="/mu-haskell/wip/db/">Databases</a>, including resource pools</li>
     </ul>
   </li>
   <li>Integration with other libraries
     <ul>
+      <li><a href="/mu-haskell/wip/db/">Databases</a>, including resource pools</li>
       <li><a href="/mu-haskell/wip/transformer/">Using transformers</a>: look here for logging</li>
       <li><a href="/mu-haskell/wip/middleware/">WAI Middleware</a>: look here for metrics</li>
     </ul>

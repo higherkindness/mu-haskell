@@ -99,14 +99,40 @@
       
 
     <div class="sidebar-menu-item  ">
-      
-      <a
-        href="/mu-haskell/wip/intro/"
-        class=""
-        title="Introduction"
+       
+      <button
+        type="button"
+        title="Open Introduction"
+        class="button drop-nested"
       >
         Introduction
-      </a>
+      </button>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/intro-rpc/"
+          title="For RPC"
+        >
+          For RPC
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/intro-graphql/"
+          title="For GraphQL"
+        >
+          For GraphQL
+        </a>
+        
+      </div>
       
     </div>
     
@@ -210,16 +236,6 @@
           Streams
         </a>
         
-        
-        
-        <a
-          class=""
-          href="/mu-haskell/wip/db/"
-          title="Databases"
-        >
-          Databases
-        </a>
-        
       </div>
       
     </div>
@@ -251,6 +267,16 @@
       
 
       <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/db/"
+          title="Databases"
+        >
+          Databases
+        </a>
         
         
         
@@ -418,25 +444,24 @@
 <p>To call a method, you use the corresponding getter (for those familiar with optics, a version of a lens which does not allow to set). This means that your code reads <code class="highlighter-rouge">client ^. #method</code>, where <code class="highlighter-rouge">client</code> is the value obtained previously in the call to <code class="highlighter-rouge">initGRpc</code>.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language OverloadedLabels #-}</span>
-<span class="kr">import</span> <span class="nn">Text.Read</span> <span class="p">(</span><span class="nf">readMaybe</span><span class="p">)</span>
 
 <span class="n">get</span> <span class="o">::</span> <span class="kt">GRpcConnection</span> <span class="kt">QuickstartService</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">get</span> <span class="n">client</span> <span class="n">idPerson</span> <span class="o">=</span> <span class="kr">do</span>
-  <span class="kr">let</span> <span class="n">req</span> <span class="o">=</span> <span class="n">record</span> <span class="p">(</span><span class="n">readMaybe</span> <span class="n">idPerson</span><span class="p">)</span>
+  <span class="kr">let</span> <span class="n">req</span> <span class="o">=</span> <span class="n">record1</span> <span class="p">(</span><span class="n">read</span> <span class="n">idPerson</span><span class="p">)</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: is there some person with id: "</span> <span class="o">++</span> <span class="n">idPerson</span> <span class="o">++</span> <span class="s">"?"</span>
-  <span class="n">res</span> <span class="o">&lt;-</span> <span class="p">(</span><span class="n">client</span> <span class="o">^.</span> <span class="o">#</span><span class="n">getPerson</span><span class="p">)</span> <span class="n">req</span>
+  <span class="n">res</span> <span class="o">&lt;-</span> <span class="n">client</span> <span class="o">^.</span> <span class="o">#</span><span class="n">getPerson</span> <span class="o">$</span> <span class="n">req</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: response was: "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">res</span>
 </code></pre></div></div>
 
-<p>Notice the use of <code class="highlighter-rouge">readMaybe</code> to convert the strings to the appropiate type in a safe manner! 👆🏼</p>
+<p>Notice the use of <code class="highlighter-rouge">read</code> to convert the strings to the appropiate type. Be careful, though, since that function throws an exception if the string is not a proper number! In a realistic scenario you should use <code class="highlighter-rouge">readMaybe</code> from <code class="highlighter-rouge">Text.Read</code> and handle the appropiate cases.</p>
 
 <p>Using this approach you must also use the optics-based interface to the terms. As a quick reminder: you use <code class="highlighter-rouge">record</code> to build new values, and use <code class="highlighter-rouge">value ^. #field</code> to access a field. The rest of the methods look as follows:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">add</span> <span class="o">::</span> <span class="kt">GRpcConnection</span> <span class="kt">QuickstartService</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">add</span> <span class="n">client</span> <span class="n">nm</span> <span class="n">ag</span> <span class="o">=</span> <span class="kr">do</span>
-  <span class="kr">let</span> <span class="n">p</span> <span class="o">=</span> <span class="n">record</span> <span class="p">(</span><span class="kt">Nothing</span><span class="p">,</span> <span class="kt">Just</span> <span class="o">$</span> <span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="n">nm</span><span class="p">,</span> <span class="n">readMaybe</span> <span class="n">ag</span><span class="p">)</span>
+  <span class="kr">let</span> <span class="n">p</span> <span class="o">=</span> <span class="n">record</span> <span class="p">(</span><span class="kt">Nothing</span><span class="p">,</span> <span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="n">nm</span><span class="p">,</span> <span class="n">read</span> <span class="n">ag</span><span class="p">)</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: creating new person "</span> <span class="o">++</span> <span class="n">nm</span> <span class="o">++</span> <span class="s">" with age "</span> <span class="o">++</span> <span class="n">ag</span>
-  <span class="n">res</span> <span class="o">&lt;-</span> <span class="p">(</span><span class="n">client</span> <span class="o">^.</span> <span class="o">#</span><span class="n">newPerson</span><span class="p">)</span> <span class="n">p</span>
+  <span class="n">res</span> <span class="o">&lt;-</span> <span class="n">client</span> <span class="o">^.</span> <span class="o">#</span><span class="n">newPerson</span> <span class="o">$</span> <span class="n">p</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: was creating successful? "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">res</span>
 
 <span class="n">watching</span> <span class="o">::</span> <span class="kt">GRpcConnection</span> <span class="kt">QuickstartService</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
@@ -476,14 +501,14 @@
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">get</span> <span class="o">::</span> <span class="kt">Call</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">get</span> <span class="n">client</span> <span class="n">idPerson</span> <span class="o">=</span> <span class="kr">do</span>
-  <span class="kr">let</span> <span class="n">req</span> <span class="o">=</span> <span class="kt">MPersonRequest</span> <span class="o">$</span> <span class="n">readMaybe</span> <span class="n">idPerson</span>
+  <span class="kr">let</span> <span class="n">req</span> <span class="o">=</span> <span class="kt">MPersonRequest</span> <span class="o">$</span> <span class="n">read</span> <span class="n">idPerson</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: is there some person with id: "</span> <span class="o">++</span> <span class="n">idPerson</span> <span class="o">++</span> <span class="s">"?"</span>
   <span class="n">res</span> <span class="o">&lt;-</span> <span class="n">call_getPerson</span> <span class="n">client</span> <span class="n">req</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: response was: "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">res</span>
 
 <span class="n">add</span> <span class="o">::</span> <span class="kt">Call</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">add</span> <span class="n">client</span> <span class="n">nm</span> <span class="n">ag</span> <span class="o">=</span> <span class="kr">do</span>
-  <span class="kr">let</span> <span class="n">p</span> <span class="o">=</span> <span class="kt">MPerson</span> <span class="kt">Nothing</span> <span class="p">(</span><span class="kt">Just</span> <span class="o">$</span> <span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="n">nm</span><span class="p">)</span> <span class="p">(</span><span class="n">readMaybe</span> <span class="n">ag</span><span class="p">)</span>
+  <span class="kr">let</span> <span class="n">p</span> <span class="o">=</span> <span class="kt">MPerson</span> <span class="kt">Nothing</span> <span class="p">(</span><span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="n">nm</span><span class="p">)</span> <span class="p">(</span><span class="n">read</span> <span class="n">ag</span><span class="p">)</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: creating new person "</span> <span class="o">++</span> <span class="n">nm</span> <span class="o">++</span> <span class="s">" with age "</span> <span class="o">++</span> <span class="n">ag</span>
   <span class="n">res</span> <span class="o">&lt;-</span> <span class="n">call_newPerson</span> <span class="n">client</span> <span class="n">p</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: was creating successful? "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">res</span>
@@ -507,7 +532,7 @@
 
 <span class="n">get</span> <span class="o">::</span> <span class="kt">GrpcClient</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">get</span> <span class="n">client</span> <span class="n">idPerson</span> <span class="o">=</span> <span class="kr">do</span>
-  <span class="kr">let</span> <span class="n">req</span> <span class="o">=</span> <span class="kt">MPersonRequest</span> <span class="o">$</span> <span class="n">readMaybe</span> <span class="n">idPerson</span>
+  <span class="kr">let</span> <span class="n">req</span> <span class="o">=</span> <span class="kt">MPersonRequest</span> <span class="o">$</span> <span class="n">read</span> <span class="n">idPerson</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: is there some person with id: "</span> <span class="o">++</span> <span class="n">idPerson</span> <span class="o">++</span> <span class="s">"?"</span>
   <span class="n">response</span> <span class="o">::</span> <span class="kt">GRpcReply</span> <span class="kt">MPerson</span>
     <span class="o">&lt;-</span> <span class="n">gRpcCall</span> <span class="o">@</span><span class="kt">Service</span> <span class="o">@</span><span class="s">"getPerson"</span> <span class="n">client</span> <span class="n">req</span>
@@ -518,7 +543,7 @@
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">add</span> <span class="o">::</span> <span class="kt">GrpcClient</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">add</span> <span class="n">client</span> <span class="n">nm</span> <span class="n">ag</span> <span class="o">=</span> <span class="kr">do</span>
-  <span class="kr">let</span> <span class="n">p</span> <span class="o">=</span> <span class="kt">MPerson</span> <span class="kt">Nothing</span> <span class="p">(</span><span class="kt">Just</span> <span class="o">$</span> <span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="n">nm</span><span class="p">)</span> <span class="p">(</span><span class="n">readMaybe</span> <span class="n">ag</span><span class="p">)</span>
+  <span class="kr">let</span> <span class="n">p</span> <span class="o">=</span> <span class="kt">MPerson</span> <span class="kt">Nothing</span> <span class="p">(</span><span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="n">nm</span><span class="p">)</span> <span class="p">(</span><span class="n">read</span> <span class="n">ag</span><span class="p">)</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: creating new person "</span> <span class="o">++</span> <span class="n">nm</span> <span class="o">++</span> <span class="s">" with age "</span> <span class="o">++</span> <span class="n">ag</span>
   <span class="n">response</span> <span class="o">::</span> <span class="kt">GRpcReply</span> <span class="kt">MPersonRequest</span>
     <span class="o">&lt;-</span> <span class="n">gRpcCall</span> <span class="o">@</span><span class="kt">Service</span> <span class="o">@</span><span class="s">"newPerson"</span> <span class="n">client</span> <span class="n">p</span>

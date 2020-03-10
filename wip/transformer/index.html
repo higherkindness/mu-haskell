@@ -99,14 +99,40 @@
       
 
     <div class="sidebar-menu-item  ">
-      
-      <a
-        href="/mu-haskell/wip/intro/"
-        class=""
-        title="Introduction"
+       
+      <button
+        type="button"
+        title="Open Introduction"
+        class="button drop-nested"
       >
         Introduction
-      </a>
+      </button>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/intro-rpc/"
+          title="For RPC"
+        >
+          For RPC
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/intro-graphql/"
+          title="For GraphQL"
+        >
+          For GraphQL
+        </a>
+        
+      </div>
       
     </div>
     
@@ -210,16 +236,6 @@
           Streams
         </a>
         
-        
-        
-        <a
-          class=""
-          href="/mu-haskell/wip/db/"
-          title="Databases"
-        >
-          Databases
-        </a>
-        
       </div>
       
     </div>
@@ -251,6 +267,16 @@
       
 
       <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/db/"
+          title="Databases"
+        >
+          Databases
+        </a>
         
         
         
@@ -390,7 +416,7 @@
          <span class="o">=&gt;</span> <span class="kt">HelloRequest</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">HelloResponse</span>
 <span class="n">sayHello</span> <span class="p">(</span><span class="kt">HelloRequest</span> <span class="n">nm</span><span class="p">)</span> <span class="o">=</span> <span class="kr">do</span>
   <span class="n">greeting</span> <span class="o">&lt;-</span> <span class="n">ask</span>
-  <span class="n">return</span> <span class="p">(</span><span class="kt">HelloResponse</span> <span class="p">(</span><span class="n">greeting</span> <span class="o">&lt;&gt;</span> <span class="s">", "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span><span class="p">))</span>
+  <span class="n">pure</span> <span class="o">$</span> <span class="kt">HelloResponse</span> <span class="p">(</span><span class="n">greeting</span> <span class="o">&lt;&gt;</span> <span class="s">", "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>Unfortunately, the simple way to run a gRPC application no longer works:</p>
@@ -413,7 +439,7 @@
          <span class="o">=&gt;</span> <span class="kt">HelloRequest</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">HelloResponse</span>
 <span class="n">sayHello</span> <span class="p">(</span><span class="kt">HelloRequest</span> <span class="n">nm</span><span class="p">)</span> <span class="o">=</span> <span class="kr">do</span>
   <span class="n">logInfoN</span> <span class="s">"running hi"</span>
-  <span class="n">return</span> <span class="p">(</span><span class="kt">HelloResponse</span> <span class="p">(</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span><span class="p">))</span>
+  <span class="n">pure</span> <span class="o">$</span> <span class="kt">HelloResponse</span> <span class="p">(</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>The most important addition with respect to the <a href="rpc.md">original code</a> is in the signature. Before we only had <code class="highlighter-rouge">MonadServer m</code>, now we have an additional <code class="highlighter-rouge">MonadLogger m</code> there.</p>
@@ -431,7 +457,7 @@
          <span class="o">=&gt;</span> <span class="kt">HelloRequest</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">HelloResponse</span>
 <span class="n">sayHello</span> <span class="p">(</span><span class="kt">HelloRequest</span> <span class="n">nm</span><span class="p">)</span> <span class="o">=</span> <span class="kr">do</span>
   <span class="n">logInfoN</span> <span class="s">"running hi"</span>
-  <span class="n">return</span> <span class="p">(</span><span class="kt">HelloResponse</span> <span class="p">(</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span><span class="p">))</span>
+  <span class="n">pure</span> <span class="o">$</span> <span class="kt">HelloResponse</span> <span class="p">(</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>In this case, the top-level handler is called <a href="http://hackage.haskell.org/package/co-log/docs/Colog-Monad.html#v:usingLoggerT"><code class="highlighter-rouge">usingLoggerT</code></a>. Its definition is slightly more involved because <code class="highlighter-rouge">co-log</code> gives you maximum customization power on your logging, instead of defining a set of predefined logging mechanisms.</p>
