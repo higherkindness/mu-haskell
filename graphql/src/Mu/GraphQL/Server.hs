@@ -137,17 +137,18 @@ runGraphQLAppSettings st svr q m = runSettings st (graphQLApp svr q m)
 
 -- | Run a Mu 'graphQLApp' on the given port.
 runGraphQLApp ::
-  (ParseMethod ('Package pname ss) qmethods
-  , ParseMethod ('Package pname ss) mmethods
-  , RunQueryFindHandler ('Package pname ss) hs chn ss (LookupService ss qr) hs
-  , RunQueryFindHandler ('Package pname ss) hs chn ss (LookupService ss mut) hs
+  ( p ~ 'Package pname ss
+  , ParseMethod p qmethods
+  , ParseMethod p mmethods
+  , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
+  , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
   , MappingRight chn qr ~ ()
   , LookupService ss qr ~ 'Service qr qanns qmethods
   , LookupService ss mut ~ 'Service mut manns mmethods
   , MappingRight chn mut ~ ()
   )
   => Port
-  -> ServerT chn ('Package pname ss) ServerErrorIO hs
+  -> ServerT chn p ServerErrorIO hs
   -> Proxy qr
   -> Proxy mut
   -> IO ()
