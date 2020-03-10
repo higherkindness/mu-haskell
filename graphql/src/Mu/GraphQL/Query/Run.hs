@@ -16,6 +16,8 @@ module Mu.GraphQL.Query.Run (
   runPipeline
 , runDocument
 , runQuery
+-- * Typeclass to be able to run query handlers
+, RunQueryFindHandler
 ) where
 
 import           Control.Monad.Except          (runExceptT)
@@ -55,15 +57,15 @@ runPipeline
 runPipeline svr _ _ opName vmap doc
   = case parseDoc opName vmap doc of
       Nothing ->
-        return $
+        pure $
           Aeson.object [
             ("errors", Aeson.Array [
               Aeson.object [ ("message", Aeson.String "cannot parse document") ] ])]
       Just (d :: Document p qr mut) -> do
         (data_, errors) <- runWriterT (runDocument svr d)
         case errors of
-          [] -> return $ Aeson.object [ ("data", data_) ]
-          _  -> return $ Aeson.object [ ("data", data_), ("errors", Aeson.listValue errValue errors) ]
+          [] -> pure $ Aeson.object [ ("data", data_) ]
+          _  -> pure $ Aeson.object [ ("data", data_), ("errors", Aeson.listValue errValue errors) ]
     where
       errValue :: GraphQLError -> Aeson.Value
       errValue (GraphQLError (ServerError _ msg) path)
@@ -71,7 +73,6 @@ runPipeline svr _ _ opName vmap doc
             ("message", Aeson.String $ T.pack msg)
           , ("path", Aeson.toJSON path)
           ]
-
 
 runDocument
   :: ( p ~ 'Package pname ss
@@ -173,7 +174,7 @@ instance (ResultConversion p whole chn r l)
     res <- liftIO $ runExceptT h
     case res of
       Right v -> convertResult whole q v
-      Left e  -> tell [GraphQLError e []] >> return Nothing
+      Left e  -> tell [GraphQLError e []] >> pure Nothing
 
 class FromRef chn ref t
       => ArgumentConversion chn ref t where
@@ -196,11 +197,11 @@ class ToRef chn r l => ResultConversion p whole chn r l where
                 -> l -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
 
 instance Aeson.ToJSON t => ResultConversion p whole chn ('PrimitiveRef t) t where
-  convertResult _ RetPrimitive = return . Just . Aeson.toJSON
+  convertResult _ RetPrimitive = pure . Just . Aeson.toJSON
 instance ( ToSchema sch l r
          , Aeson.ToJSON (Term sch (sch :/: l)) )
          => ResultConversion p whole chn ('SchemaRef sch l) r where
-  convertResult _ RetSchema = return . Just . Aeson.toJSON . toSchema' @_ @_ @sch @r
+  convertResult _ RetSchema = pure . Just . Aeson.toJSON . toSchema' @_ @_ @sch @r
 instance ( MappingRight chn ref ~ t
          , MappingRight chn sname ~ t
          , LookupService ss ref ~ 'Service sname sanns ms
@@ -208,4 +209,3 @@ instance ( MappingRight chn ref ~ t
          => ResultConversion ('Package pname ss) whole chn ('ObjectRef ref) t where
   convertResult whole (RetObject q) h
     = Just <$> runQuery @('Package pname ss) @(LookupService ss ref) whole h q
--- TODO: be able to return enums
