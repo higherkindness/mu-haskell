@@ -27,7 +27,7 @@ sayHello :: (MonadServer m, MonadReader T.Text m)
          => HelloRequest -> m HelloResponse
 sayHello (HelloRequest nm) = do
   greeting <- ask
-  return (HelloResponse (greeting <> ", " <> nm))
+  pure $ HelloResponse (greeting <> ", " <> nm)
 ```
 
 Unfortunately, the simple way to run a gRPC application no longer works:
@@ -53,7 +53,7 @@ sayHello :: (MonadServer m, MonadLogger m)
          => HelloRequest -> m HelloResponse
 sayHello (HelloRequest nm) = do
   logInfoN "running hi"
-  return (HelloResponse ("hi, " <> nm))
+  pure $ HelloResponse ("hi, " <> nm)
 ```
 
 The most important addition with respect to the [original code](rpc.md) is in the signature. Before we only had `MonadServer m`, now we have an additional `MonadLogger m` there.
@@ -73,7 +73,7 @@ sayHello :: (MonadServer m, WithLog env String m)
          => HelloRequest -> m HelloResponse
 sayHello (HelloRequest nm) = do
   logInfoN "running hi"
-  return (HelloResponse ("hi, " <> nm))
+  pure $ HelloResponse ("hi, " <> nm)
 ```
 
 In this case, the top-level handler is called [`usingLoggerT`](http://hackage.haskell.org/package/co-log/docs/Colog-Monad.html#v:usingLoggerT). Its definition is slightly more involved because `co-log` gives you maximum customization power on your logging, instead of defining a set of predefined logging mechanisms.

@@ -89,15 +89,15 @@ data Address
   = Address { postcode :: T.Text
             , country  :: T.Text }
   deriving (Eq, Show, Generic)
-  deriving (ToSchema   Maybe ExampleSchema "address")
-  deriving (FromSchema Maybe ExampleSchema "address")
+  deriving (ToSchema   ExampleSchema "address")
+  deriving (FromSchema ExampleSchema "address")
 ```
 
 Once again, you need to enable some extensions in the compiler (but do not worry, GHC should tell you which ones you need in case you forgot). You first must include `Generic` in the list of automatically-derived classes. Then you *derive* the mapping by using the lines:
 
 ```haskell
-  deriving (ToSchema   Maybe YourSchema "yourSchemaType")
-  deriving (FromSchema Maybe YourSchema "yourSchemaType")
+  deriving (ToSchema   YourSchema "yourSchemaType")
+  deriving (FromSchema YourSchema "yourSchemaType")
 ```
 
 ## Customizing the mapping
@@ -115,7 +115,7 @@ type GenderFieldMapping
 
 data Gender = Male | Female | NonBinary
   deriving (Eq, Show, Generic)
-  deriving (ToSchema f ExampleSchema "gender", FromSchema f ExampleSchema "gender")
+  deriving (ToSchema ExampleSchema "gender", FromSchema ExampleSchema "gender")
     via (CustomFieldMapping "gender" GenderFieldMapping Gender)
 ```
 

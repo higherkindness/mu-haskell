@@ -43,7 +43,7 @@ This is everything you need to start using gRPC services and clients in Haskell!
 
 ### Looking at the resulting code
 
-In order to use the library proficiently, we should look a bit at the code generated in the previous sample. A type-level description of the messages is put into the type `QuickstartSchema`. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using `mu-schema` facilities, this amounts to declaring a bunch of data types and including `deriving (Generic, ToSchema Maybe <SchemaName> "<MessageType>", FromSchema Maybe <SchemaName> "<MessageType>")` at the end of each of them.
+In order to use the library proficiently, we should look a bit at the code generated in the previous sample. A type-level description of the messages is put into the type `QuickstartSchema`. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using `mu-schema` facilities, this amounts to declaring a bunch of data types and including `deriving (Generic, ToSchema <SchemaName> "<MessageType>", FromSchema <SchemaName> "<MessageType>")` at the end of each of them.
 
 ```haskell
 {-# language PolyKinds, DataKinds, TypeFamilies #-}
@@ -67,15 +67,15 @@ type instance AnnotatedSchema ProtoBufAnnotation QuickstartSchema
 
 -- TO BE WRITTEN
 newtype HelloRequest
-  = HelloRequest { name :: Maybe T.Text }
+  = HelloRequest { name :: T.Text }
   deriving (Generic
-           , ToSchema   Maybe QuickstartSchema "HelloRequest"
-           , FromSchema Maybe QuickstartSchema "HelloRequest")
+           , ToSchema   QuickstartSchema "HelloRequest"
+           , FromSchema QuickstartSchema "HelloRequest")
 newtype HelloResponse
-  = HelloResponse { message :: Maybe T.Text }
+  = HelloResponse { message :: T.Text }
   deriving (Generic
-           , ToSchema   Maybe QuickstartSchema "HelloResponse"
-           , FromSchema Maybe QuickstartSchema "HelloResponse")
+           , ToSchema   QuickstartSchema "HelloResponse"
+           , FromSchema QuickstartSchema "HelloResponse")
 ```
 
 The service declaration looks very similar to a schema declaration, but instead of records and enumerations you define *methods*. Each method has a name, a list of arguments, and a return type.
@@ -86,14 +86,15 @@ import Mu.Rpc
 -- GENERATED
 type QuickstartService
   = 'Service "Greeter"
-      '[ 'Method "SayHello"
-        '[ 'ArgSingle ('FromSchema QuickstartSchema "HelloRequest") ]
+      '[ 'Method "SayHello" '[]
+        '[ 'ArgSingle 'Nothing '[] ('FromSchema QuickstartSchema "HelloRequest") ]
         ('RetSingle ('FromSchema QuickstartSchema "HelloResponse")) ]
 ```
 
 In order to support both [Avro IDL](https://avro.apache.org/docs/current/idl.html) and [gRPC](https://grpc.io/), the declaration of the method arguments and return types is a bit fancier than you might expect:
 
 * Each *argument* declares the schema type used for serialization. Furthermore, the argument can be declared as `ArgSingle` (only one value is provided by the client) or `ArgStream` (a stream of values is provided).
+* gRPC defines no names for arguments, hence the use of `Nothing` in `ArgSingle`. Other service APIs, like GraphQL, have names on that possitions.
 * The *return types* gives the same two choices under the names `RetSingle` or `RetStream`, and additionally supports the declaration of methods which may raise exceptions using `RetThrows`, or methods which do not retun any useful information using `RetNothing`.
 
 Note that depending on the concrete implementation you use to run the server, one or more of these choices may not be available. For example, gRPC only supports one argument and return value, either single or streaming, but not exceptions.
@@ -104,7 +105,7 @@ In order to implement the service, you have to define the behavior of each metho
 
 ```haskell
 sayHello :: (MonadServer m) => HelloRequest -> m HelloResponse
-sayHello (HelloRequest nm) = return (HelloResponse ("hi, " <> nm))
+sayHello (HelloRequest nm) = pure $ HelloResponse ("hi, " <> nm)
 ```
 
 Notice the use of `MonadServer` in this case. This gives us the ability to:
@@ -119,6 +120,6 @@ Since you can declare more than one method in a service, you need to join them i
 ```haskell
 {-# language PartialTypeSignatures #-}
 
-quickstartServer :: (MonadServer m) => ServerT Maybe QuickstartService m _
+quickstartServer :: (MonadServer m) => ServerT QuickstartService m _
 quickstartServer = Server (sayHello :<|>: H0)
 ```

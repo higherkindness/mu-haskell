@@ -27,17 +27,15 @@ grpc "Schema" id "defn.proto"
 
 This asks the compiler to load the `defn.proto` file in order to create a series of (Haskell) types. The first one, which is called `"Schema"`, as the first argument shows, includes the definition of all the schema types. Then, for every service defined in the file (since `.proto` files may have more than one), the second function is applied to obtain the name of the corresponding Haskell type. In this case we want to use the same names, so we use the identity function.
 
-When defining the conversion, it is important for `FromSchema` and `ToSchema` to receive `Maybe` as first argument:
-
 ```haskell
 data PersonMsg
-  = PersonMsg { name :: Maybe Text, age :: Maybe Int }
+  = PersonMsg { name :: Text, age :: Int }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Maybe Schema "Person"
-           , FromSchema Maybe Schema "Person" )
+           , ToSchema   Schema "Person"
+           , FromSchema Schema "Person" )
 ```
 
-This indicates that every field in the record should we wrapped by a `Maybe` layer. This is required because Protocol Buffers version 3 mandates all fields to be optional. This also means that every field in your Haskell types must be wrapped in that `Maybe` layer.
+Protocol Buffers version 3 has complicated rules about when a field may or may not appear in the message. For example it is not possible to distinguish whether the empty string is to be transmitted, or that field is missing. In that case, deserialization from a Protocol Buffers message returns the default value. However, for references to other message we can spot the difference, so those references *must* be wrapped in a `Maybe`.
 
 Finally, when starting a server or client you must provide `msgProtoBuf` as argument. For example, a server is started by running:
 
@@ -58,16 +56,14 @@ avdl "Schema" "Service" "." "defn.avdl"
 
 Each `.avdl` file defines just one protocol, so instead of a function like in the case of Protocol Buffers, the second argument is simply the name of the Haskell type to create. But you might have noticed that there's an additional argument, which in this case is `"."`. The reason for this argument is that `.avdl` files routinely *import* other files. This third argument indicates the *base directory* to search for those files.
 
-The conversion is almost identical to Protocol Buffers too, except that instead of `Maybe` you have to use `Identity`. This is because Avro makes fields *required* by default, so there's no need to have an additional `Maybe` layer. Of course, those fields which are optional (usually specified as a union with `null`) must still use `Maybe`:
+The conversion is almost identical to Protocol Buffers too. In Avro fields are required by default, only those fields which are optional (usually specified as a union with `null`) must still use `Maybe`:
 
 ```haskell
-import Data.Functor.Identity
-
 data PersonMsg
   = PersonMsg { name :: Text, age :: Int }
   deriving ( Eq, Show, Ord, Generic
-           , ToSchema   Identity Schema "Person"
-           , FromSchema Identity Schema "Person" )
+           , ToSchema   Schema "Person"
+           , FromSchema Schema "Person" )
 ```
 
 Finally, when starting a server or client you must provide `msgAvro` as argument. For example, a server is started by running:

@@ -3,7 +3,12 @@ options:
     url: /
 
   - title: Introduction
-    url: intro/
+    nested_options:
+    - title: For RPC
+      url: intro-rpc/
+
+    - title: For GraphQL
+      url: intro-graphql/
 
   - title: Schemas
     url: schema/
@@ -23,11 +28,11 @@ options:
     - title: Streams
       url: stream/
 
+  - title: Integrations
+    nested_options:
     - title: Databases
       url: db/
 
-  - title: Integrations
-    nested_options:
     - title: Transformers
       url: transformer/
 
