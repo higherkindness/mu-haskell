@@ -1,3 +1,4 @@
+{-# language ConstraintKinds   #-}
 {-# language DataKinds         #-}
 {-# language FlexibleContexts  #-}
 {-# language GADTs             #-}
@@ -5,7 +6,12 @@
 {-# language OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Mu.GraphQL.Server where
+module Mu.GraphQL.Server (
+    GraphQLApp
+  , graphQLApp
+  , runGraphQLApp
+  , runGraphQLAppSettings
+) where
 
 import           Control.Applicative           ((<|>))
 import           Control.Monad                 (join)
@@ -33,11 +39,7 @@ import           Network.HTTP.Types.Status     (ok200)
 import           Network.Wai
 import           Network.Wai.Handler.Warp      (Port, Settings, run, runSettings)
 
-data GraphQLInput = GraphQLInput {
-    query         :: T.Text
-  , variables     :: VariableMapC
-  , operationName :: Maybe T.Text
-  }
+data GraphQLInput = GraphQLInput T.Text VariableMapC (Maybe T.Text)
 
 instance A.FromJSON GraphQLInput where
   parseJSON = A.withObject "GraphQLInput" $
@@ -57,22 +59,25 @@ instance A.FromJSON ValueConst where
       toObjFld :: (T.Text, ValueConst) -> ObjectFieldG ValueConst
       toObjFld (k, v) = ObjectFieldG (coerce k) v
 
+type GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns =
+  ( p ~ 'Package pname ss
+    , ParseMethod p qmethods
+    , ParseMethod p mmethods
+    , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
+    , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
+    , MappingRight chn qr ~ ()
+    , LookupService ss qr ~ 'Service qr qanns qmethods
+    , LookupService ss mut ~ 'Service mut manns mmethods
+    , MappingRight chn mut ~ ()
+  )
+
 -- | Turn a Mu GraphQL 'Server' into a WAI 'Application'.
 --
 --   These 'Application's can be later combined using,
 --   for example, @wai-routes@, or you can add middleware
 --   from @wai-extra@, among others.
 graphQLApp ::
-    ( p ~ 'Package pname ss
-     , LookupService ss qr ~ 'Service qr qanns qmethods
-     , ParseMethod p qmethods
-     , LookupService ss mut ~ 'Service mut manns mmethods
-     , ParseMethod p mmethods
-     , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
-     , MappingRight chn qr ~ ()
-     , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
-     , MappingRight chn mut ~ ()
-     )
+    ( GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns )
     => ServerT chn p ServerErrorIO hs
     -> Proxy qr
     -> Proxy mut
@@ -106,9 +111,7 @@ graphQLApp server q m req res =
     execQuery opn vals qry =
       case parseExecutableDoc qry of
         Left err  -> toError err
-        Right doc -> do
-          response <- runPipeline server q m opn vals doc
-          toResponse response
+        Right doc -> runPipeline server q m opn vals doc >>= toResponse
     toError :: T.Text -> IO ResponseReceived
     toError err = toResponse $ A.object [ ("errors", A.Array [ A.object [ ("message", A.String err) ] ])]
     toResponse :: A.Value -> IO ResponseReceived
@@ -118,16 +121,7 @@ graphQLApp server q m req res =
 --
 --   Go to 'Network.Wai.Handler.Warp' to declare 'Settings'.
 runGraphQLAppSettings ::
-  ( p ~ 'Package pname ss
-    , ParseMethod p qmethods
-    , ParseMethod p mmethods
-    , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
-    , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
-    , MappingRight chn qr ~ ()
-    , LookupService ss qr ~ 'Service qr qanns qmethods
-    , LookupService ss mut ~ 'Service mut manns mmethods
-    , MappingRight chn mut ~ ()
-  )
+  ( GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns )
   => Settings
   -> ServerT chn p ServerErrorIO hs
   -> Proxy qr

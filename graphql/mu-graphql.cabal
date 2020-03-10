@@ -15,11 +15,12 @@ bug-reports:   https://github.com/higherkindness/mu-haskell/issues
 
 library
   exposed-modules:
+    Mu.GraphQL.Server
+  other-modules:
     Mu.GraphQL.Annotations
     Mu.GraphQL.Query.Definition
     Mu.GraphQL.Query.Parse
     Mu.GraphQL.Query.Run
-    Mu.GraphQL.Server
 
   -- other-extensions:
   build-depends:
@@ -37,7 +38,6 @@ library
     , unordered-containers
     , wai
     , warp
-    , warp-grpc
     , warp-tls
 
   hs-source-dirs:   src
