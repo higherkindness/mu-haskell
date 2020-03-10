@@ -61,26 +61,25 @@ To call a method, you use the corresponding getter (for those familiar with opti
 
 ```haskell
 {-# language OverloadedLabels #-}
-import Text.Read (readMaybe)
 
 get :: GRpcConnection QuickstartService -> String -> IO ()
 get client idPerson = do
-  let req = record (readMaybe idPerson)
+  let req = record1 (read idPerson)
   putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
-  res <- (client ^. #getPerson) req
+  res <- client ^. #getPerson $ req
   putStrLn $ "GET: response was: " ++ show res
 ```
 
-Notice the use of `readMaybe` to convert the strings to the appropiate type in a safe manner! 👆🏼
+Notice the use of `read` to convert the strings to the appropiate type. Be careful, though, since that function throws an exception if the string is not a proper number! In a realistic scenario you should use `readMaybe` from `Text.Read` and handle the appropiate cases.
 
 Using this approach you must also use the optics-based interface to the terms. As a quick reminder: you use `record` to build new values, and use `value ^. #field` to access a field. The rest of the methods look as follows:
 
 ```haskell
 add :: GRpcConnection QuickstartService -> String -> String -> IO ()
 add client nm ag = do
-  let p = record (Nothing, Just $ T.pack nm, readMaybe ag)
+  let p = record (Nothing, T.pack nm, read ag)
   putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
-  res <- (client ^. #newPerson) p
+  res <- client ^. #newPerson $ p
   putStrLn $ "ADD: was creating successful? " ++ show res
 
 watching :: GRpcConnection QuickstartService -> IO ()
@@ -123,14 +122,14 @@ After that, let's have a look at an example implementation of the three service 
 ```haskell
 get :: Call -> String -> IO ()
 get client idPerson = do
-  let req = MPersonRequest $ readMaybe idPerson
+  let req = MPersonRequest $ read idPerson
   putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
   res <- call_getPerson client req
   putStrLn $ "GET: response was: " ++ show res
 
 add :: Call -> String -> String -> IO ()
 add client nm ag = do
-  let p = MPerson Nothing (Just $ T.pack nm) (readMaybe ag)
+  let p = MPerson Nothing (T.pack nm) (read ag)
   putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
   res <- call_newPerson client p
   putStrLn $ "ADD: was creating successful? " ++ show res
@@ -156,7 +155,7 @@ main = do ...
 
 get :: GrpcClient -> String -> IO ()
 get client idPerson = do
-  let req = MPersonRequest $ readMaybe idPerson
+  let req = MPersonRequest $ read idPerson
   putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
   response :: GRpcReply MPerson
     <- gRpcCall @Service @"getPerson" client req
@@ -168,7 +167,7 @@ Notice that the type signatures of our functions needed to change to receive the
 ```haskell
 add :: GrpcClient -> String -> String -> IO ()
 add client nm ag = do
-  let p = MPerson Nothing (Just $ T.pack nm) (readMaybe ag)
+  let p = MPerson Nothing (T.pack nm) (read ag)
   putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
   response :: GRpcReply MPersonRequest
     <- gRpcCall @Service @"newPerson" client p

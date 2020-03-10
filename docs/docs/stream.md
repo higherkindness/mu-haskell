@@ -21,8 +21,8 @@ Adding this method to the service definition should be easy, we just need to use
 type QuickstartService
   = 'Service "Greeter"
       '[ 'Method "SayHello" ...
-       , 'Method "SayManyHellos"
-        '[ 'ArgStream ('FromSchema QuickstartSchema "HelloRequest")]
+       , 'Method "SayManyHellos" '[]
+        '[ 'ArgStream 'Nothing '[] ('FromSchema QuickstartSchema "HelloRequest")]
         ('RetStream ('FromSchema QuickstartSchema "HelloResponse")) ]
 ```
 
