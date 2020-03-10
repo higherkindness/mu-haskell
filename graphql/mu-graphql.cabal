@@ -1,23 +1,22 @@
 name:          mu-graphql
 version:       0.1.0.0
 synopsis:      GraphQL support for Mu
+description:   GraphQL servers and clients for Mu-Haskell
 cabal-version: >=1.10
-
--- description:
--- bug-reports:
 license:       Apache-2.0
 license-file:  LICENSE
 author:        Alejandro Serrano, Flavio Corpa
 maintainer:    alejandro.serrano@47deg.com
-
--- copyright:
+copyright:     Copyright © 2020 <http://47deg.com 47 Degrees>
 category:      Network
 build-type:    Simple
-
--- extra-source-files:  CHANGELOG.md
+homepage:      https://higherkindness.io/mu-haskell/
+bug-reports:   https://github.com/higherkindness/mu-haskell/issues
 
 library
   exposed-modules:
+    Mu.GraphQL.Server
+  other-modules:
     Mu.GraphQL.Annotations
     Mu.GraphQL.Query.Definition
     Mu.GraphQL.Query.Parse
@@ -27,13 +26,19 @@ library
   build-depends:
       aeson
     , base                  >=4.12 && <5
+    , bytestring
     , graphql-parser
+    , http-types
     , mtl
     , mu-rpc
     , mu-schema
+    , scientific
     , sop-core
     , text
     , unordered-containers
+    , wai
+    , warp
+    , warp-tls
 
   hs-source-dirs:   src
   default-language: Haskell2010
