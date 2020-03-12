@@ -5,6 +5,7 @@
 {-# language FlexibleContexts      #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
+{-# language TypeApplications      #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 
 module Main where
@@ -17,9 +18,13 @@ import           Data.Conduit.Combinators as C
 import           Data.Int
 import           Data.Text                as T
 import           GHC.Generics
+import           Mu.GraphQL.Server
 import           Mu.GRpc.Server
 import           Mu.Schema
 import           Mu.Server
+import           Network.Wai
+import           Network.Wai.Handler.Warp
+import           Network.Wai.Route
 
 import           Schema
 
@@ -45,7 +50,15 @@ newtype PeopleResponse = PeopleResponse
 main :: IO ()
 main = do
   putStrLn "running seed application"
-  runGRpcAppTrans msgProtoBuf 8080 runStderrLoggingT server
+  run 8080 $ flip route app404 $ compileRoutes
+    [ defRoute (str "proto" ./ end) $
+        \_ -> gRpcAppTrans msgProtoBuf runStderrLoggingT server
+    , defRoute (str "avro" ./ end) $
+        \_ -> gRpcAppTrans msgAvro runStderrLoggingT server
+    , defRoute (str "graphql" ./ end) $
+        \_ -> graphQLApp server (Proxy @"PeopleService") (Proxy @"PeopleService")
+    ]
+
 
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/seed/server/modules/process/src/main/scala/example/seed/server/process/ProtoPeopleServiceHandler.scala
