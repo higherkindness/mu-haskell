@@ -220,9 +220,10 @@ class ToRef chn r l => ResultConversion m p whole chn r l where
 instance Aeson.ToJSON t => ResultConversion m p whole chn ('PrimitiveRef t) t where
   convertResult _ _ RetPrimitive = pure . Just . Aeson.toJSON
 instance ( ToSchema sch l r
-         , Aeson.ToJSON (Term sch (sch :/: l)) )
+         , RunSchemaQuery sch (sch :/: l) )
          => ResultConversion m p whole chn ('SchemaRef sch l) r where
-  convertResult _ _ RetSchema = pure . Just . Aeson.toJSON . toSchema' @_ @_ @sch @r
+  convertResult _ _ (RetSchema r) t
+    = pure $ Just $ runSchemaQuery (toSchema' @_ @_ @sch @r t) r
 instance ( MappingRight chn ref ~ t
          , MappingRight chn sname ~ t
          , LookupService ss ref ~ 'Service sname sanns ms
@@ -240,3 +241,58 @@ instance ResultConversion m p whole chn r s
         => ResultConversion m p whole chn ('ListRef r) [s] where
   convertResult f whole (RetList q) xs
     = Just . Aeson.toJSON . catMaybes <$> mapM (convertResult f whole q) xs
+
+class RunSchemaQuery sch r where
+  runSchemaQuery
+    :: Term sch r
+    -> SchemaQuery sch r
+    -> Aeson.Value
+instance ( Aeson.ToJSON (Term sch ('DEnum name choices)) )
+         => RunSchemaQuery sch ('DEnum name choices) where
+  runSchemaQuery t _ = Aeson.toJSON t
+instance ( RunSchemaField sch fields )
+         => RunSchemaQuery sch ('DRecord rname fields) where
+  runSchemaQuery (TRecord args) (QueryRecord rs)
+    = Aeson.object $ mapMaybe runOneQuery rs
+    where
+      runOneQuery (OneFieldQuery nm choice)
+        = let (val, fname) = runSchemaField args choice
+              realName = fromMaybe fname nm
+          in (realName,) <$> val
+
+class RunSchemaField sch args where
+  runSchemaField
+    :: NP (Field sch) args
+    -> NS (ChosenFieldQuery sch) args
+    -> (Maybe Aeson.Value, T.Text)
+
+instance RunSchemaField sch '[] where
+  runSchemaField = error "this should never be called"
+instance (KnownName fname, RunSchemaType sch t, RunSchemaField sch fs)
+         => RunSchemaField sch ('FieldDef fname t ': fs) where
+  runSchemaField (Field x :* _) (Z (ChosenFieldQuery c))
+    = (runSchemaType x c, T.pack $ nameVal (Proxy @fname))
+  runSchemaField (_ :* xs) (S rest)
+    = runSchemaField xs rest
+
+class RunSchemaType sch t where
+  runSchemaType
+    :: FieldValue sch t
+    -> ReturnSchemaQuery sch t
+    -> Maybe Aeson.Value
+instance ( Aeson.ToJSON t )
+         => RunSchemaType sch ('TPrimitive t) where
+  runSchemaType (FPrimitive x) _
+    = Just $ Aeson.toJSON x
+instance RunSchemaType sch r
+         => RunSchemaType sch ('TList r) where
+  runSchemaType (FList xs) (RetSchList r)
+    = Just . Aeson.toJSON $ mapMaybe (`runSchemaType` r) xs
+instance RunSchemaType sch r
+         => RunSchemaType sch ('TOption r) where
+  runSchemaType (FOption xs) (RetSchOptional r)
+    = xs >>= flip runSchemaType r
+instance RunSchemaQuery sch (sch :/: l)
+         => RunSchemaType sch ('TSchematic l) where
+  runSchemaType (FSchematic t) (RetSchSchema r)
+    = Just $ runSchemaQuery t r
