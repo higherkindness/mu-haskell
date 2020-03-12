@@ -182,7 +182,7 @@ class ParseArgs (p :: Package') (args :: [Argument']) where
 instance ParseArgs p '[] where
   parseArgs _ _ = pure Nil
 instance (KnownName aname, ParseArg p a, ParseArgs p as, FindDefaultArgValue aanns)
-         => ParseArgs p ('ArgSingle aname aanns a ': as) where
+         => ParseArgs p ('ArgSingle ('Just aname) aanns a ': as) where
   parseArgs vmap args
     = case find ((== nameVal (Proxy @aname)) . T.unpack . GQL.unName . GQL._aName) args of
         Just (GQL.Argument _ x)

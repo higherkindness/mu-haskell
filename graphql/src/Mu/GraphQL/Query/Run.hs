@@ -209,3 +209,13 @@ instance ( MappingRight chn ref ~ t
          => ResultConversion ('Package pname ss) whole chn ('ObjectRef ref) t where
   convertResult whole (RetObject q) h
     = Just <$> runQuery @('Package pname ss) @(LookupService ss ref) whole h q
+instance ResultConversion p whole chn r s
+        => ResultConversion p whole chn ('OptionalRef r) (Maybe s) where
+  convertResult _ _ Nothing
+    = pure Nothing
+  convertResult whole (RetOptional q) (Just x)
+    = convertResult whole q x
+instance ResultConversion p whole chn r s
+        => ResultConversion p whole chn ('ListRef r) [s] where
+  convertResult whole (RetList q) xs
+    = Just . Aeson.toJSON . catMaybes <$> mapM (convertResult whole q) xs
