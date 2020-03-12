@@ -100,14 +100,12 @@ libraryServer
     authorBooks aid = pure $ maybe [] (map ((aid,) . fst) . trd3) (findBook aid)
 
     findAuthor aname = pure
-      [aid | (aid, aname', _) <- library
-           , toCaseFold aname == toCaseFold aname'
-           ]
+      [aid | (aid, aname', _) <- library, toCaseFold aname == toCaseFold aname']
 
     findBookTitle title = pure
       [(aid, bid) | (aid, _, books) <- library
                   , (bid, title') <- books
                   , toCaseFold title == toCaseFold title']
 
-    allAuthors = pure [author | (author, _, _) <- library]
+    allAuthors = pure $ fst3 <$> library
     allBooks = pure [(aid, bid) | (aid, _, books) <- library, (bid, _) <- books]
