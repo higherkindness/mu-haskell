@@ -419,8 +419,10 @@ instance ParseReturn p ('PrimitiveRef t) where
     = pure RetPrimitive
   parseReturn _ _ fname _
     = throwError $ "field '" <> fname <> "' should not have a selection of subfields"
-instance ParseReturn p ('SchemaRef sch sty) where
-  parseReturn _ _ _ _ = pure RetSchema
+instance (ParseSchema sch (sch :/: sty))
+         => ParseReturn p ('SchemaRef sch sty) where
+  parseReturn vmap frmap fname s
+    = RetSchema <$> parseSchema vmap frmap fname s
 instance ParseReturn p r
          => ParseReturn p ('ListRef r) where
   parseReturn vmap frmap fname s
@@ -435,3 +437,106 @@ instance ( p ~ 'Package pname ss,
          ) => ParseReturn p ('ObjectRef s) where
   parseReturn vmap frmap _ s
     = RetObject <$> parseQuery (Proxy @p) (Proxy @s) vmap frmap s
+
+class ParseSchema (s :: Schema') (t :: TypeDef Symbol Symbol) where
+  parseSchema :: MonadError T.Text f
+              => VariableMap
+              -> FragmentMap
+              -> T.Text
+              -> GQL.SelectionSet
+              -> f (SchemaQuery s t)
+instance ParseSchema sch ('DEnum name choices) where
+  parseSchema _ _ _ []
+    = pure QueryEnum
+  parseSchema _ _ fname _
+    = throwError $ "field '" <> fname <> "' should not have a selection of subfields"
+instance (KnownSymbol name, ParseField sch fields)
+         => ParseSchema sch ('DRecord name fields) where
+  parseSchema vmap frmap _ s
+    = QueryRecord <$> parseSchemaQuery (Proxy @sch) (Proxy @('DRecord name fields)) vmap frmap s
+
+parseSchemaQuery ::
+  forall (sch :: Schema') t (rname :: Symbol) fields f.
+  ( MonadError T.Text f
+  , t ~  'DRecord rname fields
+  , KnownSymbol rname
+  , ParseField sch fields ) =>
+  Proxy sch ->
+  Proxy t ->
+  VariableMap -> FragmentMap -> GQL.SelectionSet ->
+  f [OneFieldQuery sch fields]
+parseSchemaQuery _ _ _ _ [] = pure []
+parseSchemaQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
+  = (++) <$> (maybeToList <$> fieldToMethod fld)
+         <*> parseSchemaQuery pp ps vmap frmap ss
+  where
+    fieldToMethod :: GQL.Field -> f (Maybe (OneFieldQuery sch fields))
+    fieldToMethod (GQL.Field alias name args dirs sels)
+      | any (shouldSkip vmap) dirs
+      = pure Nothing
+      | _:_ <- args
+      = throwError "this field does not support arguments"
+      | otherwise
+      = Just . OneFieldQuery (GQL.unName . GQL.unAlias <$> alias)
+         <$> selectField (T.pack $ nameVal (Proxy @rname)) vmap frmap name sels
+parseSchemaQuery pp ps vmap frmap (GQL.SelectionFragmentSpread (GQL.FragmentSpread nm dirs) : ss)
+  | Just fr <- HM.lookup (GQL.unName nm) frmap
+  = if not (any (shouldSkip vmap) dirs) && not (any (shouldSkip vmap) $ GQL._fdDirectives fr)
+       then (++) <$> parseSchemaQuery pp ps vmap frmap (GQL._fdSelectionSet fr)
+                 <*> parseSchemaQuery pp ps vmap frmap ss
+       else parseSchemaQuery pp ps vmap frmap ss
+  | otherwise  -- the fragment definition was not found
+  = throwError $ "fragment '" <> GQL.unName nm <> "' was not found"
+parseSchemaQuery _ _ _ _ (_ : _)  -- Inline fragments are not yet supported
+  = throwError "inline fragments are not (yet) supported"
+
+class ParseField (sch :: Schema') (fs :: [FieldDef Symbol Symbol]) where
+  selectField ::
+    MonadError T.Text f =>
+    T.Text ->
+    VariableMap ->
+    FragmentMap ->
+    GQL.Name ->
+    GQL.SelectionSet ->
+    f (NS (ChosenFieldQuery sch) fs)
+
+instance ParseField sch '[] where
+  selectField tyName _ _ (GQL.unName -> wanted) _
+    = throwError $ "field '" <> wanted <> "' was not found on type '" <> tyName <> "'"
+instance
+  (KnownSymbol fname, ParseField sch fs, ParseSchemaReturn sch r) =>
+  ParseField sch ('FieldDef fname r ': fs)
+  where
+  selectField tyName vmap frmap w@(GQL.unName -> wanted) sels
+    | wanted == mname
+    = Z <$> (ChosenFieldQuery <$> parseSchemaReturn vmap frmap wanted sels)
+    | otherwise
+    = S <$> selectField tyName vmap frmap w sels
+    where
+      mname = T.pack $ nameVal (Proxy @fname)
+
+class ParseSchemaReturn (sch :: Schema') (r :: FieldType Symbol) where
+  parseSchemaReturn :: MonadError T.Text f
+                    => VariableMap
+                    -> FragmentMap
+                    -> T.Text
+                    -> GQL.SelectionSet
+                    -> f (ReturnSchemaQuery sch r)
+
+instance ParseSchemaReturn sch ('TPrimitive t) where
+  parseSchemaReturn _ _ _ []
+    = pure RetSchPrimitive
+  parseSchemaReturn _ _ fname _
+    = throwError $ "field '" <> fname <> "' should not have a selection of subfields"
+instance ( ParseSchema sch (sch :/: sty) )
+         => ParseSchemaReturn sch ('TSchematic sty) where
+  parseSchemaReturn vmap frmap fname s
+    = RetSchSchema <$> parseSchema vmap frmap fname s
+instance ParseSchemaReturn sch r
+         => ParseSchemaReturn sch ('TList r) where
+  parseSchemaReturn vmap frmap fname s
+    = RetSchList <$> parseSchemaReturn vmap frmap fname s
+instance ParseSchemaReturn sch r
+         => ParseSchemaReturn sch ('TOption r) where
+  parseSchemaReturn vmap frmap fname s
+    = RetSchOptional <$> parseSchemaReturn vmap frmap fname s

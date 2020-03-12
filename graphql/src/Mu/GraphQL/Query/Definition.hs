@@ -48,8 +48,34 @@ data ArgumentValue' (p :: Package snm mnm anm) (r :: TypeRef snm) where
 
 data ReturnQuery (p :: Package snm mnm anm) (r :: TypeRef snm) where
   RetPrimitive :: ReturnQuery p ('PrimitiveRef t)
-  RetSchema    :: ReturnQuery p ('SchemaRef sch sty)
+  RetSchema    :: SchemaQuery sch (sch :/: sty)
+               -> ReturnQuery p ('SchemaRef sch sty)
   RetList      :: ReturnQuery p r -> ReturnQuery p ('ListRef r)
   RetOptional  :: ReturnQuery p r -> ReturnQuery p ('OptionalRef r)
   RetObject    :: ServiceQuery ('Package pname ss) (LookupService ss s)
                -> ReturnQuery ('Package pname ss) ('ObjectRef s)
+
+data SchemaQuery (sch :: Schema tn fn) (t :: TypeDef tn fn) where
+  QueryEnum   :: SchemaQuery sch ('DEnum nm choices)
+  QueryRecord :: [OneFieldQuery sch fs]
+              -> SchemaQuery sch ('DRecord ty fs)
+
+data OneFieldQuery (sch :: Schema tn fn) (fs :: [FieldDef tn fn]) where
+  OneFieldQuery
+    :: Maybe Text
+    -> NS (ChosenFieldQuery sch) fs
+    -> OneFieldQuery sch fs
+
+data ChosenFieldQuery (sch :: Schema tn fn) (f :: FieldDef tn fn) where
+  ChosenFieldQuery
+    :: ReturnSchemaQuery sch r
+    -> ChosenFieldQuery sch ('FieldDef name r)
+
+data ReturnSchemaQuery (sch :: Schema tn fn) (r :: FieldType tn) where
+  RetSchPrimitive :: ReturnSchemaQuery sch ('TPrimitive t)
+  RetSchSchema    :: SchemaQuery sch (sch :/: sty)
+                  -> ReturnSchemaQuery sch ('TSchematic sty)
+  RetSchList      :: ReturnSchemaQuery sch r
+                  -> ReturnSchemaQuery sch ('TList r)
+  RetSchOptional  :: ReturnSchemaQuery sch r
+                  -> ReturnSchemaQuery sch ('TOption r)
