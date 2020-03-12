@@ -181,6 +181,13 @@ instance
     = S <$> selectMethod tyName vmap frmap w args sels
     where
       mname = T.pack $ nameVal (Proxy @mname)
+-- For now, do as if stream methods were not there
+instance
+  (ParseMethod p ms) =>
+  ParseMethod p ('Method mname manns args ('RetStream r) ': ms)
+  where
+    selectMethod tyName vmap frmap w args sels
+      = S <$> selectMethod tyName vmap frmap w args sels
 
 class ParseArgs (p :: Package') (args :: [Argument']) where
   parseArgs :: MonadError T.Text f
@@ -190,6 +197,13 @@ class ParseArgs (p :: Package') (args :: [Argument']) where
 
 instance ParseArgs p '[] where
   parseArgs _ _ = pure Nil
+-- one single argument without name
+instance ParseArg p a
+         => ParseArgs p '[ 'ArgSingle 'Nothing anns a ] where
+  parseArgs vmap [GQL.Argument _ x]
+    = (\v -> ArgumentValue v :* Nil) <$> parseArg' vmap "arg" x
+  parseArgs _ _
+    = throwError "this field receives one single argument"
 instance (KnownName aname, ParseArg p a, ParseArgs p as, FindDefaultArgValue aanns)
          => ParseArgs p ('ArgSingle ('Just aname) aanns a ': as) where
   parseArgs vmap args

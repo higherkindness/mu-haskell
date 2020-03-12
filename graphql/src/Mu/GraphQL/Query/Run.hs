@@ -168,6 +168,12 @@ instance (RunMethod m p whole chn s ms hs, KnownName mname, RunHandler m p whole
     = (, T.pack $ nameVal (Proxy @mname)) <$> runHandler f whole (h inh) args ret
   runMethod f whole p inh (_ :<||>: r) (S cont)
     = runMethod f whole p inh r cont
+instance (RunMethod m p whole chn s ms hs)
+         => RunMethod m p whole chn s ('Method mname anns args ('RetStream r) ': ms) (h ': hs) where
+  runMethod _ _ _ _ _ (Z _)
+    = error "this should never happen"
+  runMethod f whole p inh (_ :<||>: r) (S cont)
+    = runMethod f whole p inh r cont
 
 class Handles chn args ('RetSingle r) m h
       => RunHandler m p whole chn args r h where
