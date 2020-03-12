@@ -1,4 +1,3 @@
-{-# language ConstraintKinds   #-}
 {-# language DataKinds         #-}
 {-# language FlexibleContexts  #-}
 {-# language GADTs             #-}
@@ -30,8 +29,6 @@ import           Language.GraphQL.Draft.Parser (parseExecutableDoc)
 import           Language.GraphQL.Draft.Syntax
 import           Mu.GraphQL.Query.Parse
 import           Mu.GraphQL.Query.Run
-import           Mu.Rpc
-import           Mu.Schema.Definition          (MappingRight)
 import           Mu.Server
 import           Network.HTTP.Types.Header     (hContentType)
 import           Network.HTTP.Types.Method     (StdMethod (..), parseMethod)
@@ -58,18 +55,6 @@ instance A.FromJSON ValueConst where
     where
       toObjFld :: (T.Text, ValueConst) -> ObjectFieldG ValueConst
       toObjFld (k, v) = ObjectFieldG (coerce k) v
-
-type GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns =
-  ( p ~ 'Package pname ss
-    , ParseMethod p qmethods
-    , ParseMethod p mmethods
-    , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
-    , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
-    , MappingRight chn qr ~ ()
-    , LookupService ss qr ~ 'Service qr qanns qmethods
-    , LookupService ss mut ~ 'Service mut manns mmethods
-    , MappingRight chn mut ~ ()
-  )
 
 -- | Turn a Mu GraphQL 'Server' into a WAI 'Application'.
 --
@@ -131,16 +116,7 @@ runGraphQLAppSettings st svr q m = runSettings st (graphQLApp svr q m)
 
 -- | Run a Mu 'graphQLApp' on the given port.
 runGraphQLApp ::
-  ( p ~ 'Package pname ss
-  , ParseMethod p qmethods
-  , ParseMethod p mmethods
-  , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
-  , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
-  , MappingRight chn qr ~ ()
-  , LookupService ss qr ~ 'Service qr qanns qmethods
-  , LookupService ss mut ~ 'Service mut manns mmethods
-  , MappingRight chn mut ~ ()
-  )
+  ( GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns )
   => Port
   -> ServerT chn p ServerErrorIO hs
   -> Proxy qr
