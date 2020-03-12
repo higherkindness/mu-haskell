@@ -103,6 +103,6 @@ libraryServer
     findBookTitle title
       = pure [(aid, bid) | (aid, _, books) <- library, (bid, title') <- books, toCaseFold title == toCaseFold title']
 
-    allAuthors = pure $ (\(x, _, _) -> x) <$> library
+    allAuthors = pure [x | (x, _, _) <- library]
 
-    allBooks = pure $ library >>= (\(x, _, ys) -> (x,) . fst <$> ys)
+    allBooks = pure [(aid,bid) | (aid, _, books) <- library, (bid, _) <- books]
