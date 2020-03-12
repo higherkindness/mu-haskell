@@ -21,6 +21,19 @@ import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
 
+-- helpers
+
+fst3 :: (a, b, c) -> a
+fst3 (x, _, _) = x
+
+snd3 :: (a, b, c) -> b
+snd3 (_, y, _) = y
+
+trd3 :: (a, b, c) -> c
+trd3 (_, _, z) = z
+
+-- GraphQL App
+
 main :: IO ()
 main = do
   putStrLn "starting GraphQL server on port 8080"
@@ -41,7 +54,7 @@ type ServiceDefinition
       , Object "Query" '[]
          '[ ObjectField "author" '[]
               '[ 'ArgSingle ('Just "name") '[] ('PrimitiveRef Text)]
-              ('RetSingle ('OptionalRef ('ObjectRef "Author")))
+              ('RetSingle ('ListRef ('ObjectRef "Author")))
           , ObjectField "book" '[]
               '[ 'ArgSingle ('Just "title") '[] ('PrimitiveRef Text)]
               ('RetSingle ('ListRef ('ObjectRef "Book")))
@@ -76,33 +89,25 @@ libraryServer
                       :<||>: H0)
                :<&>: H0 :<&>: S0
   where
-    findBook i = find (\(id', _, _) -> i == id') library
+    findBook i = find ((==i) . fst3) library
 
     bookId (_, bid) = pure bid
-    bookTitle (aid, bid)
-      = case findBook aid of
-          Nothing            -> pure ""
-          Just (_, _, books) -> pure $ fromMaybe "" (lookup bid books)
+    bookTitle (aid, bid) = pure $ maybe "" (fromMaybe "" . lookup bid . trd3) (findBook aid)
     bookAuthor (aid, _) = pure aid
 
     authorId = pure
-    authorName aid
-      = case findBook aid of
-          Nothing            -> pure ""
-          Just (_, aname, _) -> pure aname
-    authorBooks aid
-      = case findBook aid of
-          Nothing            -> pure []
-          Just (_, _, books) -> pure $ map ((aid,) . fst) books
+    authorName aid = pure $ maybe "" snd3 (findBook aid)
+    authorBooks aid = pure $ maybe [] (map ((aid,) . fst) . trd3) (findBook aid)
 
-    findAuthor aname
-      = case find (\(_, aname', _) -> toCaseFold aname == toCaseFold aname') library of
-          Nothing          -> pure Nothing
-          Just (aid, _, _) -> pure $ Just aid
+    findAuthor aname = pure
+      [aid | (aid, aname', _) <- library
+           , toCaseFold aname == toCaseFold aname'
+           ]
 
-    findBookTitle title
-      = pure [(aid, bid) | (aid, _, books) <- library, (bid, title') <- books, toCaseFold title == toCaseFold title']
+    findBookTitle title = pure
+      [(aid, bid) | (aid, _, books) <- library
+                  , (bid, title') <- books
+                  , toCaseFold title == toCaseFold title']
 
-    allAuthors = pure [x | (x, _, _) <- library]
-
-    allBooks = pure [(aid,bid) | (aid, _, books) <- library, (bid, _) <- books]
+    allAuthors = pure [author | (author, _, _) <- library]
+    allBooks = pure [(aid, bid) | (aid, _, books) <- library, (bid, _) <- books]
