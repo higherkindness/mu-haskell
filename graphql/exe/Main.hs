@@ -7,6 +7,8 @@
 {-# language TupleSections         #-}
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+
 module Main where
 
 import           Data.List         (find)

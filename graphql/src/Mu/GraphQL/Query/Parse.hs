@@ -10,10 +10,11 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# language ViewPatterns          #-}
+{-# OPTIONS_GHC -Wincomplete-patterns #-}
 
 module Mu.GraphQL.Query.Parse where
 
-import           Control.Applicative
+import           Control.Monad.Except
 import qualified Data.HashMap.Strict           as HM
 import           Data.Int                      (Int32)
 import           Data.Kind
@@ -35,11 +36,11 @@ type VariableMap = HM.HashMap T.Text GQL.Value
 type FragmentMap = HM.HashMap T.Text GQL.FragmentDefinition
 
 parseDoc ::
-  ( Alternative f, p ~ 'Package pname ss,
+  ( MonadError T.Text f, p ~ 'Package pname ss,
     LookupService ss qr ~ 'Service qr qanns qmethods,
-    ParseMethod p qmethods,
+    KnownName qr, ParseMethod p qmethods,
     LookupService ss mut ~ 'Service mut manns mmethods,
-    ParseMethod p mmethods
+    KnownName mut, ParseMethod p mmethods
   ) =>
   Maybe T.Text -> VariableMapC ->
   GQL.ExecutableDocument ->
@@ -51,14 +52,19 @@ parseDoc Nothing _ (GQL.ExecutableDocument defns)
         -> QueryDoc <$> parseQuery Proxy Proxy HM.empty (fragmentsToMap frs) unnamed
       ([], [named], frs)
         -> parseTypedDoc HM.empty (fragmentsToMap frs) named
-      _ -> empty
+      ([], [], _) -> throwError "no operation to execute"
+      (_,  [], _) -> throwError "more than one unnamed query"
+      ([], _, _)  -> throwError "more than one named operation but no 'operationName' given"
+      (_,  _, _)  -> throwError "both named and unnamed queries, but no 'operationName' given"
 -- If there's an operation name, look in the named queries
 parseDoc (Just operationName) vmap (GQL.ExecutableDocument defns)
   = case GQL.partitionExDefs defns of
-      (_, named, frs) -> maybe empty (parseTypedDoc vmap (fragmentsToMap frs)) (find isThis named)
+      (_, named, frs) -> maybe notFound (parseTypedDoc vmap (fragmentsToMap frs)) (find isThis named)
     where isThis (GQL._todName -> Just nm)
             = GQL.unName nm == operationName
           isThis _ = False
+          notFound :: MonadError T.Text f => f a
+          notFound = throwError $ "operation '" <> operationName <> "' was not found"
 
 fragmentsToMap :: [GQL.FragmentDefinition] -> FragmentMap
 fragmentsToMap = HM.fromList . map fragmentToThingy
@@ -66,11 +72,11 @@ fragmentsToMap = HM.fromList . map fragmentToThingy
         fragmentToThingy f = (GQL.unName $ GQL._fdName f, f)
 
 parseTypedDoc ::
-  ( Alternative f, p ~ 'Package pname ss,
+  ( MonadError T.Text f, p ~ 'Package pname ss,
     LookupService ss qr ~ 'Service qr qanns qmethods,
-    ParseMethod p qmethods,
+    KnownName qr, ParseMethod p qmethods,
     LookupService ss mut ~ 'Service mut manns mmethods,
-    ParseMethod p mmethods
+    KnownName mut, ParseMethod p mmethods
   ) =>
   VariableMapC -> FragmentMap ->
   GQL.TypedOperationDefinition ->
@@ -83,7 +89,8 @@ parseTypedDoc vmap frmap tod
            -> QueryDoc <$> parseQuery Proxy Proxy finalVmap frmap (GQL._todSelectionSet tod)
          GQL.OperationTypeMutation
            -> MutationDoc <$> parseQuery Proxy Proxy finalVmap frmap (GQL._todSelectionSet tod)
-         _ -> empty
+         GQL.OperationTypeSubscription
+           -> throwError "subscriptions are not (yet) supported"
 
 parseVariableMap :: [GQL.VariableDefinition] -> VariableMapC
 parseVariableMap vmap
@@ -105,9 +112,9 @@ constToValue (GQL.VCObject (GQL.ObjectValueG n))
 
 parseQuery ::
   forall (p :: Package') (s :: Symbol) pname ss sanns methods f.
-  ( Alternative f, p ~ 'Package pname ss,
+  ( MonadError T.Text f, p ~ 'Package pname ss,
     LookupService ss s ~ 'Service s sanns methods,
-    ParseMethod p methods
+    KnownName s, ParseMethod p methods
   ) =>
   Proxy p ->
   Proxy s ->
@@ -124,7 +131,7 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
       = pure Nothing
       | otherwise
       = Just . OneMethodQuery (GQL.unName . GQL.unAlias <$> alias)
-         <$> selectMethod vmap frmap name args sels
+         <$> selectMethod (T.pack $ nameVal (Proxy @s)) vmap frmap name args sels
 parseQuery pp ps vmap frmap (GQL.SelectionFragmentSpread (GQL.FragmentSpread nm dirs) : ss)
   | Just fr <- HM.lookup (GQL.unName nm) frmap
   = if not (any (shouldSkip vmap) dirs) && not (any (shouldSkip vmap) $ GQL._fdDirectives fr)
@@ -132,25 +139,26 @@ parseQuery pp ps vmap frmap (GQL.SelectionFragmentSpread (GQL.FragmentSpread nm 
                  <*> parseQuery pp ps vmap frmap ss
        else parseQuery pp ps vmap frmap ss
   | otherwise  -- the fragment definition was not found
-  = empty
+  = throwError $ "fragment '" <> GQL.unName nm <> "' was not found"
 parseQuery _ _ _ _ (_ : _)  -- Inline fragments are not yet supported
-  = empty
+  = throwError "inline fragments are not (yet) supported"
 
 shouldSkip :: VariableMap -> GQL.Directive -> Bool
 shouldSkip vmap (GQL.Directive (GQL.unName -> nm) [GQL.Argument (GQL.unName -> ifn) v])
   | nm == "skip", ifn == "if"
-  = case valueParser' @'[] @('TPrimitive Bool) vmap v of
-      Just (FPrimitive b) -> b
-      Nothing             -> False
+  = case valueParser' @'[] @('TPrimitive Bool) vmap "" v of
+      Right (FPrimitive b) -> b
+      _                    -> False
   | nm == "include", ifn == "if"
-  = case valueParser' @'[] @('TPrimitive Bool) vmap v of
-      Just (FPrimitive b) -> not b
-      Nothing             -> False
+  = case valueParser' @'[] @('TPrimitive Bool) vmap "" v of
+      Right (FPrimitive b) -> not b
+      _                    -> False
 shouldSkip _ _ = False
 
 class ParseMethod (p :: Package') (ms :: [Method']) where
   selectMethod ::
-    Alternative f =>
+    MonadError T.Text f =>
+    T.Text ->
     VariableMap ->
     FragmentMap ->
     GQL.Name ->
@@ -159,22 +167,23 @@ class ParseMethod (p :: Package') (ms :: [Method']) where
     f (NS (ChosenMethodQuery p) ms)
 
 instance ParseMethod p '[] where
-  selectMethod _ _ _ _ _ = empty
+  selectMethod tyName _ _ (GQL.unName -> wanted) _ _
+    = throwError $ "field '" <> wanted <> "' was not found on type '" <> tyName <> "'"
 instance
   (KnownSymbol mname, ParseMethod p ms, ParseArgs p args, ParseReturn p r) =>
   ParseMethod p ('Method mname manns args ('RetSingle r) ': ms)
   where
-  selectMethod vmap frmap w@(GQL.unName -> wanted) args sels
+  selectMethod tyName vmap frmap w@(GQL.unName -> wanted) args sels
     | wanted == mname
     = Z <$> (ChosenMethodQuery <$> parseArgs vmap args
-                               <*> parseReturn vmap frmap sels)
+                               <*> parseReturn vmap frmap wanted sels)
     | otherwise
-    = S <$> selectMethod vmap frmap w args sels
+    = S <$> selectMethod tyName vmap frmap w args sels
     where
       mname = T.pack $ nameVal (Proxy @mname)
 
 class ParseArgs (p :: Package') (args :: [Argument']) where
-  parseArgs :: Alternative f
+  parseArgs :: MonadError T.Text f
             => VariableMap
             -> [GQL.Argument]
             -> f (NP (ArgumentValue p) args)
@@ -184,192 +193,245 @@ instance ParseArgs p '[] where
 instance (KnownName aname, ParseArg p a, ParseArgs p as, FindDefaultArgValue aanns)
          => ParseArgs p ('ArgSingle ('Just aname) aanns a ': as) where
   parseArgs vmap args
-    = case find ((== nameVal (Proxy @aname)) . T.unpack . GQL.unName . GQL._aName) args of
+    = let aname = T.pack $ nameVal (Proxy @aname)
+      in case find ((== nameVal (Proxy @aname)) . T.unpack . GQL.unName . GQL._aName) args of
         Just (GQL.Argument _ x)
-          -> (:*) <$> (ArgumentValue <$> parseArg' vmap x)
+          -> (:*) <$> (ArgumentValue <$> parseArg' vmap aname x)
                   <*> parseArgs vmap args
-        Nothing -> case findDefaultArgValue (Proxy @aanns) of
-                     Just x  -> (:*) <$> (ArgumentValue <$> parseArg' vmap (constToValue x))
-                                     <*> parseArgs vmap args
-                     Nothing -> empty
+        Nothing
+          -> do x <- findDefaultArgValue (Proxy @aanns) aname
+                (:*) <$> (ArgumentValue <$> parseArg' vmap aname (constToValue x))
+                     <*> parseArgs vmap args
 
 class FindDefaultArgValue (vs :: [Type]) where
-  findDefaultArgValue :: Alternative f
+  findDefaultArgValue :: MonadError T.Text f
                       => Proxy vs
+                      -> T.Text
                       -> f GQL.ValueConst
 instance FindDefaultArgValue '[] where
-  findDefaultArgValue _ = empty
+  findDefaultArgValue _ aname
+    = throwError $ "argument '" <> aname <> "' was not given a value, and has no default one"
 instance {-# OVERLAPPABLE #-} FindDefaultArgValue xs
          => FindDefaultArgValue (x ': xs) where
   findDefaultArgValue _ = findDefaultArgValue (Proxy @xs)
 instance {-# OVERLAPS #-} ReflectValueConst v
          => FindDefaultArgValue (DefaultValue v ': xs) where
-  findDefaultArgValue _ = pure $ reflectValueConst (Proxy @v)
+  findDefaultArgValue _ _ = pure $ reflectValueConst (Proxy @v)
 
-parseArg' :: (ParseArg p a, Alternative f)
+parseArg' :: (ParseArg p a, MonadError T.Text f)
           => VariableMap
+          -> T.Text
           -> GQL.Value
           -> f (ArgumentValue' p a)
-parseArg' vmap (GQL.VVariable x)
-  = case HM.lookup (GQL.unName (GQL.unVariable x)) vmap of
-      Nothing -> empty
-      Just v  -> parseArg vmap v
-parseArg' vmap v = parseArg vmap v
+parseArg' vmap aname (GQL.VVariable (GQL.unName . GQL.unVariable -> x))
+  = case HM.lookup x vmap of
+      Nothing -> throwError $ "variable '" <> x <> "' was not found"
+      Just v  -> parseArg vmap aname v
+parseArg' vmap aname v = parseArg vmap aname v
 
 class ParseArg (p :: Package') (a :: TypeRef Symbol) where
-  parseArg :: Alternative f
+  parseArg :: MonadError T.Text f
            => VariableMap
+           -> T.Text
            -> GQL.Value
            -> f (ArgumentValue' p a)
 
 instance (ParseArg p r) => ParseArg p ('ListRef r) where
-  parseArg vmap (GQL.VList (GQL.ListValueG xs)) = ArgList <$> traverse (parseArg' vmap) xs
-  parseArg _ _                                  = empty
+  parseArg vmap aname (GQL.VList (GQL.ListValueG xs))
+    = ArgList <$> traverse (parseArg' vmap aname) xs
+  parseArg _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef Bool) where
-  parseArg _ (GQL.VBoolean b) = pure (ArgPrimitive b)
-  parseArg _ _                = empty
+  parseArg _ _ (GQL.VBoolean b)
+    = pure (ArgPrimitive b)
+  parseArg _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef Int32) where
-  parseArg _ (GQL.VInt b) = pure (ArgPrimitive b)
-  parseArg _ _            = empty
+  parseArg _ _ (GQL.VInt b)
+    = pure (ArgPrimitive b)
+  parseArg _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef Integer) where
-  parseArg _ (GQL.VInt b) = pure $ ArgPrimitive $ fromIntegral b
-  parseArg _ _            = empty
+  parseArg _ _ (GQL.VInt b)
+    = pure $ ArgPrimitive $ fromIntegral b
+  parseArg _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef Double) where
-  parseArg _ (GQL.VFloat b) = pure (ArgPrimitive b)
-  parseArg _ _              = empty
+  parseArg _ _ (GQL.VFloat b)
+    = pure (ArgPrimitive b)
+  parseArg _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef T.Text) where
-  parseArg _ (GQL.VString (GQL.StringValue b)) = pure $ ArgPrimitive b
-  parseArg _ _                                 = empty
+  parseArg _ _ (GQL.VString (GQL.StringValue b))
+    = pure $ ArgPrimitive b
+  parseArg _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef String) where
-  parseArg _ (GQL.VString (GQL.StringValue b)) = pure $ ArgPrimitive $ T.unpack b
-  parseArg _ _                                 = empty
+  parseArg _ _ (GQL.VString (GQL.StringValue b))
+    = pure $ ArgPrimitive $ T.unpack b
+  parseArg _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef ()) where
-  parseArg _ GQL.VNull = pure $ ArgPrimitive ()
-  parseArg _ _         = empty
+  parseArg _ _ GQL.VNull = pure $ ArgPrimitive ()
+  parseArg _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
 instance (ObjectOrEnumParser sch (sch :/: sty))
          => ParseArg p ('SchemaRef sch sty) where
-  parseArg vmap v = ArgSchema <$> parseObjectOrEnum' vmap v
+  parseArg vmap aname v
+    = ArgSchema <$> parseObjectOrEnum' vmap aname v
 
-parseObjectOrEnum' :: (ObjectOrEnumParser sch t, Alternative f)
+parseObjectOrEnum' :: (ObjectOrEnumParser sch t, MonadError T.Text f)
           => VariableMap
+          -> T.Text
           -> GQL.Value
           -> f (Term sch t)
-parseObjectOrEnum' vmap (GQL.VVariable x)
-  = case HM.lookup (GQL.unName (GQL.unVariable x)) vmap of
-      Nothing -> empty
-      Just v  -> parseObjectOrEnum vmap v
-parseObjectOrEnum' vmap v = parseObjectOrEnum vmap v
+parseObjectOrEnum' vmap aname (GQL.VVariable (GQL.unName . GQL.unVariable -> x))
+  = case HM.lookup x vmap of
+      Nothing -> throwError $ "variable '" <> x <> "' was not found"
+      Just v  -> parseObjectOrEnum vmap aname v
+parseObjectOrEnum' vmap aname v
+  = parseObjectOrEnum vmap aname v
 
 class ObjectOrEnumParser (sch :: Schema') (t :: TypeDef Symbol Symbol) where
-  parseObjectOrEnum :: Alternative f
+  parseObjectOrEnum :: MonadError T.Text f
                     => VariableMap
+                    -> T.Text
                     -> GQL.Value
                     -> f (Term sch t)
 
-instance (ObjectParser sch args)
+instance (ObjectParser sch args, KnownName name)
          => ObjectOrEnumParser sch ('DRecord name args) where
-  parseObjectOrEnum vmap (GQL.VObject (GQL.ObjectValueG vs)) = TRecord <$> objectParser vmap vs
-  parseObjectOrEnum _    _                                   = empty
-instance (EnumParser choices)
+  parseObjectOrEnum vmap _ (GQL.VObject (GQL.ObjectValueG vs))
+    = TRecord <$> objectParser vmap (T.pack $ nameVal (Proxy @name)) vs
+  parseObjectOrEnum _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
+instance (EnumParser choices, KnownName name)
          => ObjectOrEnumParser sch ('DEnum name choices) where
-  parseObjectOrEnum _ (GQL.VEnum (GQL.EnumValue nm)) = TEnum <$> enumParser nm
-  parseObjectOrEnum _ _                              = empty
+  parseObjectOrEnum _ _ (GQL.VEnum (GQL.EnumValue nm))
+    = TEnum <$> enumParser (T.pack $ nameVal (Proxy @name)) nm
+  parseObjectOrEnum _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
 
 class ObjectParser (sch :: Schema') (args :: [FieldDef Symbol Symbol]) where
-  objectParser :: Alternative f
+  objectParser :: MonadError T.Text f
                => VariableMap
+               -> T.Text
                -> [GQL.ObjectFieldG GQL.Value]
                -> f (NP (Field sch) args)
 
 instance ObjectParser sch '[] where
-  objectParser _ _ = pure Nil
+  objectParser _ _ _ = pure Nil
 instance
   (ObjectParser sch args, ValueParser sch v, KnownName nm) =>
   ObjectParser sch ('FieldDef nm v ': args)
   where
-  objectParser vmap args
-    = case find ((== nameVal (Proxy @nm)) . T.unpack . GQL.unName . GQL._ofName) args of
+  objectParser vmap tyName args
+    = let wanted = T.pack $ nameVal (Proxy @nm)
+      in case find ((== wanted) . GQL.unName . GQL._ofName) args of
         Just (GQL.ObjectFieldG _ v)
-          -> (:*) <$> (Field <$> valueParser' vmap v) <*> objectParser vmap args
-        Nothing -> empty
+          -> (:*) <$> (Field <$> valueParser' vmap wanted v) <*> objectParser vmap tyName args
+        Nothing -> throwError $ "field '" <> wanted <> "' was not found on type '" <> tyName <> "'"
 
 class EnumParser (choices :: [ChoiceDef Symbol]) where
-  enumParser :: Alternative f => GQL.Name -> f (NS Proxy choices)
+  enumParser :: MonadError T.Text f
+             => T.Text -> GQL.Name
+             -> f (NS Proxy choices)
 
 instance EnumParser '[] where
-  enumParser _ = empty
+  enumParser tyName (GQL.unName -> wanted)
+    = throwError $ "value '" <> wanted <> "' was not found on enum '" <> tyName <> "'"
 instance (KnownName name, EnumParser choices)
          => EnumParser ('ChoiceDef name ': choices) where
-  enumParser w@(GQL.unName -> wanted)
+  enumParser tyName w@(GQL.unName -> wanted)
     | wanted == mname = pure (Z Proxy)
-    | otherwise = S <$> enumParser w
+    | otherwise = S <$> enumParser tyName w
     where
       mname = T.pack $ nameVal (Proxy @name)
 
-valueParser' :: (ValueParser sch v, Alternative f)
+valueParser' :: (ValueParser sch v, MonadError T.Text f)
              => VariableMap
+             -> T.Text
              -> GQL.Value
              -> f (FieldValue sch v)
-valueParser' vmap (GQL.VVariable x)
-  = case HM.lookup (GQL.unName (GQL.unVariable x)) vmap of
-      Nothing -> empty
-      Just v  -> valueParser vmap v
-valueParser' vmap v = valueParser vmap v
+valueParser' vmap aname (GQL.VVariable (GQL.unName . GQL.unVariable -> x))
+  = case HM.lookup x vmap of
+      Nothing -> throwError $ "variable '" <> x <> "' was not found"
+      Just v  -> valueParser vmap aname v
+valueParser' vmap aname v = valueParser vmap aname v
 
 class ValueParser (sch :: Schema') (v :: FieldType Symbol) where
-  valueParser :: Alternative f
+  valueParser :: MonadError T.Text f
               => VariableMap
+              -> T.Text
               -> GQL.Value
               -> f (FieldValue sch v)
 
 instance ValueParser sch 'TNull where
-  valueParser _ GQL.VNull = pure FNull
-  valueParser _ _         = empty
+  valueParser _ _ GQL.VNull = pure FNull
+  valueParser _ fname _
+    = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Bool) where
-  valueParser _ (GQL.VBoolean b) = pure (FPrimitive b)
-  valueParser _ _                = empty
+  valueParser _ _ (GQL.VBoolean b) = pure (FPrimitive b)
+  valueParser _ fname _
+    = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Int32) where
-  valueParser _ (GQL.VInt b) = pure (FPrimitive b)
-  valueParser _ _            = empty
+  valueParser _ _ (GQL.VInt b) = pure (FPrimitive b)
+  valueParser _ fname _
+    = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Integer) where
-  valueParser _ (GQL.VInt b) = pure $ FPrimitive $ fromIntegral b
-  valueParser _ _            = empty
+  valueParser _ _ (GQL.VInt b) = pure $ FPrimitive $ fromIntegral b
+  valueParser _ fname _
+    = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Double) where
-  valueParser _ (GQL.VFloat b) = pure (FPrimitive b)
-  valueParser _ _              = empty
+  valueParser _ _ (GQL.VFloat b) = pure (FPrimitive b)
+  valueParser _ fname _
+    = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive T.Text) where
-  valueParser _ (GQL.VString (GQL.StringValue b)) = pure $ FPrimitive b
-  valueParser _ _                                 = empty
+  valueParser _ _ (GQL.VString (GQL.StringValue b))
+    = pure $ FPrimitive b
+  valueParser _ fname _
+    = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive String) where
-  valueParser _ (GQL.VString (GQL.StringValue b)) = pure $ FPrimitive $ T.unpack b
-  valueParser _ _                                 = empty
+  valueParser _ _ (GQL.VString (GQL.StringValue b))
+    = pure $ FPrimitive $ T.unpack b
+  valueParser _ fname _
+    = throwError $ "field '" <> fname <> "' was not of right type"
 instance (ValueParser sch r) => ValueParser sch ('TList r) where
-  valueParser vmap (GQL.VList (GQL.ListValueG xs)) = FList <$> traverse (valueParser' vmap) xs
-  valueParser _    _                               = empty
-instance (ObjectOrEnumParser sch (sch :/: sty))
+  valueParser vmap fname (GQL.VList (GQL.ListValueG xs))
+    = FList <$> traverse (valueParser' vmap fname) xs
+  valueParser _ fname _
+    = throwError $ "field '" <> fname <> "' was not of right type"
+instance (ObjectOrEnumParser sch (sch :/: sty), KnownName sty)
          => ValueParser sch ('TSchematic sty) where
-  valueParser vmap v = FSchematic <$> parseObjectOrEnum' vmap v
+  valueParser vmap _ v
+    = FSchematic <$> parseObjectOrEnum' vmap (T.pack $ nameVal (Proxy @sty)) v
 
 class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
-  parseReturn :: Alternative f
+  parseReturn :: MonadError T.Text f
               => VariableMap
               -> FragmentMap
+              -> T.Text
               -> GQL.SelectionSet
               -> f (ReturnQuery p r)
 
 instance ParseReturn p ('PrimitiveRef t) where
-  parseReturn _ _ [] = pure RetPrimitive
-  parseReturn _ _ _  = empty
+  parseReturn _ _ _ []
+    = pure RetPrimitive
+  parseReturn _ _ fname _
+    = throwError $ "field '" <> fname <> "' should not have a selection of subfields"
 instance ParseReturn p ('SchemaRef sch sty) where
-  parseReturn _ _ _ = pure RetSchema
+  parseReturn _ _ _ _ = pure RetSchema
 instance ParseReturn p r
          => ParseReturn p ('ListRef r) where
-  parseReturn vmap frmap s = RetList <$> parseReturn vmap frmap s
+  parseReturn vmap frmap fname s
+    = RetList <$> parseReturn vmap frmap fname s
 instance ParseReturn p r
          => ParseReturn p ('OptionalRef r) where
-  parseReturn vmap frmap s = RetOptional <$> parseReturn vmap frmap s
+  parseReturn vmap frmap fname s
+    = RetOptional <$> parseReturn vmap frmap fname s
 instance ( p ~ 'Package pname ss,
            LookupService ss s ~ 'Service s sanns methods,
-           ParseMethod p methods
+           KnownName s, ParseMethod p methods
          ) => ParseReturn p ('ObjectRef s) where
-  parseReturn vmap frmap s = RetObject <$> parseQuery (Proxy @p) (Proxy @s) vmap frmap s
+  parseReturn vmap frmap _ s
+    = RetObject <$> parseQuery (Proxy @p) (Proxy @s) vmap frmap s

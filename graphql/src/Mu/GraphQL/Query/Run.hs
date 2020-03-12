@@ -1,3 +1,4 @@
+{-# language ConstraintKinds       #-}
 {-# language DataKinds             #-}
 {-# language FlexibleContexts      #-}
 {-# language FlexibleInstances     #-}
@@ -13,7 +14,8 @@
 {-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fprint-explicit-foralls #-}
 module Mu.GraphQL.Query.Run (
-  runPipeline
+  GraphQLApp
+, runPipeline
 , runDocument
 , runQuery
 -- * Typeclass to be able to run query handlers
@@ -38,30 +40,35 @@ import           Mu.Server
 data GraphQLError
   = GraphQLError ServerError [T.Text]
 
+type GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns =
+  ( p ~ 'Package pname ss
+    , KnownName qr
+    , ParseMethod p qmethods
+    , KnownName mut
+    , ParseMethod p mmethods
+    , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
+    , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
+    , MappingRight chn qr ~ ()
+    , LookupService ss qr ~ 'Service qr qanns qmethods
+    , LookupService ss mut ~ 'Service mut manns mmethods
+    , MappingRight chn mut ~ ()
+  )
+
 runPipeline
   :: forall qr mut (p :: Package') pname ss hs chn qanns qmethods manns mmethods.
-     ( p ~ 'Package pname ss
-     , LookupService ss qr ~ 'Service qr qanns qmethods
-     , ParseMethod p qmethods
-     , LookupService ss mut ~ 'Service mut manns mmethods
-     , ParseMethod p mmethods
-     , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
-     , MappingRight chn qr ~ ()
-     , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
-     , MappingRight chn mut ~ ()
-     )
+     ( GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns )
   => ServerT chn p ServerErrorIO hs
   -> Proxy qr -> Proxy mut
   -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
   -> IO Aeson.Value
 runPipeline svr _ _ opName vmap doc
   = case parseDoc opName vmap doc of
-      Nothing ->
+      Left e ->
         pure $
           Aeson.object [
             ("errors", Aeson.Array [
-              Aeson.object [ ("message", Aeson.String "cannot parse document") ] ])]
-      Just (d :: Document p qr mut) -> do
+              Aeson.object [ ("message", Aeson.String e) ] ])]
+      Right (d :: Document p qr mut) -> do
         (data_, errors) <- runWriterT (runDocument svr d)
         case errors of
           [] -> pure $ Aeson.object [ ("data", data_) ]
