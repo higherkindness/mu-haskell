@@ -1,4 +1,3 @@
-{-# language ConstraintKinds   #-}
 {-# language DataKinds         #-}
 {-# language FlexibleContexts  #-}
 {-# language GADTs             #-}
