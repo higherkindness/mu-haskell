@@ -21,17 +21,6 @@ import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
 
--- helpers
-
-fst3 :: (a, b, c) -> a
-fst3 (x, _, _) = x
-
-snd3 :: (a, b, c) -> b
-snd3 (_, y, _) = y
-
-trd3 :: (a, b, c) -> c
-trd3 (_, _, z) = z
-
 -- GraphQL App
 
 main :: IO ()
@@ -109,3 +98,14 @@ libraryServer
 
     allAuthors = pure $ fst3 <$> library
     allBooks = pure [(aid, bid) | (aid, _, books) <- library, (bid, _) <- books]
+
+-- helpers
+
+fst3 :: (a, b, c) -> a
+fst3 (x, _, _) = x
+
+snd3 :: (a, b, c) -> b
+snd3 (_, y, _) = y
+
+trd3 :: (a, b, c) -> c
+trd3 (_, _, z) = z
