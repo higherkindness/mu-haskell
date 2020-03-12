@@ -13,8 +13,7 @@ packages:
 - grpc/client
 - grpc/server
 - graphql
-- examples/health-check/avro
-- examples/health-check/protobuf
+- examples/health-check
 - examples/route-guide
 - examples/seed
 - examples/todolist

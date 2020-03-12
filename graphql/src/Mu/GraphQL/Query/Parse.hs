@@ -170,24 +170,17 @@ instance ParseMethod p '[] where
   selectMethod tyName _ _ (GQL.unName -> wanted) _ _
     = throwError $ "field '" <> wanted <> "' was not found on type '" <> tyName <> "'"
 instance
-  (KnownSymbol mname, ParseMethod p ms, ParseArgs p args, ParseReturn p r) =>
-  ParseMethod p ('Method mname manns args ('RetSingle r) ': ms)
+  (KnownSymbol mname, ParseMethod p ms, ParseArgs p args, ParseDifferentReturn p r) =>
+  ParseMethod p ('Method mname manns args r ': ms)
   where
   selectMethod tyName vmap frmap w@(GQL.unName -> wanted) args sels
     | wanted == mname
     = Z <$> (ChosenMethodQuery <$> parseArgs vmap args
-                               <*> parseReturn vmap frmap wanted sels)
+                               <*> parseDiffReturn vmap frmap wanted sels)
     | otherwise
     = S <$> selectMethod tyName vmap frmap w args sels
     where
       mname = T.pack $ nameVal (Proxy @mname)
--- For now, do as if stream methods were not there
-instance
-  (ParseMethod p ms) =>
-  ParseMethod p ('Method mname manns args ('RetStream r) ': ms)
-  where
-    selectMethod tyName vmap frmap w args sels
-      = S <$> selectMethod tyName vmap frmap w args sels
 
 class ParseArgs (p :: Package') (args :: [Argument']) where
   parseArgs :: MonadError T.Text f
@@ -204,6 +197,13 @@ instance ParseArg p a
     = (\v -> ArgumentValue v :* Nil) <$> parseArg' vmap "arg" x
   parseArgs _ _
     = throwError "this field receives one single argument"
+instance ParseArg p a
+         => ParseArgs p '[ 'ArgStream 'Nothing anns a ] where
+  parseArgs vmap [GQL.Argument _ x]
+    = (\v -> ArgumentStream v :* Nil) <$> parseArg' vmap "arg" x
+  parseArgs _ _
+    = throwError "this field receives one single argument"
+-- more than one argument
 instance (KnownName aname, ParseArg p a, ParseArgs p as, FindDefaultArgValue aanns)
          => ParseArgs p ('ArgSingle ('Just aname) aanns a ': as) where
   parseArgs vmap args
@@ -215,6 +215,18 @@ instance (KnownName aname, ParseArg p a, ParseArgs p as, FindDefaultArgValue aan
         Nothing
           -> do x <- findDefaultArgValue (Proxy @aanns) aname
                 (:*) <$> (ArgumentValue <$> parseArg' vmap aname (constToValue x))
+                     <*> parseArgs vmap args
+instance (KnownName aname, ParseArg p a, ParseArgs p as, FindDefaultArgValue aanns)
+         => ParseArgs p ('ArgStream ('Just aname) aanns a ': as) where
+  parseArgs vmap args
+    = let aname = T.pack $ nameVal (Proxy @aname)
+      in case find ((== nameVal (Proxy @aname)) . T.unpack . GQL.unName . GQL._aName) args of
+        Just (GQL.Argument _ x)
+          -> (:*) <$> (ArgumentStream <$> parseArg' vmap aname x)
+                  <*> parseArgs vmap args
+        Nothing
+          -> do x <- findDefaultArgValue (Proxy @aanns) aname
+                (:*) <$> (ArgumentStream <$> parseArg' vmap aname (constToValue x))
                      <*> parseArgs vmap args
 
 class FindDefaultArgValue (vs :: [Type]) where
@@ -415,10 +427,33 @@ instance (ValueParser sch r) => ValueParser sch ('TList r) where
     = FList <$> traverse (valueParser' vmap fname) xs
   valueParser _ fname _
     = throwError $ "field '" <> fname <> "' was not of right type"
+instance (ValueParser sch r) => ValueParser sch ('TOption r) where
+  valueParser _ _ GQL.VNull
+    = pure $ FOption Nothing
+  valueParser vmap fname v
+    = FOption . Just <$> valueParser' vmap fname v
 instance (ObjectOrEnumParser sch (sch :/: sty), KnownName sty)
          => ValueParser sch ('TSchematic sty) where
   valueParser vmap _ v
     = FSchematic <$> parseObjectOrEnum' vmap (T.pack $ nameVal (Proxy @sty)) v
+
+class ParseDifferentReturn (p :: Package') (r :: Return Symbol) where
+  parseDiffReturn :: MonadError T.Text f
+                  => VariableMap
+                  -> FragmentMap
+                  -> T.Text
+                  -> GQL.SelectionSet
+                  -> f (ReturnQuery p r)
+instance ParseDifferentReturn p 'RetNothing where
+  parseDiffReturn _ _ _ [] = pure RNothing
+  parseDiffReturn _ _ fname _
+    = throwError $ "field '" <> fname <> "' should not have a selection of subfields"
+instance ParseReturn p r => ParseDifferentReturn p ('RetSingle r) where
+  parseDiffReturn vmap frmap fname s
+    = RSingle <$> parseReturn vmap frmap fname s
+instance ParseReturn p r => ParseDifferentReturn p ('RetStream r) where
+  parseDiffReturn vmap frmap fname s
+    = RStream <$> parseReturn vmap frmap fname s
 
 class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
   parseReturn :: MonadError T.Text f
@@ -426,7 +461,7 @@ class ParseReturn (p :: Package') (r :: TypeRef Symbol) where
               -> FragmentMap
               -> T.Text
               -> GQL.SelectionSet
-              -> f (ReturnQuery p r)
+              -> f (ReturnQuery' p r)
 
 instance ParseReturn p ('PrimitiveRef t) where
   parseReturn _ _ _ []

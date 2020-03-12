@@ -32,10 +32,13 @@ data ChosenMethodQuery (p :: Package snm mnm anm) (m :: Method snm mnm anm) wher
   ChosenMethodQuery
     :: NP (ArgumentValue p) args
     -> ReturnQuery p r
-    -> ChosenMethodQuery p ('Method mname anns args ('RetSingle r))
+    -> ChosenMethodQuery p ('Method mname anns args r)
 
 data ArgumentValue (p :: Package snm mnm anm) (a :: Argument snm anm) where
-  ArgumentValue :: ArgumentValue' p r -> ArgumentValue p ('ArgSingle aname anns r)
+  ArgumentValue  :: ArgumentValue' p r
+                 -> ArgumentValue p ('ArgSingle aname anns r)
+  ArgumentStream :: ArgumentValue' p ('ListRef r)
+                 -> ArgumentValue p ('ArgStream aname anns r)
 
 data ArgumentValue' (p :: Package snm mnm anm) (r :: TypeRef snm) where
   ArgPrimitive :: t -> ArgumentValue' p ('PrimitiveRef t)
@@ -46,14 +49,19 @@ data ArgumentValue' (p :: Package snm mnm anm) (r :: TypeRef snm) where
   ArgOptional  :: Maybe (ArgumentValue' p r)
                -> ArgumentValue' p ('OptionalRef r)
 
-data ReturnQuery (p :: Package snm mnm anm) (r :: TypeRef snm) where
-  RetPrimitive :: ReturnQuery p ('PrimitiveRef t)
+data ReturnQuery (p :: Package snm mnm anm) (r :: Return snm) where
+  RNothing :: ReturnQuery p 'RetNothing
+  RSingle  :: ReturnQuery' p r -> ReturnQuery p ('RetSingle r)
+  RStream  :: ReturnQuery' p r -> ReturnQuery p ('RetStream r)
+
+data ReturnQuery' (p :: Package snm mnm anm) (r :: TypeRef snm) where
+  RetPrimitive :: ReturnQuery' p ('PrimitiveRef t)
   RetSchema    :: SchemaQuery sch (sch :/: sty)
-               -> ReturnQuery p ('SchemaRef sch sty)
-  RetList      :: ReturnQuery p r -> ReturnQuery p ('ListRef r)
-  RetOptional  :: ReturnQuery p r -> ReturnQuery p ('OptionalRef r)
+               -> ReturnQuery' p ('SchemaRef sch sty)
+  RetList      :: ReturnQuery' p r -> ReturnQuery' p ('ListRef r)
+  RetOptional  :: ReturnQuery' p r -> ReturnQuery' p ('OptionalRef r)
   RetObject    :: ServiceQuery ('Package pname ss) (LookupService ss s)
-               -> ReturnQuery ('Package pname ss) ('ObjectRef s)
+               -> ReturnQuery' ('Package pname ss) ('ObjectRef s)
 
 data SchemaQuery (sch :: Schema tn fn) (t :: TypeDef tn fn) where
   QueryEnum   :: SchemaQuery sch ('DEnum nm choices)

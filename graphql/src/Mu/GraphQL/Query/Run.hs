@@ -23,14 +23,18 @@ module Mu.GraphQL.Query.Run (
 , RunQueryFindHandler
 ) where
 
-import           Control.Monad.Except          (MonadError, runExceptT)
+import           Control.Concurrent.STM.TMQueue
+import           Control.Monad.Except           (MonadError, runExceptT)
 import           Control.Monad.Writer
-import qualified Data.Aeson                    as Aeson
-import qualified Data.Aeson.Types              as Aeson
+import qualified Data.Aeson                     as Aeson
+import qualified Data.Aeson.Types               as Aeson
+import           Data.Conduit
+import           Data.Conduit.Combinators       (sinkList, yieldMany)
+import           Data.Conduit.TQueue
 import           Data.Maybe
-import qualified Data.Text                     as T
+import qualified Data.Text                      as T
 import           GHC.TypeLits
-import qualified Language.GraphQL.Draft.Syntax as GQL
+import qualified Language.GraphQL.Draft.Syntax  as GQL
 
 import           Mu.GraphQL.Query.Definition
 import           Mu.GraphQL.Query.Parse
@@ -163,19 +167,13 @@ class RunMethod m p whole chn sname ms hs where
 instance RunMethod m p whole chn s '[] '[] where
   runMethod _ = error "this should never be called"
 instance (RunMethod m p whole chn s ms hs, KnownName mname, RunHandler m p whole chn args r h)
-         => RunMethod m p whole chn s ('Method mname anns args ('RetSingle r) ': ms) (h ': hs) where
+         => RunMethod m p whole chn s ('Method mname anns args r ': ms) (h ': hs) where
   runMethod f whole _ inh (h :<||>: _) (Z (ChosenMethodQuery args ret))
     = (, T.pack $ nameVal (Proxy @mname)) <$> runHandler f whole (h inh) args ret
   runMethod f whole p inh (_ :<||>: r) (S cont)
     = runMethod f whole p inh r cont
-instance (RunMethod m p whole chn s ms hs)
-         => RunMethod m p whole chn s ('Method mname anns args ('RetStream r) ': ms) (h ': hs) where
-  runMethod _ _ _ _ _ (Z _)
-    = error "this should never happen"
-  runMethod f whole p inh (_ :<||>: r) (S cont)
-    = runMethod f whole p inh r cont
 
-class Handles chn args ('RetSingle r) m h
+class Handles chn args r m h
       => RunHandler m p whole chn args r h where
   runHandler :: (forall a. m a -> ServerErrorIO a)
              -> ServerT chn p m whole
@@ -188,12 +186,37 @@ instance (ArgumentConversion chn ref t, RunHandler m p whole chn rest r h)
          => RunHandler m p whole chn ('ArgSingle aname aanns ref ': rest) r (t -> h) where
   runHandler f whole h (ArgumentValue one :* rest)
     = runHandler f whole (h (convertArg (Proxy @chn) one)) rest
+instance ( MonadError ServerError m
+         , FromRef chn ref t
+         , ArgumentConversion chn ('ListRef ref) [t]
+         , RunHandler m p whole chn rest r h )
+         => RunHandler m p whole chn ('ArgStream aname aanns ref ': rest) r (ConduitT () t m () -> h) where
+  runHandler f whole h (ArgumentStream lst :* rest)
+    = let converted :: [t] = convertArg (Proxy @chn) lst
+      in runHandler f whole (h (yieldMany converted)) rest
+instance (MonadError ServerError m)
+         => RunHandler m p whole chn '[] 'RetNothing (m ()) where
+  runHandler f _ h Nil _ = do
+    res <- liftIO $ runExceptT (f h)
+    case res of
+      Right _ -> pure $ Just Aeson.Null
+      Left e  -> tell [GraphQLError e []] >> pure Nothing
 instance (MonadError ServerError m, ResultConversion m p whole chn r l)
-         => RunHandler m p whole chn '[] r (m l) where
-  runHandler f whole h Nil q = do
+         => RunHandler m p whole chn '[] ('RetSingle r) (m l) where
+  runHandler f whole h Nil (RSingle q) = do
     res <- liftIO $ runExceptT (f h)
     case res of
       Right v -> convertResult f whole q v
+      Left e  -> tell [GraphQLError e []] >> pure Nothing
+instance (MonadIO m, MonadError ServerError m, ResultConversion m p whole chn r l)
+         => RunHandler m p whole chn '[] ('RetStream r) (ConduitT l Void m () -> m ()) where
+  runHandler f whole h Nil (RStream q) = do
+    queue <- liftIO newTMQueueIO
+    res <- liftIO $ runExceptT $ f $ h (sinkTMQueue queue)
+    case res of
+      Right _ -> do
+        info <- runConduit $ sourceTMQueue queue .| sinkList
+        Just . Aeson.toJSON . catMaybes <$> traverse (convertResult f whole q) info
       Left e  -> tell [GraphQLError e []] >> pure Nothing
 
 class FromRef chn ref t
@@ -214,7 +237,7 @@ instance ArgumentConversion chn ref t
 class ToRef chn r l => ResultConversion m p whole chn r l where
   convertResult :: (forall a. m a -> ServerErrorIO a)
                 -> ServerT chn p m whole
-                -> ReturnQuery p r
+                -> ReturnQuery' p r
                 -> l -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
 
 instance Aeson.ToJSON t => ResultConversion m p whole chn ('PrimitiveRef t) t where
