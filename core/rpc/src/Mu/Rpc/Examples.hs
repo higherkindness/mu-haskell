@@ -9,6 +9,7 @@
 {-# language PartialTypeSignatures #-}
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
@@ -71,7 +72,11 @@ newtype HiRequest = HiRequest { number :: Int }
 quickstartServer :: forall m. (MonadServer m)
                  => ServerT '[] QuickStartService m _
 quickstartServer
-  = Server (sayHello :<|>: sayHi :<|>: sayManyHellos :<|>: H0)
+  -- = Server (sayHello :<|>: sayHi :<|>: sayManyHellos :<|>: H0)
+  = singleService $ method @"SayHello" sayHello
+                :|: method @"SayManyHellos" sayManyHellos
+                :|: method @"SayHi" sayHi
+                :|: N0
   where
     sayHello :: HelloRequest -> m HelloResponse
     sayHello (HelloRequest nm)

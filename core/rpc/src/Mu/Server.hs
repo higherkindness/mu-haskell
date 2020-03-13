@@ -3,11 +3,14 @@
 {-# language ExistentialQuantification #-}
 {-# language FlexibleContexts          #-}
 {-# language FlexibleInstances         #-}
+{-# language FunctionalDependencies    #-}
 {-# language GADTs                     #-}
 {-# language MultiParamTypeClasses     #-}
 {-# language PatternSynonyms           #-}
 {-# language PolyKinds                 #-}
 {-# language RankNTypes                #-}
+{-# language ScopedTypeVariables       #-}
+{-# language TypeApplications          #-}
 {-# language TypeFamilies              #-}
 {-# language TypeOperators             #-}
 {-# language UndecidableInstances      #-}
@@ -36,10 +39,12 @@ We recommend you to catch exceptions and return custom
 -}
 module Mu.Server (
   -- * Servers and handlers
-  MonadServer
-, SingleServerT
-, ServerT(.., Server), ServicesT(..), HandlersT(.., (:<|>:))
-, ServiceChain, noContext
+  MonadServer, ServiceChain, noContext
+  -- ** Definitions by name
+, singleService, method, field, NamedList(..)
+  -- ** Definitions by position
+, SingleServerT, pattern Server
+, ServerT(..), ServicesT(..), HandlersT(.., (:<|>:))
   -- ** Simple servers using only IO
 , ServerErrorIO, ServerIO
   -- * Errors which might be raised
@@ -53,6 +58,7 @@ module Mu.Server (
 import           Control.Monad.Except
 import           Data.Conduit
 import           Data.Kind
+import           GHC.TypeLits
 
 import           Mu.Rpc
 import           Mu.Schema
@@ -207,3 +213,48 @@ instance (MonadError ServerError m, ToRef chn ref v, handler ~ m v)
          => Handles chn '[] ('RetSingle ref) m handler
 instance (MonadError ServerError m, ToRef chn ref v, handler ~ (ConduitT v Void m () -> m ()))
          => Handles chn '[] ('RetStream ref) m handler
+
+-- SIMPLER WAY TO DECLARE SERVICES
+
+method :: forall n p. p -> Named n (() -> p)
+method f = Named (\() -> f)
+field :: forall n h. h -> Named n h
+field  = Named
+
+singleService
+  :: (ToHandlers chn () methods m hs nl, MappingRight chn sname ~ ())
+  => NamedList nl -> ServerT chn ('Package pname '[ 'Service sname sanns methods]) m '[hs]
+singleService nl = Server (toHandlers nl)
+
+data Named n h where
+  Named :: forall n h. h -> Named n h
+
+infixr 4 :|:
+data NamedList hs where
+  N0    :: NamedList '[]
+  (:|:) :: Named n h -> NamedList hs
+        -> NamedList ('(n, h) ': hs)
+
+class ToHandlers chn inh ms m hs nl | chn inh ms m nl -> hs where
+  toHandlers :: NamedList nl
+             -> HandlersT chn inh ms m hs
+
+instance ToHandlers chn inh '[] m '[] nl where
+  toHandlers _ = H0
+instance (FindHandler name inh h nl, Handles chn args ret m h, ToHandlers chn inh ms m hs nl)
+         => ToHandlers chn inh ('Method name anns args ret ': ms) m (h ': hs) nl where
+  toHandlers nl = findHandler (Proxy @name) nl :<||>: toHandlers nl
+
+class FindHandler name inh h nl | name nl -> inh h where
+  findHandler :: Proxy name -> NamedList nl -> inh -> h
+{-
+instance TypeError ('Text "cannot find handler for " ':<>: 'ShowType name)
+         => FindHandler name inh h '[] where
+  findHandler = error "this should never be called"
+-}
+instance {-# OVERLAPS #-} (inh ~ inh', h ~ h')
+         => FindHandler name inh h ( '(name, inh' -> h') ': rest ) where
+  findHandler _ (Named f :|: _) = f
+instance {-# OVERLAPPABLE #-} FindHandler name inh h rest
+         => FindHandler name inh h (thing ': rest) where
+  findHandler p (_ :|: rest) = findHandler p rest
