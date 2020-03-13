@@ -58,7 +58,6 @@ module Mu.Server (
 import           Control.Monad.Except
 import           Data.Conduit
 import           Data.Kind
-import           GHC.TypeLits
 
 import           Mu.Rpc
 import           Mu.Schema
