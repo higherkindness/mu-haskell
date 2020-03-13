@@ -3,13 +3,15 @@
 {-# language GADTs             #-}
 {-# language OverloadedLists   #-}
 {-# language OverloadedStrings #-}
+{-# language RankNTypes        #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Mu.GraphQL.Server (
     GraphQLApp
-  , graphQLApp
   , runGraphQLApp
   , runGraphQLAppSettings
+  , graphQLApp
+  , graphQLAppTrans
 ) where
 
 import           Control.Applicative           ((<|>))
@@ -62,12 +64,21 @@ instance A.FromJSON ValueConst where
 --   for example, @wai-routes@, or you can add middleware
 --   from @wai-extra@, among others.
 graphQLApp ::
-    ( GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns )
+    ( GraphQLApp ServerErrorIO p pname ss qmethods mmethods hs chn qr mut qanns manns )
     => ServerT chn p ServerErrorIO hs
     -> Proxy qr
     -> Proxy mut
     -> Application
-graphQLApp server q m req res =
+graphQLApp = graphQLAppTrans id
+
+graphQLAppTrans ::
+    ( GraphQLApp m p pname ss qmethods mmethods hs chn qr mut qanns manns )
+    => (forall a. m a -> ServerErrorIO a)
+    -> ServerT chn p m hs
+    -> Proxy qr
+    -> Proxy mut
+    -> Application
+graphQLAppTrans f server q m req res =
   case parseMethod (requestMethod req) of
     Left err   -> toError $ decodeUtf8 err
     Right GET  -> do
@@ -96,7 +107,7 @@ graphQLApp server q m req res =
     execQuery opn vals qry =
       case parseExecutableDoc qry of
         Left err  -> toError err
-        Right doc -> runPipeline server q m opn vals doc >>= toResponse
+        Right doc -> runPipeline f server q m opn vals doc >>= toResponse
     toError :: T.Text -> IO ResponseReceived
     toError err = toResponse $ A.object [ ("errors", A.Array [ A.object [ ("message", A.String err) ] ])]
     toResponse :: A.Value -> IO ResponseReceived
@@ -106,7 +117,7 @@ graphQLApp server q m req res =
 --
 --   Go to 'Network.Wai.Handler.Warp' to declare 'Settings'.
 runGraphQLAppSettings ::
-  ( GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns )
+  ( GraphQLApp ServerErrorIO p pname ss qmethods mmethods hs chn qr mut qanns manns )
   => Settings
   -> ServerT chn p ServerErrorIO hs
   -> Proxy qr
@@ -116,7 +127,7 @@ runGraphQLAppSettings st svr q m = runSettings st (graphQLApp svr q m)
 
 -- | Run a Mu 'graphQLApp' on the given port.
 runGraphQLApp ::
-  ( GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns )
+  ( GraphQLApp ServerErrorIO p pname ss qmethods mmethods hs chn qr mut qanns manns )
   => Port
   -> ServerT chn p ServerErrorIO hs
   -> Proxy qr

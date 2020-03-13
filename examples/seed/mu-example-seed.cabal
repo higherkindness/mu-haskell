@@ -1,4 +1,4 @@
-name:               mu-example-seed-protobuf
+name:               mu-example-seed
 version:            0.3.0.0
 synopsis:
   Example seed project from mu-scala (with protobuf) ported to mu-haskell
@@ -30,12 +30,16 @@ executable seed-server
       base            >=4.12  && <5
     , conduit
     , monad-logger
-    , mu-grpc-server  >=0.2.0
-    , mu-protobuf     >=0.2.0
-    , mu-rpc          >=0.2.0
-    , mu-schema       >=0.2.0
+    , mu-graphql
+    , mu-grpc-server  >=0.3.0
+    , mu-protobuf     >=0.3.0
+    , mu-rpc          >=0.3.0
+    , mu-schema       >=0.3.0
     , stm
     , text
+    , wai
+    , wai-route
+    , warp
 
 executable seed-server-optics
   hs-source-dirs:   src
