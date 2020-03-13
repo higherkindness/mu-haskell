@@ -28,7 +28,7 @@ module Mu.GRpc.Server
 , runGRpcAppSettings, Settings
 , runGRpcAppTLS, TLSSettings
   -- * Convert a 'Server' into a WAI application
-, gRpcApp
+, gRpcApp, gRpcAppTrans
   -- * Raise errors as exceptions in IO
 , raiseErrors, liftServerConduit
   -- * Re-export useful instances
