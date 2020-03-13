@@ -11,11 +11,14 @@
 
 module Main where
 
-import           Data.List         (find)
-import           Data.Maybe        (fromMaybe)
+import           Data.List              (find)
+import           Data.Maybe             (fromMaybe, listToMaybe)
 import           Data.Proxy
-import           Data.Text         (Text, toCaseFold)
+import qualified Data.Text              as T
+import           Text.Regex.TDFA
+import           Text.Regex.TDFA.Text   ()
 
+import           Mu.GraphQL.Annotations
 import           Mu.GraphQL.Server
 import           Mu.Rpc
 import           Mu.Schema
@@ -32,21 +35,21 @@ type ServiceDefinition
   = 'Package ('Just "library")
       '[ Object "Book" '[]
         '[ ObjectField "id"     '[] '[] ('RetSingle ('PrimitiveRef Integer))
-         , ObjectField "title"  '[] '[] ('RetSingle ('PrimitiveRef Text))
+         , ObjectField "title"  '[] '[] ('RetSingle ('PrimitiveRef T.Text))
          , ObjectField "author" '[] '[] ('RetSingle ('ObjectRef "Author"))
          ]
       , Object "Author" '[]
         '[ ObjectField "id"    '[] '[] ('RetSingle ('PrimitiveRef Integer))
-         , ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef Text))
+         , ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef T.Text))
          , ObjectField "books" '[] '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
          ]
       , Object "Query" '[]
          '[ ObjectField "author" '[]
-              '[ 'ArgSingle ('Just "name") '[] ('PrimitiveRef Text)]
-              ('RetSingle ('ListRef ('ObjectRef "Author")))
+              '[ 'ArgSingle ('Just "name") '[DefaultValue ('VCString ".*")] ('PrimitiveRef T.Text)]
+              ('RetSingle ('OptionalRef ('ObjectRef "Author")))
           , ObjectField "book" '[]
-              '[ 'ArgSingle ('Just "title") '[] ('PrimitiveRef Text)]
-              ('RetSingle ('ListRef ('ObjectRef "Book")))
+              '[ 'ArgSingle ('Just "title") '[DefaultValue ('VCString ".*")] ('PrimitiveRef T.Text)]
+              ('RetSingle ('OptionalRef ('ObjectRef "Book")))
           , ObjectField "authors" '[]
               '[] ('RetSingle ('ListRef ('ObjectRef "Author")))
           , ObjectField "books" '[]
@@ -60,7 +63,7 @@ type ServiceMapping = '[
   , "Author" ':-> Integer
   ]
 
-library :: [(Integer, Text, [(Integer, Text)])]
+library :: [(Integer, T.Text, [(Integer, T.Text)])]
 library
   = [ (1, "Robert Louis Stevenson", [(1, "Treasure Island"), (2, "Strange Case of Dr Jekyll and Mr Hyde")])
     , (2, "Immanuel Kant", [(3, "Critique of Pure Reason")])
@@ -88,13 +91,13 @@ libraryServer
     authorName aid = pure $ maybe "" snd3 (findBook aid)
     authorBooks aid = pure $ maybe [] (map ((aid,) . fst) . trd3) (findBook aid)
 
-    findAuthor aname = pure
-      [aid | (aid, aname', _) <- library, toCaseFold aname == toCaseFold aname']
+    findAuthor rx = pure $ listToMaybe
+      [aid | (aid, name, _) <- library, name =~ rx]
 
-    findBookTitle title = pure
+    findBookTitle rx = pure $ listToMaybe
       [(aid, bid) | (aid, _, books) <- library
-                  , (bid, title') <- books
-                  , toCaseFold title == toCaseFold title']
+                  , (bid, title) <- books
+                  , title =~ rx]
 
     allAuthors = pure $ fst3 <$> library
     allBooks = pure [(aid, bid) | (aid, _, books) <- library, (bid, _) <- books]
