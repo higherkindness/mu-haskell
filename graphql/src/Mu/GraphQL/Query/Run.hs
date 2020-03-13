@@ -7,6 +7,7 @@
 {-# language OverloadedLists       #-}
 {-# language OverloadedStrings     #-}
 {-# language PolyKinds             #-}
+{-# language RankNTypes            #-}
 {-# language ScopedTypeVariables   #-}
 {-# language TupleSections         #-}
 {-# language TypeApplications      #-}
@@ -22,14 +23,18 @@ module Mu.GraphQL.Query.Run (
 , RunQueryFindHandler
 ) where
 
-import           Control.Monad.Except          (runExceptT)
+import           Control.Concurrent.STM.TMQueue
+import           Control.Monad.Except           (MonadError, runExceptT)
 import           Control.Monad.Writer
-import qualified Data.Aeson                    as Aeson
-import qualified Data.Aeson.Types              as Aeson
+import qualified Data.Aeson                     as Aeson
+import qualified Data.Aeson.Types               as Aeson
+import           Data.Conduit
+import           Data.Conduit.Combinators       (sinkList, yieldMany)
+import           Data.Conduit.TQueue
 import           Data.Maybe
-import qualified Data.Text                     as T
+import qualified Data.Text                      as T
 import           GHC.TypeLits
-import qualified Language.GraphQL.Draft.Syntax as GQL
+import qualified Language.GraphQL.Draft.Syntax  as GQL
 
 import           Mu.GraphQL.Query.Definition
 import           Mu.GraphQL.Query.Parse
@@ -40,14 +45,14 @@ import           Mu.Server
 data GraphQLError
   = GraphQLError ServerError [T.Text]
 
-type GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns =
+type GraphQLApp m p pname ss qmethods mmethods hs chn qr mut qanns manns =
   ( p ~ 'Package pname ss
     , KnownName qr
     , ParseMethod p qmethods
     , KnownName mut
     , ParseMethod p mmethods
-    , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
-    , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
+    , RunQueryFindHandler m p hs chn ss (LookupService ss qr) hs
+    , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
     , MappingRight chn qr ~ ()
     , LookupService ss qr ~ 'Service qr qanns qmethods
     , LookupService ss mut ~ 'Service mut manns mmethods
@@ -55,13 +60,14 @@ type GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns =
   )
 
 runPipeline
-  :: forall qr mut (p :: Package') pname ss hs chn qanns qmethods manns mmethods.
-     ( GraphQLApp p pname ss qmethods mmethods hs chn qr mut qanns manns )
-  => ServerT chn p ServerErrorIO hs
+  :: forall m qr mut (p :: Package') pname ss hs chn qanns qmethods manns mmethods.
+     ( GraphQLApp m p pname ss qmethods mmethods hs chn qr mut qanns manns )
+  => (forall a. m a -> ServerErrorIO a)
+  -> ServerT chn p m hs
   -> Proxy qr -> Proxy mut
   -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
   -> IO Aeson.Value
-runPipeline svr _ _ opName vmap doc
+runPipeline f svr _ _ opName vmap doc
   = case parseDoc opName vmap doc of
       Left e ->
         pure $
@@ -69,7 +75,7 @@ runPipeline svr _ _ opName vmap doc
             ("errors", Aeson.Array [
               Aeson.object [ ("message", Aeson.String e) ] ])]
       Right (d :: Document p qr mut) -> do
-        (data_, errors) <- runWriterT (runDocument svr d)
+        (data_, errors) <- runWriterT (runDocument f svr d)
         case errors of
           [] -> pure $ Aeson.object [ ("data", data_) ]
           _  -> pure $ Aeson.object [ ("data", data_), ("errors", Aeson.listValue errValue errors) ]
@@ -83,58 +89,61 @@ runPipeline svr _ _ opName vmap doc
 
 runDocument
   :: ( p ~ 'Package pname ss
-     , RunQueryFindHandler p hs chn ss (LookupService ss qr) hs
+     , RunQueryFindHandler m p hs chn ss (LookupService ss qr) hs
      , MappingRight chn qr ~ ()
-     , RunQueryFindHandler p hs chn ss (LookupService ss mut) hs
+     , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
      , MappingRight chn mut ~ ()
      )
-  => ServerT chn p ServerErrorIO hs
+  => (forall a. m a -> ServerErrorIO a)
+  -> ServerT chn p m hs
   -> Document p qr mut
   -> WriterT [GraphQLError] IO Aeson.Value
-runDocument svr (QueryDoc q)
-  = runQuery svr () q
-runDocument svr (MutationDoc q)
-  = runQuery svr () q
+runDocument f svr (QueryDoc q)
+  = runQuery f svr () q
+runDocument f svr (MutationDoc q)
+  = runQuery f svr () q
 
 runQuery
-  :: forall p s pname ss hs sname sanns ms chn inh.
-     ( RunQueryFindHandler p hs chn ss s hs
+  :: forall m p s pname ss hs sname sanns ms chn inh.
+     ( RunQueryFindHandler m p hs chn ss s hs
      , p ~ 'Package pname ss
      , s ~ 'Service sname sanns ms
      , inh ~ MappingRight chn sname )
-  => ServerT chn p ServerErrorIO hs
+  => (forall a. m a -> ServerErrorIO a)
+  -> ServerT chn p m hs
   -> inh
   -> ServiceQuery p s
   -> WriterT [GraphQLError] IO Aeson.Value
-runQuery whole@(Services ss) = runQueryFindHandler whole ss
+runQuery f whole@(Services ss) = runQueryFindHandler f whole ss
 
-class RunQueryFindHandler p whole chn ss s hs where
+class RunQueryFindHandler m p whole chn ss s hs where
   runQueryFindHandler
     :: ( p ~  'Package pname wholess
        , s ~ 'Service sname sanns ms
        , inh ~ MappingRight chn sname )
-    => ServerT chn p ServerErrorIO whole
-    -> ServicesT chn ss ServerErrorIO hs
+    => (forall a. m a -> ServerErrorIO a)
+    -> ServerT chn p m whole
+    -> ServicesT chn ss m hs
     -> inh
     -> ServiceQuery p s
     -> WriterT [GraphQLError] IO Aeson.Value
 
 instance TypeError ('Text "Could not find handler for " ':<>: 'ShowType s)
-         => RunQueryFindHandler p whole chn '[] s '[] where
-  runQueryFindHandler = error "this should never be called"
+         => RunQueryFindHandler m p whole chn '[] s '[] where
+  runQueryFindHandler _ = error "this should never be called"
 instance {-# OVERLAPPABLE #-}
-         RunQueryFindHandler p whole chn ss s hs
-         => RunQueryFindHandler p whole chn (other ': ss) s (h ': hs) where
-  runQueryFindHandler whole (_ :<&>: that) = runQueryFindHandler whole that
-instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod p whole chn sname ms h)
-         => RunQueryFindHandler p whole chn (s ': ss) s (h ': hs) where
-  runQueryFindHandler whole (this :<&>: _) inh queries
+         RunQueryFindHandler m p whole chn ss s hs
+         => RunQueryFindHandler m p whole chn (other ': ss) s (h ': hs) where
+  runQueryFindHandler f whole (_ :<&>: that) = runQueryFindHandler f whole that
+instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod m p whole chn sname ms h)
+         => RunQueryFindHandler m p whole chn (s ': ss) s (h ': hs) where
+  runQueryFindHandler f whole (this :<&>: _) inh queries
     = Aeson.object . catMaybes <$> mapM runOneQuery queries
     where
       -- if we include the signature we have to write
       -- an explicit type signature for 'runQueryFindHandler'
       runOneQuery (OneMethodQuery nm args)
-        = pass (do (val, methodName) <- runMethod whole (Proxy @sname) inh this args
+        = pass (do (val, methodName) <- runMethod f whole (Proxy @sname) inh this args
                    let realName = fromMaybe methodName nm
                        -- choose between given name,
                        -- or fallback to method name
@@ -144,43 +153,70 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod p whole chn s
               updateErrs :: T.Text -> GraphQLError -> GraphQLError
               updateErrs methodName (GraphQLError err loc) = GraphQLError err (methodName : loc)
 
-class RunMethod p whole chn sname ms hs where
+class RunMethod m p whole chn sname ms hs where
   runMethod
     :: ( p ~ 'Package pname wholess
        , inh ~ MappingRight chn sname )
-    => ServerT chn p ServerErrorIO whole
+    => (forall a. m a -> ServerErrorIO a)
+    -> ServerT chn p m whole
     -> Proxy sname -> inh
-    -> HandlersT chn inh ms ServerErrorIO hs
+    -> HandlersT chn inh ms m hs
     -> NS (ChosenMethodQuery p) ms
     -> WriterT [GraphQLError] IO (Maybe Aeson.Value, T.Text)
 
-instance RunMethod p whole chn s '[] '[] where
-  runMethod = error "this should never be called"
-instance (RunMethod p whole chn s ms hs, KnownName mname, RunHandler p whole chn args r h)
-         => RunMethod p whole chn s ('Method mname anns args ('RetSingle r) ': ms) (h ': hs) where
-  runMethod whole _ inh (h :<||>: _) (Z (ChosenMethodQuery args ret))
-    = (, T.pack $ nameVal (Proxy @mname)) <$> runHandler whole (h inh) args ret
-  runMethod whole p inh (_ :<||>: r) (S cont)
-    = runMethod whole p inh r cont
+instance RunMethod m p whole chn s '[] '[] where
+  runMethod _ = error "this should never be called"
+instance (RunMethod m p whole chn s ms hs, KnownName mname, RunHandler m p whole chn args r h)
+         => RunMethod m p whole chn s ('Method mname anns args r ': ms) (h ': hs) where
+  runMethod f whole _ inh (h :<||>: _) (Z (ChosenMethodQuery args ret))
+    = (, T.pack $ nameVal (Proxy @mname)) <$> runHandler f whole (h inh) args ret
+  runMethod f whole p inh (_ :<||>: r) (S cont)
+    = runMethod f whole p inh r cont
 
-class Handles chn args ('RetSingle r) ServerErrorIO h
-      => RunHandler p whole chn args r h where
-  runHandler :: ServerT chn p ServerErrorIO whole
+class Handles chn args r m h
+      => RunHandler m p whole chn args r h where
+  runHandler :: (forall a. m a -> ServerErrorIO a)
+             -> ServerT chn p m whole
              -> h
              -> NP (ArgumentValue p) args
              -> ReturnQuery p r
              -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
 
-instance (ArgumentConversion chn ref t, RunHandler p whole chn rest r h)
-         => RunHandler p whole chn ('ArgSingle aname aanns ref ': rest) r (t -> h) where
-  runHandler whole h (ArgumentValue one :* rest)
-    = runHandler whole (h (convertArg (Proxy @chn) one)) rest
-instance (ResultConversion p whole chn r l)
-         => RunHandler p whole chn '[] r (ServerErrorIO l) where
-  runHandler whole h Nil q = do
-    res <- liftIO $ runExceptT h
+instance (ArgumentConversion chn ref t, RunHandler m p whole chn rest r h)
+         => RunHandler m p whole chn ('ArgSingle aname aanns ref ': rest) r (t -> h) where
+  runHandler f whole h (ArgumentValue one :* rest)
+    = runHandler f whole (h (convertArg (Proxy @chn) one)) rest
+instance ( MonadError ServerError m
+         , FromRef chn ref t
+         , ArgumentConversion chn ('ListRef ref) [t]
+         , RunHandler m p whole chn rest r h )
+         => RunHandler m p whole chn ('ArgStream aname aanns ref ': rest) r (ConduitT () t m () -> h) where
+  runHandler f whole h (ArgumentStream lst :* rest)
+    = let converted :: [t] = convertArg (Proxy @chn) lst
+      in runHandler f whole (h (yieldMany converted)) rest
+instance (MonadError ServerError m)
+         => RunHandler m p whole chn '[] 'RetNothing (m ()) where
+  runHandler f _ h Nil _ = do
+    res <- liftIO $ runExceptT (f h)
     case res of
-      Right v -> convertResult whole q v
+      Right _ -> pure $ Just Aeson.Null
+      Left e  -> tell [GraphQLError e []] >> pure Nothing
+instance (MonadError ServerError m, ResultConversion m p whole chn r l)
+         => RunHandler m p whole chn '[] ('RetSingle r) (m l) where
+  runHandler f whole h Nil (RSingle q) = do
+    res <- liftIO $ runExceptT (f h)
+    case res of
+      Right v -> convertResult f whole q v
+      Left e  -> tell [GraphQLError e []] >> pure Nothing
+instance (MonadIO m, MonadError ServerError m, ResultConversion m p whole chn r l)
+         => RunHandler m p whole chn '[] ('RetStream r) (ConduitT l Void m () -> m ()) where
+  runHandler f whole h Nil (RStream q) = do
+    queue <- liftIO newTMQueueIO
+    res <- liftIO $ runExceptT $ f $ h (sinkTMQueue queue)
+    case res of
+      Right _ -> do
+        info <- runConduit $ sourceTMQueue queue .| sinkList
+        Just . Aeson.toJSON . catMaybes <$> traverse (convertResult f whole q) info
       Left e  -> tell [GraphQLError e []] >> pure Nothing
 
 class FromRef chn ref t
@@ -198,35 +234,36 @@ instance ArgumentConversion chn ref t
          => ArgumentConversion chn ('OptionalRef ref) (Maybe t) where
   convertArg p (ArgOptional x) = convertArg p <$> x
 
-class ToRef chn r l => ResultConversion p whole chn r l where
-  convertResult :: ServerT chn p ServerErrorIO whole
-                -> ReturnQuery p r
+class ToRef chn r l => ResultConversion m p whole chn r l where
+  convertResult :: (forall a. m a -> ServerErrorIO a)
+                -> ServerT chn p m whole
+                -> ReturnQuery' p r
                 -> l -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
 
-instance Aeson.ToJSON t => ResultConversion p whole chn ('PrimitiveRef t) t where
-  convertResult _ RetPrimitive = pure . Just . Aeson.toJSON
+instance Aeson.ToJSON t => ResultConversion m p whole chn ('PrimitiveRef t) t where
+  convertResult _ _ RetPrimitive = pure . Just . Aeson.toJSON
 instance ( ToSchema sch l r
          , RunSchemaQuery sch (sch :/: l) )
-         => ResultConversion p whole chn ('SchemaRef sch l) r where
-  convertResult _ (RetSchema r) t
+         => ResultConversion m p whole chn ('SchemaRef sch l) r where
+  convertResult _ _ (RetSchema r) t
     = pure $ Just $ runSchemaQuery (toSchema' @_ @_ @sch @r t) r
 instance ( MappingRight chn ref ~ t
          , MappingRight chn sname ~ t
          , LookupService ss ref ~ 'Service sname sanns ms
-         , RunQueryFindHandler ('Package pname ss) whole chn ss ('Service sname sanns ms) whole)
-         => ResultConversion ('Package pname ss) whole chn ('ObjectRef ref) t where
-  convertResult whole (RetObject q) h
-    = Just <$> runQuery @('Package pname ss) @(LookupService ss ref) whole h q
-instance ResultConversion p whole chn r s
-        => ResultConversion p whole chn ('OptionalRef r) (Maybe s) where
-  convertResult _ _ Nothing
+         , RunQueryFindHandler m ('Package pname ss) whole chn ss ('Service sname sanns ms) whole)
+         => ResultConversion m ('Package pname ss) whole chn ('ObjectRef ref) t where
+  convertResult f whole (RetObject q) h
+    = Just <$> runQuery @m @('Package pname ss) @(LookupService ss ref) f whole h q
+instance ResultConversion m p whole chn r s
+        => ResultConversion m p whole chn ('OptionalRef r) (Maybe s) where
+  convertResult _ _ _ Nothing
     = pure Nothing
-  convertResult whole (RetOptional q) (Just x)
-    = convertResult whole q x
-instance ResultConversion p whole chn r s
-        => ResultConversion p whole chn ('ListRef r) [s] where
-  convertResult whole (RetList q) xs
-    = Just . Aeson.toJSON . catMaybes <$> mapM (convertResult whole q) xs
+  convertResult f whole (RetOptional q) (Just x)
+    = convertResult f whole q x
+instance ResultConversion m p whole chn r s
+        => ResultConversion m p whole chn ('ListRef r) [s] where
+  convertResult f whole (RetList q) xs
+    = Just . Aeson.toJSON . catMaybes <$> mapM (convertResult f whole q) xs
 
 class RunSchemaQuery sch r where
   runSchemaQuery
