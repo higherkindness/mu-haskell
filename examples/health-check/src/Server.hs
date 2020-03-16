@@ -36,7 +36,7 @@ main = do
     , defRoute (str "avro" ./ end) $
         \_ -> gRpcApp msgAvro s
     , defRoute (str "graphql" ./ end) $
-        \_ -> graphQLApp s (Proxy @"HealthCheckServiceFS2") (Proxy @"HealthCheckServiceFS2")
+        \_ -> graphQLAppQuery s (Proxy @"HealthCheckServiceFS2")
     ]
 
 -- Server implementation

@@ -36,12 +36,8 @@ type VariableMap = HM.HashMap T.Text GQL.Value
 type FragmentMap = HM.HashMap T.Text GQL.FragmentDefinition
 
 parseDoc ::
-  ( MonadError T.Text f, p ~ 'Package pname ss,
-    LookupService ss qr ~ 'Service qr qanns qmethods,
-    KnownName qr, ParseMethod p qmethods,
-    LookupService ss mut ~ 'Service mut manns mmethods,
-    KnownName mut, ParseMethod p mmethods
-  ) =>
+  forall qr mut p f.
+  ( MonadError T.Text f, ParseTypedDoc p qr mut ) =>
   Maybe T.Text -> VariableMapC ->
   GQL.ExecutableDocument ->
   f (Document p qr mut)
@@ -49,7 +45,7 @@ parseDoc ::
 parseDoc Nothing _ (GQL.ExecutableDocument defns)
   = case GQL.partitionExDefs defns of
       ([unnamed], [], frs)
-        -> QueryDoc <$> parseQuery Proxy Proxy HM.empty (fragmentsToMap frs) unnamed
+        -> parseTypedDocQuery HM.empty (fragmentsToMap frs) unnamed
       ([], [named], frs)
         -> parseTypedDoc HM.empty (fragmentsToMap frs) named
       ([], [], _) -> throwError "no operation to execute"
@@ -72,12 +68,7 @@ fragmentsToMap = HM.fromList . map fragmentToThingy
         fragmentToThingy f = (GQL.unName $ GQL._fdName f, f)
 
 parseTypedDoc ::
-  ( MonadError T.Text f, p ~ 'Package pname ss,
-    LookupService ss qr ~ 'Service qr qanns qmethods,
-    KnownName qr, ParseMethod p qmethods,
-    LookupService ss mut ~ 'Service mut manns mmethods,
-    KnownName mut, ParseMethod p mmethods
-  ) =>
+  (MonadError T.Text f, ParseTypedDoc p qr mut) =>
   VariableMapC -> FragmentMap ->
   GQL.TypedOperationDefinition ->
   f (Document p qr mut)
@@ -85,12 +76,63 @@ parseTypedDoc vmap frmap tod
   = let defVmap = parseVariableMap (GQL._todVariableDefinitions tod)
         finalVmap = constToValue <$> HM.union vmap defVmap  -- first one takes precedence
     in case GQL._todType tod of
-         GQL.OperationTypeQuery
-           -> QueryDoc <$> parseQuery Proxy Proxy finalVmap frmap (GQL._todSelectionSet tod)
-         GQL.OperationTypeMutation
-           -> MutationDoc <$> parseQuery Proxy Proxy finalVmap frmap (GQL._todSelectionSet tod)
-         GQL.OperationTypeSubscription
-           -> throwError "subscriptions are not (yet) supported"
+        GQL.OperationTypeQuery
+          -> parseTypedDocQuery finalVmap frmap (GQL._todSelectionSet tod)
+        GQL.OperationTypeMutation
+          -> parseTypedDocMutation finalVmap frmap (GQL._todSelectionSet tod)
+        GQL.OperationTypeSubscription
+          -> throwError "subscriptions are not (yet) supported"
+
+class ParseTypedDoc (p :: Package') (qr :: Maybe Symbol) (mut :: Maybe Symbol) where
+  parseTypedDocQuery ::
+    MonadError T.Text f =>
+    VariableMap -> FragmentMap ->
+    GQL.SelectionSet ->
+    f (Document p qr mut)
+  parseTypedDocMutation ::
+    MonadError T.Text f =>
+    VariableMap -> FragmentMap ->
+    GQL.SelectionSet ->
+    f (Document p qr mut)
+
+instance
+  ( p ~ 'Package pname ss,
+    LookupService ss qr ~ 'Service qr qanns qmethods,
+    KnownName qr, ParseMethod p qmethods,
+    LookupService ss mut ~ 'Service mut manns mmethods,
+    KnownName mut, ParseMethod p mmethods
+  ) => ParseTypedDoc p ('Just qr) ('Just mut) where
+  parseTypedDocQuery vmap frmap sset
+    = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
+  parseTypedDocMutation vmap frmap sset
+    = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
+
+instance
+  ( p ~ 'Package pname ss,
+    LookupService ss qr ~ 'Service qr qanns qmethods,
+    KnownName qr, ParseMethod p qmethods
+  ) => ParseTypedDoc p ('Just qr) 'Nothing where
+  parseTypedDocQuery vmap frmap sset
+    = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
+  parseTypedDocMutation _ _ _
+    = throwError "no mutations are defined in the schema"
+
+instance
+  ( p ~ 'Package pname ss,
+    LookupService ss mut ~ 'Service mut manns mmethods,
+    KnownName mut, ParseMethod p mmethods
+  ) => ParseTypedDoc p 'Nothing ('Just mut) where
+  parseTypedDocQuery _ _ _
+    = throwError "no queries are defined in the schema"
+  parseTypedDocMutation vmap frmap sset
+    = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
+
+instance
+  ParseTypedDoc p 'Nothing 'Nothing where
+  parseTypedDocQuery _ _ _
+    = throwError "no queries are defined in the schema"
+  parseTypedDocMutation _ _ _
+    = throwError "no mutations are defined in the schema"
 
 parseVariableMap :: [GQL.VariableDefinition] -> VariableMapC
 parseVariableMap vmap
