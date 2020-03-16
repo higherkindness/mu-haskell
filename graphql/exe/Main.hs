@@ -29,7 +29,7 @@ import           Mu.Server
 main :: IO ()
 main = do
   putStrLn "starting GraphQL server on port 8080"
-  runGraphQLApp 8080 libraryServer (Proxy @"Query") (Proxy @"Mutation")
+  runGraphQLApp 8080 libraryServer (Proxy @('Just "Query")) (Proxy @('Just "Mutation"))
 
 type ServiceDefinition
   = 'Package ('Just "library")

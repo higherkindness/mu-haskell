@@ -45,30 +45,18 @@ import           Mu.Server
 data GraphQLError
   = GraphQLError ServerError [T.Text]
 
-type GraphQLApp m p pname ss qmethods mmethods hs chn qr mut qanns manns =
-  ( p ~ 'Package pname ss
-    , KnownName qr
-    , ParseMethod p qmethods
-    , KnownName mut
-    , ParseMethod p mmethods
-    , RunQueryFindHandler m p hs chn ss (LookupService ss qr) hs
-    , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
-    , MappingRight chn qr ~ ()
-    , LookupService ss qr ~ 'Service qr qanns qmethods
-    , LookupService ss mut ~ 'Service mut manns mmethods
-    , MappingRight chn mut ~ ()
-  )
+type GraphQLApp p qr mut m chn hs
+  = (ParseTypedDoc p qr mut, RunDocument p qr mut m chn hs)
 
 runPipeline
-  :: forall m qr mut (p :: Package') pname ss hs chn qanns qmethods manns mmethods.
-     ( GraphQLApp m p pname ss qmethods mmethods hs chn qr mut qanns manns )
+  :: forall qr mut p m chn hs. GraphQLApp p qr mut m chn hs
   => (forall a. m a -> ServerErrorIO a)
   -> ServerT chn p m hs
   -> Proxy qr -> Proxy mut
   -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
   -> IO Aeson.Value
 runPipeline f svr _ _ opName vmap doc
-  = case parseDoc opName vmap doc of
+  = case parseDoc @qr @mut opName vmap doc of
       Left e ->
         pure $
           Aeson.object [
@@ -87,21 +75,45 @@ runPipeline f svr _ _ opName vmap doc
           , ("path", Aeson.toJSON path)
           ]
 
-runDocument
-  :: ( p ~ 'Package pname ss
-     , RunQueryFindHandler m p hs chn ss (LookupService ss qr) hs
-     , MappingRight chn qr ~ ()
-     , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
-     , MappingRight chn mut ~ ()
-     )
-  => (forall a. m a -> ServerErrorIO a)
-  -> ServerT chn p m hs
-  -> Document p qr mut
-  -> WriterT [GraphQLError] IO Aeson.Value
-runDocument f svr (QueryDoc q)
-  = runQuery f svr () q
-runDocument f svr (MutationDoc q)
-  = runQuery f svr () q
+class RunDocument (p :: Package') (qr :: Maybe Symbol) (mut :: Maybe Symbol) m chn hs where
+  runDocument ::
+       (forall a. m a -> ServerErrorIO a)
+    -> ServerT chn p m hs
+    -> Document p qr mut
+    -> WriterT [GraphQLError] IO Aeson.Value
+
+instance
+  ( p ~ 'Package pname ss
+  , KnownSymbol qr
+  , RunQueryFindHandler m p hs chn ss (LookupService ss qr) hs
+  , MappingRight chn qr ~ ()
+  , KnownSymbol mut
+  , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
+  , MappingRight chn mut ~ ()
+  ) => RunDocument p ('Just qr) ('Just mut) m chn hs where
+  runDocument f svr (QueryDoc q)
+    = runQuery f svr () q
+  runDocument f svr (MutationDoc q)
+    = runQuery f svr () q
+instance
+  ( p ~ 'Package pname ss
+  , KnownSymbol qr
+  , RunQueryFindHandler m p hs chn ss (LookupService ss qr) hs
+  , MappingRight chn qr ~ ()
+  ) => RunDocument p ('Just qr) 'Nothing m chn hs where
+  runDocument f svr (QueryDoc q)
+    = runQuery f svr () q
+instance
+  ( p ~ 'Package pname ss
+  , KnownSymbol mut
+  , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
+  , MappingRight chn mut ~ ()
+  ) => RunDocument p 'Nothing ('Just mut) m chn hs where
+  runDocument f svr (MutationDoc q)
+    = runQuery f svr () q
+instance
+  RunDocument p 'Nothing 'Nothing m chn hs where
+  runDocument _ = error "this should never be called"
 
 runQuery
   :: forall m p s pname ss hs sname sanns ms chn inh.

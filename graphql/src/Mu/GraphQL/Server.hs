@@ -1,17 +1,24 @@
-{-# language DataKinds         #-}
-{-# language FlexibleContexts  #-}
-{-# language GADTs             #-}
-{-# language OverloadedLists   #-}
-{-# language OverloadedStrings #-}
-{-# language RankNTypes        #-}
+{-# language DataKinds           #-}
+{-# language FlexibleContexts    #-}
+{-# language GADTs               #-}
+{-# language OverloadedLists     #-}
+{-# language OverloadedStrings   #-}
+{-# language RankNTypes          #-}
+{-# language ScopedTypeVariables #-}
+{-# language TypeApplications    #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Mu.GraphQL.Server (
     GraphQLApp
+  -- * Run an GraphQL resolver directly
   , runGraphQLApp
   , runGraphQLAppSettings
+  -- * Build a WAI 'Application'
   , graphQLApp
   , graphQLAppTrans
+  -- ** Query-only builders
+  , graphQLAppQuery
+  , graphQLAppTransQuery
 ) where
 
 import           Control.Applicative           ((<|>))
@@ -64,15 +71,34 @@ instance A.FromJSON ValueConst where
 --   for example, @wai-routes@, or you can add middleware
 --   from @wai-extra@, among others.
 graphQLApp ::
-    ( GraphQLApp ServerErrorIO p pname ss qmethods mmethods hs chn qr mut qanns manns )
+    ( GraphQLApp p qr mut ServerErrorIO chn hs )
     => ServerT chn p ServerErrorIO hs
     -> Proxy qr
     -> Proxy mut
     -> Application
 graphQLApp = graphQLAppTrans id
 
+graphQLAppQuery ::
+    forall qr p chn hs.
+    ( GraphQLApp p ('Just qr) 'Nothing ServerErrorIO chn hs )
+    => ServerT chn p ServerErrorIO hs
+    -> Proxy qr
+    -> Application
+graphQLAppQuery svr _
+  = graphQLApp svr (Proxy @('Just qr)) (Proxy @'Nothing)
+
+graphQLAppTransQuery ::
+    forall qr m p chn hs.
+    ( GraphQLApp p ('Just qr) 'Nothing m chn hs )
+    => (forall a. m a -> ServerErrorIO a)
+    -> ServerT chn p m hs
+    -> Proxy qr
+    -> Application
+graphQLAppTransQuery f svr _
+  = graphQLAppTrans f svr (Proxy @('Just qr)) (Proxy @'Nothing)
+
 graphQLAppTrans ::
-    ( GraphQLApp m p pname ss qmethods mmethods hs chn qr mut qanns manns )
+    ( GraphQLApp p qr mut m chn hs )
     => (forall a. m a -> ServerErrorIO a)
     -> ServerT chn p m hs
     -> Proxy qr
@@ -117,7 +143,7 @@ graphQLAppTrans f server q m req res =
 --
 --   Go to 'Network.Wai.Handler.Warp' to declare 'Settings'.
 runGraphQLAppSettings ::
-  ( GraphQLApp ServerErrorIO p pname ss qmethods mmethods hs chn qr mut qanns manns )
+  ( GraphQLApp p qr mut ServerErrorIO chn hs )
   => Settings
   -> ServerT chn p ServerErrorIO hs
   -> Proxy qr
@@ -127,7 +153,7 @@ runGraphQLAppSettings st svr q m = runSettings st (graphQLApp svr q m)
 
 -- | Run a Mu 'graphQLApp' on the given port.
 runGraphQLApp ::
-  ( GraphQLApp ServerErrorIO p pname ss qmethods mmethods hs chn qr mut qanns manns )
+  ( GraphQLApp p qr mut ServerErrorIO chn hs )
   => Port
   -> ServerT chn p ServerErrorIO hs
   -> Proxy qr
