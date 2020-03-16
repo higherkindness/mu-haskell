@@ -56,7 +56,7 @@ main = do
     , defRoute (str "avro" ./ end) $
         \_ -> gRpcAppTrans msgAvro runStderrLoggingT server
     , defRoute (str "graphql" ./ end) $
-        \_ -> graphQLAppTrans runStderrLoggingT server (Proxy @"PeopleService") (Proxy @"PeopleService")
+        \_ -> graphQLAppTransQuery runStderrLoggingT server (Proxy @"PeopleService")
     ]
 
 
