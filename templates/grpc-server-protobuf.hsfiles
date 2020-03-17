@@ -32,8 +32,10 @@ extra-deps:
 - mu-schema-0.2.0.0
 - mu-rpc-0.2.0.0
 - mu-optics-0.2.0.0
+- mu-avro-0.2.0.0
 - mu-protobuf-0.2.0.0
 - mu-grpc-server-0.2.0.0
+- mu-grpc-common-0.2.0.0
 - compendium-client-0.2.0.0
 # dependencies of mu
 - http2-client-0.9.0.0
@@ -42,6 +44,9 @@ extra-deps:
 - warp-grpc-0.3.0.0
 - proto3-wire-1.1.0
 - language-protobuf-1.0.1
+- language-avro-0.1.2.0
+- avro-0.4.7.0
+- HasBigDecimal-0.1.1
 
 {-# START_FILE Setup.hs #-}
 import Distribution.Simple
