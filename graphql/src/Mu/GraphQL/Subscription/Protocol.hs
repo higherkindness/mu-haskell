@@ -1,3 +1,4 @@
+{-# language FlexibleContexts    #-}
 {-# language OverloadedStrings   #-}
 {-# language ScopedTypeVariables #-}
 {-
@@ -7,13 +8,93 @@ https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL
 module Mu.GraphQL.Subscription.Protocol where
 
 import           Control.Applicative
-import           Data.Aeson             ((.:), (.:?), (.=))
-import qualified Data.Aeson             as A
-import qualified Data.HashMap.Strict    as HM
-import qualified Data.Text              as T
+import           Control.Concurrent
+import           Control.Concurrent.Async
+import           Control.Concurrent.STM
+import           Control.Monad            (forM_)
+import           Data.Aeson               ((.:), (.:?), (.=))
+import qualified Data.Aeson               as A
+import           Data.Conduit
+import qualified Data.HashMap.Strict      as HM
+import qualified Data.Text                as T
+import qualified ListT                    as L
 import           Network.WebSockets
+import qualified StmContainers.Map        as M
 
+import           Control.Monad.Except     (runExceptT)
+import           Control.Monad.IO.Class   (MonadIO (liftIO))
 import           Mu.GraphQL.Query.Parse
+import           Mu.Server                (ServerError (..), ServerErrorIO)
+
+protocol :: ( T.Text -> VariableMapC -> Maybe T.Text
+              -> ConduitT A.Value Void ServerErrorIO ()
+              -> ServerErrorIO () )
+         -> Connection -> IO ()
+protocol f conn = start
+  where
+    -- listen for GQL_CONNECTION_INIT
+    start = do
+      msg <- receiveJSON conn
+      case msg of
+        Just (GQLConnectionInit _)
+          -> do -- send GQL_CONNECTION_ACK
+                sendJSON conn GQLConnectionAck
+                vars <- M.newIO
+                -- send GQL_KEEP_ALIVE each 1s.
+                ka <- async $ do
+                  sendJSON conn GQLKeepAlive
+                  threadDelay 1000000
+                -- start listening for incoming messages
+                listen ka vars
+        _ -> start  -- Keep waiting
+    -- listen for messages from client
+    listen ka vars = do
+      msg <- receiveJSON conn
+      case msg of
+        Just (GQLStart i q v o)  -- start handling
+          -> do t <- async $ handle i q v o >> atomically (M.delete i vars)
+                atomically $ M.insert t i vars
+                listen ka vars
+        Just (GQLStop i)  -- stop with handling that query
+          -> do r <- atomically $ M.lookup i vars
+                case r of
+                  Nothing -> return ()
+                  Just a  -> do cancel a
+                                atomically $ M.delete i vars
+                listen ka vars
+        Just GQLTerminate  -- terminate all queries
+          -> do cancelAll ka vars
+                sendClose conn ("GraphQL session terminated" :: T.Text)
+        _ -> listen ka vars  -- Keep going
+    -- Handle a single query
+    handle i q v o
+      = do r <- runExceptT $ f q v o (cndt i)
+           case r of
+             Left (ServerError _ msg)
+               -> sendJSON conn (GQLError i (A.toJSON msg))
+             Right _
+               -> sendJSON conn (GQLComplete i)
+    -- Conduit which sends the results via the wire
+    cndt i = do
+      msg <- await
+      case msg of
+        Nothing -> return ()
+        Just v  -> do liftIO $ sendJSON conn (GQLData i v)
+                      cndt i
+    -- Cancel all pending subscriptions
+    cancelAll ka vars
+      = do cancel ka
+           vs <- atomically $ L.toList $ M.listT vars
+           forM_ (map snd vs) cancel
+
+receiveJSON :: A.FromJSON a => Connection -> IO (Maybe a)
+receiveJSON conn = do
+  d <- receiveData conn
+  return $ A.decode d
+
+sendJSON :: A.ToJSON a => Connection -> a -> IO ()
+sendJSON conn v
+  = sendTextData conn (A.encode v)
 
 data ClientMessage
   = GQLConnectionInit { initPayload :: Maybe A.Value }
@@ -31,7 +112,7 @@ data ServerMessage
   | GQLData     { serverMsgId :: T.Text
                 , payload     :: A.Value }
   | GQLError    { serverMsgId :: T.Text
-                , payload     :: A.Value}
+                , payload     :: A.Value }
   | GQLComplete { serverMsgId :: T.Text}
   | GQLKeepAlive
   deriving Show
@@ -50,6 +131,7 @@ instance A.FromJSON ClientMessage where
          -> GQLStop <$> v .: "id"
        "GQL_TERMINATE"
          -> pure GQLTerminate
+       _ -> empty
     where
       parsePayload = A.withObject "ClientMessage/GQL_START" $
         \v -> (,,) <$> v .: "query"

@@ -27,18 +27,22 @@ library
   -- other-extensions:
   build-depends:
       aeson
+    , async
     , base                  >=4.12 && <5
     , bytestring
     , conduit
     , graphql-parser
     , http-types
+    , list-t
     , mtl
     , mu-rpc
     , mu-schema
     , scientific
     , sop-core
+    , stm
     , stm-chans
     , stm-conduit
+    , stm-containers
     , text
     , unordered-containers
     , wai
