@@ -6,7 +6,6 @@
 {-# language RankNTypes          #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeApplications    #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Mu.GraphQL.Server (
     GraphQLApp
@@ -26,24 +25,21 @@ import           Control.Monad                 (join)
 import qualified Data.Aeson                    as A
 import           Data.Aeson.Text               (encodeToLazyText)
 import           Data.ByteString.Lazy          (fromStrict, toStrict)
-import           Data.Coerce                   (coerce)
-import qualified Data.Foldable                 as F
-import           Data.HashMap.Strict           (empty, toList)
+import qualified Data.HashMap.Strict           as HM
 import           Data.Proxy
-import           Data.Scientific               (floatingOrInteger)
 import qualified Data.Text                     as T
 import           Data.Text.Encoding            (decodeUtf8)
 import qualified Data.Text.Lazy.Encoding       as T
 import           Language.GraphQL.Draft.Parser (parseExecutableDoc)
-import           Language.GraphQL.Draft.Syntax
-import           Mu.GraphQL.Query.Parse
-import           Mu.GraphQL.Query.Run
-import           Mu.Server
 import           Network.HTTP.Types.Header     (hContentType)
 import           Network.HTTP.Types.Method     (StdMethod (..), parseMethod)
 import           Network.HTTP.Types.Status     (ok200)
 import           Network.Wai
 import           Network.Wai.Handler.Warp      (Port, Settings, run, runSettings)
+
+import           Mu.GraphQL.Query.Parse
+import           Mu.GraphQL.Query.Run
+import           Mu.Server
 
 data GraphQLInput = GraphQLInput T.Text VariableMapC (Maybe T.Text)
 
@@ -51,19 +47,8 @@ instance A.FromJSON GraphQLInput where
   parseJSON = A.withObject "GraphQLInput" $
      \v -> GraphQLInput
       <$> v A..: "query"
-      <*> (v A..: "variables" <|> pure empty)
+      <*> (v A..: "variables" <|> pure HM.empty)
       <*> v A..:? "operationName"
-
-instance A.FromJSON ValueConst where
-  parseJSON A.Null       = pure VCNull
-  parseJSON (A.Bool b)   = pure $ VCBoolean b
-  parseJSON (A.String s) = pure $ VCString $ coerce s
-  parseJSON (A.Number n) = pure $ either VCFloat VCInt $ floatingOrInteger n
-  parseJSON (A.Array xs) = VCList . ListValueG . F.toList <$> traverse A.parseJSON xs
-  parseJSON (A.Object o) = VCObject . ObjectValueG . fmap toObjFld . toList <$> traverse A.parseJSON o
-    where
-      toObjFld :: (T.Text, ValueConst) -> ObjectFieldG ValueConst
-      toObjFld (k, v) = ObjectFieldG (coerce k) v
 
 -- | Turn a Mu GraphQL 'Server' into a WAI 'Application'.
 --
@@ -115,7 +100,7 @@ graphQLAppTrans f server q m req res =
           case A.eitherDecode $ fromStrict vars of
             Left err  -> toError $ T.pack err
             Right vrs -> execQuery opN vrs qry
-        (Just (Just qry), _)                -> execQuery opN empty qry
+        (Just (Just qry), _)                -> execQuery opN HM.empty qry
         _                                   -> toError "Error parsing query"
     Right POST -> do
       body <- strictRequestBody req
@@ -125,7 +110,7 @@ graphQLAppTrans f server q m req res =
             Left err                             -> toError $ T.pack err
             Right (GraphQLInput qry vars opName) -> execQuery opName vars qry
         Just "application/graphql" ->
-          execQuery Nothing empty (decodeUtf8 $ toStrict body)
+          execQuery Nothing HM.empty (decodeUtf8 $ toStrict body)
         _                          -> toError "No `Content-Type` header found!"
     _          -> toError "Unsupported method"
   where

@@ -10,17 +10,21 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# language ViewPatterns          #-}
-{-# OPTIONS_GHC -Wincomplete-patterns #-}
+{-# OPTIONS_GHC -Wincomplete-patterns -fno-warn-orphans #-}
 
 module Mu.GraphQL.Query.Parse where
 
 import           Control.Monad.Except
+import qualified Data.Aeson                    as A
+import           Data.Coerce                   (coerce)
+import qualified Data.Foldable                 as F
 import qualified Data.HashMap.Strict           as HM
 import           Data.Int                      (Int32)
 import           Data.Kind
 import           Data.List                     (find)
 import           Data.Maybe
 import           Data.Proxy
+import           Data.Scientific               (floatingOrInteger)
 import           Data.SOP.NS
 import qualified Data.Text                     as T
 import           GHC.TypeLits
@@ -32,8 +36,19 @@ import           Mu.Rpc
 import           Mu.Schema
 
 type VariableMapC = HM.HashMap T.Text GQL.ValueConst
-type VariableMap = HM.HashMap T.Text GQL.Value
-type FragmentMap = HM.HashMap T.Text GQL.FragmentDefinition
+type VariableMap  = HM.HashMap T.Text GQL.Value
+type FragmentMap  = HM.HashMap T.Text GQL.FragmentDefinition
+
+instance A.FromJSON GQL.ValueConst where
+  parseJSON A.Null       = pure GQL.VCNull
+  parseJSON (A.Bool b)   = pure $ GQL.VCBoolean b
+  parseJSON (A.String s) = pure $ GQL.VCString $ coerce s
+  parseJSON (A.Number n) = pure $ either GQL.VCFloat GQL.VCInt $ floatingOrInteger n
+  parseJSON (A.Array xs) = GQL.VCList . GQL.ListValueG . F.toList <$> traverse A.parseJSON xs
+  parseJSON (A.Object o) = GQL.VCObject . GQL.ObjectValueG . fmap toObjFld . HM.toList <$> traverse A.parseJSON o
+    where
+      toObjFld :: (T.Text, GQL.ValueConst) -> GQL.ObjectFieldG GQL.ValueConst
+      toObjFld (k, v) = GQL.ObjectFieldG (coerce k) v
 
 parseDoc ::
   forall qr mut p f.
