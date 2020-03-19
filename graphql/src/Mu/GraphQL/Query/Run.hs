@@ -17,8 +17,10 @@
 module Mu.GraphQL.Query.Run (
   GraphQLApp
 , runPipeline
+, runSubscriptionPipeline
 , runDocument
 , runQuery
+, runSubscription
 -- * Typeclass to be able to run query handlers
 , RunQueryFindHandler
 ) where
@@ -47,7 +49,7 @@ data GraphQLError
   = GraphQLError ServerError [T.Text]
 
 type GraphQLApp p qr mut sub m chn hs
-  = (ParseTypedDoc p qr mut sub, RunDocument p qr mut m chn hs)
+  = (ParseTypedDoc p qr mut sub, RunDocument p qr mut sub m chn hs)
 
 runPipeline
   :: forall qr mut sub p m chn hs. GraphQLApp p qr mut sub m chn hs
@@ -57,17 +59,33 @@ runPipeline
   -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
   -> IO Aeson.Value
 runPipeline f svr _ _ _ opName vmap doc
-  = case parseDoc @qr @mut opName vmap doc of
-      Left e ->
-        pure $
-          Aeson.object [
-            ("errors", Aeson.Array [
-              Aeson.object [ ("message", Aeson.String e) ] ])]
+  = case parseDoc @qr @mut @sub opName vmap doc of
+      Left e -> pure $ singleErrValue e
       Right (d :: Document p qr mut sub) -> do
         (data_, errors) <- runWriterT (runDocument f svr d)
         case errors of
           [] -> pure $ Aeson.object [ ("data", data_) ]
           _  -> pure $ Aeson.object [ ("data", data_), ("errors", Aeson.listValue errValue errors) ]
+
+runSubscriptionPipeline
+  :: forall qr mut sub p m chn hs. GraphQLApp p qr mut sub m chn hs
+  => (forall a. m a -> ServerErrorIO a)
+  -> ServerT chn p m hs
+  -> Proxy qr -> Proxy mut -> Proxy sub
+  -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
+  -> ConduitT Aeson.Value Void IO ()
+  -> IO ()
+runSubscriptionPipeline f svr _ _ _ opName vmap doc sink
+  = case parseDoc @qr @mut @sub opName vmap doc of
+      Left e
+        -> yieldSingleError e sink
+      Right (d :: Document p qr mut sub)
+        -> runDocumentSubscription f svr d sink
+
+singleErrValue :: T.Text -> Aeson.Value
+singleErrValue e
+  = Aeson.object [ ("errors", Aeson.Array [
+                       Aeson.object [ ("message", Aeson.String e) ] ])]
 
 errValue :: GraphQLError -> Aeson.Value
 errValue (GraphQLError (ServerError _ msg) path)
@@ -76,15 +94,34 @@ errValue (GraphQLError (ServerError _ msg) path)
     , ("path", Aeson.toJSON path)
     ]
 
+yieldSingleError :: Monad m
+                 => T.Text -> ConduitM Aeson.Value Void m () -> m ()
+yieldSingleError e sink =
+  runConduit $ yieldMany ([singleErrValue e] :: [Aeson.Value]) .| sink
+
+yieldError :: Monad m
+           => ServerError -> [T.Text]
+           -> ConduitM Aeson.Value Void m () -> m ()
+yieldError e path sink = do
+  let val = Aeson.object [ ("errors", Aeson.listValue errValue [GraphQLError e path]) ]
+  runConduit $ yieldMany ([val] :: [Aeson.Value]) .| sink
+
 class RunDocument (p :: Package')
                   (qr :: Maybe Symbol)
                   (mut :: Maybe Symbol)
+                  (sub :: Maybe Symbol)
                   m chn hs where
   runDocument ::
        (forall a. m a -> ServerErrorIO a)
     -> ServerT chn p m hs
     -> Document p qr mut sub
     -> WriterT [GraphQLError] IO Aeson.Value
+  runDocumentSubscription ::
+       (forall a. m a -> ServerErrorIO a)
+    -> ServerT chn p m hs
+    -> Document p qr mut sub
+    -> ConduitT Aeson.Value Void IO ()
+    -> IO ()
 
 instance
   ( p ~ 'Package pname ss
@@ -94,30 +131,120 @@ instance
   , KnownSymbol mut
   , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
   , MappingRight chn mut ~ ()
-  ) => RunDocument p ('Just qr) ('Just mut) m chn hs where
+  , KnownSymbol sub
+  , RunQueryFindHandler m p hs chn ss (LookupService ss sub) hs
+  , MappingRight chn sub ~ ()
+  ) => RunDocument p ('Just qr) ('Just mut) ('Just sub) m chn hs where
   runDocument f svr (QueryDoc q)
     = runQuery f svr [] () q
   runDocument f svr (MutationDoc q)
     = runQuery f svr [] () q
+  runDocument _ _ (SubscriptionDoc _)
+    = pure $ singleErrValue "cannot execute subscriptions in this wire"
+  runDocumentSubscription f svr (SubscriptionDoc d)
+    = runSubscription f svr [] () d
+  runDocumentSubscription f svr d = yieldDocument f svr d
+
 instance
   ( p ~ 'Package pname ss
   , KnownSymbol qr
   , RunQueryFindHandler m p hs chn ss (LookupService ss qr) hs
   , MappingRight chn qr ~ ()
-  ) => RunDocument p ('Just qr) 'Nothing m chn hs where
+  , KnownSymbol mut
+  , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
+  , MappingRight chn mut ~ ()
+  ) => RunDocument p ('Just qr) ('Just mut) 'Nothing m chn hs where
   runDocument f svr (QueryDoc q)
     = runQuery f svr [] () q
+  runDocument f svr (MutationDoc q)
+    = runQuery f svr [] () q
+  runDocumentSubscription = yieldDocument
+
+instance
+  ( p ~ 'Package pname ss
+  , KnownSymbol qr
+  , RunQueryFindHandler m p hs chn ss (LookupService ss qr) hs
+  , MappingRight chn qr ~ ()
+  , KnownSymbol sub
+  , RunQueryFindHandler m p hs chn ss (LookupService ss sub) hs
+  , MappingRight chn sub ~ ()
+  ) => RunDocument p ('Just qr) 'Nothing ('Just sub) m chn hs where
+  runDocument f svr (QueryDoc q)
+    = runQuery f svr [] () q
+  runDocument _ _ (SubscriptionDoc _)
+    = pure $ singleErrValue "cannot execute subscriptions in this wire"
+  runDocumentSubscription f svr (SubscriptionDoc d)
+    = runSubscription f svr [] () d
+  runDocumentSubscription f svr d = yieldDocument f svr d
+
+instance
+  ( p ~ 'Package pname ss
+  , KnownSymbol qr
+  , RunQueryFindHandler m p hs chn ss (LookupService ss qr) hs
+  , MappingRight chn qr ~ ()
+  ) => RunDocument p ('Just qr) 'Nothing 'Nothing m chn hs where
+  runDocument f svr (QueryDoc q)
+    = runQuery f svr [] () q
+  runDocumentSubscription = yieldDocument
+
 instance
   ( p ~ 'Package pname ss
   , KnownSymbol mut
   , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
   , MappingRight chn mut ~ ()
-  ) => RunDocument p 'Nothing ('Just mut) m chn hs where
+  , KnownSymbol sub
+  , RunQueryFindHandler m p hs chn ss (LookupService ss sub) hs
+  , MappingRight chn sub ~ ()
+  ) => RunDocument p 'Nothing ('Just mut) ('Just sub) m chn hs where
   runDocument f svr (MutationDoc q)
     = runQuery f svr [] () q
+  runDocument _ _ (SubscriptionDoc _)
+    = pure $ singleErrValue "cannot execute subscriptions in this wire"
+  runDocumentSubscription f svr (SubscriptionDoc d)
+    = runSubscription f svr [] () d
+  runDocumentSubscription f svr d = yieldDocument f svr d
+
 instance
-  RunDocument p 'Nothing 'Nothing m chn hs where
+  ( p ~ 'Package pname ss
+  , KnownSymbol mut
+  , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
+  , MappingRight chn mut ~ ()
+  ) => RunDocument p 'Nothing ('Just mut) 'Nothing m chn hs where
+  runDocument f svr (MutationDoc q)
+    = runQuery f svr [] () q
+  runDocumentSubscription = yieldDocument
+
+instance
+  ( p ~ 'Package pname ss
+  , KnownSymbol sub
+  , RunQueryFindHandler m p hs chn ss (LookupService ss sub) hs
+  , MappingRight chn sub ~ ()
+  ) => RunDocument p 'Nothing 'Nothing ('Just sub) m chn hs where
+  runDocument _ _ (SubscriptionDoc _)
+    = pure $ singleErrValue "cannot execute subscriptions in this wire"
+  runDocumentSubscription f svr (SubscriptionDoc d)
+    = runSubscription f svr [] () d
+
+instance
+  RunDocument p 'Nothing 'Nothing 'Nothing m chn hs where
   runDocument _ = error "this should never be called"
+  runDocumentSubscription _ = error "this should never be called"
+
+yieldDocument ::
+     forall p qr mut sub m chn hs.
+     RunDocument p qr mut sub m chn hs
+  => (forall a. m a -> ServerErrorIO a)
+  -> ServerT chn p m hs
+  -> Document p qr mut sub
+  -> ConduitT Aeson.Value Void IO ()
+  -> IO ()
+yieldDocument f svr doc sink = do
+  (data_, errors) <- runWriterT (runDocument @p @qr @mut @sub @m @chn @hs f svr doc)
+  let (val :: Aeson.Value)
+        = case errors of
+            [] -> Aeson.object [ ("data", data_) ]
+            _  -> Aeson.object [ ("data", data_), ("errors", Aeson.listValue errValue errors) ]
+  runConduit $ yieldMany ([val] :: [Aeson.Value]) .| sink
 
 runQuery
   :: forall m p s pname ss hs sname sanns ms chn inh.
@@ -143,7 +270,7 @@ runSubscription
   -> ServerT chn p m hs
   -> [T.Text]
   -> inh
-  -> ServiceQuery p s
+  -> OneMethodQuery p s
   -> ConduitT Aeson.Value Void IO ()
   -> IO ()
 runSubscription f whole@(Services ss) path
@@ -170,7 +297,7 @@ class RunQueryFindHandler m p whole chn ss s hs where
     -> [T.Text]
     -> ServicesT chn ss m hs
     -> inh
-    -> ServiceQuery p s
+    -> OneMethodQuery p s
     -> ConduitT Aeson.Value Void IO ()
     -> IO ()
 
@@ -195,12 +322,8 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod m p whole chn
       runOneQuery (OneMethodQuery nm args)
         = runMethod f whole (Proxy @sname) path nm inh this args
   -- subscriptions should only have one element
-  runSubscriptionFindHandler f whole path (this :<&>: _) inh [OneMethodQuery nm args] sink
-    = runMethodSubscription f whole (Proxy @sname) path nm inh this args sink
-  runSubscriptionFindHandler _ _ path _ _ _ sink
-    = let e = ServerError Invalid "you need exactly one field to subscribe"
-          val = Aeson.object [ ("errors", Aeson.listValue errValue [GraphQLError e path]) ]
-      in runConduit $ yieldMany ([val] :: [Aeson.Value]) .| sink
+  runSubscriptionFindHandler f whole path (this :<&>: _) inh (OneMethodQuery nm args)
+    = runMethodSubscription f whole (Proxy @sname) path nm inh this args
 
 class RunMethod m p whole chn sname ms hs where
   runMethod
@@ -287,10 +410,9 @@ instance (MonadError ServerError m)
       Left e  -> tell [GraphQLError e path] >> pure Nothing
   runHandlerSubscription f _ path h Nil _ sink = do
     res <- liftIO $ runExceptT (f h)
-    let vals = case res of
-                 Right _ -> [] :: [Aeson.Value]
-                 Left e -> [ Aeson.object [ ("errors", Aeson.listValue errValue [GraphQLError e path]) ] ]
-    runConduit $ yieldMany vals .| sink
+    case res of
+      Right _ -> runConduit $ yieldMany ([] :: [Aeson.Value]) .| sink
+      Left e  -> yieldError e path sink
 instance (MonadError ServerError m, ResultConversion m p whole chn r l)
          => RunHandler m p whole chn '[] ('RetSingle r) (m l) where
   runHandler f whole path h Nil (RSingle q) = do
@@ -324,9 +446,7 @@ instance (MonadIO m, MonadError ServerError m, ResultConversion m p whole chn r 
       (transPipe liftIO (mapInputM convert (error "this should not be called") sink))
     case res of
       Right _ -> return ()
-      Left e  -> do
-        let val = Aeson.object [ ("errors", Aeson.listValue errValue [GraphQLError e path]) ]
-        runConduit $ yieldMany ([val] :: [Aeson.Value]) .| sink
+      Left e  -> yieldError e path sink
     where
       convert :: l -> IO Aeson.Value
       convert v = do
