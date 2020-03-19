@@ -30,6 +30,7 @@ import qualified Data.Aeson                     as Aeson
 import qualified Data.Aeson.Types               as Aeson
 import           Data.Conduit
 import           Data.Conduit.Combinators       (sinkList, yieldMany)
+import           Data.Conduit.Internal          (ConduitT (..), Pipe (..))
 import           Data.Conduit.TQueue
 import           Data.Maybe
 import qualified Data.Text                      as T
@@ -129,6 +130,22 @@ runQuery
   -> WriterT [GraphQLError] IO Aeson.Value
 runQuery f whole@(Services ss) path = runQueryFindHandler f whole path ss
 
+runSubscription
+  :: forall m p s pname ss hs sname sanns ms chn inh.
+     ( RunQueryFindHandler m p hs chn ss s hs
+     , p ~ 'Package pname ss
+     , s ~ 'Service sname sanns ms
+     , inh ~ MappingRight chn sname )
+  => (forall a. m a -> ServerErrorIO a)
+  -> ServerT chn p m hs
+  -> [T.Text]
+  -> inh
+  -> ServiceQuery p s
+  -> ConduitT Aeson.Value Void IO ()
+  -> IO ()
+runSubscription f whole@(Services ss) path
+  = runSubscriptionFindHandler f whole path ss
+
 class RunQueryFindHandler m p whole chn ss s hs where
   runQueryFindHandler
     :: ( p ~  'Package pname wholess
@@ -141,14 +158,30 @@ class RunQueryFindHandler m p whole chn ss s hs where
     -> inh
     -> ServiceQuery p s
     -> WriterT [GraphQLError] IO Aeson.Value
+  runSubscriptionFindHandler
+    :: ( p ~  'Package pname wholess
+       , s ~ 'Service sname sanns ms
+       , inh ~ MappingRight chn sname )
+    => (forall a. m a -> ServerErrorIO a)
+    -> ServerT chn p m whole
+    -> [T.Text]
+    -> ServicesT chn ss m hs
+    -> inh
+    -> ServiceQuery p s
+    -> ConduitT Aeson.Value Void IO ()
+    -> IO ()
 
 instance TypeError ('Text "Could not find handler for " ':<>: 'ShowType s)
          => RunQueryFindHandler m p whole chn '[] s '[] where
   runQueryFindHandler _ = error "this should never be called"
+  runSubscriptionFindHandler _ = error "this should never be called"
 instance {-# OVERLAPPABLE #-}
          RunQueryFindHandler m p whole chn ss s hs
          => RunQueryFindHandler m p whole chn (other ': ss) s (h ': hs) where
-  runQueryFindHandler f whole path (_ :<&>: that) = runQueryFindHandler f whole path that
+  runQueryFindHandler f whole path (_ :<&>: that)
+    = runQueryFindHandler f whole path that
+  runSubscriptionFindHandler f whole path (_ :<&>: that)
+    = runSubscriptionFindHandler f whole path that
 instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod m p whole chn sname ms h)
          => RunQueryFindHandler m p whole chn (s ': ss) s (h ': hs) where
   runQueryFindHandler f whole path (this :<&>: _) inh queries
@@ -158,6 +191,13 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod m p whole chn
       -- an explicit type signature for 'runQueryFindHandler'
       runOneQuery (OneMethodQuery nm args)
         = runMethod f whole (Proxy @sname) path nm inh this args
+  -- subscriptions should only have one element
+  runSubscriptionFindHandler f whole path (this :<&>: _) inh [OneMethodQuery nm args] sink
+    = runMethodSubscription f whole (Proxy @sname) path nm inh this args sink
+  runSubscriptionFindHandler _ _ path _ _ _ sink
+    = let e = ServerError Invalid "you need exactly one field to subscribe"
+          val = Aeson.object [ ("errors", Aeson.listValue errValue [GraphQLError e path]) ]
+      in runConduit $ yieldMany ([val] :: [Aeson.Value]) .| sink
 
 class RunMethod m p whole chn sname ms hs where
   runMethod
@@ -169,16 +209,34 @@ class RunMethod m p whole chn sname ms hs where
     -> HandlersT chn inh ms m hs
     -> NS (ChosenMethodQuery p) ms
     -> WriterT [GraphQLError] IO (Maybe (T.Text, Aeson.Value))
+  runMethodSubscription
+    :: ( p ~ 'Package pname wholess
+       , inh ~ MappingRight chn sname )
+    => (forall a. m a -> ServerErrorIO a)
+    -> ServerT chn p m whole
+    -> Proxy sname -> [T.Text] -> Maybe T.Text -> inh
+    -> HandlersT chn inh ms m hs
+    -> NS (ChosenMethodQuery p) ms
+    -> ConduitT Aeson.Value Void IO ()
+    -> IO ()
 
 instance RunMethod m p whole chn s '[] '[] where
   runMethod _ = error "this should never be called"
+  runMethodSubscription _ = error "this should never be called"
 instance (RunMethod m p whole chn s ms hs, KnownName mname, RunHandler m p whole chn args r h)
          => RunMethod m p whole chn s ('Method mname anns args r ': ms) (h ': hs) where
+  -- handle normal methods
   runMethod f whole _ path nm inh (h :<||>: _) (Z (ChosenMethodQuery args ret))
     = ((realName ,) <$>) <$> runHandler f whole (path ++ [realName]) (h inh) args ret
     where realName = fromMaybe (T.pack $ nameVal (Proxy @mname)) nm
   runMethod f whole p path nm inh (_ :<||>: r) (S cont)
     = runMethod f whole p path nm inh r cont
+  -- handle subscriptions
+  runMethodSubscription f whole _ path nm inh (h :<||>: _) (Z (ChosenMethodQuery args ret)) sink
+    = runHandlerSubscription f whole (path ++ [realName]) (h inh) args ret sink
+    where realName = fromMaybe (T.pack $ nameVal (Proxy @mname)) nm
+  runMethodSubscription f whole p path nm inh (_ :<||>: r) (S cont) sink
+    = runMethodSubscription f whole p path nm inh r cont sink
 
 class Handles chn args r m h
       => RunHandler m p whole chn args r h where
@@ -190,7 +248,7 @@ class Handles chn args r m h
     -> NP (ArgumentValue p) args
     -> ReturnQuery p r
     -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
-  runSubscription
+  runHandlerSubscription
     :: (forall a. m a -> ServerErrorIO a)
     -> ServerT chn p m whole
     -> [T.Text]
@@ -204,8 +262,8 @@ instance (ArgumentConversion chn ref t, RunHandler m p whole chn rest r h)
          => RunHandler m p whole chn ('ArgSingle aname aanns ref ': rest) r (t -> h) where
   runHandler f whole path h (ArgumentValue one :* rest)
     = runHandler f whole path (h (convertArg (Proxy @chn) one)) rest
-  runSubscription f whole path h (ArgumentValue one :* rest)
-    = runSubscription f whole path (h (convertArg (Proxy @chn) one)) rest
+  runHandlerSubscription f whole path h (ArgumentValue one :* rest)
+    = runHandlerSubscription f whole path (h (convertArg (Proxy @chn) one)) rest
 instance ( MonadError ServerError m
          , FromRef chn ref t
          , ArgumentConversion chn ('ListRef ref) [t]
@@ -214,9 +272,9 @@ instance ( MonadError ServerError m
   runHandler f whole path h (ArgumentStream lst :* rest)
     = let converted :: [t] = convertArg (Proxy @chn) lst
       in runHandler f whole path (h (yieldMany converted)) rest
-  runSubscription f whole path h (ArgumentStream lst :* rest) sink
+  runHandlerSubscription f whole path h (ArgumentStream lst :* rest) sink
     = let converted :: [t] = convertArg (Proxy @chn) lst
-      in runSubscription f whole path (h (yieldMany converted)) rest sink
+      in runHandlerSubscription f whole path (h (yieldMany converted)) rest sink
 instance (MonadError ServerError m)
          => RunHandler m p whole chn '[] 'RetNothing (m ()) where
   runHandler f _ path h Nil _ = do
@@ -224,7 +282,7 @@ instance (MonadError ServerError m)
     case res of
       Right _ -> pure $ Just Aeson.Null
       Left e  -> tell [GraphQLError e path] >> pure Nothing
-  runSubscription f _ path h Nil _ sink = do
+  runHandlerSubscription f _ path h Nil _ sink = do
     res <- liftIO $ runExceptT (f h)
     let vals = case res of
                  Right _ -> [] :: [Aeson.Value]
@@ -237,7 +295,7 @@ instance (MonadError ServerError m, ResultConversion m p whole chn r l)
     case res of
       Right v -> convertResult f whole path q v
       Left e  -> tell [GraphQLError e path] >> pure Nothing
-  runSubscription f whole path h Nil (RSingle q) sink = do
+  runHandlerSubscription f whole path h Nil (RSingle q) sink = do
     res <- liftIO $ runExceptT (f h)
     val <- case res of
       Right v -> do
@@ -258,6 +316,35 @@ instance (MonadIO m, MonadError ServerError m, ResultConversion m p whole chn r 
         info <- runConduit $ sourceTMQueue queue .| sinkList
         Just . Aeson.toJSON . catMaybes <$> traverse (convertResult f whole path q) info
       Left e  -> tell [GraphQLError e []] >> pure Nothing
+  runHandlerSubscription f whole path h Nil (RStream q) sink = do
+    res <- liftIO $ runExceptT $ f $ h
+      (transPipe liftIO (mapInputM convert (error "this should not be called") sink))
+    case res of
+      Right _ -> return ()
+      Left e  -> do
+        let val = Aeson.object [ ("errors", Aeson.listValue errValue [GraphQLError e path]) ]
+        runConduit $ yieldMany ([val] :: [Aeson.Value]) .| sink
+    where
+      convert :: l -> IO Aeson.Value
+      convert v = do
+        (data_, errors) <- runWriterT (convertResult f whole path q v)
+        case errors of
+          [] -> pure $ Aeson.object [ ("data", fromMaybe Aeson.Null data_) ]
+          _  -> pure $ Aeson.object [ ("data", fromMaybe Aeson.Null data_)
+                                    , ("errors", Aeson.listValue errValue errors) ]
+
+mapInputM :: Monad m
+          => (i1 -> m i2) -- ^ map initial input to new input
+          -> (i2 -> m (Maybe i1)) -- ^ map new leftovers to initial leftovers
+          -> ConduitT i2 o m r
+          -> ConduitT i1 o m r
+mapInputM f f' (ConduitT c0) = ConduitT $ \rest -> let
+    go (HaveOutput p o) = HaveOutput (go p) o
+    go (NeedInput p c)  = NeedInput (\i -> PipeM $ go . p <$> f i) (go . c)
+    go (Done r)         = rest r
+    go (PipeM mp)       = PipeM $ fmap go mp
+    go (Leftover p i)   = PipeM $ (\x -> maybe id (flip Leftover) x (go p)) <$> f' i
+    in go (c0 Done)
 
 class FromRef chn ref t
       => ArgumentConversion chn ref t where
