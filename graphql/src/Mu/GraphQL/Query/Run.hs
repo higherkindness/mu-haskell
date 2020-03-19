@@ -46,24 +46,24 @@ import           Mu.Server
 data GraphQLError
   = GraphQLError ServerError [T.Text]
 
-type GraphQLApp p qr mut m chn hs
-  = (ParseTypedDoc p qr mut, RunDocument p qr mut m chn hs)
+type GraphQLApp p qr mut sub m chn hs
+  = (ParseTypedDoc p qr mut sub, RunDocument p qr mut m chn hs)
 
 runPipeline
-  :: forall qr mut p m chn hs. GraphQLApp p qr mut m chn hs
+  :: forall qr mut sub p m chn hs. GraphQLApp p qr mut sub m chn hs
   => (forall a. m a -> ServerErrorIO a)
   -> ServerT chn p m hs
-  -> Proxy qr -> Proxy mut
+  -> Proxy qr -> Proxy mut -> Proxy sub
   -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
   -> IO Aeson.Value
-runPipeline f svr _ _ opName vmap doc
+runPipeline f svr _ _ _ opName vmap doc
   = case parseDoc @qr @mut opName vmap doc of
       Left e ->
         pure $
           Aeson.object [
             ("errors", Aeson.Array [
               Aeson.object [ ("message", Aeson.String e) ] ])]
-      Right (d :: Document p qr mut) -> do
+      Right (d :: Document p qr mut sub) -> do
         (data_, errors) <- runWriterT (runDocument f svr d)
         case errors of
           [] -> pure $ Aeson.object [ ("data", data_) ]
@@ -76,11 +76,14 @@ errValue (GraphQLError (ServerError _ msg) path)
     , ("path", Aeson.toJSON path)
     ]
 
-class RunDocument (p :: Package') (qr :: Maybe Symbol) (mut :: Maybe Symbol) m chn hs where
+class RunDocument (p :: Package')
+                  (qr :: Maybe Symbol)
+                  (mut :: Maybe Symbol)
+                  m chn hs where
   runDocument ::
        (forall a. m a -> ServerErrorIO a)
     -> ServerT chn p m hs
-    -> Document p qr mut
+    -> Document p qr mut sub
     -> WriterT [GraphQLError] IO Aeson.Value
 
 instance
