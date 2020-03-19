@@ -34,7 +34,9 @@ protocol f conn = start
   where
     -- listen for GQL_CONNECTION_INIT
     start = do
+      putStrLn "waiting for message"
       msg <- receiveJSON conn
+      print msg
       case msg of
         Just (GQLConnectionInit _)
           -> do -- send GQL_CONNECTION_ACK
@@ -120,15 +122,15 @@ instance A.FromJSON ClientMessage where
   parseJSON = A.withObject "ClientMessage" $ \v -> do
      ty :: String <- v .: "type"
      case ty of
-       "GQL_CONNECTION_INIT"
+       "connection_init"
          -> GQLConnectionInit <$> v .:? "payload"
-       "GQL_START"
+       "start"
          -> do i <- v .: "id"
                (q,vrs,opN) <- v .: "payload" >>= parsePayload
                pure $ GQLStart i q vrs opN
-       "GQL_STOP"
+       "stop"
          -> GQLStop <$> v .: "id"
-       "GQL_TERMINATE"
+       "terminate"
          -> pure GQLTerminate
        _ -> empty
     where
@@ -142,14 +144,14 @@ theType t = "type" .= t
 
 instance A.ToJSON ServerMessage where
   toJSON (GQLConnectionError e)
-    = A.object [theType "GQL_CONNECTION_ERROR", "payload" .= e]
+    = A.object [theType "connection_error", "payload" .= e]
   toJSON GQLConnectionAck
-    = A.object [theType "GQL_CONNECTION_ACK"]
+    = A.object [theType "connection_acl"]
   toJSON (GQLData i p)
-    = A.object [theType "GQL_DATA", "id" .= i, "payload" .= p]
+    = A.object [theType "data", "id" .= i, "payload" .= p]
   toJSON (GQLError i p)
-    = A.object [theType "GQL_ERROR", "id" .= i, "payload" .= p]
+    = A.object [theType "error", "id" .= i, "payload" .= p]
   toJSON (GQLComplete i)
-    = A.object [theType "GQL_COMPLETE", "id" .= i]
+    = A.object [theType "complete", "id" .= i]
   toJSON GQLKeepAlive
-    = A.object [theType "GQL_CONNECTION_KEEP_ALIVE"]
+    = A.object [theType "connection_keep_alive"]

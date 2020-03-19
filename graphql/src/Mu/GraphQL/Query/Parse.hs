@@ -96,7 +96,7 @@ parseTypedDoc vmap frmap tod
         GQL.OperationTypeMutation
           -> parseTypedDocMutation finalVmap frmap (GQL._todSelectionSet tod)
         GQL.OperationTypeSubscription
-          -> throwError "subscriptions are not (yet) supported"
+          -> parseTypedDocSubscription finalVmap frmap (GQL._todSelectionSet tod)
 
 class ParseTypedDoc (p :: Package')
                     (qr :: Maybe Symbol) (mut :: Maybe Symbol) (sub :: Maybe Symbol) where
@@ -147,7 +147,7 @@ instance
   parseTypedDocMutation vmap frmap sset
     = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
   parseTypedDocSubscription _ _ _
-    = throwError "no mutations are defined in the schema"
+    = throwError "no subscriptions are defined in the schema"
 
 instance
   ( p ~ 'Package pname ss,
@@ -176,7 +176,7 @@ instance
   parseTypedDocMutation _ _ _
     = throwError "no mutations are defined in the schema"
   parseTypedDocSubscription _ _ _
-    = throwError "no mutations are defined in the schema"
+    = throwError "no subscriptions are defined in the schema"
 
 instance
   ( p ~ 'Package pname ss,
@@ -205,7 +205,7 @@ instance
   parseTypedDocMutation vmap frmap sset
     = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
   parseTypedDocSubscription _ _ _
-    = throwError "no mutations are defined in the schema"
+    = throwError "no subscriptions are defined in the schema"
 
 instance
   ( p ~ 'Package pname ss,
@@ -229,7 +229,7 @@ instance
   parseTypedDocMutation _ _ _
     = throwError "no mutations are defined in the schema"
   parseTypedDocSubscription _ _ _
-    = throwError "no mutations are defined in the schema"
+    = throwError "no subscriptions are defined in the schema"
 
 parseVariableMap :: [GQL.VariableDefinition] -> VariableMapC
 parseVariableMap vmap
