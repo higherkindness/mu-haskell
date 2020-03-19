@@ -11,12 +11,16 @@
 
 module Main where
 
-import           Data.List              (find)
-import           Data.Maybe             (fromMaybe, listToMaybe)
+import           Data.List                         (find)
+import           Data.Maybe                        (fromMaybe, listToMaybe)
 import           Data.Proxy
-import qualified Data.Text              as T
+import qualified Data.Text                         as T
 import           Text.Regex.TDFA
-import           Text.Regex.TDFA.Text   ()
+import           Text.Regex.TDFA.Text              ()
+
+import           Network.Wai.Handler.Warp          (run)
+import           Network.Wai.Middleware.AddHeaders (addHeaders)
+
 
 import           Mu.GraphQL.Annotations
 import           Mu.GraphQL.Server
@@ -28,8 +32,12 @@ import           Mu.Server
 
 main :: IO ()
 main = do
-  putStrLn "starting GraphQL server on port 8080"
-  runGraphQLApp 8080 libraryServer (Proxy @('Just "Query")) (Proxy @('Just "Mutation"))
+  putStrLn "starting GraphQL server on port 8000"
+  let hm = addHeaders [
+             ("Access-Control-Allow-Origin", "*")
+           , ("Access-Control-Allow-Headers", "Content-Type")
+           ]
+  run 8000 $ hm $ graphQLAppQuery libraryServer (Proxy @"Query")
 
 type ServiceDefinition
   = 'Package ('Just "library")
