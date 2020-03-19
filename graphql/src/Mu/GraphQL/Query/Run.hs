@@ -147,7 +147,7 @@ instance {-# OVERLAPPABLE #-}
          RunQueryFindHandler m p whole chn ss s hs
          => RunQueryFindHandler m p whole chn (other ': ss) s (h ': hs) where
   runQueryFindHandler f whole (_ :<&>: that) = runQueryFindHandler f whole that
-instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod m p whole chn sname ms h)
+instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, KnownName sname, RunMethod m p whole chn sname ms h)
          => RunQueryFindHandler m p whole chn (s ': ss) s (h ': hs) where
   runQueryFindHandler f whole (this :<&>: _) inh queries
     = Aeson.object . catMaybes <$> mapM runOneQuery queries
@@ -164,6 +164,10 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod m p whole chn
         where -- add the additional path component to the errors
               updateErrs :: T.Text -> GraphQLError -> GraphQLError
               updateErrs methodName (GraphQLError err loc) = GraphQLError err (methodName : loc)
+      -- handle __typename
+      runOneQuery (TypeNameQuery nm)
+        = let realName = fromMaybe "__typename" nm
+          in pure $ Just (realName, Aeson.String $ T.pack $ nameVal (Proxy @sname))
 
 class RunMethod m p whole chn sname ms hs where
   runMethod
