@@ -20,25 +20,28 @@ module Mu.GraphQL.Server (
   , graphQLAppTransQuery
 ) where
 
-import           Control.Applicative           ((<|>))
-import           Control.Monad                 (join)
-import qualified Data.Aeson                    as A
-import           Data.Aeson.Text               (encodeToLazyText)
-import           Data.ByteString.Lazy          (fromStrict, toStrict)
-import qualified Data.HashMap.Strict           as HM
+import           Control.Applicative              ((<|>))
+import           Control.Monad                    (join)
+import qualified Data.Aeson                       as A
+import           Data.Aeson.Text                  (encodeToLazyText)
+import           Data.ByteString.Lazy             (fromStrict, toStrict)
+import qualified Data.HashMap.Strict              as HM
 import           Data.Proxy
-import qualified Data.Text                     as T
-import           Data.Text.Encoding            (decodeUtf8)
-import qualified Data.Text.Lazy.Encoding       as T
-import           Language.GraphQL.Draft.Parser (parseExecutableDoc)
-import           Network.HTTP.Types.Header     (hContentType)
-import           Network.HTTP.Types.Method     (StdMethod (..), parseMethod)
-import           Network.HTTP.Types.Status     (ok200)
+import qualified Data.Text                        as T
+import           Data.Text.Encoding               (decodeUtf8)
+import qualified Data.Text.Lazy.Encoding          as T
+import           Language.GraphQL.Draft.Parser    (parseExecutableDoc)
+import           Network.HTTP.Types.Header        (hContentType)
+import           Network.HTTP.Types.Method        (StdMethod (..), parseMethod)
+import           Network.HTTP.Types.Status        (ok200)
 import           Network.Wai
-import           Network.Wai.Handler.Warp      (Port, Settings, run, runSettings)
+import           Network.Wai.Handler.Warp         (Port, Settings, run, runSettings)
+import qualified Network.Wai.Handler.WebSockets   as WS
+import qualified Network.WebSockets               as WS
 
 import           Mu.GraphQL.Query.Parse
 import           Mu.GraphQL.Query.Run
+import           Mu.GraphQL.Subscription.Protocol
 import           Mu.Server
 
 data GraphQLInput = GraphQLInput T.Text VariableMapC (Maybe T.Text)
@@ -91,7 +94,20 @@ graphQLAppTrans ::
     -> Proxy mut
     -> Proxy sub
     -> Application
-graphQLAppTrans f server q m s req res =
+graphQLAppTrans f server q m s
+  = WS.websocketsOr WS.defaultConnectionOptions
+                    (wsGraphQLAppTrans f server q m s)
+                    (httpGraphQLAppTrans f server q m s)
+
+httpGraphQLAppTrans ::
+    ( GraphQLApp p qr mut sub m chn hs )
+    => (forall a. m a -> ServerErrorIO a)
+    -> ServerT chn p m hs
+    -> Proxy qr
+    -> Proxy mut
+    -> Proxy sub
+    -> Application
+httpGraphQLAppTrans f server q m s req res =
   case parseMethod (requestMethod req) of
     Left err   -> toError $ decodeUtf8 err
     Right GET  -> do
@@ -125,6 +141,18 @@ graphQLAppTrans f server q m s req res =
     toError err = toResponse $ A.object [ ("errors", A.Array [ A.object [ ("message", A.String err) ] ])]
     toResponse :: A.Value -> IO ResponseReceived
     toResponse = res . responseBuilder ok200 [] . T.encodeUtf8Builder . encodeToLazyText
+
+wsGraphQLAppTrans
+    :: ( GraphQLApp p qr mut sub m chn hs )
+    => (forall a. m a -> ServerErrorIO a)
+    -> ServerT chn p m hs
+    -> Proxy qr
+    -> Proxy mut
+    -> Proxy sub
+    -> WS.ServerApp
+wsGraphQLAppTrans f server q m s conn
+  = do conn' <- WS.acceptRequest conn
+       flip protocol conn' $ runSubscriptionPipeline f server q m s
 
 -- | Run a Mu 'graphQLApp' using the given 'Settings'.
 --
