@@ -56,40 +56,42 @@ instance A.FromJSON GraphQLInput where
 --   for example, @wai-routes@, or you can add middleware
 --   from @wai-extra@, among others.
 graphQLApp ::
-    ( GraphQLApp p qr mut ServerErrorIO chn hs )
+    ( GraphQLApp p qr mut sub ServerErrorIO chn hs )
     => ServerT chn p ServerErrorIO hs
     -> Proxy qr
     -> Proxy mut
+    -> Proxy sub
     -> Application
 graphQLApp = graphQLAppTrans id
 
 graphQLAppQuery ::
     forall qr p chn hs.
-    ( GraphQLApp p ('Just qr) 'Nothing ServerErrorIO chn hs )
+    ( GraphQLApp p ('Just qr) 'Nothing 'Nothing ServerErrorIO chn hs )
     => ServerT chn p ServerErrorIO hs
     -> Proxy qr
     -> Application
 graphQLAppQuery svr _
-  = graphQLApp svr (Proxy @('Just qr)) (Proxy @'Nothing)
+  = graphQLApp svr (Proxy @('Just qr)) (Proxy @'Nothing) (Proxy @'Nothing)
 
 graphQLAppTransQuery ::
     forall qr m p chn hs.
-    ( GraphQLApp p ('Just qr) 'Nothing m chn hs )
+    ( GraphQLApp p ('Just qr) 'Nothing 'Nothing m chn hs )
     => (forall a. m a -> ServerErrorIO a)
     -> ServerT chn p m hs
     -> Proxy qr
     -> Application
 graphQLAppTransQuery f svr _
-  = graphQLAppTrans f svr (Proxy @('Just qr)) (Proxy @'Nothing)
+  = graphQLAppTrans f svr (Proxy @('Just qr)) (Proxy @'Nothing) (Proxy @'Nothing)
 
 graphQLAppTrans ::
-    ( GraphQLApp p qr mut m chn hs )
+    ( GraphQLApp p qr mut sub m chn hs )
     => (forall a. m a -> ServerErrorIO a)
     -> ServerT chn p m hs
     -> Proxy qr
     -> Proxy mut
+    -> Proxy sub
     -> Application
-graphQLAppTrans f server q m req res =
+graphQLAppTrans f server q m s req res =
   case parseMethod (requestMethod req) of
     Left err   -> toError $ decodeUtf8 err
     Right GET  -> do
@@ -118,7 +120,7 @@ graphQLAppTrans f server q m req res =
     execQuery opn vals qry =
       case parseExecutableDoc qry of
         Left err  -> toError err
-        Right doc -> runPipeline f server q m opn vals doc >>= toResponse
+        Right doc -> runPipeline f server q m s opn vals doc >>= toResponse
     toError :: T.Text -> IO ResponseReceived
     toError err = toResponse $ A.object [ ("errors", A.Array [ A.object [ ("message", A.String err) ] ])]
     toResponse :: A.Value -> IO ResponseReceived
@@ -128,20 +130,22 @@ graphQLAppTrans f server q m req res =
 --
 --   Go to 'Network.Wai.Handler.Warp' to declare 'Settings'.
 runGraphQLAppSettings ::
-  ( GraphQLApp p qr mut ServerErrorIO chn hs )
+  ( GraphQLApp p qr mut sub ServerErrorIO chn hs )
   => Settings
   -> ServerT chn p ServerErrorIO hs
   -> Proxy qr
   -> Proxy mut
+  -> Proxy sub
   -> IO ()
-runGraphQLAppSettings st svr q m = runSettings st (graphQLApp svr q m)
+runGraphQLAppSettings st svr q m s = runSettings st (graphQLApp svr q m s)
 
 -- | Run a Mu 'graphQLApp' on the given port.
 runGraphQLApp ::
-  ( GraphQLApp p qr mut ServerErrorIO chn hs )
+  ( GraphQLApp p qr mut sub ServerErrorIO chn hs )
   => Port
   -> ServerT chn p ServerErrorIO hs
   -> Proxy qr
   -> Proxy mut
+  -> Proxy sub
   -> IO ()
-runGraphQLApp port svr q m = run port (graphQLApp svr q m)
+runGraphQLApp port svr q m s = run port (graphQLApp svr q m s)
