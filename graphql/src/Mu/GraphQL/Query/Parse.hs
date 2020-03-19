@@ -57,12 +57,12 @@ parseDoc ::
   GQL.ExecutableDocument ->
   f (Document p qr mut sub)
 -- If there's no operation name, there must be only one query
-parseDoc Nothing _ (GQL.ExecutableDocument defns)
+parseDoc Nothing vmap (GQL.ExecutableDocument defns)
   = case GQL.partitionExDefs defns of
       ([unnamed], [], frs)
         -> parseTypedDocQuery HM.empty (fragmentsToMap frs) unnamed
       ([], [named], frs)
-        -> parseTypedDoc HM.empty (fragmentsToMap frs) named
+        -> parseTypedDoc vmap (fragmentsToMap frs) named
       ([], [], _) -> throwError "no operation to execute"
       (_,  [], _) -> throwError "more than one unnamed query"
       ([], _, _)  -> throwError "more than one named operation but no 'operationName' given"
