@@ -34,9 +34,7 @@ protocol f conn = start
   where
     -- listen for GQL_CONNECTION_INIT
     start = do
-      putStrLn "waiting for message"
       msg <- receiveJSON conn
-      print msg
       case msg of
         Just (GQLConnectionInit _)
           -> do -- send GQL_CONNECTION_ACK
