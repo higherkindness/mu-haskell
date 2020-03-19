@@ -62,6 +62,7 @@ executable library-graphql
   ghc-options:      -Wall
   build-depends:
       base             >=4.12   && <5
+    , conduit
     , mu-graphql
     , mu-rpc
     , mu-schema
