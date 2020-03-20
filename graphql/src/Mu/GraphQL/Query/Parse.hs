@@ -268,6 +268,10 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
     fieldToMethod (GQL.Field alias name args dirs sels)
       | any (shouldSkip vmap) dirs
       = pure Nothing
+      | GQL.unName name == "__typename"
+      = case sels of
+          [] -> pure $ Just $ TypeNameQuery $ GQL.unName . GQL.unAlias <$> alias
+          _  -> throwError "__typename does not admit selection of subfields"
       | otherwise
       = Just . OneMethodQuery (GQL.unName . GQL.unAlias <$> alias)
          <$> selectMethod (T.pack $ nameVal (Proxy @s)) vmap frmap name args sels

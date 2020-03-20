@@ -312,7 +312,7 @@ instance {-# OVERLAPPABLE #-}
     = runQueryFindHandler f whole path that
   runSubscriptionFindHandler f whole path (_ :<&>: that)
     = runSubscriptionFindHandler f whole path that
-instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod m p whole chn sname ms h)
+instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, KnownName sname, RunMethod m p whole chn sname ms h)
          => RunQueryFindHandler m p whole chn (s ': ss) s (h ': hs) where
   runQueryFindHandler f whole path (this :<&>: _) inh queries
     = Aeson.object . catMaybes <$> mapM runOneQuery queries
@@ -321,9 +321,17 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, RunMethod m p whole chn
       -- an explicit type signature for 'runQueryFindHandler'
       runOneQuery (OneMethodQuery nm args)
         = runMethod f whole (Proxy @sname) path nm inh this args
+      -- handle __typename
+      runOneQuery (TypeNameQuery nm)
+        = let realName = fromMaybe "__typename" nm
+          in pure $ Just (realName, Aeson.String $ T.pack $ nameVal (Proxy @sname))
   -- subscriptions should only have one element
-  runSubscriptionFindHandler f whole path (this :<&>: _) inh (OneMethodQuery nm args)
-    = runMethodSubscription f whole (Proxy @sname) path nm inh this args
+  runSubscriptionFindHandler f whole path (this :<&>: _) inh (OneMethodQuery nm args) sink
+    = runMethodSubscription f whole (Proxy @sname) path nm inh this args sink
+  runSubscriptionFindHandler _ _ _ _ _ (TypeNameQuery nm) sink
+    = let realName = fromMaybe "__typename" nm
+          o = Aeson.object [(realName, Aeson.String $ T.pack $ nameVal (Proxy @sname))]
+      in runConduit $ yieldMany ([o] :: [Aeson.Value]) .| sink
 
 class RunMethod m p whole chn sname ms hs where
   runMethod

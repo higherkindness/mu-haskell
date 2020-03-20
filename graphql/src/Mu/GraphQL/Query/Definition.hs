@@ -34,6 +34,9 @@ data OneMethodQuery (p :: Package snm mnm anm) (s :: Service snm mnm anm) where
     :: Maybe Text
     -> NS (ChosenMethodQuery p) ms
     -> OneMethodQuery p ('Service nm anns ms)
+  TypeNameQuery
+    :: Maybe Text
+    -> OneMethodQuery p ('Service nm anns ms)
 
 data ChosenMethodQuery (p :: Package snm mnm anm) (m :: Method snm mnm anm) where
   ChosenMethodQuery
