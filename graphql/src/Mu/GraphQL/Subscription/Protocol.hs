@@ -41,20 +41,23 @@ protocol f conn = start
                 sendJSON conn GQLConnectionAck
                 vars <- M.newIO
                 -- send GQL_KEEP_ALIVE each 1s.
-                ka <- async $ do
-                  sendJSON conn GQLKeepAlive
-                  threadDelay 1000000
+                withAsync keepAlive $ \ka ->
                 -- start listening for incoming messages
-                listen ka vars
+                  listen ka vars
         _ -> start  -- Keep waiting
+    -- keep-alive
+    keepAlive = do
+      sendJSON conn GQLKeepAlive
+      threadDelay 1000000
+      keepAlive
     -- listen for messages from client
     listen ka vars = do
       msg <- receiveJSON conn
       case msg of
         Just (GQLStart i q v o)  -- start handling
-          -> do t <- async $ handle i q v o >> atomically (M.delete i vars)
-                atomically $ M.insert t i vars
-                listen ka vars
+          -> withAsync (handle i q v o >> atomically (M.delete i vars)) $ \t -> do
+             atomically $ M.insert t i vars
+             listen ka vars
         Just (GQLStop i)  -- stop with handling that query
           -> do r <- atomically $ M.lookup i vars
                 case r of
