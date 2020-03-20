@@ -11,6 +11,8 @@
 
 module Main where
 
+import           Data.Conduit
+import           Data.Conduit.Combinators          (yieldMany)
 import           Data.List                         (find)
 import           Data.Maybe                        (fromMaybe, listToMaybe)
 import           Data.Proxy
@@ -37,7 +39,8 @@ main = do
              ("Access-Control-Allow-Origin", "*")
            , ("Access-Control-Allow-Headers", "Content-Type")
            ]
-  run 8000 $ hm $ graphQLAppQuery libraryServer (Proxy @"Query")
+  run 8000 $ hm $ graphQLApp libraryServer
+    (Proxy @('Just "Query")) (Proxy @'Nothing) (Proxy @('Just "Subscription"))
 
 type ServiceDefinition
   = 'Package ('Just "library")
@@ -63,7 +66,10 @@ type ServiceDefinition
           , ObjectField "books" '[]
               '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
           ]
-      , Object "Mutation" '[] '[]
+      , Object "Subscription" '[]
+         '[ ObjectField "books" '[]
+              '[] ('RetStream ('ObjectRef "Book"))
+          ]
       ]
 
 type ServiceMapping = '[
@@ -85,9 +91,10 @@ libraryServer
                :<&>: (noContext findAuthor
                       :<||>: noContext findBookTitle
                       :<||>: noContext allAuthors
-                      :<||>: noContext allBooks
+                      :<||>: noContext allBooks'
                       :<||>: H0)
-               :<&>: H0 :<&>: S0
+               :<&>: (noContext allBooksConduit :<||>: H0)
+               :<&>: S0
   where
     findBook i = find ((==i) . fst3) library
 
@@ -108,7 +115,12 @@ libraryServer
                   , title =~ rx]
 
     allAuthors = pure $ fst3 <$> library
-    allBooks = pure [(aid, bid) | (aid, _, books) <- library, (bid, _) <- books]
+    allBooks = [(aid, bid) | (aid, _, books) <- library, (bid, _) <- books]
+    allBooks' = pure allBooks
+
+    allBooksConduit :: ConduitM (Integer, Integer) Void m () -> m ()
+    allBooksConduit sink
+      = runConduit $ yieldMany allBooks .| sink
 
 -- helpers
 
