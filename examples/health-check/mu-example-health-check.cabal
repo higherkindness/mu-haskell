@@ -21,7 +21,8 @@ executable health-server
   main-is:          Server.hs
   other-modules:    Definition
   build-depends:
-      base            >=4.12  && <5
+      async
+    , base            >=4.12  && <5
     , conduit
     , deferred-folds
     , mu-graphql
@@ -34,8 +35,6 @@ executable health-server
     , stm-containers
     , text
     , wai
-    , wai-route
-    , warp
 
   hs-source-dirs:   src
   default-language: Haskell2010

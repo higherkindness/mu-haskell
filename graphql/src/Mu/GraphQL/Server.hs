@@ -13,6 +13,8 @@ module Mu.GraphQL.Server (
   -- * Run an GraphQL resolver directly
   , runGraphQLApp
   , runGraphQLAppSettings
+  , runGraphQLAppQuery
+  , runGraphQLAppTrans
   -- * Build a WAI 'Application'
   , graphQLApp
   , graphQLAppTrans
@@ -160,3 +162,23 @@ runGraphQLApp ::
   -> Proxy mut
   -> IO ()
 runGraphQLApp port svr q m = run port (graphQLApp svr q m)
+
+-- | Run a Mu 'graphQLApp' on a transformer stack on the given port.
+runGraphQLAppTrans ::
+  ( GraphQLApp p qr mut m chn hs )
+  => Port
+  -> (forall a. m a -> ServerErrorIO a)
+  -> ServerT chn p m hs
+  -> Proxy qr
+  -> Proxy mut
+  -> IO ()
+runGraphQLAppTrans port f svr q m = run port (graphQLAppTrans f svr q m)
+
+-- | Run a query-only Mu 'graphQLApp' on the given port.
+runGraphQLAppQuery ::
+  ( GraphQLApp p ('Just qr) 'Nothing ServerErrorIO chn hs )
+  => Port
+  -> ServerT chn p ServerErrorIO hs
+  -> Proxy qr
+  -> IO ()
+runGraphQLAppQuery port svr q = run port (graphQLAppQuery svr q)
