@@ -95,6 +95,9 @@ data OneFieldQuery (sch :: Schema tn fn) (fs :: [FieldDef tn fn]) where
     :: Maybe Text
     -> NS (ChosenFieldQuery sch) fs
     -> OneFieldQuery sch fs
+  TypeNameFieldQuery
+    :: Maybe Text
+    -> OneFieldQuery sch fs
 
 data ChosenFieldQuery (sch :: Schema tn fn) (f :: FieldDef tn fn) where
   ChosenFieldQuery

@@ -269,9 +269,24 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
       | any (shouldSkip vmap) dirs
       = pure Nothing
       | GQL.unName name == "__typename"
-      = case sels of
-          [] -> pure $ Just $ TypeNameQuery $ GQL.unName . GQL.unAlias <$> alias
-          _  -> throwError "__typename does not admit selection of subfields"
+      = case (args, sels) of
+          ([], []) -> pure $ Just $ TypeNameQuery $ GQL.unName . GQL.unAlias <$> alias
+          _        -> throwError "__typename does not admit arguments nor selection of subfields"
+      | GQL.unName name == "__schema"
+      = case args of
+          [] -> pure $ Just $ SchemaQuery (GQL.unName . GQL.unAlias <$> alias) sels
+          _  -> throwError "__schema does not admit selection of subfields"
+      | GQL.unName name == "__type"
+      = let alias' = GQL.unName . GQL.unAlias <$> alias
+            getString (GQL.VString s)   = Just $ coerce s
+            getString (GQL.VVariable v) = HM.lookup (coerce v) vmap >>= getString
+            getString _                 = Nothing
+        in case args of
+          [GQL.Argument _ val]
+            -> case getString val of
+                 Just s -> pure $ Just $ TypeQuery alias' s sels
+                 _      -> throwError "__type requires a string argument"
+          _ -> throwError "__type requires one single argument"
       | otherwise
       = Just . OneMethodQuery (GQL.unName . GQL.unAlias <$> alias)
          <$> selectMethod (T.pack $ nameVal (Proxy @s)) vmap frmap name args sels
@@ -666,6 +681,10 @@ parseSchemaQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
     fieldToMethod (GQL.Field alias name args dirs sels)
       | any (shouldSkip vmap) dirs
       = pure Nothing
+      | GQL.unName name == "__typename"
+      = case (args, sels) of
+          ([], []) -> pure $ Just $ TypeNameFieldQuery $ GQL.unName . GQL.unAlias <$> alias
+          _        -> throwError "__typename does not admit arguments nor selection of subfields"
       | _:_ <- args
       = throwError "this field does not support arguments"
       | otherwise
