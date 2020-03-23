@@ -28,6 +28,7 @@ data Schema
            , mutationType     :: Maybe T.Text
            , subscriptionType :: Maybe T.Text
            , types            :: TypeMap }
+  deriving Show
 
 data Type
   = Type { kind       :: TypeKind
@@ -36,19 +37,23 @@ data Type
          , enumValues :: [EnumValue]
          , ofType     :: Maybe Type }
   | TypeRef { to      :: T.Text }
+  deriving Show
 
 data Field
   = Field { fieldName :: T.Text
           , args      :: [Input]
           , fieldType :: Type }
+  deriving Show
 
 data Input
   = Input { inputName         :: T.Text
           , inputDefaultValue :: Maybe T.Text
           , inputType         :: Type }
+  deriving Show
 
 newtype EnumValue
   = EnumValue { enumValueName :: T.Text }
+  deriving Show
 
 data TypeKind
   = SCALAR
@@ -59,6 +64,7 @@ data TypeKind
   | INPUT_OBJECT
   | LIST
   | NON_NULL
+  deriving Show
 
 tSimple :: T.Text -> Type
 tSimple t = Type SCALAR (Just t) [] [] Nothing
@@ -79,6 +85,18 @@ class Introspect (p :: Package')
                  (sub :: Maybe Symbol) where
   introspect
     :: Proxy p -> Proxy qr -> Proxy mut -> Proxy sub -> Schema
+
+instance ( IntrospectServices ss sub
+         , KnownMaybeSymbol qr
+         , KnownMaybeSymbol mut
+         , KnownMaybeSymbol sub)
+         => Introspect ('Package nm ss) qr mut sub where
+  introspect _ _ _ _
+    = let (_, ts) = runWriter $ introspectServices (Proxy @ss) (Proxy @sub)
+      in Schema (maybeSymbolVal (Proxy @qr))
+                (maybeSymbolVal (Proxy @mut))
+                (maybeSymbolVal (Proxy @sub))
+                ts
 
 class KnownMaybeSymbol (s :: Maybe Symbol) where
   maybeSymbolVal :: Proxy s -> Maybe T.Text
@@ -138,7 +156,7 @@ instance ( KnownMaybeSymbol nm
          => IntrospectInputs ('ArgSingle nm anns r ': args) where
   introspectInputs _
     = do let nm = maybeSymbolVal (Proxy @nm)
-         t <- introspectTypeRef (Proxy @r)
+         t <- introspectTypeRef (Proxy @r) False
          -- TODO Find default value
          let this = Input (fromMaybe "arg" nm) Nothing t
          (this :) <$> introspectInputs (Proxy @args)
@@ -151,40 +169,129 @@ instance IntrospectReturn 'RetNothing isSub where
   introspectReturn _ _ = pure $ tSimple "Null"
 instance IntrospectTypeRef t
          => IntrospectReturn ('RetSingle t) isSub where
-  introspectReturn _ _ = introspectTypeRef (Proxy @t)
+  introspectReturn _ _ = introspectTypeRef (Proxy @t) True
 instance IntrospectTypeRef t
          => IntrospectReturn ('RetStream t) 'False where
-  introspectReturn _ _ = tList <$> introspectTypeRef (Proxy @t)
+  introspectReturn _ _ = tList <$> introspectTypeRef (Proxy @t) True
 instance IntrospectTypeRef t
          => IntrospectReturn ('RetStream t) 'True where
-  introspectReturn _ _ = introspectTypeRef (Proxy @t)
+  introspectReturn _ _ = introspectTypeRef (Proxy @t) True
 
 class IntrospectTypeRef (tr :: TypeRef Symbol) where
   introspectTypeRef
-    :: Proxy tr -> Writer TypeMap Type
+    :: Proxy tr -> Bool -> Writer TypeMap Type
 
 instance IntrospectTypeRef ('PrimitiveRef Bool) where
-  introspectTypeRef _ = pure $ tNonNull $ tSimple "Boolean"
+  introspectTypeRef _ _ = pure $ tNonNull $ tSimple "Boolean"
 instance IntrospectTypeRef ('PrimitiveRef Int32) where
-  introspectTypeRef _ = pure $ tNonNull $ tSimple "Int"
+  introspectTypeRef _ _ = pure $ tNonNull $ tSimple "Int"
 instance IntrospectTypeRef ('PrimitiveRef Integer) where
-  introspectTypeRef _ = pure $ tNonNull $ tSimple "Int"
+  introspectTypeRef _ _ = pure $ tNonNull $ tSimple "Int"
 instance IntrospectTypeRef ('PrimitiveRef Double) where
-  introspectTypeRef _ = pure $ tNonNull $ tSimple "Float"
+  introspectTypeRef _ _ = pure $ tNonNull $ tSimple "Float"
 instance IntrospectTypeRef ('PrimitiveRef String) where
-  introspectTypeRef _ = pure $ tNonNull $ tSimple "String"
+  introspectTypeRef _ _ = pure $ tNonNull $ tSimple "String"
 instance IntrospectTypeRef ('PrimitiveRef Text) where
-  introspectTypeRef _ = pure $ tNonNull $ tSimple "Text"
+  introspectTypeRef _ _ = pure $ tNonNull $ tSimple "String"
 
 instance (IntrospectTypeRef r)
          => IntrospectTypeRef ('ListRef r) where
-  introspectTypeRef _ = tList <$> introspectTypeRef (Proxy @r)
+  introspectTypeRef _ isRet = tList <$> introspectTypeRef (Proxy @r) isRet
 instance (IntrospectTypeRef r)
          => IntrospectTypeRef ('OptionalRef r) where
-  introspectTypeRef _ = do
-    r <- introspectTypeRef (Proxy @r)
+  introspectTypeRef _ isRet = do
+    r <- introspectTypeRef (Proxy @r) isRet
     pure $ fromMaybe r (unwrapNonNull r)
 
 instance (KnownSymbol o)
          => IntrospectTypeRef ('ObjectRef o) where
-  introspectTypeRef _ = pure $ TypeRef $ T.pack $ symbolVal (Proxy @o)
+  introspectTypeRef _ _
+    = pure $ TypeRef $ T.pack $ symbolVal (Proxy @o)
+
+instance (IntrospectSchema sch, KnownSymbol t)
+         => IntrospectTypeRef ('SchemaRef sch t) where
+  introspectTypeRef _ isRet
+    = do let (k, suffix) = if isRet then (OBJECT, "R") else (INPUT_OBJECT, "")
+         introspectSchema k suffix (Proxy @sch)
+         pure $ TypeRef $ T.pack (symbolVal (Proxy @t)) <> suffix
+
+class IntrospectSchema (ts :: [Mu.TypeDef Symbol Symbol]) where
+  introspectSchema
+    :: TypeKind -> Text -> Proxy ts -> Writer TypeMap ()
+instance IntrospectSchema '[] where
+  introspectSchema _ _ _ = pure ()
+instance (KnownSymbol name, IntrospectSchemaFields fields, IntrospectSchema ts)
+         => IntrospectSchema ('Mu.DRecord name fields ': ts) where
+  introspectSchema k suffix _
+    = do let name = T.pack (symbolVal (Proxy @name)) <> suffix
+             fs   = introspectSchemaFields suffix (Proxy @fields)
+             t    = Type k (Just name) fs [] Nothing
+         -- add this one to the mix
+         tell (HM.singleton name t)
+         -- continue with the rest
+         introspectSchema k suffix (Proxy @ts)
+instance (KnownSymbol name, IntrospectSchemaEnum choices, IntrospectSchema ts)
+         => IntrospectSchema ('Mu.DEnum name choices ': ts) where
+  introspectSchema k suffix _
+    = do let name = T.pack (symbolVal (Proxy @name)) <> suffix
+             cs   = introspectSchemaEnum (Proxy @choices)
+             t    = Type ENUM (Just name) [] cs Nothing
+         -- add this one to the mix
+         tell (HM.singleton name t)
+         -- continue with the rest
+         introspectSchema k suffix (Proxy @ts)
+
+class IntrospectSchemaFields (fs :: [Mu.FieldDef Symbol Symbol]) where
+  introspectSchemaFields
+    :: T.Text -> Proxy fs -> [Field]
+instance IntrospectSchemaFields '[] where
+  introspectSchemaFields _ _ = []
+instance (KnownSymbol fname,IntrospectSchemaFieldType r, IntrospectSchemaFields fs)
+         => IntrospectSchemaFields ('Mu.FieldDef fname r ': fs) where
+  introspectSchemaFields suffix _
+    = let name = T.pack $ symbolVal (Proxy @fname)
+          ret  = introspectSchemaFieldType suffix (Proxy @r)
+          this = Field name [] ret
+      in this : introspectSchemaFields suffix (Proxy @fs)
+
+class IntrospectSchemaFieldType (t :: Mu.FieldType Symbol) where
+  introspectSchemaFieldType
+    :: T.Text -> Proxy t -> Type
+
+instance IntrospectSchemaFieldType ('Mu.TPrimitive Bool) where
+  introspectSchemaFieldType _ _ = tNonNull $ tSimple "Boolean"
+instance IntrospectSchemaFieldType ('Mu.TPrimitive Int32) where
+  introspectSchemaFieldType _ _ = tNonNull $ tSimple "Int"
+instance IntrospectSchemaFieldType ('Mu.TPrimitive Integer) where
+  introspectSchemaFieldType _ _ = tNonNull $ tSimple "Int"
+instance IntrospectSchemaFieldType ('Mu.TPrimitive Double) where
+  introspectSchemaFieldType _ _ = tNonNull $ tSimple "Float"
+instance IntrospectSchemaFieldType ('Mu.TPrimitive String) where
+  introspectSchemaFieldType _ _ = tNonNull $ tSimple "String"
+instance IntrospectSchemaFieldType ('Mu.TPrimitive Text) where
+  introspectSchemaFieldType _ _ = tNonNull $ tSimple "String"
+
+instance (IntrospectSchemaFieldType r)
+         => IntrospectSchemaFieldType ('Mu.TList r) where
+  introspectSchemaFieldType suffix _
+    = tList $ introspectSchemaFieldType suffix (Proxy @r)
+instance (IntrospectSchemaFieldType r)
+         => IntrospectSchemaFieldType ('Mu.TOption r) where
+  introspectSchemaFieldType suffix _
+    = let r = introspectSchemaFieldType suffix (Proxy @r)
+      in fromMaybe r (unwrapNonNull r)
+
+instance (KnownSymbol nm)
+         => IntrospectSchemaFieldType ('Mu.TSchematic nm) where
+  introspectSchemaFieldType suffix _
+    = TypeRef $ T.pack (symbolVal (Proxy @nm)) <> suffix
+
+class IntrospectSchemaEnum (c :: [Mu.ChoiceDef Symbol]) where
+  introspectSchemaEnum :: Proxy c -> [EnumValue]
+instance IntrospectSchemaEnum '[] where
+  introspectSchemaEnum _ = []
+instance (KnownSymbol nm, IntrospectSchemaEnum cs)
+         => IntrospectSchemaEnum ('Mu.ChoiceDef nm ': cs) where
+  introspectSchemaEnum _
+    = let this = EnumValue $ T.pack $ symbolVal (Proxy @nm)
+      in this : introspectSchemaEnum (Proxy @cs)
