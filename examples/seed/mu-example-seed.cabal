@@ -27,7 +27,8 @@ executable seed-server
   other-modules:    Schema
   default-language: Haskell2010
   build-depends:
-      base            >=4.12  && <5
+      async
+    , base            >=4.12  && <5
     , conduit
     , monad-logger
     , mu-graphql
@@ -38,8 +39,6 @@ executable seed-server
     , stm
     , text
     , wai
-    , wai-route
-    , warp
 
 executable seed-server-optics
   hs-source-dirs:   src
