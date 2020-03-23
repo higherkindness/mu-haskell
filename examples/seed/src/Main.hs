@@ -11,6 +11,7 @@
 module Main where
 
 import           Control.Concurrent       (threadDelay)
+import           Control.Concurrent.Async
 import           Control.Monad.IO.Class   (liftIO)
 import           Control.Monad.Logger
 import           Data.Conduit
@@ -23,8 +24,6 @@ import           Mu.GRpc.Server
 import           Mu.Schema
 import           Mu.Server
 import           Network.Wai
-import           Network.Wai.Handler.Warp
-import           Network.Wai.Route
 
 import           Schema
 
@@ -50,14 +49,12 @@ newtype PeopleResponse = PeopleResponse
 main :: IO ()
 main = do
   putStrLn "running seed application"
-  run 8080 $ flip route app404 $ compileRoutes
-    [ defRoute (str "proto" ./ end) $
-        \_ -> gRpcAppTrans msgProtoBuf runStderrLoggingT server
-    , defRoute (str "avro" ./ end) $
-        \_ -> gRpcAppTrans msgAvro runStderrLoggingT server
-    , defRoute (str "graphql" ./ end) $
-        \_ -> graphQLAppTransQuery runStderrLoggingT server (Proxy @"PeopleService")
-    ]
+  runConcurrently $ (\_ _ _ -> ())
+    <$> Concurrently (runGRpcAppTrans msgProtoBuf 8080 runStderrLoggingT server)
+    <*> Concurrently (runGRpcAppTrans msgAvro     8081 runStderrLoggingT server)
+    <*> Concurrently (runGraphQLAppTrans         50053 runStderrLoggingT server
+                        (Proxy @('Just "PeopleService"))
+                        (Proxy @'Nothing) (Proxy @'Nothing))
 
 
 -- Server implementation

@@ -6,6 +6,7 @@
 
 module Main where
 
+import           Control.Concurrent.Async
 import           Control.Concurrent.STM
 import           Data.Conduit
 import qualified Data.Conduit.Combinators as C
@@ -14,8 +15,6 @@ import           Data.Maybe               (fromMaybe)
 import           Data.Proxy
 import qualified Data.Text                as T
 import           DeferredFolds.UnfoldlM
-import           Network.Wai.Handler.Warp
-import           Network.Wai.Route
 import qualified StmContainers.Map        as M
 
 import           Mu.GraphQL.Server
@@ -30,14 +29,10 @@ main = do
   upd <- newTBMChanIO 100
   putStrLn "running health check application"
   let s = server m upd
-  run 50051 $ flip route app404 $ compileRoutes
-    [ defRoute (str "proto" ./ end) $
-        \_ -> gRpcApp msgProtoBuf s
-    , defRoute (str "avro" ./ end) $
-        \_ -> gRpcApp msgAvro s
-    , defRoute (str "graphql" ./ end) $
-        \_ -> graphQLAppQuery s (Proxy @"HealthCheckServiceFS2")
-    ]
+  runConcurrently $ (\_ _ _ -> ())
+    <$> Concurrently (runGRpcApp msgProtoBuf 50051 s)
+    <*> Concurrently (runGRpcApp msgAvro     50052 s)
+    <*> Concurrently (runGraphQLAppQuery     50053 s (Proxy @"HealthCheckServiceFS2"))
 
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/handler/HealthServiceImpl.scala
