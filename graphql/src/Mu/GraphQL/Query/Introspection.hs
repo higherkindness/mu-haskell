@@ -20,7 +20,6 @@ import           GHC.TypeLits
 import           Mu.Rpc
 import qualified Mu.Schema            as Mu
 
-
 type TypeMap = HM.HashMap T.Text Type
 
 data Schema
@@ -78,6 +77,9 @@ tNonNull = Type NON_NULL Nothing [] [] . Just
 unwrapNonNull :: Type -> Maybe Type
 unwrapNonNull (Type NON_NULL _ _ _ x) = x
 unwrapNonNull _                       = Nothing
+
+-- BUILD INTROSPECTION DATA
+-- ========================
 
 class Introspect (p :: Package')
                  (qr :: Maybe Symbol)

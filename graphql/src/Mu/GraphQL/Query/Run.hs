@@ -13,6 +13,7 @@
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
+{-# language ViewPatterns          #-}
 {-# OPTIONS_GHC -fprint-explicit-foralls #-}
 module Mu.GraphQL.Query.Run (
   GraphQLApp
@@ -33,12 +34,15 @@ import qualified Data.Aeson.Types               as Aeson
 import           Data.Conduit
 import           Data.Conduit.Combinators       (sinkList, yieldMany)
 import           Data.Conduit.TQueue
+import qualified Data.HashMap.Strict            as HM
 import           Data.Maybe
 import qualified Data.Text                      as T
 import           GHC.TypeLits
 import qualified Language.GraphQL.Draft.Syntax  as GQL
 
+import           Data.Coerce                    (coerce)
 import           Mu.GraphQL.Query.Definition
+import qualified Mu.GraphQL.Query.Introspection as Intro
 import           Mu.GraphQL.Query.Parse
 import           Mu.Rpc
 import           Mu.Schema
@@ -569,3 +573,71 @@ instance RunSchemaQuery sch (sch :/: l)
          => RunSchemaType sch ('TSchematic l) where
   runSchemaType (FSchematic t) (RetSchSchema r)
     = Just $ runSchemaQuery t r
+
+
+runIntroSchema
+  :: [T.Text] -> Intro.Schema -> GQL.SelectionSet
+  -> WriterT [GraphQLError] IO Aeson.Value
+runIntroSchema path s@(Intro.Schema qr mut sub ts) ss
+  = do things <- catMaybes <$> traverse runOne ss
+       pure $ Aeson.object things
+  where
+    runOne (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
+      = let realName :: T.Text = fromMaybe nm alias
+        in fmap (realName,) <$> case nm of
+             "description"
+               -> pure $ Just Aeson.Null
+             "directive"
+               -> pure $ Just $ Aeson.Array []
+             "queryType"
+               -> case qr >>= flip HM.lookup ts of
+                    Nothing -> pure Nothing
+                    Just ty -> runIntroType path s ty innerss
+             "mutationType"
+               -> case mut >>= flip HM.lookup ts of
+                    Nothing -> pure Nothing
+                    Just ty -> runIntroType path s ty innerss
+             "subscriptionType"
+               -> case sub >>= flip HM.lookup ts of
+                    Nothing -> pure Nothing
+                    Just ty -> runIntroType path s ty innerss
+             _ -> do tell [GraphQLError
+                             (ServerError Invalid
+                               $ "field '" <> T.unpack nm <> "' was not found on type '__Schema'")
+                             path]
+                     pure Nothing
+
+runIntroType
+  :: [T.Text] -> Intro.Schema -> Intro.Type -> GQL.SelectionSet
+  -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
+runIntroType path s@(Intro.Schema _ _ _ ts) (Intro.TypeRef t) ss
+  = case HM.lookup t ts of
+      Nothing -> pure Nothing
+      Just ty -> runIntroType path s ty ss
+runIntroType path s@(Intro.Schema _ _ _ ts) (Intro.Type k tnm fs vals ofT) ss
+  = do things <- catMaybes <$> traverse runOne ss
+       pure $ Just $ Aeson.object things
+  where
+    runOne (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
+      = let realName :: T.Text = fromMaybe nm alias
+        in fmap (realName,) <$> case nm of
+             "kind"
+                -> pure $ Just $ Aeson.String $ T.pack (show k)
+             "name"
+                -> pure $ Just $ maybe Aeson.Null Aeson.String tnm
+             "description"
+                -> pure $ Just Aeson.Null
+
+
+
+             -- unions and interfaces are not supported
+             "interfaces"
+                -> pure $ Just $ Aeson.Array []
+             "possibleTypes"
+                -> pure $ Just $ Aeson.Array []
+
+             _ -> do tell [GraphQLError
+                             (ServerError Invalid
+                               $ "field '" <> T.unpack nm <> "' was not found on type '__Type'")
+                             path]
+                     pure Nothing
