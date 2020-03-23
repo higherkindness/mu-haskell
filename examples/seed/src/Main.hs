@@ -51,7 +51,7 @@ main = do
   putStrLn "running seed application"
   runConcurrently $ (\_ _ _ -> ())
     <$> Concurrently (runGRpcAppTrans msgProtoBuf 8080 runStderrLoggingT server)
-    <*> Concurrently (runGRpcAppTrans msgAvro     8080 runStderrLoggingT server)
+    <*> Concurrently (runGRpcAppTrans msgAvro     8081 runStderrLoggingT server)
     <*> Concurrently (runGraphQLAppTrans         50053 runStderrLoggingT server
                         (Proxy @('Just "PeopleService"))
                         (Proxy @'Nothing) (Proxy @'Nothing))
