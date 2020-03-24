@@ -36,28 +36,28 @@ module Mu.GRpc.Server
 ) where
 
 import           Control.Concurrent.Async
-import           Control.Concurrent.STM       (atomically)
+import           Control.Concurrent.STM             (atomically)
 import           Control.Concurrent.STM.TMVar
 import           Control.Exception
 import           Control.Monad.Except
 import           Data.Avro
-import           Data.ByteString              (ByteString)
-import qualified Data.ByteString.Char8        as BS
+import           Data.ByteString                    (ByteString)
+import qualified Data.ByteString.Char8              as BS
 import           Data.Conduit
 import           Data.Conduit.TMChan
 import           Data.Kind
 import           Data.Proxy
-import           Network.GRPC.HTTP2.Encoding  (GRPCInput, GRPCOutput, gzip, uncompressed)
-import           Network.GRPC.HTTP2.Types     (GRPCStatus (..), GRPCStatusCode (..))
-import           Network.GRPC.Server.Handlers
-import           Network.GRPC.Server.Wai      as Wai
-import           Network.Wai                  (Application)
-import           Network.Wai.Handler.Warp     (Port, Settings, run, runSettings)
-import           Network.Wai.Handler.WarpTLS  (TLSSettings, runTLS)
+import           Network.GRPC.HTTP2.Encoding        (GRPCInput, GRPCOutput, gzip, uncompressed)
+import           Network.GRPC.HTTP2.Types           (GRPCStatus (..), GRPCStatusCode (..))
+import           Network.GRPC.Server.Handlers.Trans
+import           Network.GRPC.Server.Wai            as Wai
+import           Network.Wai                        (Application)
+import           Network.Wai.Handler.Warp           (Port, Settings, run, runSettings)
+import           Network.Wai.Handler.WarpTLS        (TLSSettings, runTLS)
 
 import           Mu.Adapter.ProtoBuf.Via
 import           Mu.GRpc.Avro
-import qualified Mu.GRpc.Avro                 as Avro
+import qualified Mu.GRpc.Avro                       as Avro
 import           Mu.GRpc.Bridge
 import           Mu.Rpc
 import           Mu.Schema
@@ -271,84 +271,87 @@ instance forall (sch :: Schema') sty (r :: Type).
 
 ---
 
-instance (GRPCInput (RPCTy p) (), GRPCOutput (RPCTy p) ())
+instance (MonadIO m, GRPCInput (RPCTy p) (), GRPCOutput (RPCTy p) ())
          => GRpcMethodHandler p m '[ ] 'RetNothing (m ()) where
   gRpcMethodHandler f _ _ _ rpc h
-    = unary @_ @() @() rpc (\_ _ -> raiseErrors (f h))
+    = unary @m @_ @() @() (raiseErrors . f) rpc (\_ _ -> h)
 
 -----
 
-instance (GRPCInput (RPCTy p) (), GRpcOutputWrapper p rref r)
+instance (MonadIO m, GRPCInput (RPCTy p) (), GRpcOutputWrapper p rref r)
          => GRpcMethodHandler p m '[ ] ('RetSingle rref) (m r) where
   gRpcMethodHandler f _ _ _ rpc h
-    = unary @_ @() @(GRpcOWTy p rref r)
-            rpc (\_ _ -> buildGRpcOWTy (Proxy @p) (Proxy @rref) <$> raiseErrors (f h))
+    = unary @m @_ @() @(GRpcOWTy p rref r)
+            (raiseErrors . f) rpc (\_ _ -> buildGRpcOWTy (Proxy @p) (Proxy @rref) <$> h)
 
 -----
 
-instance (GRPCInput (RPCTy p) (), GRpcOutputWrapper p rref r, MonadIO m)
+instance (MonadIO m, GRPCInput (RPCTy p) (), GRpcOutputWrapper p rref r, MonadIO m)
          => GRpcMethodHandler p m '[ ] ('RetStream rref)
                               (ConduitT r Void m () -> m ()) where
   gRpcMethodHandler f _ _ _ rpc h
-    = serverStream @_ @() @(GRpcOWTy p rref r) rpc sstream
+    = serverStream @m @_ @() @(GRpcOWTy p rref r) (raiseErrors . f) rpc sstream
     where sstream :: req -> ()
-                  -> IO ((), ServerStream (GRpcOWTy p rref r) ())
+                  -> m ((), ServerStream m (GRpcOWTy p rref r) ())
           sstream _ _ = do
             -- Variable to connect input and output
-            var <- newEmptyTMVarIO :: IO (TMVar (Maybe r))
+            var <- liftIO newEmptyTMVarIO :: m (TMVar (Maybe r))
             -- Start executing the handler
-            promise <- async (raiseErrors $ f (h (toTMVarConduit var)))
+            liftIO $ withAsync (raiseErrors $ f (h (toTMVarConduit var))) $ \promise -> do
               -- Return the information
-            let readNext _
-                  = do nextOutput <- atomically $ takeTMVar var
-                       case nextOutput of
-                         Just o  -> pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
-                         Nothing -> do cancel promise
-                                       pure Nothing
-            pure ((), ServerStream readNext)
+              let readNext _
+                    = do nextOutput <- liftIO $ atomically $ takeTMVar var
+                         case nextOutput of
+                           Just o  -> pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
+                           Nothing -> do liftIO $ cancel promise
+                                         pure Nothing
+              pure ((), ServerStream readNext)
 
 -----
 
-instance (GRpcInputWrapper p vref v, GRPCOutput (RPCTy p) ())
+instance (MonadIO m, GRpcInputWrapper p vref v, GRPCOutput (RPCTy p) ())
          => GRpcMethodHandler p m '[ 'ArgSingle aname anns vref ] 'RetNothing (v -> m ()) where
   gRpcMethodHandler f _ _ _ rpc h
-    = unary @_ @(GRpcIWTy p vref v) @()
-            rpc (\_ -> raiseErrors . f . h . unGRpcIWTy (Proxy @p) (Proxy @vref))
+    = unary @m @_ @(GRpcIWTy p vref v) @()
+            (raiseErrors . f) rpc (\_ -> h . unGRpcIWTy (Proxy @p) (Proxy @vref))
 
 -----
 
-instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r)
+instance (MonadIO m, GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r)
          => GRpcMethodHandler p m '[ 'ArgSingle aname anns vref ] ('RetSingle rref) (v -> m r) where
   gRpcMethodHandler f _ _ _ rpc h
-    = unary @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
-            rpc (\_ -> (buildGRpcOWTy (Proxy @p) (Proxy @rref) <$>)
-                       . raiseErrors . f . h
-                       . unGRpcIWTy (Proxy @p) (Proxy @vref))
+    = unary @m @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
+            (raiseErrors . f) rpc
+            (\_ -> (buildGRpcOWTy (Proxy @p) (Proxy @rref) <$>)
+                   . h
+                   . unGRpcIWTy (Proxy @p) (Proxy @vref))
 
 -----
 
-instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
+instance (MonadIO m, GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
          => GRpcMethodHandler p m '[ 'ArgStream aname anns vref ] ('RetSingle rref)
                               (ConduitT () v m () -> m r) where
   gRpcMethodHandler f _ _ _ rpc h
-    = clientStream @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
-                   rpc cstream
+    = clientStream @m @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
+                   (raiseErrors . f) rpc cstream
     where cstream :: req
-                  -> IO ((), ClientStream (GRpcIWTy p vref v)
+                  -> m ((), ClientStream m (GRpcIWTy p vref v)
                         (GRpcOWTy p rref r) ())
           cstream _ = do
             -- Create a new TMChan
-            chan <- newTMChanIO :: IO (TMChan v)
+            chan <- liftIO newTMChanIO :: m (TMChan v)
             let producer = sourceTMChan @m chan
             -- Start executing the handler in another thread
-            promise <- async (raiseErrors $ buildGRpcOWTy (Proxy @p) (Proxy @rref) <$> f (h producer))
-            -- Build the actual handler
-            let cstreamHandler _ newInput
-                  = atomically (writeTMChan chan (unGRpcIWTy (Proxy @p) (Proxy @vref) newInput))
-                cstreamFinalizer _
-                  = atomically (closeTMChan chan) >> wait promise
-            -- Return the information
-            pure ((), ClientStream cstreamHandler cstreamFinalizer)
+            liftIO $ withAsync (raiseErrors $ buildGRpcOWTy (Proxy @p) (Proxy @rref) <$> f (h producer))
+                   $ \promise -> do
+              -- Build the actual handler
+              let cstreamHandler _ newInput
+                    = liftIO $ atomically $
+                        writeTMChan chan (unGRpcIWTy (Proxy @p) (Proxy @vref) newInput)
+                  cstreamFinalizer _
+                    = liftIO $ atomically (closeTMChan chan) >> wait promise
+              -- Return the information
+              pure ((), ClientStream cstreamHandler cstreamFinalizer)
 
 -----
 
@@ -356,24 +359,24 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
          => GRpcMethodHandler p m '[ 'ArgSingle aname anns vref ] ('RetStream rref)
                               (v -> ConduitT r Void m () -> m ()) where
   gRpcMethodHandler f _ _ _ rpc h
-    = serverStream @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
-                   rpc sstream
+    = serverStream @m @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
+                   (raiseErrors . f) rpc sstream
     where sstream :: req -> GRpcIWTy p vref v
-                  -> IO ((), ServerStream (GRpcOWTy p rref r) ())
+                  -> m ((), ServerStream m (GRpcOWTy p rref r) ())
           sstream _ v = do
             -- Variable to connect input and output
-            var <- newEmptyTMVarIO :: IO (TMVar (Maybe r))
+            var <- liftIO newEmptyTMVarIO :: m (TMVar (Maybe r))
             -- Start executing the handler
             let v' = unGRpcIWTy (Proxy @p) (Proxy @vref) v
-            promise <- async (raiseErrors $ f (h v' (toTMVarConduit var)))
+            liftIO $ withAsync (raiseErrors $ f (h v' (toTMVarConduit var))) $ \promise -> do
               -- Return the information
-            let readNext _
-                  = do nextOutput <- atomically $ takeTMVar var
-                       case nextOutput of
-                         Just o  -> pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
-                         Nothing -> do cancel promise
-                                       pure Nothing
-            pure ((), ServerStream readNext)
+              let readNext _
+                    = do nextOutput <- liftIO $ atomically $ takeTMVar var
+                         case nextOutput of
+                           Just o  -> pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
+                           Nothing -> do liftIO $ cancel promise
+                                         pure Nothing
+              pure ((), ServerStream readNext)
 
 -----
 
@@ -381,33 +384,34 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
          => GRpcMethodHandler p m '[ 'ArgStream aname anns vref ] ('RetStream rref)
                               (ConduitT () v m () -> ConduitT r Void m () -> m ()) where
   gRpcMethodHandler f _ _ _ rpc h
-    = generalStream @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
-                    rpc bdstream
-    where bdstream :: req -> IO ( (), IncomingStream (GRpcIWTy p vref v) ()
-                                , (), OutgoingStream (GRpcOWTy p rref r) () )
+    = generalStream @m @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r)
+                    (raiseErrors . f) rpc bdstream
+    where bdstream :: req -> m ( (), IncomingStream m (GRpcIWTy p vref v) ()
+                               , (), OutgoingStream m (GRpcOWTy p rref r) () )
           bdstream _ = do
             -- Create a new TMChan and a new variable
-            chan <- newTMChanIO :: IO (TMChan v)
+            chan <- liftIO newTMChanIO :: m (TMChan v)
             let producer = sourceTMChan @m chan
-            var <- newEmptyTMVarIO :: IO (TMVar (Maybe r))
+            var <- liftIO newEmptyTMVarIO :: m (TMVar (Maybe r))
             -- Start executing the handler
-            promise <- async (raiseErrors $ f $ h producer (toTMVarConduit var))
-            -- Build the actual handler
-            let cstreamHandler _ newInput
-                  = atomically (writeTMChan chan (unGRpcIWTy (Proxy @p) (Proxy @vref) newInput))
-                cstreamFinalizer _
-                  = atomically (closeTMChan chan) >> wait promise
-                readNext _
-                  = do nextOutput <- atomically $ tryTakeTMVar var
-                       case nextOutput of
-                         Just (Just o) ->
-                           pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
-                         Just Nothing  -> do
-                           cancel promise
-                           pure Nothing
-                         Nothing -> -- no new elements to output
-                           readNext ()
-            pure ((), IncomingStream cstreamHandler cstreamFinalizer, (), OutgoingStream readNext)
+            liftIO $ withAsync (raiseErrors $ f $ h producer (toTMVarConduit var)) $ \promise -> do
+              -- Build the actual handler
+              let cstreamHandler _ newInput
+                    = liftIO $ atomically $
+                        writeTMChan chan (unGRpcIWTy (Proxy @p) (Proxy @vref) newInput)
+                  cstreamFinalizer _
+                    = liftIO $ atomically (closeTMChan chan) >> wait promise
+                  readNext _
+                    = do nextOutput <- liftIO $ atomically $ tryTakeTMVar var
+                         case nextOutput of
+                           Just (Just o) ->
+                             pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
+                           Just Nothing  -> do
+                             liftIO $ cancel promise
+                             pure Nothing
+                           Nothing -> -- no new elements to output
+                             readNext ()
+              pure ((), IncomingStream cstreamHandler cstreamFinalizer, (), OutgoingStream readNext)
 
 -----
 

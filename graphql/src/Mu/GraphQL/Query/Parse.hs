@@ -10,17 +10,21 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# language ViewPatterns          #-}
-{-# OPTIONS_GHC -Wincomplete-patterns #-}
+{-# OPTIONS_GHC -Wincomplete-patterns -fno-warn-orphans #-}
 
 module Mu.GraphQL.Query.Parse where
 
 import           Control.Monad.Except
+import qualified Data.Aeson                    as A
+import           Data.Coerce                   (coerce)
+import qualified Data.Foldable                 as F
 import qualified Data.HashMap.Strict           as HM
 import           Data.Int                      (Int32)
 import           Data.Kind
 import           Data.List                     (find)
 import           Data.Maybe
 import           Data.Proxy
+import           Data.Scientific               (floatingOrInteger)
 import           Data.SOP.NS
 import qualified Data.Text                     as T
 import           GHC.TypeLits
@@ -32,22 +36,33 @@ import           Mu.Rpc
 import           Mu.Schema
 
 type VariableMapC = HM.HashMap T.Text GQL.ValueConst
-type VariableMap = HM.HashMap T.Text GQL.Value
-type FragmentMap = HM.HashMap T.Text GQL.FragmentDefinition
+type VariableMap  = HM.HashMap T.Text GQL.Value
+type FragmentMap  = HM.HashMap T.Text GQL.FragmentDefinition
+
+instance A.FromJSON GQL.ValueConst where
+  parseJSON A.Null       = pure GQL.VCNull
+  parseJSON (A.Bool b)   = pure $ GQL.VCBoolean b
+  parseJSON (A.String s) = pure $ GQL.VCString $ coerce s
+  parseJSON (A.Number n) = pure $ either GQL.VCFloat GQL.VCInt $ floatingOrInteger n
+  parseJSON (A.Array xs) = GQL.VCList . GQL.ListValueG . F.toList <$> traverse A.parseJSON xs
+  parseJSON (A.Object o) = GQL.VCObject . GQL.ObjectValueG . fmap toObjFld . HM.toList <$> traverse A.parseJSON o
+    where
+      toObjFld :: (T.Text, GQL.ValueConst) -> GQL.ObjectFieldG GQL.ValueConst
+      toObjFld (k, v) = GQL.ObjectFieldG (coerce k) v
 
 parseDoc ::
-  forall qr mut p f.
-  ( MonadError T.Text f, ParseTypedDoc p qr mut ) =>
+  forall qr mut sub p f.
+  ( MonadError T.Text f, ParseTypedDoc p qr mut sub ) =>
   Maybe T.Text -> VariableMapC ->
   GQL.ExecutableDocument ->
-  f (Document p qr mut)
+  f (Document p qr mut sub)
 -- If there's no operation name, there must be only one query
-parseDoc Nothing _ (GQL.ExecutableDocument defns)
+parseDoc Nothing vmap (GQL.ExecutableDocument defns)
   = case GQL.partitionExDefs defns of
       ([unnamed], [], frs)
         -> parseTypedDocQuery HM.empty (fragmentsToMap frs) unnamed
       ([], [named], frs)
-        -> parseTypedDoc HM.empty (fragmentsToMap frs) named
+        -> parseTypedDoc vmap (fragmentsToMap frs) named
       ([], [], _) -> throwError "no operation to execute"
       (_,  [], _) -> throwError "more than one unnamed query"
       ([], _, _)  -> throwError "more than one named operation but no 'operationName' given"
@@ -68,10 +83,10 @@ fragmentsToMap = HM.fromList . map fragmentToThingy
         fragmentToThingy f = (GQL.unName $ GQL._fdName f, f)
 
 parseTypedDoc ::
-  (MonadError T.Text f, ParseTypedDoc p qr mut) =>
+  (MonadError T.Text f, ParseTypedDoc p qr mut sub) =>
   VariableMapC -> FragmentMap ->
   GQL.TypedOperationDefinition ->
-  f (Document p qr mut)
+  f (Document p qr mut sub)
 parseTypedDoc vmap frmap tod
   = let defVmap = parseVariableMap (GQL._todVariableDefinitions tod)
         finalVmap = constToValue <$> HM.union vmap defVmap  -- first one takes precedence
@@ -81,19 +96,44 @@ parseTypedDoc vmap frmap tod
         GQL.OperationTypeMutation
           -> parseTypedDocMutation finalVmap frmap (GQL._todSelectionSet tod)
         GQL.OperationTypeSubscription
-          -> throwError "subscriptions are not (yet) supported"
+          -> parseTypedDocSubscription finalVmap frmap (GQL._todSelectionSet tod)
 
-class ParseTypedDoc (p :: Package') (qr :: Maybe Symbol) (mut :: Maybe Symbol) where
+class ParseTypedDoc (p :: Package')
+                    (qr :: Maybe Symbol) (mut :: Maybe Symbol) (sub :: Maybe Symbol) where
   parseTypedDocQuery ::
     MonadError T.Text f =>
     VariableMap -> FragmentMap ->
     GQL.SelectionSet ->
-    f (Document p qr mut)
+    f (Document p qr mut sub)
   parseTypedDocMutation ::
     MonadError T.Text f =>
     VariableMap -> FragmentMap ->
     GQL.SelectionSet ->
-    f (Document p qr mut)
+    f (Document p qr mut sub)
+  parseTypedDocSubscription ::
+    MonadError T.Text f =>
+    VariableMap -> FragmentMap ->
+    GQL.SelectionSet ->
+    f (Document p qr mut sub)
+
+instance
+  ( p ~ 'Package pname ss,
+    LookupService ss qr ~ 'Service qr qanns qmethods,
+    KnownName qr, ParseMethod p qmethods,
+    LookupService ss mut ~ 'Service mut manns mmethods,
+    KnownName mut, ParseMethod p mmethods,
+    LookupService ss sub ~ 'Service sub sanns smethods,
+    KnownName sub, ParseMethod p smethods
+  ) => ParseTypedDoc p ('Just qr) ('Just mut) ('Just sub) where
+  parseTypedDocQuery vmap frmap sset
+    = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
+  parseTypedDocMutation vmap frmap sset
+    = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
+  parseTypedDocSubscription vmap frmap sset
+    = do q <- parseQuery Proxy Proxy vmap frmap sset
+         case q of
+           [one] -> pure $ SubscriptionDoc one
+           _     -> throwError "subscriptions may only have one field"
 
 instance
   ( p ~ 'Package pname ss,
@@ -101,38 +141,95 @@ instance
     KnownName qr, ParseMethod p qmethods,
     LookupService ss mut ~ 'Service mut manns mmethods,
     KnownName mut, ParseMethod p mmethods
-  ) => ParseTypedDoc p ('Just qr) ('Just mut) where
+  ) => ParseTypedDoc p ('Just qr) ('Just mut) 'Nothing where
   parseTypedDocQuery vmap frmap sset
     = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
   parseTypedDocMutation vmap frmap sset
     = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
+  parseTypedDocSubscription _ _ _
+    = throwError "no subscriptions are defined in the schema"
+
+instance
+  ( p ~ 'Package pname ss,
+    LookupService ss qr ~ 'Service qr qanns qmethods,
+    KnownName qr, ParseMethod p qmethods,
+    LookupService ss sub ~ 'Service sub sanns smethods,
+    KnownName sub, ParseMethod p smethods
+  ) => ParseTypedDoc p ('Just qr) 'Nothing ('Just sub) where
+  parseTypedDocQuery vmap frmap sset
+    = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
+  parseTypedDocMutation _ _ _
+    = throwError "no mutations are defined in the schema"
+  parseTypedDocSubscription vmap frmap sset
+    = do q <- parseQuery Proxy Proxy vmap frmap sset
+         case q of
+           [one] -> pure $ SubscriptionDoc one
+           _     -> throwError "subscriptions may only have one field"
 
 instance
   ( p ~ 'Package pname ss,
     LookupService ss qr ~ 'Service qr qanns qmethods,
     KnownName qr, ParseMethod p qmethods
-  ) => ParseTypedDoc p ('Just qr) 'Nothing where
+  ) => ParseTypedDoc p ('Just qr) 'Nothing 'Nothing where
   parseTypedDocQuery vmap frmap sset
     = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
   parseTypedDocMutation _ _ _
     = throwError "no mutations are defined in the schema"
+  parseTypedDocSubscription _ _ _
+    = throwError "no subscriptions are defined in the schema"
+
+instance
+  ( p ~ 'Package pname ss,
+    LookupService ss mut ~ 'Service mut manns mmethods,
+    KnownName mut, ParseMethod p mmethods,
+    LookupService ss sub ~ 'Service sub sanns smethods,
+    KnownName sub, ParseMethod p smethods
+  ) => ParseTypedDoc p 'Nothing ('Just mut) ('Just sub) where
+  parseTypedDocQuery _ _ _
+    = throwError "no queries are defined in the schema"
+  parseTypedDocMutation vmap frmap sset
+    = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
+  parseTypedDocSubscription vmap frmap sset
+    = do q <- parseQuery Proxy Proxy vmap frmap sset
+         case q of
+           [one] -> pure $ SubscriptionDoc one
+           _     -> throwError "subscriptions may only have one field"
 
 instance
   ( p ~ 'Package pname ss,
     LookupService ss mut ~ 'Service mut manns mmethods,
     KnownName mut, ParseMethod p mmethods
-  ) => ParseTypedDoc p 'Nothing ('Just mut) where
+  ) => ParseTypedDoc p 'Nothing ('Just mut) 'Nothing where
   parseTypedDocQuery _ _ _
     = throwError "no queries are defined in the schema"
   parseTypedDocMutation vmap frmap sset
     = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
+  parseTypedDocSubscription _ _ _
+    = throwError "no subscriptions are defined in the schema"
 
 instance
-  ParseTypedDoc p 'Nothing 'Nothing where
+  ( p ~ 'Package pname ss,
+    LookupService ss sub ~ 'Service sub sanns smethods,
+    KnownName sub, ParseMethod p smethods
+  ) => ParseTypedDoc p 'Nothing 'Nothing ('Just sub) where
   parseTypedDocQuery _ _ _
     = throwError "no queries are defined in the schema"
   parseTypedDocMutation _ _ _
     = throwError "no mutations are defined in the schema"
+  parseTypedDocSubscription vmap frmap sset
+    = do q <- parseQuery Proxy Proxy vmap frmap sset
+         case q of
+           [one] -> pure $ SubscriptionDoc one
+           _     -> throwError "subscriptions may only have one field"
+
+instance
+  ParseTypedDoc p 'Nothing 'Nothing 'Nothing where
+  parseTypedDocQuery _ _ _
+    = throwError "no queries are defined in the schema"
+  parseTypedDocMutation _ _ _
+    = throwError "no mutations are defined in the schema"
+  parseTypedDocSubscription _ _ _
+    = throwError "no subscriptions are defined in the schema"
 
 parseVariableMap :: [GQL.VariableDefinition] -> VariableMapC
 parseVariableMap vmap
@@ -171,6 +268,10 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
     fieldToMethod (GQL.Field alias name args dirs sels)
       | any (shouldSkip vmap) dirs
       = pure Nothing
+      | GQL.unName name == "__typename"
+      = case sels of
+          [] -> pure $ Just $ TypeNameQuery $ GQL.unName . GQL.unAlias <$> alias
+          _  -> throwError "__typename does not admit selection of subfields"
       | otherwise
       = Just . OneMethodQuery (GQL.unName . GQL.unAlias <$> alias)
          <$> selectMethod (T.pack $ nameVal (Proxy @s)) vmap frmap name args sels

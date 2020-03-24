@@ -11,13 +11,20 @@ import           Data.Text
 import           Mu.Rpc
 import           Mu.Schema
 
-data Document (p :: Package snm mnm anm) (qr :: Maybe snm) (mut :: Maybe snm) where
-  QueryDoc    :: LookupService ss qr ~ 'Service qr qanns qms
-              => ServiceQuery ('Package pname ss) (LookupService ss qr)
-              -> Document ('Package pname ss) ('Just qr) mut
-  MutationDoc :: LookupService ss mut ~ 'Service mut manns mms
-              => ServiceQuery ('Package pname ss) (LookupService ss mut)
-              -> Document ('Package pname ss) qr ('Just mut)
+data Document (p :: Package snm mnm anm)
+              (qr :: Maybe snm) (mut :: Maybe snm) (sub :: Maybe snm) where
+  QueryDoc
+    :: LookupService ss qr ~ 'Service qr qanns qms
+    => ServiceQuery ('Package pname ss) (LookupService ss qr)
+    -> Document ('Package pname ss) ('Just qr) mut sub
+  MutationDoc
+    :: LookupService ss mut ~ 'Service mut manns mms
+    => ServiceQuery ('Package pname ss) (LookupService ss mut)
+    -> Document ('Package pname ss) qr ('Just mut) sub
+  SubscriptionDoc
+    :: LookupService ss sub ~ 'Service sub manns mms
+    => OneMethodQuery ('Package pname ss) (LookupService ss sub)
+    -> Document ('Package pname ss) qr mut ('Just sub)
 
 type ServiceQuery (p :: Package snm mnm anm) (s :: Service snm mnm anm)
   = [OneMethodQuery p s]
@@ -26,6 +33,9 @@ data OneMethodQuery (p :: Package snm mnm anm) (s :: Service snm mnm anm) where
   OneMethodQuery
     :: Maybe Text
     -> NS (ChosenMethodQuery p) ms
+    -> OneMethodQuery p ('Service nm anns ms)
+  TypeNameQuery
+    :: Maybe Text
     -> OneMethodQuery p ('Service nm anns ms)
 
 data ChosenMethodQuery (p :: Package snm mnm anm) (m :: Method snm mnm anm) where
