@@ -274,7 +274,7 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
           _        -> throwError "__typename does not admit arguments nor selection of subfields"
       | GQL.unName name == "__schema"
       = case args of
-          [] -> pure $ Just $ SchemaQuery (GQL.unName . GQL.unAlias <$> alias) sels
+          [] -> Just . SchemaQuery (GQL.unName . GQL.unAlias <$> alias) <$> unFragment frmap sels
           _  -> throwError "__schema does not admit selection of subfields"
       | GQL.unName name == "__type"
       = let alias' = GQL.unName . GQL.unAlias <$> alias
@@ -284,7 +284,7 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
         in case args of
           [GQL.Argument _ val]
             -> case getString val of
-                 Just s -> pure $ Just $ TypeQuery alias' s sels
+                 Just s -> Just . TypeQuery alias' s <$> unFragment frmap sels
                  _      -> throwError "__type requires a string argument"
           _ -> throwError "__type requires one single argument"
       | otherwise
@@ -325,6 +325,8 @@ unFragment frmap (GQL.SelectionFragmentSpread (GQL.FragmentSpread nm _) : ss)
 unFragment frmap (GQL.SelectionField (GQL.Field al nm args dir innerss) : ss)
   = (:) <$> (GQL.SelectionField . GQL.Field al nm args dir <$> unFragment frmap innerss)
         <*> unFragment frmap ss
+unFragment _ _
+  = throwError "inline fragments are not (yet) supported"
 
 class ParseMethod (p :: Package') (ms :: [Method']) where
   selectMethod ::

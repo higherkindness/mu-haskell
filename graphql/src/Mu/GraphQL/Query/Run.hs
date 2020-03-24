@@ -589,7 +589,7 @@ runIntroSchema path s@(Intro.Schema qr mut sub ts) ss
         in fmap (realName,) <$> case nm of
              "description"
                -> pure $ Just Aeson.Null
-             "directive"
+             "directives"
                -> pure $ Just $ Aeson.Array []
              "queryType"
                -> case qr >>= flip HM.lookup ts of

@@ -94,7 +94,9 @@ instance ( IntrospectServices ss sub
          , KnownMaybeSymbol sub)
          => Introspect ('Package nm ss) qr mut sub where
   introspect _ _ _ _
-    = let (_, ts) = runWriter $ introspectServices (Proxy @ss) (Proxy @sub)
+    = let (_, ts) = runWriter $
+           introspectServices (Proxy @ss) (Proxy @sub) >>
+           tell (HM.fromList ((\i -> (i, tSimple i)) <$> ["Int", "Float", "String", "Boolean", "ID"]))
       in Schema (maybeSymbolVal (Proxy @qr))
                 (maybeSymbolVal (Proxy @mut))
                 (maybeSymbolVal (Proxy @sub))
