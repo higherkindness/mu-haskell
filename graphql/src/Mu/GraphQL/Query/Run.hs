@@ -311,6 +311,17 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, KnownName sname, RunMet
       runOneQuery (SchemaQuery nm ss)
         = do let realName = fromMaybe "__schema" nm
              Just . (realName, ) <$> runIntroSchema path sch ss
+      -- handle __type
+      runOneQuery (TypeQuery nm ty ss)
+        = do let realName = fromMaybe "__schema" nm
+             res <- runIntroType path sch (Intro.TypeRef ty) ss
+             case res of
+               Just val -> pure $ Just (realName, val)
+               Nothing  -> do tell [GraphQLError
+                                     (ServerError Invalid
+                                       $ "cannot find type '" <> T.unpack ty <> "'")
+                                    path]
+                              pure $ Just (realName, Aeson.Null)
   -- subscriptions should only have one element
   runSubscriptionFindHandler f whole path (this :<&>: _) inh (OneMethodQuery nm args) sink
     = runMethodSubscription f whole (Proxy @sname) path nm inh this args sink
@@ -606,7 +617,7 @@ runIntroType path s@(Intro.Schema _ _ _ ts) (Intro.TypeRef t) ss
   = case HM.lookup t ts of
       Nothing -> pure Nothing
       Just ty -> runIntroType path s ty ss
-runIntroType path s@(Intro.Schema _ _ _ ts) (Intro.Type k tnm fs vals ofT) ss
+runIntroType path s (Intro.Type k tnm fs vals ofT) ss
   = do things <- catMaybes <$> traverse runOne ss
        pure $ Just $ Aeson.object things
   where
@@ -746,3 +757,5 @@ runIntroType path s@(Intro.Schema _ _ _ ts) (Intro.Type k tnm fs vals ofT) ss
                                $ "field '" <> T.unpack nm <> "' was not found on type '__Field'")
                              ipath]
                   pure Nothing
+    -- we do not support spreads here
+    runIntroInput _ _ _ = pure Nothing

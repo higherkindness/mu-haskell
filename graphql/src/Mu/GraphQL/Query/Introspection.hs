@@ -162,6 +162,16 @@ instance ( KnownMaybeSymbol nm
          -- TODO Find default value
          let this = Input (fromMaybe "arg" nm) Nothing t
          (this :) <$> introspectInputs (Proxy @args)
+instance ( KnownMaybeSymbol nm
+         , IntrospectTypeRef r
+         , IntrospectInputs args )
+         => IntrospectInputs ('ArgStream nm anns r ': args) where
+  introspectInputs _
+    = do let nm = maybeSymbolVal (Proxy @nm)
+         t <- tList <$> introspectTypeRef (Proxy @r) False
+         -- TODO Find default value
+         let this = Input (fromMaybe "arg" nm) Nothing t
+         (this :) <$> introspectInputs (Proxy @args)
 
 class IntrospectReturn (r :: Return Symbol) (isSub :: Bool) where
   introspectReturn
