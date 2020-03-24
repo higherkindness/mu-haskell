@@ -12,7 +12,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ~/.stack
-        key: dot-stack-${{ hashFiles('docs/**/*.md') }}
+        key: dot-stack-${{ hashFiles('stack.yaml') }}
         restore-keys: |
           dot-stack-
     - name: Get Standalone Haddock
