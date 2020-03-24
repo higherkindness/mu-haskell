@@ -438,7 +438,7 @@
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">main</span> <span class="o">=</span> <span class="kr">do</span> <span class="o">...</span>
-  <span class="kr">where</span> <span class="n">setup</span> <span class="n">config</span> <span class="o">=</span> <span class="n">initGRpc</span> <span class="n">config</span>
+  <span class="kr">where</span> <span class="n">setup</span> <span class="n">config</span> <span class="o">=</span> <span class="n">initGRpc</span> <span class="n">config</span> <span class="n">msgProtoBuf</span>
 </code></pre></div></div>
 
 <p>To call a method, you use the corresponding getter (for those familiar with optics, a version of a lens which does not allow to set). This means that your code reads <code class="highlighter-rouge">client ^. #method</code>, where <code class="highlighter-rouge">client</code> is the value obtained previously in the call to <code class="highlighter-rouge">initGRpc</code>.</p>
