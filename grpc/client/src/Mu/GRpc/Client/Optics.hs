@@ -56,7 +56,7 @@ newtype GRpcConnection (s :: Package') (p :: GRpcMessageProtocol)
 --   inferred from the usage later on.
 --   However, it can also be made explicit by using
 --
---   > initGRpc config @Service
+--   > initGRpc config msgProtoBuf @Service
 --
 initGRpc :: G.GrpcClientConfig  -- ^ gRPC configuration
          -> Proxy p

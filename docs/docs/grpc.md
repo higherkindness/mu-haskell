@@ -54,7 +54,7 @@ The simplest way to call methods is to use the `optics`-based API. In that case,
 ```haskell
 main :: IO ()
 main = do ...
-  where setup config = initGRpc config
+  where setup config = initGRpc config msgProtoBuf
 ```
 
 To call a method, you use the corresponding getter (for those familiar with optics, a version of a lens which does not allow to set). This means that your code reads `client ^. #method`, where `client` is the value obtained previously in the call to `initGRpc`.
