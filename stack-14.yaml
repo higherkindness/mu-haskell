@@ -40,6 +40,7 @@ extra-deps:
 - wai-route-1.0.0
 - pattern-trie-0.1.0
 # missing in LTS 14.x
+- conduit-1.3.2
 - primitive-0.7.0.0
 - primitive-extras-0.8
 - primitive-unlifted-0.1.2.0

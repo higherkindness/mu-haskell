@@ -32,7 +32,6 @@ import qualified Data.Aeson                     as Aeson
 import qualified Data.Aeson.Types               as Aeson
 import           Data.Conduit
 import           Data.Conduit.Combinators       (sinkList, yieldMany)
-import           Data.Conduit.Internal          (ConduitT (..), Pipe (..))
 import           Data.Conduit.TQueue
 import           Data.Maybe
 import qualified Data.Text                      as T
@@ -463,19 +462,6 @@ instance (MonadIO m, MonadError ServerError m, ResultConversion m p whole chn r 
           [] -> pure $ Aeson.object [ ("data", fromMaybe Aeson.Null data_) ]
           _  -> pure $ Aeson.object [ ("data", fromMaybe Aeson.Null data_)
                                     , ("errors", Aeson.listValue errValue errors) ]
-
-mapInputM :: Monad m
-          => (i1 -> m i2) -- ^ map initial input to new input
-          -> (i2 -> m (Maybe i1)) -- ^ map new leftovers to initial leftovers
-          -> ConduitT i2 o m r
-          -> ConduitT i1 o m r
-mapInputM f f' (ConduitT c0) = ConduitT $ \rest -> let
-    go (HaveOutput p o) = HaveOutput (go p) o
-    go (NeedInput p c)  = NeedInput (\i -> PipeM $ go . p <$> f i) (go . c)
-    go (Done r)         = rest r
-    go (PipeM mp)       = PipeM $ fmap go mp
-    go (Leftover p i)   = PipeM $ (\x -> maybe id (flip Leftover) x (go p)) <$> f' i
-    in go (c0 Done)
 
 class FromRef chn ref t
       => ArgumentConversion chn ref t where
