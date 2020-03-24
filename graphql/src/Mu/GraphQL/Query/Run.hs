@@ -137,13 +137,17 @@ instance
   , KnownSymbol sub
   , RunQueryFindHandler m p hs chn ss (LookupService ss sub) hs
   , MappingRight chn sub ~ ()
+  , Intro.Introspect p ('Just qr) ('Just mut) ('Just sub)
   ) => RunDocument p ('Just qr) ('Just mut) ('Just sub) m chn hs where
-  runDocument f svr (QueryDoc q)
-    = runQuery f svr [] () q
-  runDocument f svr (MutationDoc q)
-    = runQuery f svr [] () q
-  runDocument _ _ (SubscriptionDoc _)
-    = pure $ singleErrValue "cannot execute subscriptions in this wire"
+  runDocument f svr d
+    = let i = Intro.introspect (Proxy @p) (Proxy @('Just qr)) (Proxy @('Just mut)) (Proxy @('Just sub))
+      in case d of
+           QueryDoc q
+             -> runQuery f i svr [] () q
+           MutationDoc q
+             -> runQuery f i svr [] () q
+           SubscriptionDoc _
+             -> pure $ singleErrValue "cannot execute subscriptions in this wire"
   runDocumentSubscription f svr (SubscriptionDoc d)
     = runSubscription f svr [] () d
   runDocumentSubscription f svr d = yieldDocument f svr d
@@ -156,11 +160,15 @@ instance
   , KnownSymbol mut
   , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
   , MappingRight chn mut ~ ()
+  , Intro.Introspect p ('Just qr) ('Just mut) 'Nothing
   ) => RunDocument p ('Just qr) ('Just mut) 'Nothing m chn hs where
-  runDocument f svr (QueryDoc q)
-    = runQuery f svr [] () q
-  runDocument f svr (MutationDoc q)
-    = runQuery f svr [] () q
+  runDocument f svr d
+    = let i = Intro.introspect (Proxy @p) (Proxy @('Just qr)) (Proxy @('Just mut)) (Proxy @'Nothing)
+      in case d of
+           QueryDoc q
+             -> runQuery f i svr [] () q
+           MutationDoc q
+             -> runQuery f i svr [] () q
   runDocumentSubscription = yieldDocument
 
 instance
@@ -171,11 +179,15 @@ instance
   , KnownSymbol sub
   , RunQueryFindHandler m p hs chn ss (LookupService ss sub) hs
   , MappingRight chn sub ~ ()
+  , Intro.Introspect p ('Just qr) 'Nothing ('Just sub)
   ) => RunDocument p ('Just qr) 'Nothing ('Just sub) m chn hs where
-  runDocument f svr (QueryDoc q)
-    = runQuery f svr [] () q
-  runDocument _ _ (SubscriptionDoc _)
-    = pure $ singleErrValue "cannot execute subscriptions in this wire"
+  runDocument f svr d
+    = let i = Intro.introspect (Proxy @p) (Proxy @('Just qr)) (Proxy @'Nothing) (Proxy @('Just sub))
+      in case d of
+           QueryDoc q
+             -> runQuery f i svr [] () q
+           SubscriptionDoc _
+             -> pure $ singleErrValue "cannot execute subscriptions in this wire"
   runDocumentSubscription f svr (SubscriptionDoc d)
     = runSubscription f svr [] () d
   runDocumentSubscription f svr d = yieldDocument f svr d
@@ -185,51 +197,18 @@ instance
   , KnownSymbol qr
   , RunQueryFindHandler m p hs chn ss (LookupService ss qr) hs
   , MappingRight chn qr ~ ()
+  , Intro.Introspect p ('Just qr) 'Nothing 'Nothing
   ) => RunDocument p ('Just qr) 'Nothing 'Nothing m chn hs where
-  runDocument f svr (QueryDoc q)
-    = runQuery f svr [] () q
+  runDocument f svr d
+    = let i = Intro.introspect (Proxy @p) (Proxy @('Just qr)) (Proxy @'Nothing) (Proxy @'Nothing)
+      in case d of
+           QueryDoc q
+             -> runQuery f i svr [] () q
   runDocumentSubscription = yieldDocument
 
 instance
-  ( p ~ 'Package pname ss
-  , KnownSymbol mut
-  , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
-  , MappingRight chn mut ~ ()
-  , KnownSymbol sub
-  , RunQueryFindHandler m p hs chn ss (LookupService ss sub) hs
-  , MappingRight chn sub ~ ()
-  ) => RunDocument p 'Nothing ('Just mut) ('Just sub) m chn hs where
-  runDocument f svr (MutationDoc q)
-    = runQuery f svr [] () q
-  runDocument _ _ (SubscriptionDoc _)
-    = pure $ singleErrValue "cannot execute subscriptions in this wire"
-  runDocumentSubscription f svr (SubscriptionDoc d)
-    = runSubscription f svr [] () d
-  runDocumentSubscription f svr d = yieldDocument f svr d
-
-instance
-  ( p ~ 'Package pname ss
-  , KnownSymbol mut
-  , RunQueryFindHandler m p hs chn ss (LookupService ss mut) hs
-  , MappingRight chn mut ~ ()
-  ) => RunDocument p 'Nothing ('Just mut) 'Nothing m chn hs where
-  runDocument f svr (MutationDoc q)
-    = runQuery f svr [] () q
-  runDocumentSubscription = yieldDocument
-
-instance
-  ( p ~ 'Package pname ss
-  , KnownSymbol sub
-  , RunQueryFindHandler m p hs chn ss (LookupService ss sub) hs
-  , MappingRight chn sub ~ ()
-  ) => RunDocument p 'Nothing 'Nothing ('Just sub) m chn hs where
-  runDocument _ _ (SubscriptionDoc _)
-    = pure $ singleErrValue "cannot execute subscriptions in this wire"
-  runDocumentSubscription f svr (SubscriptionDoc d)
-    = runSubscription f svr [] () d
-
-instance
-  RunDocument p 'Nothing 'Nothing 'Nothing m chn hs where
+  ( TypeError ('Text "you need to have a query in your schema")
+  ) => RunDocument p 'Nothing mut sub m chn hs where
   runDocument _ = error "this should never be called"
   runDocumentSubscription _ = error "this should never be called"
 
@@ -256,12 +235,12 @@ runQuery
      , s ~ 'Service sname sanns ms
      , inh ~ MappingRight chn sname )
   => (forall a. m a -> ServerErrorIO a)
-  -> ServerT chn p m hs
+  -> Intro.Schema -> ServerT chn p m hs
   -> [T.Text]
   -> inh
   -> ServiceQuery p s
   -> WriterT [GraphQLError] IO Aeson.Value
-runQuery f whole@(Services ss) path = runQueryFindHandler f whole path ss
+runQuery f sch whole@(Services ss) path = runQueryFindHandler f sch whole path ss
 
 runSubscription
   :: forall m p s pname ss hs sname sanns ms chn inh.
@@ -285,7 +264,7 @@ class RunQueryFindHandler m p whole chn ss s hs where
        , s ~ 'Service sname sanns ms
        , inh ~ MappingRight chn sname )
     => (forall a. m a -> ServerErrorIO a)
-    -> ServerT chn p m whole
+    -> Intro.Schema -> ServerT chn p m whole
     -> [T.Text]
     -> ServicesT chn ss m hs
     -> inh
@@ -311,13 +290,13 @@ instance TypeError ('Text "Could not find handler for " ':<>: 'ShowType s)
 instance {-# OVERLAPPABLE #-}
          RunQueryFindHandler m p whole chn ss s hs
          => RunQueryFindHandler m p whole chn (other ': ss) s (h ': hs) where
-  runQueryFindHandler f whole path (_ :<&>: that)
-    = runQueryFindHandler f whole path that
+  runQueryFindHandler f sch whole path (_ :<&>: that)
+    = runQueryFindHandler f sch whole path that
   runSubscriptionFindHandler f whole path (_ :<&>: that)
     = runSubscriptionFindHandler f whole path that
 instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, KnownName sname, RunMethod m p whole chn sname ms h)
          => RunQueryFindHandler m p whole chn (s ': ss) s (h ': hs) where
-  runQueryFindHandler f whole path (this :<&>: _) inh queries
+  runQueryFindHandler f sch whole path (this :<&>: _) inh queries
     = Aeson.object . catMaybes <$> mapM runOneQuery queries
     where
       -- if we include the signature we have to write
@@ -328,6 +307,10 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, KnownName sname, RunMet
       runOneQuery (TypeNameQuery nm)
         = let realName = fromMaybe "__typename" nm
           in pure $ Just (realName, Aeson.String $ T.pack $ nameVal (Proxy @sname))
+      -- handle __schema
+      runOneQuery (SchemaQuery nm ss)
+        = do let realName = fromMaybe "__schema" nm
+             Just . (realName, ) <$> runIntroSchema path sch ss
   -- subscriptions should only have one element
   runSubscriptionFindHandler f whole path (this :<&>: _) inh (OneMethodQuery nm args) sink
     = runMethodSubscription f whole (Proxy @sname) path nm inh this args sink
@@ -335,6 +318,11 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, KnownName sname, RunMet
     = let realName = fromMaybe "__typename" nm
           o = Aeson.object [(realName, Aeson.String $ T.pack $ nameVal (Proxy @sname))]
       in runConduit $ yieldMany ([o] :: [Aeson.Value]) .| sink
+  runSubscriptionFindHandler _ _ _ _ _ _ sink
+    = runConduit $ yieldMany
+                   ([singleErrValue "__schema and __type are not supported in subscriptions"]
+                      :: [Aeson.Value])
+                   .| sink
 
 class RunMethod m p whole chn sname ms hs where
   runMethod
@@ -502,7 +490,9 @@ instance ( MappingRight chn ref ~ t
          , RunQueryFindHandler m ('Package pname ss) whole chn ss ('Service sname sanns ms) whole)
          => ResultConversion m ('Package pname ss) whole chn ('ObjectRef ref) t where
   convertResult f whole path (RetObject q) h
-    = Just <$> runQuery @m @('Package pname ss) @(LookupService ss ref) f whole path h q
+    = Just <$> runQuery @m @('Package pname ss) @(LookupService ss ref) f
+                        (error "cannot inspect schema inside a field")
+                        whole path h q
 instance ResultConversion m p whole chn r s
         => ResultConversion m p whole chn ('OptionalRef r) (Maybe s) where
   convertResult _ _ _ _ Nothing
@@ -606,6 +596,8 @@ runIntroSchema path s@(Intro.Schema qr mut sub ts) ss
                                $ "field '" <> T.unpack nm <> "' was not found on type '__Schema'")
                              path]
                      pure Nothing
+    -- we do not support spreads here
+    runOne _ = pure Nothing
 
 runIntroType
   :: [T.Text] -> Intro.Schema -> Intro.Type -> GQL.SelectionSet
@@ -620,24 +612,137 @@ runIntroType path s@(Intro.Schema _ _ _ ts) (Intro.Type k tnm fs vals ofT) ss
   where
     runOne (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
       = let realName :: T.Text = fromMaybe nm alias
-        in fmap (realName,) <$> case nm of
-             "kind"
-                -> pure $ Just $ Aeson.String $ T.pack (show k)
-             "name"
-                -> pure $ Just $ maybe Aeson.Null Aeson.String tnm
-             "description"
-                -> pure $ Just Aeson.Null
+            path' = path ++ [realName]
+        in fmap (realName,) <$> case (nm, innerss) of
+             ("kind", [])
+               -> pure $ Just $ Aeson.String $ T.pack (show k)
+             ("name", [])
+               -> pure $ Just $ maybe Aeson.Null Aeson.String tnm
+             ("description", [])
+               -> pure $ Just Aeson.Null
 
+             ("fields", _)
+               -> case k of
+                    Intro.OBJECT
+                      -> do things <- mapM (\f -> runIntroFields path' f innerss) fs
+                            pure $ Just $ Aeson.toJSON things
+                    _ -> pure $ Just Aeson.Null
+             ("inputFields", _)
+               -> case k of
+                    Intro.INPUT_OBJECT
+                      -> do things <- mapM (\f -> runIntroFields path' f innerss) fs
+                            pure $ Just $ Aeson.toJSON things
+                    _ -> pure $ Just Aeson.Null
+             ("enumValues", _)
+               -> do things <- mapM (\e -> runIntroEnums path' e innerss) vals
+                     pure $ Just $ Aeson.toJSON things
 
+             ("ofType", _)
+               -> case ofT of
+                    Nothing -> pure $ Just Aeson.Null
+                    Just o  -> runIntroType path' s o innerss
 
              -- unions and interfaces are not supported
-             "interfaces"
-                -> pure $ Just $ Aeson.Array []
-             "possibleTypes"
-                -> pure $ Just $ Aeson.Array []
+             ("interfaces", _)
+               -> pure $ Just $ Aeson.Array []
+             ("possibleTypes", _)
+               -> pure $ Just $ Aeson.Array []
 
              _ -> do tell [GraphQLError
                              (ServerError Invalid
                                $ "field '" <> T.unpack nm <> "' was not found on type '__Type'")
                              path]
                      pure Nothing
+    -- we do not support spreads here
+    runOne _ = pure Nothing
+
+    runIntroFields
+      :: [T.Text] -> Intro.Field -> GQL.SelectionSet
+      -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
+    runIntroFields fpath fld fss
+      = do things <- catMaybes <$> traverse (runIntroField fpath fld) fss
+           pure $ Just $ Aeson.object things
+
+    runIntroField fpath (Intro.Field fnm fargs fty)
+                  (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
+      = let realName :: T.Text = fromMaybe nm alias
+            fpath' = fpath ++ [realName]
+        in fmap (realName,) <$> case (nm, innerss) of
+          ("name", [])
+            -> pure $ Just $ Aeson.String fnm
+          ("description", [])
+            -> pure $ Just Aeson.Null
+          ("isDeprecated", [])
+            -> pure $ Just $ Aeson.Bool False
+          ("deprecationReason", [])
+            -> pure $ Just Aeson.Null
+
+          ("type", _)
+            -> runIntroType fpath' s fty innerss
+          ("args", _)
+               -> do things <- mapM (\i -> runIntroInputs fpath' i innerss) fargs
+                     pure $ Just $ Aeson.toJSON things
+
+          _ -> do tell [GraphQLError
+                             (ServerError Invalid
+                               $ "field '" <> T.unpack nm <> "' was not found on type '__Field'")
+                             fpath]
+                  pure Nothing
+    -- we do not support spreads here
+    runIntroField _ _ _ = pure Nothing
+
+    runIntroEnums
+      :: [T.Text] -> Intro.EnumValue -> GQL.SelectionSet
+      -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
+    runIntroEnums epath enm ess
+      = do things <- catMaybes <$> traverse (runIntroEnum epath enm) ess
+           pure $ Just $ Aeson.object things
+
+    runIntroEnum epath (Intro.EnumValue enm)
+                 (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
+      = let realName :: T.Text = fromMaybe nm alias
+        in fmap (realName,) <$> case (nm, innerss) of
+          ("name", [])
+            -> pure $ Just $ Aeson.String enm
+          ("description", [])
+            -> pure $ Just Aeson.Null
+          ("isDeprecated", [])
+            -> pure $ Just $ Aeson.Bool False
+          ("deprecationReason", [])
+            -> pure $ Just Aeson.Null
+
+          _ -> do tell [GraphQLError
+                             (ServerError Invalid
+                               $ "field '" <> T.unpack nm <> "' was not found on type '__EnumValue'")
+                             epath]
+                  pure Nothing
+    -- we do not support spreads here
+    runIntroEnum _ _ _ = pure Nothing
+
+    runIntroInputs
+      :: [T.Text] -> Intro.Input -> GQL.SelectionSet
+      -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
+    runIntroInputs ipath inm iss
+      = do things <- catMaybes <$> traverse (runIntroInput ipath inm) iss
+           pure $ Just $ Aeson.object things
+
+    runIntroInput ipath (Intro.Input inm def ty)
+                 (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
+      = let realName :: T.Text = fromMaybe nm alias
+            ipath' = ipath ++ [realName]
+        in fmap (realName,) <$> case (nm, innerss) of
+          ("name", [])
+            -> pure $ Just $ Aeson.String inm
+          ("description", [])
+            -> pure $ Just Aeson.Null
+          ("defaultValue", [])
+            -> pure $ Just $ maybe Aeson.Null Aeson.String def
+
+          ("type", _)
+            -> runIntroType ipath' s ty innerss
+
+          _ -> do tell [GraphQLError
+                             (ServerError Invalid
+                               $ "field '" <> T.unpack nm <> "' was not found on type '__Field'")
+                             ipath]
+                  pure Nothing
