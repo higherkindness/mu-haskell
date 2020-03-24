@@ -16,26 +16,3 @@ jobs:
       run: sudo apt-get install librdkafka-dev
     - name: Compile with Stack
       run: stack build
-  test_stack_templates:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - uses: mstksg/setup-stack@v1
-    - uses: actions/cache@v1
-      with:
-        path: ~/.stack
-        key: dot-stack-templates-${{ hashFiles('templates/*.hsfiles') }}
-        restore-keys: |
-          dot-stack-templates-
-    - name: Generate Avro RPC server from Stack template
-      run: stack new muavro $GITHUB_WORKSPACE/templates/grpc-server-avro.hsfiles -p "author-email:haskell.curry@47deg.com" -p "author-name:Haskell Curry"
-      working-directory: /tmp
-    - name: Build the generated Avro RPC server
-      run: stack build
-      working-directory: /tmp/muavro
-    - name: Generate Protobuf RPC server from Stack template
-      run: stack new muproto $GITHUB_WORKSPACE/templates/grpc-server-protobuf.hsfiles -p "author-email:haskell.curry@47deg.com" -p "author-name:Haskell Curry"
-      working-directory: /tmp
-    - name: Build the generated Protobuf RPC server
-      run: stack build
-      working-directory: /tmp/muproto
