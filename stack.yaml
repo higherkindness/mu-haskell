@@ -1,4 +1,4 @@
-resolver: lts-14.27
+resolver: lts-15.3
 allow-newer: true
 
 packages:
@@ -39,13 +39,3 @@ extra-deps:
   commit: 1380495a7b3269b70a7ab3081d745a5f54171a9c
 - wai-route-1.0.0
 - pattern-trie-0.1.0
-# missing in the current LTS
-- primitive-0.7.0.0
-- primitive-extras-0.8
-- primitive-unlifted-0.1.2.0
-- stm-hamt-1.2.0.4
-- stm-containers-1.1.0.4
-- AC-Angle-1.0
-- optics-core-0.2
-- indexed-profunctors-0.1
-
