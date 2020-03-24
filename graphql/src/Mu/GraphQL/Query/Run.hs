@@ -585,6 +585,7 @@ runIntroSchema path s@(Intro.Schema qr mut sub ts) ss
   where
     runOne (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
       = let realName :: T.Text = fromMaybe nm alias
+            path' = path ++ [realName]
         in fmap (realName,) <$> case nm of
              "description"
                -> pure $ Just Aeson.Null
@@ -593,15 +594,18 @@ runIntroSchema path s@(Intro.Schema qr mut sub ts) ss
              "queryType"
                -> case qr >>= flip HM.lookup ts of
                     Nothing -> pure Nothing
-                    Just ty -> runIntroType path s ty innerss
+                    Just ty -> runIntroType path' s ty innerss
              "mutationType"
                -> case mut >>= flip HM.lookup ts of
                     Nothing -> pure Nothing
-                    Just ty -> runIntroType path s ty innerss
+                    Just ty -> runIntroType path' s ty innerss
              "subscriptionType"
                -> case sub >>= flip HM.lookup ts of
                     Nothing -> pure Nothing
-                    Just ty -> runIntroType path s ty innerss
+                    Just ty -> runIntroType path' s ty innerss
+             "types"
+               -> do tys <- catMaybes <$> mapM (\t -> runIntroType path' s t innerss) (HM.elems ts)
+                     pure $ Just $ Aeson.toJSON tys
              _ -> do tell [GraphQLError
                              (ServerError Invalid
                                $ "field '" <> T.unpack nm <> "' was not found on type '__Schema'")

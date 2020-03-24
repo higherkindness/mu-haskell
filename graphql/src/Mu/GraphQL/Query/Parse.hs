@@ -313,6 +313,19 @@ shouldSkip vmap (GQL.Directive (GQL.unName -> nm) [GQL.Argument (GQL.unName -> i
       _                    -> False
 shouldSkip _ _ = False
 
+unFragment :: MonadError T.Text f
+           => FragmentMap -> GQL.SelectionSet -> f GQL.SelectionSet
+unFragment _ [] = pure []
+unFragment frmap (GQL.SelectionFragmentSpread (GQL.FragmentSpread nm _) : ss)
+  | Just fr <- HM.lookup (GQL.unName nm) frmap
+  = (++) <$> unFragment frmap (GQL._fdSelectionSet fr)
+         <*> unFragment frmap ss
+  | otherwise  -- the fragment definition was not found
+  = throwError $ "fragment '" <> GQL.unName nm <> "' was not found"
+unFragment frmap (GQL.SelectionField (GQL.Field al nm args dir innerss) : ss)
+  = (:) <$> (GQL.SelectionField . GQL.Field al nm args dir <$> unFragment frmap innerss)
+        <*> unFragment frmap ss
+
 class ParseMethod (p :: Package') (ms :: [Method']) where
   selectMethod ::
     MonadError T.Text f =>

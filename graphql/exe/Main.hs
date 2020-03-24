@@ -39,7 +39,7 @@ main = do
              ("Access-Control-Allow-Origin", "*")
            , ("Access-Control-Allow-Headers", "Content-Type")
            ]
-  run 8000 $ hm $ graphQLApp libraryServer
+  run 8000 $ {- hm $ -} graphQLApp libraryServer
     (Proxy @('Just "Query")) (Proxy @'Nothing) (Proxy @('Just "Subscription"))
 
 type ServiceDefinition
