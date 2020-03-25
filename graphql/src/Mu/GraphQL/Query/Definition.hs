@@ -8,6 +8,7 @@ module Mu.GraphQL.Query.Definition where
 import           Data.SOP.NP
 import           Data.SOP.NS
 import           Data.Text
+import qualified Language.GraphQL.Draft.Syntax as GQL
 import           Mu.Rpc
 import           Mu.Schema
 
@@ -34,8 +35,19 @@ data OneMethodQuery (p :: Package snm mnm anm) (s :: Service snm mnm anm) where
     :: Maybe Text
     -> NS (ChosenMethodQuery p) ms
     -> OneMethodQuery p ('Service nm anns ms)
+  -- the special '__typename' field
   TypeNameQuery
     :: Maybe Text
+    -> OneMethodQuery p ('Service nm anns ms)
+  -- introspection fields
+  SchemaQuery
+    :: Maybe Text
+    -> GQL.SelectionSet
+    -> OneMethodQuery p ('Service nm anns ms)
+  TypeQuery
+    :: Maybe Text
+    -> Text
+    -> GQL.SelectionSet
     -> OneMethodQuery p ('Service nm anns ms)
 
 data ChosenMethodQuery (p :: Package snm mnm anm) (m :: Method snm mnm anm) where
@@ -82,6 +94,9 @@ data OneFieldQuery (sch :: Schema tn fn) (fs :: [FieldDef tn fn]) where
   OneFieldQuery
     :: Maybe Text
     -> NS (ChosenFieldQuery sch) fs
+    -> OneFieldQuery sch fs
+  TypeNameFieldQuery
+    :: Maybe Text
     -> OneFieldQuery sch fs
 
 data ChosenFieldQuery (sch :: Schema tn fn) (f :: FieldDef tn fn) where
