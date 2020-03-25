@@ -7,11 +7,19 @@ jobs:
     - uses: actions/checkout@v1
     - uses: mstksg/setup-stack@v1
     - uses: actions/cache@v1
+      name: Cache ~/.stack
       with:
         path: ~/.stack
-        key: dot-stack-${{ hashFiles('stack.yaml') }}
+        key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml') }}
         restore-keys: |
-          dot-stack-
+          ${{ runner.os }}-stack-
+    - uses: actions/cache@v1
+      name: Cache .stack-work
+      with:
+        path: .stack-work
+        key: ${{ runner.os }}-stack-work-${{ hashFiles('stack.yaml') }}-${{ '**/*.hs' }}
+        restore-keys: |
+          ${{ runner.os }}-stack-work-
     - name: Get rdkafka
       run: sudo apt-get install librdkafka-dev
     - name: Compile with Stack
