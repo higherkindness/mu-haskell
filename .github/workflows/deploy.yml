@@ -16,7 +16,7 @@ jobs:
         restore-keys: |
           dot-stack-
     - name: Get Standalone Haddock
-      run: stack install standalone-haddock
+      run: stack --resolver lts-14.27 install standalone-haddock
     - name: Get rdkafka
       run: sudo apt-get install librdkafka-dev
     - name: Get Bundle & Jekyll
