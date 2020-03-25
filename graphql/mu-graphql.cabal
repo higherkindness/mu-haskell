@@ -20,6 +20,7 @@ library
 
   other-modules:
     Mu.GraphQL.Query.Definition
+    Mu.GraphQL.Query.Introspection
     Mu.GraphQL.Query.Parse
     Mu.GraphQL.Query.Run
     Mu.GraphQL.Subscription.Protocol
