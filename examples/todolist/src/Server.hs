@@ -10,7 +10,6 @@ import           Control.Concurrent.STM
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Int
 import           Data.List              (find)
-import           Data.Maybe             (maybe)
 
 import           Mu.GRpc.Server
 import           Mu.Server
