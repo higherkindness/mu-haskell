@@ -1,93 +1,422 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# language DataKinds             #-}</span><span>
-</span><a name="line-2"></a><span class="hs-pragma">{-# language DeriveAnyClass        #-}</span><span>
-</span><a name="line-3"></a><span class="hs-pragma">{-# language DeriveGeneric         #-}</span><span>
-</span><a name="line-4"></a><span class="hs-pragma">{-# language FlexibleContexts      #-}</span><span>
-</span><a name="line-5"></a><span class="hs-pragma">{-# language FlexibleInstances     #-}</span><span>
-</span><a name="line-6"></a><span class="hs-pragma">{-# language GADTs                 #-}</span><span>
-</span><a name="line-7"></a><span class="hs-pragma">{-# language MultiParamTypeClasses #-}</span><span>
-</span><a name="line-8"></a><span class="hs-pragma">{-# language OverloadedStrings     #-}</span><span>
-</span><a name="line-9"></a><span class="hs-pragma">{-# language PartialTypeSignatures #-}</span><span>
-</span><a name="line-10"></a><span class="hs-pragma">{-# language PolyKinds             #-}</span><span>
-</span><a name="line-11"></a><span class="hs-pragma">{-# language ScopedTypeVariables   #-}</span><span>
-</span><a name="line-12"></a><span class="hs-pragma">{-# language TypeFamilies          #-}</span><span>
-</span><a name="line-13"></a><span class="hs-pragma">{-# language TypeOperators         #-}</span><span>
-</span><a name="line-14"></a><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}</span><span>
-</span><a name="line-15"></a><span class="hs-comment">{-|
+</span><span id="line-2"></span><span class="hs-pragma">{-# language DeriveAnyClass        #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# language DeriveGeneric         #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# language FlexibleContexts      #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# language FlexibleInstances     #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# language GADTs                 #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# language MultiParamTypeClasses #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# language OverloadedStrings     #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# language PartialTypeSignatures #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# language PolyKinds             #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# language ScopedTypeVariables   #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# language TypeFamilies          #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# language TypeOperators         #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}</span><span>
+</span><span id="line-15"></span><span class="hs-comment">{-|
 Description : Examples for service and server definitions
 
 Look at the source code of this module.
 -}</span><span>
-</span><a name="line-20"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Mu.Rpc.Examples</span><span> </span><span class="hs-keyword">where</span><span>
-</span><a name="line-21"></a><span>
-</span><a name="line-22"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.Conduit</span><span>
-</span><a name="line-23"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.Conduit.Combinators</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">C</span><span>
-</span><a name="line-24"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data.Text</span><span>                </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">T</span><span>
-</span><a name="line-25"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">GHC.Generics</span><span>
-</span><a name="line-26"></a><span>
-</span><a name="line-27"></a><span class="hs-keyword">import</span><span>           </span><a href="Mu.Rpc.html"><span class="hs-identifier">Mu.Rpc</span></a><span>
-</span><a name="line-28"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Mu.Schema</span><span>
-</span><a name="line-29"></a><span class="hs-keyword">import</span><span>           </span><a href="Mu.Server.html"><span class="hs-identifier">Mu.Server</span></a><span>
-</span><a name="line-30"></a><span>
-</span><a name="line-31"></a><span class="hs-comment">-- Defines the service from gRPC Quickstart</span><span>
-</span><a name="line-32"></a><span class="hs-comment">-- https://grpc.io/docs/quickstart/python/</span><span>
-</span><a name="line-33"></a><span>
-</span><a name="line-34"></a><span class="hs-keyword">type</span><span> </span><a name="QuickstartSchema"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier">QuickstartSchema</span></a></a><span>
-</span><a name="line-35"></a><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="hs-identifier hs-type">DRecord</span><span> </span><span class="hs-string">&quot;HelloRequest&quot;</span><span>
-</span><a name="line-36"></a><span>      </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="hs-identifier hs-type">FieldDef</span><span> </span><span class="hs-string">&quot;name&quot;</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier hs-type">TPrimitive</span><span> </span><span class="hs-identifier hs-type">T.Text</span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span>
-</span><a name="line-37"></a><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-special">'</span><span class="hs-identifier hs-type">DRecord</span><span> </span><span class="hs-string">&quot;HelloResponse&quot;</span><span>
-</span><a name="line-38"></a><span>      </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="hs-identifier hs-type">FieldDef</span><span> </span><span class="hs-string">&quot;message&quot;</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier hs-type">TPrimitive</span><span> </span><span class="hs-identifier hs-type">T.Text</span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span>
-</span><a name="line-39"></a><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-special">'</span><span class="hs-identifier hs-type">DRecord</span><span> </span><span class="hs-string">&quot;HiRequest&quot;</span><span>
-</span><a name="line-40"></a><span>      </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="hs-identifier hs-type">FieldDef</span><span> </span><span class="hs-string">&quot;number&quot;</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier hs-type">TPrimitive</span><span> </span><span class="hs-identifier hs-type">Int</span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span>
-</span><a name="line-41"></a><span>     </span><span class="hs-special">]</span><span>
-</span><a name="line-42"></a><span>
-</span><a name="line-43"></a><span class="hs-keyword">type</span><span> </span><a name="QuickStartService"><a href="Mu.Rpc.Examples.html#QuickStartService"><span class="hs-identifier">QuickStartService</span></a></a><span>
-</span><a name="line-44"></a><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">'</span><a href="Mu.Rpc.html#Package"><span class="hs-identifier hs-type">Package</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier hs-type">Just</span><span> </span><span class="hs-string">&quot;helloworld&quot;</span><span class="hs-special">)</span><span>
-</span><a name="line-45"></a><span>      </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><a href="Mu.Rpc.html#Service"><span class="hs-identifier hs-type">Service</span></a><span> </span><span class="hs-string">&quot;Greeter&quot;</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
-</span><a name="line-46"></a><span>        </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><a href="Mu.Rpc.html#Method"><span class="hs-identifier hs-type">Method</span></a><span> </span><span class="hs-string">&quot;SayHello&quot;</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
-</span><a name="line-47"></a><span>          </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><a href="Mu.Rpc.html#ArgSingle"><span class="hs-identifier hs-type">ArgSingle</span></a><span> </span><span class="hs-special">'</span><span class="hs-identifier hs-type">Nothing</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a><span> </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HelloRequest&quot;</span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span>
-</span><a name="line-48"></a><span>            </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#RetSingle"><span class="hs-identifier hs-type">RetSingle</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a><span> </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HelloResponse&quot;</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><a name="line-49"></a><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">'</span><a href="Mu.Rpc.html#Method"><span class="hs-identifier hs-type">Method</span></a><span> </span><span class="hs-string">&quot;SayHi&quot;</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
-</span><a name="line-50"></a><span>          </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><a href="Mu.Rpc.html#ArgSingle"><span class="hs-identifier hs-type">ArgSingle</span></a><span> </span><span class="hs-special">'</span><span class="hs-identifier hs-type">Nothing</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a><span> </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HiRequest&quot;</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
-</span><a name="line-51"></a><span>            </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#RetStream"><span class="hs-identifier hs-type">RetStream</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a><span> </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HelloResponse&quot;</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><a name="line-52"></a><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">'</span><a href="Mu.Rpc.html#Method"><span class="hs-identifier hs-type">Method</span></a><span> </span><span class="hs-string">&quot;SayManyHellos&quot;</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
-</span><a name="line-53"></a><span>          </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><a href="Mu.Rpc.html#ArgStream"><span class="hs-identifier hs-type">ArgStream</span></a><span> </span><span class="hs-special">'</span><span class="hs-identifier hs-type">Nothing</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a><span> </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HelloRequest&quot;</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
-</span><a name="line-54"></a><span>                </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#RetStream"><span class="hs-identifier hs-type">RetStream</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a><span> </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HelloResponse&quot;</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span> </span><span class="hs-special">]</span><span>
-</span><a name="line-55"></a><span>
-</span><a name="line-56"></a><span class="hs-keyword">newtype</span><span> </span><a name="HelloRequest"><a href="Mu.Rpc.Examples.html#HelloRequest"><span class="hs-identifier">HelloRequest</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="HelloRequest"><a href="Mu.Rpc.Examples.html#HelloRequest"><span class="hs-identifier">HelloRequest</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="name"><a href="Mu.Rpc.Examples.html#name"><span class="hs-identifier">name</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">T.Text</span><span> </span><span class="hs-special">}</span><span>
-</span><a name="line-57"></a><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-type">Show</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Eq</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Generic</span><span>
-</span><a name="line-58"></a><span>           </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">ToSchema</span><span>   </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HelloRequest&quot;</span><span>
-</span><a name="line-59"></a><span>           </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">FromSchema</span><span> </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HelloRequest&quot;</span><span> </span><span class="hs-special">)</span><span>
-</span><a name="line-60"></a><span>
-</span><a name="line-61"></a><span class="hs-keyword">newtype</span><span> </span><a name="HelloResponse"><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier">HelloResponse</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="HelloResponse"><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier">HelloResponse</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="message"><a href="Mu.Rpc.Examples.html#message"><span class="hs-identifier">message</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">T.Text</span><span> </span><span class="hs-special">}</span><span>
-</span><a name="line-62"></a><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-type">Show</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Eq</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Generic</span><span>
-</span><a name="line-63"></a><span>           </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">ToSchema</span><span>   </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HelloResponse&quot;</span><span>
-</span><a name="line-64"></a><span>           </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">FromSchema</span><span> </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HelloResponse&quot;</span><span> </span><span class="hs-special">)</span><span>
-</span><a name="line-65"></a><span>
-</span><a name="line-66"></a><span class="hs-keyword">newtype</span><span> </span><a name="HiRequest"><a href="Mu.Rpc.Examples.html#HiRequest"><span class="hs-identifier">HiRequest</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="HiRequest"><a href="Mu.Rpc.Examples.html#HiRequest"><span class="hs-identifier">HiRequest</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="number"><a href="Mu.Rpc.Examples.html#number"><span class="hs-identifier">number</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Int</span><span> </span><span class="hs-special">}</span><span>
-</span><a name="line-67"></a><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-type">Show</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Eq</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Generic</span><span>
-</span><a name="line-68"></a><span>           </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">ToSchema</span><span>   </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HiRequest&quot;</span><span>
-</span><a name="line-69"></a><span>           </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">FromSchema</span><span> </span><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a><span> </span><span class="hs-string">&quot;HiRequest&quot;</span><span> </span><span class="hs-special">)</span><span>
-</span><a name="line-70"></a><span>
-</span><a name="line-71"></a><span class="hs-identifier">quickstartServer</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><a name="local-6989586621679081561"><a href="#local-6989586621679081561"><span class="hs-identifier">m</span></a></a><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><a href="Mu.Server.html#MonadServer"><span class="hs-identifier hs-type">MonadServer</span></a><span> </span><a href="#local-6989586621679081561"><span class="hs-identifier hs-type">m</span></a><span class="hs-special">)</span><span>
-</span><a name="line-72"></a><span>                 </span><span class="hs-glyph">=&gt;</span><span> </span><a href="Mu.Server.html#ServerT"><span class="hs-identifier hs-type">ServerT</span></a><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><a href="Mu.Rpc.Examples.html#QuickStartService"><span class="hs-identifier hs-type">QuickStartService</span></a><span> </span><a href="#local-6989586621679081561"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-identifier">_</span><span>
-</span><a name="line-73"></a><a name="quickstartServer"><a href="Mu.Rpc.Examples.html#quickstartServer"><span class="hs-identifier">quickstartServer</span></a></a><span>
-</span><a name="line-74"></a><span>  </span><span class="hs-glyph">=</span><span> </span><a href="Mu.Server.html#Server"><span class="hs-identifier hs-var">Server</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679081563"><span class="hs-identifier hs-var">sayHello</span></a><span> </span><a href="Mu.Server.html#%3A%3C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;|&gt;:</span></a><span> </span><a href="#local-6989586621679081564"><span class="hs-identifier hs-var">sayHi</span></a><span> </span><a href="Mu.Server.html#%3A%3C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;|&gt;:</span></a><span> </span><a href="#local-6989586621679081565"><span class="hs-identifier hs-var">sayManyHellos</span></a><span> </span><a href="Mu.Server.html#%3A%3C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;|&gt;:</span></a><span> </span><a href="Mu.Server.html#H0"><span class="hs-identifier hs-var">H0</span></a><span class="hs-special">)</span><span>
-</span><a name="line-75"></a><span>  </span><span class="hs-keyword">where</span><span>
-</span><a name="line-76"></a><span>    </span><span class="hs-identifier">sayHello</span><span> </span><span class="hs-glyph">::</span><span> </span><a href="Mu.Rpc.Examples.html#HelloRequest"><span class="hs-identifier hs-type">HelloRequest</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679081561"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-type">HelloResponse</span></a><span>
-</span><a name="line-77"></a><span>    </span><a name="local-6989586621679081563"><a href="#local-6989586621679081563"><span class="hs-identifier">sayHello</span></a></a><span> </span><span class="hs-special">(</span><a href="Mu.Rpc.Examples.html#HelloRequest"><span class="hs-identifier hs-var">HelloRequest</span></a><span> </span><a name="local-6989586621679081566"><a href="#local-6989586621679081566"><span class="hs-identifier">nm</span></a></a><span class="hs-special">)</span><span>
-</span><a name="line-78"></a><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">pure</span><span> </span><span class="hs-operator hs-var">$</span><span> </span><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-var">HelloResponse</span></a><span> </span><span class="hs-operator hs-var">$</span><span> </span><span class="hs-string">&quot;hi, &quot;</span><span> </span><span class="hs-operator hs-var">&lt;&gt;</span><span> </span><a href="#local-6989586621679081566"><span class="hs-identifier hs-var">nm</span></a><span>
-</span><a name="line-79"></a><span>    </span><span class="hs-identifier">sayHi</span><span> </span><span class="hs-glyph">::</span><span> </span><a href="Mu.Rpc.Examples.html#HiRequest"><span class="hs-identifier hs-type">HiRequest</span></a><span>
-</span><a name="line-80"></a><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">ConduitT</span><span> </span><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-type">HelloResponse</span></a><span> </span><span class="hs-identifier hs-type">Void</span><span> </span><a href="#local-6989586621679081561"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><a name="line-81"></a><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679081561"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><a name="line-82"></a><span>    </span><a name="local-6989586621679081564"><a href="#local-6989586621679081564"><span class="hs-identifier">sayHi</span></a></a><span> </span><span class="hs-special">(</span><a href="Mu.Rpc.Examples.html#HiRequest"><span class="hs-identifier hs-var">HiRequest</span></a><span> </span><a name="local-6989586621679081567"><a href="#local-6989586621679081567"><span class="hs-identifier">n</span></a></a><span class="hs-special">)</span><span> </span><a name="local-6989586621679081568"><a href="#local-6989586621679081568"><span class="hs-identifier">sink</span></a></a><span>
-</span><a name="line-83"></a><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">runConduit</span><span> </span><span class="hs-operator hs-var">$</span><span> </span><span class="hs-identifier hs-var">C.replicate</span><span> </span><a href="#local-6989586621679081567"><span class="hs-identifier hs-var">n</span></a><span> </span><span class="hs-special">(</span><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-var">HelloResponse</span></a><span> </span><span class="hs-string">&quot;hi!&quot;</span><span class="hs-special">)</span><span> </span><span class="hs-operator hs-var">.|</span><span> </span><a href="#local-6989586621679081568"><span class="hs-identifier hs-var">sink</span></a><span>
-</span><a name="line-84"></a><span>    </span><span class="hs-identifier">sayManyHellos</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">ConduitT</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="Mu.Rpc.Examples.html#HelloRequest"><span class="hs-identifier hs-type">HelloRequest</span></a><span> </span><a href="#local-6989586621679081561"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><a name="line-85"></a><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">ConduitT</span><span> </span><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-type">HelloResponse</span></a><span> </span><span class="hs-identifier hs-type">Void</span><span> </span><a href="#local-6989586621679081561"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><a name="line-86"></a><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679081561"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><a name="line-87"></a><span>    </span><a name="local-6989586621679081565"><a href="#local-6989586621679081565"><span class="hs-identifier">sayManyHellos</span></a></a><span> </span><a name="local-6989586621679081569"><a href="#local-6989586621679081569"><span class="hs-identifier">source</span></a></a><span> </span><a name="local-6989586621679081570"><a href="#local-6989586621679081570"><span class="hs-identifier">sink</span></a></a><span>
-</span><a name="line-88"></a><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">runConduit</span><span> </span><span class="hs-operator hs-var">$</span><span> </span><a href="#local-6989586621679081569"><span class="hs-identifier hs-var">source</span></a><span> </span><span class="hs-operator hs-var">.|</span><span> </span><span class="hs-identifier hs-var">C.mapM</span><span> </span><a href="#local-6989586621679081563"><span class="hs-identifier hs-var">sayHello</span></a><span> </span><span class="hs-operator hs-var">.|</span><span> </span><a href="#local-6989586621679081570"><span class="hs-identifier hs-var">sink</span></a><span>
-</span><a name="line-89"></a><span>
-</span><a name="line-90"></a><span class="hs-comment">{-
+</span><span id="line-20"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Mu.Rpc.Examples</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Conduit</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Conduit.Combinators</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span>                </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Mu.Rpc.html"><span class="hs-identifier">Mu.Rpc</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Mu.Schema</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Mu.Server.html"><span class="hs-identifier">Mu.Server</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- Defines the service from gRPC Quickstart</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- https://grpc.io/docs/quickstart/python/</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">type</span><span> </span><span id="QuickstartSchema"><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-var">QuickstartSchema</span></a></span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">DRecord</span></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloRequest&quot;</span></span><span>
+</span><span id="line-36"></span><span>      </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">FieldDef</span></span><span> </span><span class="annot"><span class="hs-string">&quot;name&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">TPrimitive</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-37"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">DRecord</span></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloResponse&quot;</span></span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">FieldDef</span></span><span> </span><span class="annot"><span class="hs-string">&quot;message&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">TPrimitive</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-39"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">DRecord</span></span><span> </span><span class="annot"><span class="hs-string">&quot;HiRequest&quot;</span></span><span>
+</span><span id="line-40"></span><span>      </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">FieldDef</span></span><span> </span><span class="annot"><span class="hs-string">&quot;number&quot;</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">TPrimitive</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-41"></span><span>     </span><span class="hs-special">]</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">type</span><span> </span><span id="QuickStartService"><span class="annot"><a href="Mu.Rpc.Examples.html#QuickStartService"><span class="hs-identifier hs-var">QuickStartService</span></a></span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#Package"><span class="hs-identifier hs-type">Package</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="annot"><span class="hs-string">&quot;helloworld&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>      </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#Service"><span class="hs-identifier hs-type">Service</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;Greeter&quot;</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-46"></span><span>        </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#Method"><span class="hs-identifier hs-type">Method</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;SayHello&quot;</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-47"></span><span>          </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#ArgSingle"><span class="hs-identifier hs-type">ArgSingle</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">Nothing</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloRequest&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span>            </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#RetSingle"><span class="hs-identifier hs-type">RetSingle</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloResponse&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#Method"><span class="hs-identifier hs-type">Method</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;SayHi&quot;</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-50"></span><span>          </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#ArgSingle"><span class="hs-identifier hs-type">ArgSingle</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">Nothing</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HiRequest&quot;</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-51"></span><span>            </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#RetStream"><span class="hs-identifier hs-type">RetStream</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloResponse&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#Method"><span class="hs-identifier hs-type">Method</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;SayManyHellos&quot;</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>          </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#ArgStream"><span class="hs-identifier hs-type">ArgStream</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">Nothing</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloRequest&quot;</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>                </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#RetStream"><span class="hs-identifier hs-type">RetStream</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#SchemaRef"><span class="hs-identifier hs-type">SchemaRef</span></a></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloResponse&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span id="local-6989586621679117250"><span id="local-6989586621679117251"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="HelloRequest"><span class="annot"><a href="Mu.Rpc.Examples.html#HelloRequest"><span class="hs-identifier hs-var">HelloRequest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="HelloRequest"><span class="annot"><a href="Mu.Rpc.Examples.html#HelloRequest"><span class="hs-identifier hs-var">HelloRequest</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="name"><span class="annot"><span class="annottext">HelloRequest -&gt; Text
+</span><a href="Mu.Rpc.Examples.html#name"><span class="hs-identifier hs-var hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679117242"><span id="local-6989586621679117244"><span id="local-6989586621679117246"><span class="annot"><span class="annottext">Int -&gt; HelloRequest -&gt; ShowS
+[HelloRequest] -&gt; ShowS
+HelloRequest -&gt; String
+(Int -&gt; HelloRequest -&gt; ShowS)
+-&gt; (HelloRequest -&gt; String)
+-&gt; ([HelloRequest] -&gt; ShowS)
+-&gt; Show HelloRequest
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [HelloRequest] -&gt; ShowS
+$cshowList :: [HelloRequest] -&gt; ShowS
+show :: HelloRequest -&gt; String
+$cshow :: HelloRequest -&gt; String
+showsPrec :: Int -&gt; HelloRequest -&gt; ShowS
+$cshowsPrec :: Int -&gt; HelloRequest -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117237"><span id="local-6989586621679117239"><span class="annot"><span class="annottext">HelloRequest -&gt; HelloRequest -&gt; Bool
+(HelloRequest -&gt; HelloRequest -&gt; Bool)
+-&gt; (HelloRequest -&gt; HelloRequest -&gt; Bool) -&gt; Eq HelloRequest
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: HelloRequest -&gt; HelloRequest -&gt; Bool
+$c/= :: HelloRequest -&gt; HelloRequest -&gt; Bool
+== :: HelloRequest -&gt; HelloRequest -&gt; Bool
+$c== :: HelloRequest -&gt; HelloRequest -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. HelloRequest -&gt; Rep HelloRequest x)
+-&gt; (forall x. Rep HelloRequest x -&gt; HelloRequest)
+-&gt; Generic HelloRequest
+forall x. Rep HelloRequest x -&gt; HelloRequest
+forall x. HelloRequest -&gt; Rep HelloRequest x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep HelloRequest x -&gt; HelloRequest
+$cfrom :: forall x. HelloRequest -&gt; Rep HelloRequest x
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></span><span>
+</span><span id="line-58"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117231"><span class="annot"><span class="hs-identifier hs-type">ToSchema</span></span><span>   </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloRequest&quot;</span></span></span><span>
+</span><span id="line-59"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117228"><span class="annot"><span class="hs-identifier hs-type">FromSchema</span></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloRequest&quot;</span></span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span id="local-6989586621679117225"><span id="local-6989586621679117226"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="HelloResponse"><span class="annot"><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-var">HelloResponse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="HelloResponse"><span class="annot"><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-var">HelloResponse</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="message"><span class="annot"><span class="annottext">HelloResponse -&gt; Text
+</span><a href="Mu.Rpc.Examples.html#message"><span class="hs-identifier hs-var hs-var">message</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679117217"><span id="local-6989586621679117219"><span id="local-6989586621679117221"><span class="annot"><span class="annottext">Int -&gt; HelloResponse -&gt; ShowS
+[HelloResponse] -&gt; ShowS
+HelloResponse -&gt; String
+(Int -&gt; HelloResponse -&gt; ShowS)
+-&gt; (HelloResponse -&gt; String)
+-&gt; ([HelloResponse] -&gt; ShowS)
+-&gt; Show HelloResponse
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [HelloResponse] -&gt; ShowS
+$cshowList :: [HelloResponse] -&gt; ShowS
+show :: HelloResponse -&gt; String
+$cshow :: HelloResponse -&gt; String
+showsPrec :: Int -&gt; HelloResponse -&gt; ShowS
+$cshowsPrec :: Int -&gt; HelloResponse -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117213"><span id="local-6989586621679117215"><span class="annot"><span class="annottext">HelloResponse -&gt; HelloResponse -&gt; Bool
+(HelloResponse -&gt; HelloResponse -&gt; Bool)
+-&gt; (HelloResponse -&gt; HelloResponse -&gt; Bool) -&gt; Eq HelloResponse
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: HelloResponse -&gt; HelloResponse -&gt; Bool
+$c/= :: HelloResponse -&gt; HelloResponse -&gt; Bool
+== :: HelloResponse -&gt; HelloResponse -&gt; Bool
+$c== :: HelloResponse -&gt; HelloResponse -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. HelloResponse -&gt; Rep HelloResponse x)
+-&gt; (forall x. Rep HelloResponse x -&gt; HelloResponse)
+-&gt; Generic HelloResponse
+forall x. Rep HelloResponse x -&gt; HelloResponse
+forall x. HelloResponse -&gt; Rep HelloResponse x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep HelloResponse x -&gt; HelloResponse
+$cfrom :: forall x. HelloResponse -&gt; Rep HelloResponse x
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></span><span>
+</span><span id="line-63"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117209"><span class="annot"><span class="hs-identifier hs-type">ToSchema</span></span><span>   </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloResponse&quot;</span></span></span><span>
+</span><span id="line-64"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117207"><span class="annot"><span class="hs-identifier hs-type">FromSchema</span></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HelloResponse&quot;</span></span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span id="local-6989586621679117205"><span id="local-6989586621679117206"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="HiRequest"><span class="annot"><a href="Mu.Rpc.Examples.html#HiRequest"><span class="hs-identifier hs-var">HiRequest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="HiRequest"><span class="annot"><a href="Mu.Rpc.Examples.html#HiRequest"><span class="hs-identifier hs-var">HiRequest</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="number"><span class="annot"><span class="annottext">HiRequest -&gt; Int
+</span><a href="Mu.Rpc.Examples.html#number"><span class="hs-identifier hs-var hs-var">number</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679117197"><span id="local-6989586621679117199"><span id="local-6989586621679117201"><span class="annot"><span class="annottext">Int -&gt; HiRequest -&gt; ShowS
+[HiRequest] -&gt; ShowS
+HiRequest -&gt; String
+(Int -&gt; HiRequest -&gt; ShowS)
+-&gt; (HiRequest -&gt; String)
+-&gt; ([HiRequest] -&gt; ShowS)
+-&gt; Show HiRequest
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [HiRequest] -&gt; ShowS
+$cshowList :: [HiRequest] -&gt; ShowS
+show :: HiRequest -&gt; String
+$cshow :: HiRequest -&gt; String
+showsPrec :: Int -&gt; HiRequest -&gt; ShowS
+$cshowsPrec :: Int -&gt; HiRequest -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117193"><span id="local-6989586621679117195"><span class="annot"><span class="annottext">HiRequest -&gt; HiRequest -&gt; Bool
+(HiRequest -&gt; HiRequest -&gt; Bool)
+-&gt; (HiRequest -&gt; HiRequest -&gt; Bool) -&gt; Eq HiRequest
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: HiRequest -&gt; HiRequest -&gt; Bool
+$c/= :: HiRequest -&gt; HiRequest -&gt; Bool
+== :: HiRequest -&gt; HiRequest -&gt; Bool
+$c== :: HiRequest -&gt; HiRequest -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(forall x. HiRequest -&gt; Rep HiRequest x)
+-&gt; (forall x. Rep HiRequest x -&gt; HiRequest) -&gt; Generic HiRequest
+forall x. Rep HiRequest x -&gt; HiRequest
+forall x. HiRequest -&gt; Rep HiRequest x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep HiRequest x -&gt; HiRequest
+$cfrom :: forall x. HiRequest -&gt; Rep HiRequest x
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></span><span>
+</span><span id="line-68"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117189"><span class="annot"><span class="hs-identifier hs-type">ToSchema</span></span><span>   </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HiRequest&quot;</span></span></span><span>
+</span><span id="line-69"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679117187"><span class="annot"><span class="hs-identifier hs-type">FromSchema</span></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickstartSchema"><span class="hs-identifier hs-type">QuickstartSchema</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;HiRequest&quot;</span></span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Mu.Rpc.Examples.html#quickstartServer"><span class="hs-identifier hs-type">quickstartServer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679117185"><span class="annot"><a href="#local-6989586621679117185"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.Server.html#MonadServer"><span class="hs-identifier hs-type">MonadServer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117185"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>                 </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Mu.Server.html#ServerT"><span class="hs-identifier hs-type">ServerT</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#QuickStartService"><span class="hs-identifier hs-type">QuickStartService</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117185"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span>
+</span><span id="line-73"></span><span id="quickstartServer"><span class="annot"><span class="annottext">quickstartServer :: ServerT
+  '[]
+  QuickStartService
+  m
+  '[ '[HelloRequest -&gt; m HelloResponse,
+       HiRequest -&gt; ConduitT HelloResponse Void m () -&gt; m (),
+       ConduitT () HelloRequest m ()
+       -&gt; ConduitT HelloResponse Void m () -&gt; m ()]]
+</span><a href="Mu.Rpc.Examples.html#quickstartServer"><span class="hs-identifier hs-var hs-var">quickstartServer</span></a></span></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HandlersT
+  '[]
+  ()
+  '[ 'Method
+       &quot;SayHello&quot;
+       '[]
+       '[ 'ArgSingle
+            'Nothing '[] ('SchemaRef QuickstartSchema &quot;HelloRequest&quot;)]
+       ('RetSingle ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;)),
+     'Method
+       &quot;SayHi&quot;
+       '[]
+       '[ 'ArgSingle
+            'Nothing '[] ('SchemaRef QuickstartSchema &quot;HiRequest&quot;)]
+       ('RetStream ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;)),
+     'Method
+       &quot;SayManyHellos&quot;
+       '[]
+       '[ 'ArgStream
+            'Nothing '[] ('SchemaRef QuickstartSchema &quot;HelloRequest&quot;)]
+       ('RetStream ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;))]
+  m
+  '[HelloRequest -&gt; m HelloResponse,
+    HiRequest -&gt; ConduitT HelloResponse Void m () -&gt; m (),
+    ConduitT () HelloRequest m ()
+    -&gt; ConduitT HelloResponse Void m () -&gt; m ()]
+-&gt; ServerT
+     '[]
+     QuickStartService
+     m
+     '[ '[HelloRequest -&gt; m HelloResponse,
+          HiRequest -&gt; ConduitT HelloResponse Void m () -&gt; m (),
+          ConduitT () HelloRequest m ()
+          -&gt; ConduitT HelloResponse Void m () -&gt; m ()]]
+forall serviceName mnm anm (chn :: Mappings serviceName *)
+       (sname :: serviceName) (methods :: [Method serviceName mnm anm])
+       (m :: * -&gt; *) (hs :: [*]) (pname :: Maybe serviceName)
+       (sanns :: [*]).
+(MappingRight chn sname ~ ()) =&gt;
+HandlersT chn () methods m hs
+-&gt; ServerT
+     chn ('Package pname '[ 'Service sname sanns methods]) m '[hs]
+</span><a href="Mu.Server.html#Server"><span class="hs-identifier hs-var">Server</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HelloRequest -&gt; m HelloResponse
+</span><a href="#local-6989586621679117182"><span class="hs-identifier hs-var">sayHello</span></a></span><span> </span><span class="annot"><span class="annottext">(HelloRequest -&gt; m HelloResponse)
+-&gt; HandlersT
+     '[]
+     ()
+     '[ 'Method
+          &quot;SayHi&quot;
+          '[]
+          '[ 'ArgSingle
+               'Nothing '[] ('SchemaRef QuickstartSchema &quot;HiRequest&quot;)]
+          ('RetStream ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;)),
+        'Method
+          &quot;SayManyHellos&quot;
+          '[]
+          '[ 'ArgStream
+               'Nothing '[] ('SchemaRef QuickstartSchema &quot;HelloRequest&quot;)]
+          ('RetStream ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;))]
+     m
+     '[HiRequest -&gt; ConduitT HelloResponse Void m () -&gt; m (),
+       ConduitT () HelloRequest m ()
+       -&gt; ConduitT HelloResponse Void m () -&gt; m ()]
+-&gt; HandlersT
+     '[]
+     ()
+     '[ 'Method
+          &quot;SayHello&quot;
+          '[]
+          '[ 'ArgSingle
+               'Nothing '[] ('SchemaRef QuickstartSchema &quot;HelloRequest&quot;)]
+          ('RetSingle ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;)),
+        'Method
+          &quot;SayHi&quot;
+          '[]
+          '[ 'ArgSingle
+               'Nothing '[] ('SchemaRef QuickstartSchema &quot;HiRequest&quot;)]
+          ('RetStream ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;)),
+        'Method
+          &quot;SayManyHellos&quot;
+          '[]
+          '[ 'ArgStream
+               'Nothing '[] ('SchemaRef QuickstartSchema &quot;HelloRequest&quot;)]
+          ('RetStream ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;))]
+     m
+     '[HelloRequest -&gt; m HelloResponse,
+       HiRequest -&gt; ConduitT HelloResponse Void m () -&gt; m (),
+       ConduitT () HelloRequest m ()
+       -&gt; ConduitT HelloResponse Void m () -&gt; m ()]
+forall serviceName anm mnm (chn :: ServiceChain serviceName)
+       (args :: [Argument serviceName anm]) (ret :: Return serviceName)
+       (m :: * -&gt; *) h (ms :: [Method serviceName mnm anm]) (hs :: [*])
+       (name :: mnm) (anns :: [*]).
+Handles chn args ret m h =&gt;
+h
+-&gt; HandlersT chn () ms m hs
+-&gt; HandlersT chn () ('Method name anns args ret : ms) m (h : hs)
+</span><a href="Mu.Server.html#%3A%3C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;|&gt;:</span></a></span><span> </span><span class="annot"><span class="annottext">HiRequest -&gt; ConduitT HelloResponse Void m () -&gt; m ()
+</span><a href="#local-6989586621679117180"><span class="hs-identifier hs-var">sayHi</span></a></span><span> </span><span class="annot"><span class="annottext">(HiRequest -&gt; ConduitT HelloResponse Void m () -&gt; m ())
+-&gt; HandlersT
+     '[]
+     ()
+     '[ 'Method
+          &quot;SayManyHellos&quot;
+          '[]
+          '[ 'ArgStream
+               'Nothing '[] ('SchemaRef QuickstartSchema &quot;HelloRequest&quot;)]
+          ('RetStream ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;))]
+     m
+     '[ConduitT () HelloRequest m ()
+       -&gt; ConduitT HelloResponse Void m () -&gt; m ()]
+-&gt; HandlersT
+     '[]
+     ()
+     '[ 'Method
+          &quot;SayHi&quot;
+          '[]
+          '[ 'ArgSingle
+               'Nothing '[] ('SchemaRef QuickstartSchema &quot;HiRequest&quot;)]
+          ('RetStream ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;)),
+        'Method
+          &quot;SayManyHellos&quot;
+          '[]
+          '[ 'ArgStream
+               'Nothing '[] ('SchemaRef QuickstartSchema &quot;HelloRequest&quot;)]
+          ('RetStream ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;))]
+     m
+     '[HiRequest -&gt; ConduitT HelloResponse Void m () -&gt; m (),
+       ConduitT () HelloRequest m ()
+       -&gt; ConduitT HelloResponse Void m () -&gt; m ()]
+forall serviceName anm mnm (chn :: ServiceChain serviceName)
+       (args :: [Argument serviceName anm]) (ret :: Return serviceName)
+       (m :: * -&gt; *) h (ms :: [Method serviceName mnm anm]) (hs :: [*])
+       (name :: mnm) (anns :: [*]).
+Handles chn args ret m h =&gt;
+h
+-&gt; HandlersT chn () ms m hs
+-&gt; HandlersT chn () ('Method name anns args ret : ms) m (h : hs)
+</span><a href="Mu.Server.html#%3A%3C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;|&gt;:</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitT () HelloRequest m ()
+-&gt; ConduitT HelloResponse Void m () -&gt; m ()
+</span><a href="#local-6989586621679117179"><span class="hs-identifier hs-var">sayManyHellos</span></a></span><span> </span><span class="annot"><span class="annottext">(ConduitT () HelloRequest m ()
+ -&gt; ConduitT HelloResponse Void m () -&gt; m ())
+-&gt; HandlersT '[] () '[] m '[]
+-&gt; HandlersT
+     '[]
+     ()
+     '[ 'Method
+          &quot;SayManyHellos&quot;
+          '[]
+          '[ 'ArgStream
+               'Nothing '[] ('SchemaRef QuickstartSchema &quot;HelloRequest&quot;)]
+          ('RetStream ('SchemaRef QuickstartSchema &quot;HelloResponse&quot;))]
+     m
+     '[ConduitT () HelloRequest m ()
+       -&gt; ConduitT HelloResponse Void m () -&gt; m ()]
+forall serviceName anm mnm (chn :: ServiceChain serviceName)
+       (args :: [Argument serviceName anm]) (ret :: Return serviceName)
+       (m :: * -&gt; *) h (ms :: [Method serviceName mnm anm]) (hs :: [*])
+       (name :: mnm) (anns :: [*]).
+Handles chn args ret m h =&gt;
+h
+-&gt; HandlersT chn () ms m hs
+-&gt; HandlersT chn () ('Method name anns args ret : ms) m (h : hs)
+</span><a href="Mu.Server.html#%3A%3C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;|&gt;:</span></a></span><span> </span><span class="annot"><span class="annottext">HandlersT '[] () '[] m '[]
+forall snm mnm anm (chn :: ServiceChain snm) inh (m :: * -&gt; *).
+HandlersT chn inh '[] m '[]
+</span><a href="Mu.Server.html#H0"><span class="hs-identifier hs-var">H0</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><a href="#local-6989586621679117182"><span class="hs-identifier hs-type">sayHello</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#HelloRequest"><span class="hs-identifier hs-type">HelloRequest</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679117185"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-type">HelloResponse</span></a></span><span>
+</span><span id="line-77"></span><span>    </span><span id="local-6989586621679117182"><span class="annot"><span class="annottext">sayHello :: HelloRequest -&gt; m HelloResponse
+</span><a href="#local-6989586621679117182"><span class="hs-identifier hs-var hs-var">sayHello</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.Rpc.Examples.html#HelloRequest"><span class="hs-identifier hs-type">HelloRequest</span></a></span><span> </span><span id="local-6989586621679117177"><span class="annot"><span class="annottext">nm :: Text
+</span><a href="#local-6989586621679117177"><span class="hs-identifier hs-var">nm</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HelloResponse -&gt; m HelloResponse
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(HelloResponse -&gt; m HelloResponse)
+-&gt; HelloResponse -&gt; m HelloResponse
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; HelloResponse
+</span><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-var">HelloResponse</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; HelloResponse) -&gt; Text -&gt; HelloResponse
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="hs-string">&quot;hi, &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679117177"><span class="hs-identifier hs-var">nm</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><a href="#local-6989586621679117180"><span class="hs-identifier hs-type">sayHi</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#HiRequest"><span class="hs-identifier hs-type">HiRequest</span></a></span><span>
+</span><span id="line-80"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitT</span></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-type">HelloResponse</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Void</span></span><span> </span><span class="annot"><a href="#local-6989586621679117185"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679117185"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679117180"><span class="annot"><span class="annottext">sayHi :: HiRequest -&gt; ConduitT HelloResponse Void m () -&gt; m ()
+</span><a href="#local-6989586621679117180"><span class="hs-identifier hs-var hs-var">sayHi</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.Rpc.Examples.html#HiRequest"><span class="hs-identifier hs-type">HiRequest</span></a></span><span> </span><span id="local-6989586621679117176"><span class="annot"><span class="annottext">n :: Int
+</span><a href="#local-6989586621679117176"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679117175"><span class="annot"><span class="annottext">sink :: ConduitT HelloResponse Void m ()
+</span><a href="#local-6989586621679117175"><span class="hs-identifier hs-var">sink</span></a></span></span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConduitT () Void m () -&gt; m ()
+forall (m :: * -&gt; *) r. Monad m =&gt; ConduitT () Void m r -&gt; m r
+</span><span class="hs-identifier hs-var">runConduit</span></span><span> </span><span class="annot"><span class="annottext">(ConduitT () Void m () -&gt; m ()) -&gt; ConduitT () Void m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; HelloResponse -&gt; ConduitT () HelloResponse m ()
+forall (m :: * -&gt; *) a i. Monad m =&gt; Int -&gt; a -&gt; ConduitT i a m ()
+</span><span class="hs-identifier hs-var">C.replicate</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679117176"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; HelloResponse
+</span><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-var">HelloResponse</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;hi!&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ConduitT () HelloResponse m ()
+-&gt; ConduitT HelloResponse Void m () -&gt; ConduitT () Void m ()
+forall (m :: * -&gt; *) a b c r.
+Monad m =&gt;
+ConduitM a b m () -&gt; ConduitM b c m r -&gt; ConduitM a c m r
+</span><span class="hs-operator hs-var">.|</span></span><span> </span><span class="annot"><span class="annottext">ConduitT HelloResponse Void m ()
+</span><a href="#local-6989586621679117175"><span class="hs-identifier hs-var">sink</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><a href="#local-6989586621679117179"><span class="hs-identifier hs-type">sayManyHellos</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitT</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#HelloRequest"><span class="hs-identifier hs-type">HelloRequest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117185"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitT</span></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#HelloResponse"><span class="hs-identifier hs-type">HelloResponse</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Void</span></span><span> </span><span class="annot"><a href="#local-6989586621679117185"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679117185"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>    </span><span id="local-6989586621679117179"><span class="annot"><span class="annottext">sayManyHellos :: ConduitT () HelloRequest m ()
+-&gt; ConduitT HelloResponse Void m () -&gt; m ()
+</span><a href="#local-6989586621679117179"><span class="hs-identifier hs-var hs-var">sayManyHellos</span></a></span></span><span> </span><span id="local-6989586621679117171"><span class="annot"><span class="annottext">source :: ConduitT () HelloRequest m ()
+</span><a href="#local-6989586621679117171"><span class="hs-identifier hs-var">source</span></a></span></span><span> </span><span id="local-6989586621679117170"><span class="annot"><span class="annottext">sink :: ConduitT HelloResponse Void m ()
+</span><a href="#local-6989586621679117170"><span class="hs-identifier hs-var">sink</span></a></span></span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConduitT () Void m () -&gt; m ()
+forall (m :: * -&gt; *) r. Monad m =&gt; ConduitT () Void m r -&gt; m r
+</span><span class="hs-identifier hs-var">runConduit</span></span><span> </span><span class="annot"><span class="annottext">(ConduitT () Void m () -&gt; m ()) -&gt; ConduitT () Void m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ConduitT () HelloRequest m ()
+</span><a href="#local-6989586621679117171"><span class="hs-identifier hs-var">source</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitT () HelloRequest m ()
+-&gt; ConduitM HelloRequest Void m () -&gt; ConduitT () Void m ()
+forall (m :: * -&gt; *) a b c r.
+Monad m =&gt;
+ConduitM a b m () -&gt; ConduitM b c m r -&gt; ConduitM a c m r
+</span><span class="hs-operator hs-var">.|</span></span><span> </span><span class="annot"><span class="annottext">(HelloRequest -&gt; m HelloResponse)
+-&gt; ConduitT HelloRequest HelloResponse m ()
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; ConduitT a b m ()
+</span><span class="hs-identifier hs-var">C.mapM</span></span><span> </span><span class="annot"><span class="annottext">HelloRequest -&gt; m HelloResponse
+</span><a href="#local-6989586621679117182"><span class="hs-identifier hs-var">sayHello</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitT HelloRequest HelloResponse m ()
+-&gt; ConduitT HelloResponse Void m ()
+-&gt; ConduitM HelloRequest Void m ()
+forall (m :: * -&gt; *) a b c r.
+Monad m =&gt;
+ConduitM a b m () -&gt; ConduitM b c m r -&gt; ConduitM a c m r
+</span><span class="hs-operator hs-var">.|</span></span><span> </span><span class="annot"><span class="annottext">ConduitT HelloResponse Void m ()
+</span><a href="#local-6989586621679117170"><span class="hs-identifier hs-var">sink</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-comment">{-
 From https://www.apollographql.com/docs/apollo-server/schema/schema/
 
 type Book {
@@ -100,32 +429,277 @@ type Author {
   books: [Book]
 }
 -}</span><span>
-</span><a name="line-103"></a><span>
-</span><a name="line-104"></a><span class="hs-keyword">type</span><span> </span><a name="ApolloService"><a href="Mu.Rpc.Examples.html#ApolloService"><span class="hs-identifier">ApolloService</span></a></a><span>
-</span><a name="line-105"></a><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">'</span><a href="Mu.Rpc.html#Package"><span class="hs-identifier hs-type">Package</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="hs-identifier hs-type">Just</span><span> </span><span class="hs-string">&quot;apollo&quot;</span><span class="hs-special">)</span><span>
-</span><a name="line-106"></a><span>      </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><a href="Mu.Rpc.html#Object"><span class="hs-identifier hs-type">Object</span></a><span> </span><span class="hs-string">&quot;Book&quot;</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
-</span><a name="line-107"></a><span>        </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><a href="Mu.Rpc.html#ObjectField"><span class="hs-identifier hs-type">ObjectField</span></a><span> </span><span class="hs-string">&quot;title&quot;</span><span>  </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#RetSingle"><span class="hs-identifier hs-type">RetSingle</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#PrimitiveRef"><span class="hs-identifier hs-type">PrimitiveRef</span></a><span> </span><span class="hs-identifier hs-type">String</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><a name="line-108"></a><span>        </span><span class="hs-special">,</span><span> </span><a href="Mu.Rpc.html#ObjectField"><span class="hs-identifier hs-type">ObjectField</span></a><span> </span><span class="hs-string">&quot;author&quot;</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#RetSingle"><span class="hs-identifier hs-type">RetSingle</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#ObjectRef"><span class="hs-identifier hs-type">ObjectRef</span></a><span> </span><span class="hs-string">&quot;Author&quot;</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><a name="line-109"></a><span>        </span><span class="hs-special">]</span><span>
-</span><a name="line-110"></a><span>      </span><span class="hs-special">,</span><span> </span><a href="Mu.Rpc.html#Object"><span class="hs-identifier hs-type">Object</span></a><span> </span><span class="hs-string">&quot;Author&quot;</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
-</span><a name="line-111"></a><span>        </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><a href="Mu.Rpc.html#ObjectField"><span class="hs-identifier hs-type">ObjectField</span></a><span> </span><span class="hs-string">&quot;name&quot;</span><span>  </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#RetSingle"><span class="hs-identifier hs-type">RetSingle</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#PrimitiveRef"><span class="hs-identifier hs-type">PrimitiveRef</span></a><span> </span><span class="hs-identifier hs-type">String</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><a name="line-112"></a><span>        </span><span class="hs-special">,</span><span> </span><a href="Mu.Rpc.html#ObjectField"><span class="hs-identifier hs-type">ObjectField</span></a><span> </span><span class="hs-string">&quot;books&quot;</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#RetSingle"><span class="hs-identifier hs-type">RetSingle</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#ListRef"><span class="hs-identifier hs-type">ListRef</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Mu.Rpc.html#ObjectRef"><span class="hs-identifier hs-type">ObjectRef</span></a><span> </span><span class="hs-string">&quot;Book&quot;</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><a name="line-113"></a><span>        </span><span class="hs-special">]</span><span>
-</span><a name="line-114"></a><span>      </span><span class="hs-special">]</span><span>
-</span><a name="line-115"></a><span>
-</span><a name="line-116"></a><span class="hs-keyword">type</span><span> </span><a name="ApolloBookAuthor"><a href="Mu.Rpc.Examples.html#ApolloBookAuthor"><span class="hs-identifier">ApolloBookAuthor</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span>
-</span><a name="line-117"></a><span>    </span><span class="hs-string">&quot;Book&quot;</span><span>   </span><span class="hs-special">'</span><span class="hs-operator hs-type">:-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">String</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Integer</span><span class="hs-special">)</span><span>
-</span><a name="line-118"></a><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-string">&quot;Author&quot;</span><span> </span><span class="hs-special">'</span><span class="hs-operator hs-type">:-&gt;</span><span> </span><span class="hs-identifier hs-type">Integer</span><span>
-</span><a name="line-119"></a><span>  </span><span class="hs-special">]</span><span>
-</span><a name="line-120"></a><span>
-</span><a name="line-121"></a><span class="hs-identifier">apolloServer</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><a name="local-6989586621679081559"><a href="#local-6989586621679081559"><span class="hs-identifier">m</span></a></a><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><a href="Mu.Server.html#MonadServer"><span class="hs-identifier hs-type">MonadServer</span></a><span> </span><a href="#local-6989586621679081559"><span class="hs-identifier hs-type">m</span></a><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><a href="Mu.Server.html#ServerT"><span class="hs-identifier hs-type">ServerT</span></a><span> </span><a href="Mu.Rpc.Examples.html#ApolloBookAuthor"><span class="hs-identifier hs-type">ApolloBookAuthor</span></a><span> </span><a href="Mu.Rpc.Examples.html#ApolloService"><span class="hs-identifier hs-type">ApolloService</span></a><span> </span><a href="#local-6989586621679081559"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-identifier">_</span><span>
-</span><a name="line-122"></a><a name="apolloServer"><a href="Mu.Rpc.Examples.html#apolloServer"><span class="hs-identifier">apolloServer</span></a></a><span>
-</span><a name="line-123"></a><span>  </span><span class="hs-glyph">=</span><span> </span><a href="Mu.Server.html#Services"><span class="hs-identifier hs-var">Services</span></a><span> </span><span class="hs-operator hs-var">$</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">pure</span><span> </span><span class="hs-operator hs-var">.</span><span> </span><span class="hs-identifier hs-var">fst</span><span> </span><a href="Mu.Server.html#%3A%3C%7C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;||&gt;:</span></a><span> </span><span class="hs-identifier hs-var">pure</span><span> </span><span class="hs-operator hs-var">.</span><span> </span><span class="hs-identifier hs-var">snd</span><span> </span><a href="Mu.Server.html#%3A%3C%7C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;||&gt;:</span></a><span> </span><a href="Mu.Server.html#H0"><span class="hs-identifier hs-var">H0</span></a><span class="hs-special">)</span><span>
-</span><a name="line-124"></a><span>               </span><a href="Mu.Server.html#%3A%3C%26%3E%3A"><span class="hs-operator hs-var">:&lt;&amp;&gt;:</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679081571"><span class="hs-identifier hs-var">authorName</span></a><span> </span><a href="Mu.Server.html#%3A%3C%7C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;||&gt;:</span></a><span> </span><a href="#local-6989586621679081572"><span class="hs-identifier hs-var">authorBooks</span></a><span> </span><a href="Mu.Server.html#%3A%3C%7C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;||&gt;:</span></a><span> </span><a href="Mu.Server.html#H0"><span class="hs-identifier hs-var">H0</span></a><span class="hs-special">)</span><span>
-</span><a name="line-125"></a><span>               </span><a href="Mu.Server.html#%3A%3C%26%3E%3A"><span class="hs-operator hs-var">:&lt;&amp;&gt;:</span></a><span> </span><a href="Mu.Server.html#S0"><span class="hs-identifier hs-var">S0</span></a><span>
-</span><a name="line-126"></a><span>  </span><span class="hs-keyword">where</span><span>
-</span><a name="line-127"></a><span>    </span><span class="hs-identifier">authorName</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Integer</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679081559"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-identifier hs-type">String</span><span>
-</span><a name="line-128"></a><span>    </span><a name="local-6989586621679081571"><a href="#local-6989586621679081571"><span class="hs-identifier">authorName</span></a></a><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">pure</span><span> </span><span class="hs-string">&quot;alex&quot;</span><span>  </span><span class="hs-comment">-- this would run in the DB</span><span>
-</span><a name="line-129"></a><span>    </span><span class="hs-identifier">authorBooks</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Integer</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679081559"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-identifier hs-type">String</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Integer</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
-</span><a name="line-130"></a><span>    </span><a name="local-6989586621679081572"><a href="#local-6989586621679081572"><span class="hs-identifier">authorBooks</span></a></a><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">pure</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
-</span><a name="line-131"></a></pre></body></html>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-keyword">type</span><span> </span><span id="ApolloService"><span class="annot"><a href="Mu.Rpc.Examples.html#ApolloService"><span class="hs-identifier hs-var">ApolloService</span></a></span></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#Package"><span class="hs-identifier hs-type">Package</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="annot"><span class="hs-string">&quot;apollo&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>      </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="annot"><a href="Mu.Rpc.html#Object"><span class="hs-identifier hs-type">Object</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;Book&quot;</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-107"></span><span>        </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="annot"><a href="Mu.Rpc.html#ObjectField"><span class="hs-identifier hs-type">ObjectField</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;title&quot;</span></span><span>  </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#RetSingle"><span class="hs-identifier hs-type">RetSingle</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#PrimitiveRef"><span class="hs-identifier hs-type">PrimitiveRef</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Rpc.html#ObjectField"><span class="hs-identifier hs-type">ObjectField</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;author&quot;</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#RetSingle"><span class="hs-identifier hs-type">RetSingle</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#ObjectRef"><span class="hs-identifier hs-type">ObjectRef</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;Author&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Rpc.html#Object"><span class="hs-identifier hs-type">Object</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;Author&quot;</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-111"></span><span>        </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="annot"><a href="Mu.Rpc.html#ObjectField"><span class="hs-identifier hs-type">ObjectField</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;name&quot;</span></span><span>  </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#RetSingle"><span class="hs-identifier hs-type">RetSingle</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#PrimitiveRef"><span class="hs-identifier hs-type">PrimitiveRef</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Rpc.html#ObjectField"><span class="hs-identifier hs-type">ObjectField</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;books&quot;</span></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#RetSingle"><span class="hs-identifier hs-type">RetSingle</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#ListRef"><span class="hs-identifier hs-type">ListRef</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="Mu.Rpc.html#ObjectRef"><span class="hs-identifier hs-type">ObjectRef</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;Book&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-114"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">type</span><span> </span><span id="ApolloBookAuthor"><span class="annot"><a href="Mu.Rpc.Examples.html#ApolloBookAuthor"><span class="hs-identifier hs-var">ApolloBookAuthor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="hs-string">&quot;Book&quot;</span></span><span>   </span><span class="hs-special">'</span><span class="hs-operator">:-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;Author&quot;</span></span><span> </span><span class="hs-special">'</span><span class="hs-operator">:-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Mu.Rpc.Examples.html#apolloServer"><span class="hs-identifier hs-type">apolloServer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679117164"><span class="annot"><a href="#local-6989586621679117164"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.Server.html#MonadServer"><span class="hs-identifier hs-type">MonadServer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117164"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Mu.Server.html#ServerT"><span class="hs-identifier hs-type">ServerT</span></a></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#ApolloBookAuthor"><span class="hs-identifier hs-type">ApolloBookAuthor</span></a></span><span> </span><span class="annot"><a href="Mu.Rpc.Examples.html#ApolloService"><span class="hs-identifier hs-type">ApolloService</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679117164"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span>
+</span><span id="line-122"></span><span id="apolloServer"><span class="annot"><span class="annottext">apolloServer :: ServerT
+  ApolloBookAuthor
+  ApolloService
+  m
+  '[ '[m String, m Integer], '[m String, m [(String, Integer)]]]
+</span><a href="Mu.Rpc.Examples.html#apolloServer"><span class="hs-identifier hs-var hs-var">apolloServer</span></a></span></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ServicesT
+  ApolloBookAuthor
+  '[ 'Service
+       &quot;Book&quot;
+       '[]
+       '[ 'Method &quot;title&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+          'Method &quot;author&quot; '[] '[] ('RetSingle ('ObjectRef &quot;Author&quot;))],
+     'Service
+       &quot;Author&quot;
+       '[]
+       '[ 'Method &quot;name&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+          'Method
+            &quot;books&quot; '[] '[] ('RetSingle ('ListRef ('ObjectRef &quot;Book&quot;)))]]
+  m
+  '[ '[m String, m Integer], '[m String, m [(String, Integer)]]]
+-&gt; ServerT
+     ApolloBookAuthor
+     ApolloService
+     m
+     '[ '[m String, m Integer], '[m String, m [(String, Integer)]]]
+forall serviceName mnm anm (chn :: ServiceChain serviceName)
+       (s :: [Service serviceName mnm anm]) (m :: * -&gt; *) (hs :: [[*]])
+       (pname :: Maybe serviceName).
+ServicesT chn s m hs -&gt; ServerT chn ('Package pname s) m hs
+</span><a href="Mu.Server.html#Services"><span class="hs-identifier hs-var">Services</span></a></span><span> </span><span class="annot"><span class="annottext">(ServicesT
+   ApolloBookAuthor
+   '[ 'Service
+        &quot;Book&quot;
+        '[]
+        '[ 'Method &quot;title&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+           'Method &quot;author&quot; '[] '[] ('RetSingle ('ObjectRef &quot;Author&quot;))],
+      'Service
+        &quot;Author&quot;
+        '[]
+        '[ 'Method &quot;name&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+           'Method
+             &quot;books&quot; '[] '[] ('RetSingle ('ListRef ('ObjectRef &quot;Book&quot;)))]]
+   m
+   '[ '[m String, m Integer], '[m String, m [(String, Integer)]]]
+ -&gt; ServerT
+      ApolloBookAuthor
+      ApolloService
+      m
+      '[ '[m String, m Integer], '[m String, m [(String, Integer)]]])
+-&gt; ServicesT
+     ApolloBookAuthor
+     '[ 'Service
+          &quot;Book&quot;
+          '[]
+          '[ 'Method &quot;title&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+             'Method &quot;author&quot; '[] '[] ('RetSingle ('ObjectRef &quot;Author&quot;))],
+        'Service
+          &quot;Author&quot;
+          '[]
+          '[ 'Method &quot;name&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+             'Method
+               &quot;books&quot; '[] '[] ('RetSingle ('ListRef ('ObjectRef &quot;Book&quot;)))]]
+     m
+     '[ '[m String, m Integer], '[m String, m [(String, Integer)]]]
+-&gt; ServerT
+     ApolloBookAuthor
+     ApolloService
+     m
+     '[ '[m String, m Integer], '[m String, m [(String, Integer)]]]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; m String
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m String)
+-&gt; ((String, Integer) -&gt; String) -&gt; (String, Integer) -&gt; m String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(String, Integer) -&gt; String
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">((String, Integer) -&gt; m String)
+-&gt; HandlersT
+     ApolloBookAuthor
+     (String, Integer)
+     '[ 'Method &quot;author&quot; '[] '[] ('RetSingle ('ObjectRef &quot;Author&quot;))]
+     m
+     '[m Integer]
+-&gt; HandlersT
+     ApolloBookAuthor
+     (String, Integer)
+     '[ 'Method &quot;title&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+        'Method &quot;author&quot; '[] '[] ('RetSingle ('ObjectRef &quot;Author&quot;))]
+     m
+     '[m String, m Integer]
+forall serviceName anm mnm (chn :: ServiceChain serviceName)
+       (args :: [Argument serviceName anm]) (ret :: Return serviceName)
+       (m :: * -&gt; *) h inh (ms :: [Method serviceName mnm anm])
+       (hs :: [*]) (name :: mnm) (anns :: [*]).
+Handles chn args ret m h =&gt;
+(inh -&gt; h)
+-&gt; HandlersT chn inh ms m hs
+-&gt; HandlersT chn inh ('Method name anns args ret : ms) m (h : hs)
+</span><a href="Mu.Server.html#%3A%3C%7C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;||&gt;:</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; m Integer
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; m Integer)
+-&gt; ((String, Integer) -&gt; Integer) -&gt; (String, Integer) -&gt; m Integer
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(String, Integer) -&gt; Integer
+forall a b. (a, b) -&gt; b
+</span><span class="hs-identifier hs-var">snd</span></span><span> </span><span class="annot"><span class="annottext">((String, Integer) -&gt; m Integer)
+-&gt; HandlersT ApolloBookAuthor (String, Integer) '[] m '[]
+-&gt; HandlersT
+     ApolloBookAuthor
+     (String, Integer)
+     '[ 'Method &quot;author&quot; '[] '[] ('RetSingle ('ObjectRef &quot;Author&quot;))]
+     m
+     '[m Integer]
+forall serviceName anm mnm (chn :: ServiceChain serviceName)
+       (args :: [Argument serviceName anm]) (ret :: Return serviceName)
+       (m :: * -&gt; *) h inh (ms :: [Method serviceName mnm anm])
+       (hs :: [*]) (name :: mnm) (anns :: [*]).
+Handles chn args ret m h =&gt;
+(inh -&gt; h)
+-&gt; HandlersT chn inh ms m hs
+-&gt; HandlersT chn inh ('Method name anns args ret : ms) m (h : hs)
+</span><a href="Mu.Server.html#%3A%3C%7C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;||&gt;:</span></a></span><span> </span><span class="annot"><span class="annottext">HandlersT ApolloBookAuthor (String, Integer) '[] m '[]
+forall snm mnm anm (chn :: ServiceChain snm) inh (m :: * -&gt; *).
+HandlersT chn inh '[] m '[]
+</span><a href="Mu.Server.html#H0"><span class="hs-identifier hs-var">H0</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>               </span><span class="annot"><span class="annottext">HandlersT
+  ApolloBookAuthor
+  (MappingRight ApolloBookAuthor &quot;Book&quot;)
+  '[ 'Method &quot;title&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+     'Method &quot;author&quot; '[] '[] ('RetSingle ('ObjectRef &quot;Author&quot;))]
+  m
+  '[m String, m Integer]
+-&gt; ServicesT
+     ApolloBookAuthor
+     '[ 'Service
+          &quot;Author&quot;
+          '[]
+          '[ 'Method &quot;name&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+             'Method
+               &quot;books&quot; '[] '[] ('RetSingle ('ListRef ('ObjectRef &quot;Book&quot;)))]]
+     m
+     '[ '[m String, m [(String, Integer)]]]
+-&gt; ServicesT
+     ApolloBookAuthor
+     '[ 'Service
+          &quot;Book&quot;
+          '[]
+          '[ 'Method &quot;title&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+             'Method &quot;author&quot; '[] '[] ('RetSingle ('ObjectRef &quot;Author&quot;))],
+        'Service
+          &quot;Author&quot;
+          '[]
+          '[ 'Method &quot;name&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+             'Method
+               &quot;books&quot; '[] '[] ('RetSingle ('ListRef ('ObjectRef &quot;Book&quot;)))]]
+     m
+     '[ '[m String, m Integer], '[m String, m [(String, Integer)]]]
+forall serviceName mnm anm (chn :: ServiceChain serviceName)
+       (sname :: serviceName) (methods :: [Method serviceName mnm anm])
+       (m :: * -&gt; *) (hs :: [*]) (rest :: [Service serviceName mnm anm])
+       (hss :: [[*]]) (anns :: [*]).
+HandlersT chn (MappingRight chn sname) methods m hs
+-&gt; ServicesT chn rest m hss
+-&gt; ServicesT chn ('Service sname anns methods : rest) m (hs : hss)
+</span><a href="Mu.Server.html#%3A%3C%26%3E%3A"><span class="hs-operator hs-var">:&lt;&amp;&gt;:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; m String
+</span><a href="#local-6989586621679117159"><span class="hs-identifier hs-var">authorName</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; m String)
+-&gt; HandlersT
+     ApolloBookAuthor
+     Integer
+     '[ 'Method
+          &quot;books&quot; '[] '[] ('RetSingle ('ListRef ('ObjectRef &quot;Book&quot;)))]
+     m
+     '[m [(String, Integer)]]
+-&gt; HandlersT
+     ApolloBookAuthor
+     Integer
+     '[ 'Method &quot;name&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+        'Method
+          &quot;books&quot; '[] '[] ('RetSingle ('ListRef ('ObjectRef &quot;Book&quot;)))]
+     m
+     '[m String, m [(String, Integer)]]
+forall serviceName anm mnm (chn :: ServiceChain serviceName)
+       (args :: [Argument serviceName anm]) (ret :: Return serviceName)
+       (m :: * -&gt; *) h inh (ms :: [Method serviceName mnm anm])
+       (hs :: [*]) (name :: mnm) (anns :: [*]).
+Handles chn args ret m h =&gt;
+(inh -&gt; h)
+-&gt; HandlersT chn inh ms m hs
+-&gt; HandlersT chn inh ('Method name anns args ret : ms) m (h : hs)
+</span><a href="Mu.Server.html#%3A%3C%7C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;||&gt;:</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; m [(String, Integer)]
+</span><a href="#local-6989586621679117158"><span class="hs-identifier hs-var">authorBooks</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; m [(String, Integer)])
+-&gt; HandlersT ApolloBookAuthor Integer '[] m '[]
+-&gt; HandlersT
+     ApolloBookAuthor
+     Integer
+     '[ 'Method
+          &quot;books&quot; '[] '[] ('RetSingle ('ListRef ('ObjectRef &quot;Book&quot;)))]
+     m
+     '[m [(String, Integer)]]
+forall serviceName anm mnm (chn :: ServiceChain serviceName)
+       (args :: [Argument serviceName anm]) (ret :: Return serviceName)
+       (m :: * -&gt; *) h inh (ms :: [Method serviceName mnm anm])
+       (hs :: [*]) (name :: mnm) (anns :: [*]).
+Handles chn args ret m h =&gt;
+(inh -&gt; h)
+-&gt; HandlersT chn inh ms m hs
+-&gt; HandlersT chn inh ('Method name anns args ret : ms) m (h : hs)
+</span><a href="Mu.Server.html#%3A%3C%7C%7C%3E%3A"><span class="hs-operator hs-var">:&lt;||&gt;:</span></a></span><span> </span><span class="annot"><span class="annottext">HandlersT ApolloBookAuthor Integer '[] m '[]
+forall snm mnm anm (chn :: ServiceChain snm) inh (m :: * -&gt; *).
+HandlersT chn inh '[] m '[]
+</span><a href="Mu.Server.html#H0"><span class="hs-identifier hs-var">H0</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>               </span><span class="annot"><span class="annottext">HandlersT
+  ApolloBookAuthor
+  (MappingRight ApolloBookAuthor &quot;Author&quot;)
+  '[ 'Method &quot;name&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+     'Method
+       &quot;books&quot; '[] '[] ('RetSingle ('ListRef ('ObjectRef &quot;Book&quot;)))]
+  m
+  '[m String, m [(String, Integer)]]
+-&gt; ServicesT ApolloBookAuthor '[] m '[]
+-&gt; ServicesT
+     ApolloBookAuthor
+     '[ 'Service
+          &quot;Author&quot;
+          '[]
+          '[ 'Method &quot;name&quot; '[] '[] ('RetSingle ('PrimitiveRef String)),
+             'Method
+               &quot;books&quot; '[] '[] ('RetSingle ('ListRef ('ObjectRef &quot;Book&quot;)))]]
+     m
+     '[ '[m String, m [(String, Integer)]]]
+forall serviceName mnm anm (chn :: ServiceChain serviceName)
+       (sname :: serviceName) (methods :: [Method serviceName mnm anm])
+       (m :: * -&gt; *) (hs :: [*]) (rest :: [Service serviceName mnm anm])
+       (hss :: [[*]]) (anns :: [*]).
+HandlersT chn (MappingRight chn sname) methods m hs
+-&gt; ServicesT chn rest m hss
+-&gt; ServicesT chn ('Service sname anns methods : rest) m (hs : hss)
+</span><a href="Mu.Server.html#%3A%3C%26%3E%3A"><span class="hs-operator hs-var">:&lt;&amp;&gt;:</span></a></span><span> </span><span class="annot"><span class="annottext">ServicesT ApolloBookAuthor '[] m '[]
+forall snm mnm anm (chn :: ServiceChain snm) (m :: * -&gt; *).
+ServicesT chn '[] m '[]
+</span><a href="Mu.Server.html#S0"><span class="hs-identifier hs-var">S0</span></a></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><a href="#local-6989586621679117159"><span class="hs-identifier hs-type">authorName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679117164"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-128"></span><span>    </span><span id="local-6989586621679117159"><span class="annot"><span class="annottext">authorName :: Integer -&gt; m String
+</span><a href="#local-6989586621679117159"><span class="hs-identifier hs-var hs-var">authorName</span></a></span></span><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; m String
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="hs-string">&quot;alex&quot;</span></span><span>  </span><span class="hs-comment">-- this would run in the DB</span><span>
+</span><span id="line-129"></span><span>    </span><span class="annot"><a href="#local-6989586621679117158"><span class="hs-identifier hs-type">authorBooks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679117164"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621679117158"><span class="annot"><span class="annottext">authorBooks :: Integer -&gt; m [(String, Integer)]
+</span><a href="#local-6989586621679117158"><span class="hs-identifier hs-var hs-var">authorBooks</span></a></span></span><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(String, Integer)] -&gt; m [(String, Integer)]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-131"></span></pre></body></html>

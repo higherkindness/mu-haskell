@@ -1,6 +1,3 @@
-@import url('https://fonts.googleapis.com/css?family=Fira+Mono:400,500,700&display=swap');
-@import url('https://fonts.googleapis.com/css?family=Montserrat:400,600,700&display=swap');
-
 /* @group Fundamentals */
 
 * { margin: 0; padding: 0 }
@@ -14,7 +11,7 @@ html {
 
 body {
   background: #fefefe;
-  color: #001E38;
+  color: #111;
   text-align: left;
   min-height: 100vh;
   position: relative;
@@ -50,7 +47,7 @@ dd {
 }
 
 a { text-decoration: none; }
-a[href]:link { color: #6d2c71; }
+a[href]:link { color: #9E358F; }
 a[href]:visited {color: #6F5F9C; }
 a[href]:hover { text-decoration:underline; }
 
@@ -103,7 +100,7 @@ body.js-enabled .hide-when-js-enabled {
   }
 
   #synopsis .show {
-    border: 1px solid #6d2c71;
+    border: 1px solid #5E5184;
     padding: 0.7em;
     max-height: 65vh;
   }
@@ -237,7 +234,7 @@ Display the package name on top of the menu links and center both elements:
  */
 
  body, button {
-   font: 400 14px/1.4 'Montserrat', 'PT Sans',
+   font: 400 14px/1.4 'PT Sans',
      /* Fallback Font Stack */
      -apple-system,
 	  BlinkMacSystemFont,
@@ -263,7 +260,7 @@ table {
 }
 
 pre, code, kbd, samp, tt, .src {
-	font-family: 'Fira Mono', monospace;;
+	font-family:monospace;
 }
 
 .links, .link {
@@ -293,7 +290,7 @@ pre, code, kbd, samp, tt, .src {
 
 .caption, h1, h2, h3, h4, h5, h6, summary {
   font-weight: bold;
-  color: #512054;
+  color: #5E5184;
   margin: 1.5em 0 1em 0;
 }
 
@@ -434,8 +431,8 @@ blockquote {
 }
 
 #package-header {
-  background: #6d2c71;
-  border-bottom: 5px solid #512054;
+  background: #5E5184;
+  border-bottom: 5px solid rgba(69, 59, 97, 0.5);
   color: #ddd;
   position: relative;
   font-size: 1.2em;
@@ -459,7 +456,7 @@ table.info {
   float: right;
   padding: 0.5em 1em;
   border: 1px solid #ddd;
-  color: #512054;
+  color: rgb(78,98,114);
   background-color: #fff;
   max-width: 60%;
   border-spacing: 0;
@@ -532,7 +529,7 @@ table.info {
 }
 
 #synopsis summary {
-  display: none;
+  display: block;
   float: right;
   width: 29px;
   color: rgba(255,255,255,0);
@@ -612,7 +609,7 @@ table.info {
   margin: 0 0 0 1em;
 }
 
-#interface table { border-spacing: 0px; }
+#interface table { border-spacing: 2px; }
 #interface td {
   vertical-align: top;
   padding-left: 0.5em;
