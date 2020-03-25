@@ -9,6 +9,12 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: mstksg/setup-stack@v1
+    - uses: actions/cache@v1
+      with:
+        path: ~/.stack
+        key: dot-stack-${{ hashFiles('stack.yaml') }}
+        restore-keys: |
+          dot-stack-
     - name: Get Standalone Haddock
       run: stack install standalone-haddock
     - name: Get rdkafka
