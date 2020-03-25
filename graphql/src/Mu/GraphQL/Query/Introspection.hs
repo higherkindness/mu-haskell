@@ -12,10 +12,11 @@ module Mu.GraphQL.Query.Introspection where
 
 import           Control.Monad.Writer
 import qualified Data.HashMap.Strict  as HM
+import qualified Data.HashSet         as S
 import           Data.Int             (Int32)
-import           Data.Maybe           (fromMaybe)
+import           Data.Maybe           (catMaybes, fromMaybe)
 import           Data.Proxy
-import           Data.Text            as T
+import qualified Data.Text            as T
 import           GHC.TypeLits
 import           Mu.Rpc
 import qualified Mu.Schema            as Mu
@@ -98,10 +99,47 @@ instance ( IntrospectServices ss sub
            introspectServices (Proxy @ss) (Proxy @sub) >>
            tell (HM.fromList (
              (\i -> (i, tSimple i)) <$> ["Null", "Int", "Float", "String", "Boolean", "ID"]))
-      in Schema (maybeSymbolVal (Proxy @qr))
-                (maybeSymbolVal (Proxy @mut))
-                (maybeSymbolVal (Proxy @sub))
-                ts
+          -- return only reachable types
+          qrS  = maybeSymbolVal (Proxy @qr)
+          mutS = maybeSymbolVal (Proxy @mut)
+          subS = maybeSymbolVal (Proxy @sub)
+          initials = S.fromList $ catMaybes [qrS, mutS, subS]
+          reach = reachableFrom ts initials
+          --
+          finalTs = HM.filterWithKey (\k _ -> k `S.member` reach) ts
+      in Schema qrS mutS subS finalTs
+
+reachableFrom :: TypeMap -> S.HashSet T.Text -> S.HashSet T.Text
+reachableFrom mp tys
+  = let tys' = S.toList tys
+        fromThis = map (S.fromList . reachableFromOne) tys'
+        allReachable = S.unions fromThis
+    in if tys == allReachable
+          then tys
+          else reachableFrom mp allReachable
+  where
+    reachableFromOne :: T.Text -> [T.Text]
+    reachableFromOne t
+      = case HM.lookup t mp of
+          Just ty@Type {}
+            -> t : concatMap reachableFromField (fields ty)
+          _ -> error "this should never happen"
+
+    reachableFromField :: Field -> [T.Text]
+    reachableFromField f
+      = reachableFromType (fieldType f) ++ concatMap reachableFromInput (args f)
+
+    reachableFromInput :: Input -> [T.Text]
+    reachableFromInput i = reachableFromType (inputType i)
+
+    reachableFromType :: Type -> [T.Text]
+    reachableFromType (TypeRef t) = [t]
+    reachableFromType t@Type {}
+      = case ofType t of
+          Just t' -> reachableFromType t'
+          Nothing -> case typeName t of
+            Just tn -> [tn]
+            Nothing -> []
 
 class KnownMaybeSymbol (s :: Maybe Symbol) where
   maybeSymbolVal :: Proxy s -> Maybe T.Text
@@ -206,7 +244,7 @@ instance IntrospectTypeRef ('PrimitiveRef Double) where
   introspectTypeRef _ _ = pure $ tNonNull $ tSimple "Float"
 instance IntrospectTypeRef ('PrimitiveRef String) where
   introspectTypeRef _ _ = pure $ tNonNull $ tSimple "String"
-instance IntrospectTypeRef ('PrimitiveRef Text) where
+instance IntrospectTypeRef ('PrimitiveRef T.Text) where
   introspectTypeRef _ _ = pure $ tNonNull $ tSimple "String"
 
 instance (IntrospectTypeRef r)
@@ -232,7 +270,7 @@ instance (IntrospectSchema sch, KnownSymbol t)
 
 class IntrospectSchema (ts :: [Mu.TypeDef Symbol Symbol]) where
   introspectSchema
-    :: TypeKind -> Text -> Proxy ts -> Writer TypeMap ()
+    :: TypeKind -> T.Text -> Proxy ts -> Writer TypeMap ()
 instance IntrospectSchema '[] where
   introspectSchema _ _ _ = pure ()
 instance (KnownSymbol name, IntrospectSchemaFields fields, IntrospectSchema ts)
@@ -283,7 +321,7 @@ instance IntrospectSchemaFieldType ('Mu.TPrimitive Double) where
   introspectSchemaFieldType _ _ = tNonNull $ tSimple "Float"
 instance IntrospectSchemaFieldType ('Mu.TPrimitive String) where
   introspectSchemaFieldType _ _ = tNonNull $ tSimple "String"
-instance IntrospectSchemaFieldType ('Mu.TPrimitive Text) where
+instance IntrospectSchemaFieldType ('Mu.TPrimitive T.Text) where
   introspectSchemaFieldType _ _ = tNonNull $ tSimple "String"
 
 instance (IntrospectSchemaFieldType r)
