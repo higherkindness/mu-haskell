@@ -31,24 +31,30 @@ data Schema
   deriving Show
 
 data Type
-  = Type { kind       :: TypeKind
-         , typeName   :: Maybe T.Text
-         , fields     :: [Field]
-         , enumValues :: [EnumValue]
-         , ofType     :: Maybe Type }
-  | TypeRef { to      :: T.Text }
+  = Type
+    { kind       :: TypeKind
+    , typeName   :: Maybe T.Text
+    , fields     :: [Field]
+    , enumValues :: [EnumValue]
+    , ofType     :: Maybe Type
+    }
+  | TypeRef { to :: T.Text }
   deriving Show
 
 data Field
-  = Field { fieldName :: T.Text
-          , args      :: [Input]
-          , fieldType :: Type }
+  = Field
+    { fieldName :: T.Text
+    , args      :: [Input]
+    , fieldType :: Type
+    }
   deriving Show
 
 data Input
-  = Input { inputName         :: T.Text
-          , inputDefaultValue :: Maybe T.Text
-          , inputType         :: Type }
+  = Input
+    { inputName         :: T.Text
+    , inputDefaultValue :: Maybe T.Text
+    , inputType         :: Type
+    }
   deriving Show
 
 newtype EnumValue
@@ -112,7 +118,7 @@ instance ( IntrospectServices ss sub
 reachableFrom :: TypeMap -> S.HashSet T.Text -> S.HashSet T.Text
 reachableFrom mp tys
   = let tys' = S.toList tys
-        fromThis = map (S.fromList . reachableFromOne) tys'
+        fromThis = S.fromList . reachableFromOne <$> tys'
         allReachable = S.unions fromThis
     in if tys == allReachable
           then tys
@@ -162,14 +168,14 @@ instance ( KnownSymbol sname
          , IntrospectFields smethods (IsSub sname sub)
          , IntrospectServices ss sub )
          => IntrospectServices ('Service sname sanns smethods ': ss) sub where
-  introspectServices _ psub
-    = do let name = T.pack $ symbolVal (Proxy @sname)
-         fs <- introspectFields (Proxy @smethods) (Proxy @(IsSub sname sub))
-         let t = Type OBJECT (Just name) fs [] Nothing
-         -- add this one to the mix
-         tell (HM.singleton name t)
-         -- continue with the rest
-         introspectServices (Proxy @ss) psub
+  introspectServices _ psub = do
+    let name = T.pack $ symbolVal (Proxy @sname)
+    fs <- introspectFields (Proxy @smethods) (Proxy @(IsSub sname sub))
+    let t = Type OBJECT (Just name) fs [] Nothing
+    -- add this one to the mix
+    tell (HM.singleton name t)
+    -- continue with the rest
+    introspectServices (Proxy @ss) psub
 
 class IntrospectFields (fs :: [Method']) (isSub :: Bool) where
   introspectFields
@@ -181,12 +187,12 @@ instance ( KnownSymbol mname
          , IntrospectReturn mret isSub
          , IntrospectFields fs isSub)
          => IntrospectFields ('Method mname manns margs mret ': fs) isSub where
-  introspectFields _ pIsSub
-    = do let name = T.pack $ symbolVal (Proxy @mname)
-         inputs <- introspectInputs (Proxy @margs)
-         ret <- introspectReturn (Proxy @mret) pIsSub
-         let this = Field name inputs ret
-         (this :) <$> introspectFields (Proxy @fs) pIsSub
+  introspectFields _ pIsSub = do
+    let name = T.pack $ symbolVal (Proxy @mname)
+    inputs <- introspectInputs (Proxy @margs)
+    ret <- introspectReturn (Proxy @mret) pIsSub
+    let this = Field name inputs ret
+    (this :) <$> introspectFields (Proxy @fs) pIsSub
 
 class IntrospectInputs (args :: [Argument']) where
   introspectInputs
@@ -197,22 +203,22 @@ instance ( KnownMaybeSymbol nm
          , IntrospectTypeRef r
          , IntrospectInputs args )
          => IntrospectInputs ('ArgSingle nm anns r ': args) where
-  introspectInputs _
-    = do let nm = maybeSymbolVal (Proxy @nm)
-         t <- introspectTypeRef (Proxy @r) False
-         -- TODO Find default value
-         let this = Input (fromMaybe "arg" nm) Nothing t
-         (this :) <$> introspectInputs (Proxy @args)
+  introspectInputs _ = do
+    let nm = maybeSymbolVal (Proxy @nm)
+    t <- introspectTypeRef (Proxy @r) False
+    -- TODO: Find default value
+    let this = Input (fromMaybe "arg" nm) Nothing t
+    (this :) <$> introspectInputs (Proxy @args)
 instance ( KnownMaybeSymbol nm
          , IntrospectTypeRef r
          , IntrospectInputs args )
          => IntrospectInputs ('ArgStream nm anns r ': args) where
-  introspectInputs _
-    = do let nm = maybeSymbolVal (Proxy @nm)
-         t <- tList <$> introspectTypeRef (Proxy @r) False
-         -- TODO Find default value
-         let this = Input (fromMaybe "arg" nm) Nothing t
-         (this :) <$> introspectInputs (Proxy @args)
+  introspectInputs _ = do
+    let nm = maybeSymbolVal (Proxy @nm)
+    t <- tList <$> introspectTypeRef (Proxy @r) False
+    -- TODO: Find default value
+    let this = Input (fromMaybe "arg" nm) Nothing t
+    (this :) <$> introspectInputs (Proxy @args)
 
 class IntrospectReturn (r :: Return Symbol) (isSub :: Bool) where
   introspectReturn
@@ -263,10 +269,10 @@ instance (KnownSymbol o)
 
 instance (IntrospectSchema sch, KnownSymbol t)
          => IntrospectTypeRef ('SchemaRef sch t) where
-  introspectTypeRef _ isRet
-    = do let (k, suffix) = if isRet then (OBJECT, "R") else (INPUT_OBJECT, "")
-         introspectSchema k suffix (Proxy @sch)
-         pure $ TypeRef $ T.pack (symbolVal (Proxy @t)) <> suffix
+  introspectTypeRef _ isRet = do
+    let (k, suffix) = if isRet then (OBJECT, "R") else (INPUT_OBJECT, "")
+    introspectSchema k suffix (Proxy @sch)
+    pure $ TypeRef $ T.pack (symbolVal (Proxy @t)) <> suffix
 
 class IntrospectSchema (ts :: [Mu.TypeDef Symbol Symbol]) where
   introspectSchema
@@ -275,24 +281,24 @@ instance IntrospectSchema '[] where
   introspectSchema _ _ _ = pure ()
 instance (KnownSymbol name, IntrospectSchemaFields fields, IntrospectSchema ts)
          => IntrospectSchema ('Mu.DRecord name fields ': ts) where
-  introspectSchema k suffix _
-    = do let name = T.pack (symbolVal (Proxy @name)) <> suffix
-             fs   = introspectSchemaFields suffix (Proxy @fields)
-             t    = Type k (Just name) fs [] Nothing
-         -- add this one to the mix
-         tell (HM.singleton name t)
-         -- continue with the rest
-         introspectSchema k suffix (Proxy @ts)
+  introspectSchema k suffix _ = do
+    let name = T.pack (symbolVal (Proxy @name)) <> suffix
+        fs   = introspectSchemaFields suffix (Proxy @fields)
+        t    = Type k (Just name) fs [] Nothing
+    -- add this one to the mix
+    tell (HM.singleton name t)
+    -- continue with the rest
+    introspectSchema k suffix (Proxy @ts)
 instance (KnownSymbol name, IntrospectSchemaEnum choices, IntrospectSchema ts)
          => IntrospectSchema ('Mu.DEnum name choices ': ts) where
-  introspectSchema k suffix _
-    = do let name = T.pack (symbolVal (Proxy @name)) <> suffix
-             cs   = introspectSchemaEnum (Proxy @choices)
-             t    = Type ENUM (Just name) [] cs Nothing
-         -- add this one to the mix
-         tell (HM.singleton name t)
-         -- continue with the rest
-         introspectSchema k suffix (Proxy @ts)
+  introspectSchema k suffix _ = do
+    let name = T.pack (symbolVal (Proxy @name)) <> suffix
+        cs   = introspectSchemaEnum (Proxy @choices)
+        t    = Type ENUM (Just name) [] cs Nothing
+    -- add this one to the mix
+    tell (HM.singleton name t)
+    -- continue with the rest
+    introspectSchema k suffix (Proxy @ts)
 
 class IntrospectSchemaFields (fs :: [Mu.FieldDef Symbol Symbol]) where
   introspectSchemaFields
