@@ -8,6 +8,7 @@
 {-# language RankNTypes            #-}
 {-# language ScopedTypeVariables   #-}
 {-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -20,6 +21,7 @@ and to Avro values.
 -}
 module Mu.Adapter.Avro () where
 
+import           Control.Applicative                 ((<|>))
 import           Control.Arrow                       ((***))
 import qualified Data.Avro                           as A
 import qualified Data.Avro.Encoding.FromAvro         as AVal
@@ -32,6 +34,7 @@ import           Data.Avro.EitherN                   (putIndexedValue)
 import           Data.ByteString.Builder             (Builder, word8)
 import           Data.Coerce                         (coerce)
 import qualified Data.HashMap.Strict                 as HM
+import           Data.List                           ((\\))
 import           Data.List.NonEmpty                  (NonEmpty (..))
 import qualified Data.List.NonEmpty                  as NonEmptyList
 import qualified Data.Map                            as M
@@ -50,7 +53,7 @@ instance SLess.ToSchemalessTerm AVal.Value where
         RSch.Record { RSch.fields = fs }
           -> SLess.TRecord $ map (\(k,v) -> SLess.Field k (SLess.toSchemalessValue v))
                            $ zip (map RSch.fldName fs) (V.toList r)
-        _ -> error "this should never happen"
+        _ -> error ("this should never happen:\n" ++ show s)
   toSchemalessTerm (AVal.Enum _ i _)
     = SLess.TEnum i
   toSchemalessTerm (AVal.Union _ _ v)
@@ -80,32 +83,64 @@ instance SLess.ToSchemalessValue AVal.Value where
   toSchemalessValue e@AVal.Enum {}
     = SLess.FSchematic (SLess.toSchemalessTerm e)
 
-instance A.HasAvroSchema (Term sch (sch :/: sty))
+instance (HasAvroSchemas sch sch)
          => A.HasAvroSchema (WithSchema sch sty t) where
-  schema = coerce $ A.schema @(Term sch (sch :/: sty))
+  schema = Tagged $ ASch.Union $ schemas (Proxy @sch) (Proxy @sch) ts
+    where ts = typeNames (Proxy @sch) (Proxy @sch)
 instance ( FromSchema sch sty t
          , A.FromAvro (Term sch (sch :/: sty)) )
          => A.FromAvro (WithSchema sch sty t) where
-  fromAvro v = WithSchema . fromSchema' @_ @_ @sch <$> AVal.fromAvro v
+  fromAvro entire@(AVal.Union _ _ v)
+    =   -- remove first layer of union
+        WithSchema . fromSchema' @_ @_ @sch <$> AVal.fromAvro v
+    <|> -- try with the entire thing
+        WithSchema . fromSchema' @_ @_ @sch <$> AVal.fromAvro entire
+  fromAvro entire
+    =   WithSchema . fromSchema' @_ @_ @sch <$> AVal.fromAvro entire
 instance ( ToSchema sch sty t
-         , A.ToAvro (Term sch (sch :/: sty)) )
+         , A.ToAvro (Term sch (sch :/: sty))
+         , KnownNat (IxOf sch sty) )
          => A.ToAvro (WithSchema sch sty t) where
-  toAvro s (WithSchema v) = A.toAvro s (toSchema' @_ @_ @sch v)
+  toAvro (ASch.Union vs) (WithSchema v)
+    = putIndexedValue (fromInteger $ natVal (Proxy @(IxOf sch sty)))
+                      vs
+                      (toSchema' @_ @_ @sch v)
+  toAvro s _ = error ("this should never happen:\n" ++ show s)
+
+class HasAvroSchemas (r :: Schema tn fn) (sch :: Schema tn fn) where
+  schemas   :: Proxy r -> Proxy sch -> [ASch.TypeName] -> V.Vector ASch.Schema
+  typeNames :: Proxy r -> Proxy sch -> [ASch.TypeName]
+instance HasAvroSchemas r '[] where
+  schemas _ _ _ = V.empty
+  typeNames _ _ = []
+instance forall r d ds.
+         (HasAvroSchema' (Term r d), HasAvroSchemas r ds)
+         => HasAvroSchemas r (d ': ds) where
+  schemas pr _ tys = V.cons thisSchema (schemas pr (Proxy @ds) tys)
+    where thisSchema = unTagged $ schema' @(Term r d) (tys \\ typeName' (Proxy @(Term r d)))
+  typeNames pr _ = typeName' (Proxy @(Term r d)) ++ typeNames pr (Proxy @ds)
+
+type family IxOf (sch :: Schema tn fn) (sty :: tn) :: Nat where
+  IxOf ('DRecord nm fs ': rest) nm = 0
+  IxOf ('DEnum   nm cs ': rest) nm = 0
+  IxOf (other          ': rest) nm = 1 + IxOf rest nm
 
 -- HasAvroSchema instances
 
 class HasAvroSchema' x where
+  typeName' :: Proxy x -> [ASch.TypeName]
   schema' :: [ASch.TypeName] -> Tagged x ASch.Schema
 
-instance HasAvroSchema' (Term sch t)
+instance TypeError ('Text "you should never use HasAvroSchema directly on Term, use WithSchema")
          => A.HasAvroSchema (Term sch t) where
-  schema = schema' []
+  schema = error "this should never happen"
 instance HasAvroSchema' (FieldValue sch t)
          => A.HasAvroSchema (FieldValue sch t) where
   schema = schema' []
 
 instance (KnownName name, HasAvroSchemaFields sch args)
          => HasAvroSchema' (Term sch ('DRecord name args)) where
+  typeName' _ = [nameTypeName (Proxy @name)]
   schema' visited
     = if recordName `elem` visited
          then Tagged $ ASch.NamedType recordName
@@ -114,6 +149,7 @@ instance (KnownName name, HasAvroSchemaFields sch args)
           fields = schemaF (Proxy @sch) (Proxy @args) visited
 instance (KnownName name, HasAvroSchemaEnum choices)
           => HasAvroSchema' (Term sch ('DEnum name choices)) where
+  typeName' _ = [nameTypeName (Proxy @name)]
   schema' visited
     = if enumName `elem` visited
          then Tagged $ ASch.NamedType enumName
@@ -122,39 +158,48 @@ instance (KnownName name, HasAvroSchemaEnum choices)
           choicesNames = schemaE (Proxy @choices)
 instance HasAvroSchema' (FieldValue sch t)
          => HasAvroSchema' (Term sch ('DSimple t)) where
+  typeName' _ = []
   schema' visited = coerce $ schema' @(FieldValue sch t) visited
 
 instance HasAvroSchema' (FieldValue sch 'TNull) where
+  typeName' _ = []
   schema' _ = Tagged ASch.Null
 instance A.HasAvroSchema t
          => HasAvroSchema' (FieldValue sch ('TPrimitive t)) where
+  typeName' _ = []
   schema' _ = coerce $ A.schema @t
 instance (HasAvroSchema' (Term sch (sch :/: t)))
          => HasAvroSchema' (FieldValue sch ('TSchematic t)) where
+  typeName' _ = []
   schema' visited = coerce $ schema' @(Term sch (sch :/: t)) visited
 instance forall sch choices.
          HasAvroSchemaUnion (FieldValue sch) choices
          => HasAvroSchema' (FieldValue sch ('TUnion choices)) where
+  typeName' _ = []
   schema' visited
     = Tagged $ ASch.mkUnion $ schemaU (Proxy @(FieldValue sch)) (Proxy @choices) visited
 instance HasAvroSchema' (FieldValue sch t)
          => HasAvroSchema' (FieldValue sch ('TOption t)) where
+  typeName' _ = []
   schema' visited
     = Tagged $ ASch.mkUnion $ ASch.Null :| [iSchema]
     where iSchema = unTagged $ schema' @(FieldValue sch t) visited
 instance HasAvroSchema' (FieldValue sch t)
          => HasAvroSchema' (FieldValue sch ('TList t)) where
+  typeName' _ = []
   schema' visited
     = Tagged $ ASch.Array iSchema
     where iSchema = unTagged $ schema' @(FieldValue sch t) visited
 -- These are the only two versions of Map supported by the library
 instance HasAvroSchema' (FieldValue sch v)
          => HasAvroSchema' (FieldValue sch ('TMap ('TPrimitive T.Text) v)) where
+  typeName' _ = []
   schema' visited
     = Tagged $ ASch.Map iSchema
     where iSchema = unTagged $ schema' @(FieldValue sch v) visited
 instance HasAvroSchema' (FieldValue sch v)
          => HasAvroSchema' (FieldValue sch ('TMap ('TPrimitive String) v)) where
+  typeName' _ = []
   schema' visited
     = Tagged $ ASch.Map iSchema
     where iSchema = unTagged $ schema' @(FieldValue sch v) visited
@@ -266,14 +311,20 @@ instance (KnownName name, A.FromAvro (FieldValue sch t), FromAvroFields sch fs)
 
 -- ToAvro instances
 
-instance (KnownName name, ToAvroFields sch args)
+instance (KnownName name, ToAvroFields sch args, HasAvroSchemaFields sch args)
          => A.ToAvro (Term sch ('DRecord name args)) where
-  toAvro s (TRecord fields) = A.record s $ toAvroF fields
-instance (KnownName name, ToAvroEnum choices)
+  toAvro s@ASch.Record {} (TRecord fields)
+    = A.record s $ toAvroF fields
+  -- if we don't have a record, fall back to the one from schema
+  toAvro _ (TRecord fields)
+    = A.record (unTagged $ schema' @(Term sch ('DRecord name args)) []) $ toAvroF fields
+instance (KnownName name, ToAvroEnum choices, HasAvroSchemaEnum choices)
           => A.ToAvro (Term sch ('DEnum name choices)) where
   toAvro ASch.Enum { ASch.symbols = ss } (TEnum n)
     = word8 $ fromIntegral $ toAvroE ss n
-  toAvro _ _ = error "this should never happen"
+  -- otherwise fall back to the one from schema
+  toAvro _ (TEnum n)
+    = word8 $ fromIntegral $ toAvroE (V.fromList $ schemaE (Proxy @choices)) n
 instance (A.ToAvro (FieldValue sch t))
          => A.ToAvro (Term sch ('DSimple t)) where
   toAvro s (TSimple v) = A.toAvro s v
@@ -288,7 +339,7 @@ instance ( KnownName t, A.ToAvro (Term sch (sch :/: t)) )
 instance (ToAvroUnion sch choices)
          => A.ToAvro (FieldValue sch ('TUnion choices)) where
   toAvro (ASch.Union vs) (FUnion v) = toAvroU vs 0 v
-  toAvro _ _                        = error "this should never happen"
+  toAvro s _                        = error ("this should never happen:\n" ++ show s)
 instance (A.ToAvro (FieldValue sch t))
          => A.ToAvro (FieldValue sch ('TOption t)) where
   toAvro s (FOption v) = A.toAvro s v

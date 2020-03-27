@@ -50,8 +50,8 @@ data ProducerRecord' k v = ProducerRecord'
 
 toPR
   :: ( ToSchema sch sty t
-     , A.ToAvro (Term sch (sch :/: sty))
-     , A.HasAvroSchema (Term sch (sch :/: sty)) )
+     , A.ToAvro (WithSchema sch sty t)
+     , A.HasAvroSchema (WithSchema sch sty t) )
   => Proxy sch -> ProducerRecord' ByteString t -> ProducerRecord
 toPR proxy (ProducerRecord' t p k v)
   = ProducerRecord t p k (toBS proxy <$> v)
@@ -64,8 +64,8 @@ toPR proxy (ProducerRecord' t p k v)
 kafkaSink
   :: ( MonadResource m
      , ToSchema sch sty t
-     , A.ToAvro (Term sch (sch :/: sty))
-     , A.HasAvroSchema (Term sch (sch :/: sty)) )
+     , A.ToAvro (WithSchema sch sty t)
+     , A.HasAvroSchema (WithSchema sch sty t) )
   => Proxy sch -> X.ProducerProperties
   -> ConduitT (ProducerRecord' ByteString t) Void m (Maybe KafkaError)
 kafkaSink proxy prod
@@ -76,8 +76,8 @@ kafkaSink proxy prod
 kafkaSinkAutoClose
   :: ( MonadResource m
      , ToSchema sch sty t
-     , A.ToAvro (Term sch (sch :/: sty))
-     , A.HasAvroSchema (Term sch (sch :/: sty)) )
+     , A.ToAvro (WithSchema sch sty t)
+     , A.HasAvroSchema (WithSchema sch sty t) )
   => Proxy sch -> KafkaProducer
   -> ConduitT (ProducerRecord' ByteString t) Void m (Maybe X.KafkaError)
 kafkaSinkAutoClose proxy prod
@@ -88,8 +88,8 @@ kafkaSinkAutoClose proxy prod
 kafkaSinkNoClose
   :: ( MonadIO m
      , ToSchema sch sty t
-     , A.ToAvro (Term sch (sch :/: sty))
-     , A.HasAvroSchema (Term sch (sch :/: sty)) )
+     , A.ToAvro (WithSchema sch sty t)
+     , A.HasAvroSchema (WithSchema sch sty t) )
   => Proxy sch -> KafkaProducer
   -> ConduitT (ProducerRecord' ByteString t) Void m (Maybe X.KafkaError)
 kafkaSinkNoClose proxy prod
@@ -100,8 +100,8 @@ kafkaSinkNoClose proxy prod
 kafkaBatchSinkNoClose
   :: ( MonadIO m
      , ToSchema sch sty t
-     , A.ToAvro (Term sch (sch :/: sty))
-     , A.HasAvroSchema (Term sch (sch :/: sty)) )
+     , A.ToAvro (WithSchema sch sty t)
+     , A.HasAvroSchema (WithSchema sch sty t) )
   => Proxy sch -> KafkaProducer
   -> ConduitT [ProducerRecord' ByteString t] Void m [(ProducerRecord, KafkaError)]
 kafkaBatchSinkNoClose proxy prod

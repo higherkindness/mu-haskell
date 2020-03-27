@@ -58,37 +58,33 @@ instance GRPCOutput AvroRPC () where
   decodeOutput _ _ = runGetIncremental $ pure $ Right ()
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
-         ( FromSchema sch sty i
-         , FromAvro (Term sch (sch :/: sty))
-         , HasAvroSchema (Term sch (sch :/: sty)) )
+         ( HasAvroSchema (WithSchema sch sty i)
+         , FromAvro (WithSchema sch sty i) )
          => GRPCInput AvroRPC (ViaFromAvroTypeRef ('SchemaRef sch sty) i) where
   encodeInput = error "eif/you should not call this"
-  decodeInput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch <$>) <$> decoder i
+  decodeInput _ i = (ViaFromAvroTypeRef . unWithSchema @_ @_ @sch @sty @i <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
-         ( FromSchema sch sty i
-         , FromAvro (Term sch (sch :/: sty))
-         , HasAvroSchema (Term sch (sch :/: sty)) )
+         ( HasAvroSchema (WithSchema sch sty i)
+         , FromAvro (WithSchema sch sty i) )
          => GRPCOutput AvroRPC (ViaFromAvroTypeRef ('SchemaRef sch sty) i) where
   encodeOutput = error "eof/you should not call this"
-  decodeOutput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch <$>) <$> decoder i
+  decodeOutput _ i = (ViaFromAvroTypeRef . unWithSchema @_ @_ @sch @sty @i <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
-         ( ToSchema sch sty o
-         , ToAvro (Term sch (sch :/: sty))
-         , HasAvroSchema (Term sch (sch :/: sty)) )
+         ( HasAvroSchema (WithSchema sch sty o)
+         , ToAvro (WithSchema sch sty o) )
          => GRPCInput AvroRPC (ViaToAvroTypeRef ('SchemaRef sch sty) o) where
   encodeInput _ compression
-    = encoder compression . toSchema' @_ @_ @sch . unViaToAvroTypeRef
+    = encoder compression . WithSchema @_ @_ @sch @sty . unViaToAvroTypeRef
   decodeInput = error "dit/you should not call this"
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
-         ( ToSchema sch sty o
-         , ToAvro (Term sch (sch :/: sty))
-         , HasAvroSchema (Term sch (sch :/: sty)) )
+         ( HasAvroSchema (WithSchema sch sty o)
+         , ToAvro (WithSchema sch sty o) )
          => GRPCOutput AvroRPC (ViaToAvroTypeRef ('SchemaRef sch sty) o) where
   encodeOutput _ compression
-    = encoder compression . toSchema' @_ @_ @sch . unViaToAvroTypeRef
+    = encoder compression . WithSchema @_ @_ @sch @sty . unViaToAvroTypeRef
   decodeOutput = error "dot/you should not call this"
 
 encoder :: (HasAvroSchema m, ToAvro m)
