@@ -36,5 +36,5 @@ main = do -- Obtain the filenames
   -- Encode a couple of values
   putStrLn "haskell/generate"
   print [examplePerson1, examplePerson2]
-  gbs <- encodeContainer [[examplePerson1, examplePerson2]]
+  gbs <- encodeContainer nullCodec [[examplePerson1, examplePerson2]]
   BS.writeFile genFile gbs

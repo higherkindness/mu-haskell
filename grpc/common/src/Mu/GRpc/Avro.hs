@@ -9,7 +9,7 @@
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
-{-# options_ghc -fno-warn-orphans  #-}
+{-# options_ghc -fno-warn-orphans -fno-warn-simplifiable-class-constraints  #-}
 module Mu.GRpc.Avro (
   AvroRPC(..)
 , ViaFromAvroTypeRef(..)
@@ -59,21 +59,24 @@ instance GRPCOutput AvroRPC () where
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          ( FromSchema sch sty i
-         , FromAvro (Term sch (sch :/: sty)) )
+         , FromAvro (Term sch (sch :/: sty))
+         , HasAvroSchema (Term sch (sch :/: sty)) )
          => GRPCInput AvroRPC (ViaFromAvroTypeRef ('SchemaRef sch sty) i) where
   encodeInput = error "eif/you should not call this"
   decodeInput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          ( FromSchema sch sty i
-         , FromAvro (Term sch (sch :/: sty)) )
+         , FromAvro (Term sch (sch :/: sty))
+         , HasAvroSchema (Term sch (sch :/: sty)) )
          => GRPCOutput AvroRPC (ViaFromAvroTypeRef ('SchemaRef sch sty) i) where
   encodeOutput = error "eof/you should not call this"
   decodeOutput _ i = (ViaFromAvroTypeRef . fromSchema' @_ @_ @sch <$>) <$> decoder i
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
          ( ToSchema sch sty o
-         , ToAvro (Term sch (sch :/: sty)) )
+         , ToAvro (Term sch (sch :/: sty))
+         , HasAvroSchema (Term sch (sch :/: sty)) )
          => GRPCInput AvroRPC (ViaToAvroTypeRef ('SchemaRef sch sty) o) where
   encodeInput _ compression
     = encoder compression . toSchema' @_ @_ @sch . unViaToAvroTypeRef
@@ -81,31 +84,30 @@ instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
 
 instance forall (sch :: Schema') (sty :: Symbol) (o :: Type).
          ( ToSchema sch sty o
-         , ToAvro (Term sch (sch :/: sty)) )
+         , ToAvro (Term sch (sch :/: sty))
+         , HasAvroSchema (Term sch (sch :/: sty)) )
          => GRPCOutput AvroRPC (ViaToAvroTypeRef ('SchemaRef sch sty) o) where
   encodeOutput _ compression
     = encoder compression . toSchema' @_ @_ @sch . unViaToAvroTypeRef
   decodeOutput = error "dot/you should not call this"
 
-encoder :: ToAvro m => Compression -> m -> Builder
+encoder :: (HasAvroSchema m, ToAvro m)
+        => Compression -> m -> Builder
 encoder compression plain =
     mconcat [ singleton (if _compressionByteSet compression then 1 else 0)
             , putWord32be (fromIntegral $ ByteString.length bin)
             , fromByteString bin
             ]
   where
-    bin = _compressionFunction compression $ toStrict $ encode plain
+    bin = _compressionFunction compression $ toStrict $ encodeValue plain
 
-decoder :: FromAvro a => Compression -> Decoder (Either String a)
+decoder :: (HasAvroSchema a, FromAvro a)
+        => Compression -> Decoder (Either String a)
 decoder compression = runGetIncremental $ do
     isCompressed <- getInt8      -- 1byte
     let decompress = if isCompressed == 0 then pure else _decompressionFunction compression
     n <- getWord32be             -- 4bytes
-    decode' . fromStrict <$> (decompress =<< getByteString (fromIntegral n))
-  where
-    decode' x = case decode x of
-                  Success y -> Right y
-                  Error   e -> Left e
+    decodeValue . fromStrict <$> (decompress =<< getByteString (fromIntegral n))
 
 -- Based on https://hackage.haskell.org/package/binary/docs/Data-Binary-Get-Internal.html
 instance Functor Decoder where

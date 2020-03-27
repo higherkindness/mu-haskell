@@ -247,7 +247,8 @@ instance ToProtoBufTypeRef ref r
 
 instance forall (sch :: Schema') sty (r :: Type).
          ( ToSchema sch sty r
-         , ToAvro (Term sch (sch :/: sty)) )
+         , ToAvro (Term sch (sch :/: sty))
+         , HasAvroSchema (Term sch (sch :/: sty)) )
          => GRpcOutputWrapper 'MsgAvro ('SchemaRef sch sty) r where
   type GRpcOWTy 'MsgAvro ('SchemaRef sch sty) r = ViaToAvroTypeRef ('SchemaRef sch sty) r
   buildGRpcOWTy _ _ = ViaToAvroTypeRef
@@ -264,7 +265,8 @@ instance FromProtoBufTypeRef ref r
 
 instance forall (sch :: Schema') sty (r :: Type).
          ( FromSchema sch sty r
-         , FromAvro (Term sch (sch :/: sty)) )
+         , FromAvro (Term sch (sch :/: sty))
+         , HasAvroSchema (Term sch (sch :/: sty)) )
          => GRpcInputWrapper 'MsgAvro ('SchemaRef sch sty) r where
   type GRpcIWTy 'MsgAvro ('SchemaRef sch sty) r = ViaFromAvroTypeRef ('SchemaRef sch sty) r
   unGRpcIWTy _ _ = unViaFromAvroTypeRef

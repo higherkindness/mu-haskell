@@ -22,15 +22,20 @@ module Mu.Adapter.Avro () where
 
 import           Control.Arrow                       ((***))
 import qualified Data.Avro                           as A
-import qualified Data.Avro.Schema                    as ASch
-import qualified Data.Avro.Types.Value               as AVal
+import qualified Data.Avro.Encoding.FromAvro         as AVal
+import qualified Data.Avro.Encoding.ToAvro           as A
+import qualified Data.Avro.Schema.ReadSchema         as RSch
+import qualified Data.Avro.Schema.Schema             as ASch
 -- 'Tagged . unTagged' can be replaced by 'coerce'
 -- eliminating some run-time overhead
+import           Data.Avro.EitherN                   (putIndexedValue)
+import           Data.ByteString.Builder             (Builder, word8)
 import           Data.Coerce                         (coerce)
 import qualified Data.HashMap.Strict                 as HM
 import           Data.List.NonEmpty                  (NonEmpty (..))
 import qualified Data.List.NonEmpty                  as NonEmptyList
 import qualified Data.Map                            as M
+import           Data.Maybe                          (fromJust)
 import           Data.Tagged
 import qualified Data.Text                           as T
 import qualified Data.Vector                         as V
@@ -39,26 +44,29 @@ import           GHC.TypeLits
 import           Mu.Schema
 import qualified Mu.Schema.Interpretation.Schemaless as SLess
 
-instance SLess.ToSchemalessTerm (AVal.Value t) where
-  toSchemalessTerm (AVal.Record _ r)
-    = SLess.TRecord $ map (\(k,v) -> SLess.Field k (SLess.toSchemalessValue v))
-                    $ HM.toList r
+instance SLess.ToSchemalessTerm AVal.Value where
+  toSchemalessTerm (AVal.Record s r)
+    = case s of
+        RSch.Record { RSch.fields = fs }
+          -> SLess.TRecord $ map (\(k,v) -> SLess.Field k (SLess.toSchemalessValue v))
+                           $ zip (map RSch.fldName fs) (V.toList r)
+        _ -> error "this should never happen"
   toSchemalessTerm (AVal.Enum _ i _)
     = SLess.TEnum i
   toSchemalessTerm (AVal.Union _ _ v)
     = SLess.toSchemalessTerm v
   toSchemalessTerm v = SLess.TSimple (SLess.toSchemalessValue v)
 
-instance SLess.ToSchemalessValue (AVal.Value t) where
-  toSchemalessValue AVal.Null        = SLess.FNull
-  toSchemalessValue (AVal.Boolean b) = SLess.FPrimitive b
-  toSchemalessValue (AVal.Int b)     = SLess.FPrimitive b
-  toSchemalessValue (AVal.Long b)    = SLess.FPrimitive b
-  toSchemalessValue (AVal.Float b)   = SLess.FPrimitive b
-  toSchemalessValue (AVal.Double b)  = SLess.FPrimitive b
-  toSchemalessValue (AVal.String b)  = SLess.FPrimitive b
-  toSchemalessValue (AVal.Fixed _ b) = SLess.FPrimitive b
-  toSchemalessValue (AVal.Bytes b)   = SLess.FPrimitive b
+instance SLess.ToSchemalessValue AVal.Value where
+  toSchemalessValue AVal.Null         = SLess.FNull
+  toSchemalessValue (AVal.Boolean  b) = SLess.FPrimitive b
+  toSchemalessValue (AVal.Int    _ b) = SLess.FPrimitive b
+  toSchemalessValue (AVal.Long   _ b) = SLess.FPrimitive b
+  toSchemalessValue (AVal.Float  _ b) = SLess.FPrimitive b
+  toSchemalessValue (AVal.Double _ b) = SLess.FPrimitive b
+  toSchemalessValue (AVal.String _ b) = SLess.FPrimitive b
+  toSchemalessValue (AVal.Fixed  _ b) = SLess.FPrimitive b
+  toSchemalessValue (AVal.Bytes  _ b) = SLess.FPrimitive b
   toSchemalessValue (AVal.Array v)
     = SLess.FList $ map SLess.toSchemalessValue $ V.toList v
   toSchemalessValue (AVal.Map hm)
@@ -78,11 +86,11 @@ instance A.HasAvroSchema (Term sch (sch :/: sty))
 instance ( FromSchema sch sty t
          , A.FromAvro (Term sch (sch :/: sty)) )
          => A.FromAvro (WithSchema sch sty t) where
-  fromAvro v = WithSchema . fromSchema' @_ @_ @sch <$> A.fromAvro v
+  fromAvro v = WithSchema . fromSchema' @_ @_ @sch <$> AVal.fromAvro v
 instance ( ToSchema sch sty t
          , A.ToAvro (Term sch (sch :/: sty)) )
          => A.ToAvro (WithSchema sch sty t) where
-  toAvro (WithSchema v) = A.toAvro (toSchema' @_ @_ @sch v)
+  toAvro s (WithSchema v) = A.toAvro s (toSchema' @_ @_ @sch v)
 
 -- HasAvroSchema instances
 
@@ -183,150 +191,147 @@ instance (KnownName name, HasAvroSchemaEnum fs)
 
 -- FromAvro instances
 
-instance (KnownName name, HasAvroSchemaFields sch args, FromAvroFields sch args)
+instance (KnownName name, FromAvroFields sch args)
          => A.FromAvro (Term sch ('DRecord name args)) where
-  fromAvro (AVal.Record _ fields) = TRecord <$> fromAvroF fields
-  fromAvro v                      = A.badValue v "record"
-instance (KnownName name, HasAvroSchemaEnum choices, FromAvroEnum choices)
+  fromAvro (AVal.Record RSch.Record { RSch.fields = fs } fields)
+    = TRecord <$> fromAvroF r
+    where
+      r = HM.fromList $ zip (map RSch.fldName fs) (V.toList fields)
+  fromAvro _ = Left "expecting record"
+instance (KnownName name, FromAvroEnum choices)
           => A.FromAvro (Term sch ('DEnum name choices)) where
-  fromAvro v@(AVal.Enum _ n _) = TEnum <$> fromAvroEnum v n
-  fromAvro v                   = A.badValue v "enum"
-instance (HasAvroSchema' (FieldValue sch t), A.FromAvro (FieldValue sch t))
+  fromAvro (AVal.Enum _ _ v) = TEnum <$> fromAvroEnum v
+  fromAvro _                 = Left "expecting enum"
+instance (A.FromAvro (FieldValue sch t))
          => A.FromAvro (Term sch ('DSimple t)) where
-  fromAvro v = TSimple <$> A.fromAvro v
+  fromAvro v = TSimple <$> AVal.fromAvro v
 
 instance A.FromAvro (FieldValue sch 'TNull) where
   fromAvro AVal.Null = pure FNull
-  fromAvro v         = A.badValue v "null"
+  fromAvro _         = Left "expecting null"
 instance A.FromAvro t => A.FromAvro (FieldValue sch ('TPrimitive t)) where
-  fromAvro v = FPrimitive <$> A.fromAvro v
-instance ( KnownName t, HasAvroSchema' (Term sch (sch :/: t))
-         , A.FromAvro (Term sch (sch :/: t)) )
+  fromAvro v = FPrimitive <$> AVal.fromAvro v
+instance ( KnownName t, A.FromAvro (Term sch (sch :/: t)) )
          => A.FromAvro (FieldValue sch ('TSchematic t)) where
-  fromAvro v = FSchematic <$> A.fromAvro v
-instance (HasAvroSchemaUnion (FieldValue sch) choices, FromAvroUnion sch choices)
+  fromAvro v = FSchematic <$> AVal.fromAvro v
+instance (FromAvroUnion sch choices)
          => A.FromAvro (FieldValue sch ('TUnion choices)) where
-  fromAvro (AVal.Union _ branch v) = FUnion <$> fromAvroU branch v
-  fromAvro v                       = A.badValue v "union"
-instance (HasAvroSchema' (FieldValue sch t), A.FromAvro (FieldValue sch t))
+  fromAvro (AVal.Union _ i v) = FUnion <$> fromAvroU i v
+  fromAvro _                  = Left "expecting union"
+instance (A.FromAvro (FieldValue sch t))
          => A.FromAvro (FieldValue sch ('TOption t)) where
-  fromAvro v = FOption <$> A.fromAvro v
-instance (HasAvroSchema' (FieldValue sch t), A.FromAvro (FieldValue sch t))
+  fromAvro v = FOption <$> AVal.fromAvro v
+instance (A.FromAvro (FieldValue sch t))
          => A.FromAvro (FieldValue sch ('TList t)) where
-  fromAvro v = FList <$> A.fromAvro v
+  fromAvro v = FList <$> AVal.fromAvro v
 -- These are the only two versions of Map supported by the library
-instance (HasAvroSchema' (FieldValue sch v), A.FromAvro (FieldValue sch v))
+instance (A.FromAvro (FieldValue sch v))
          => A.FromAvro (FieldValue sch ('TMap ('TPrimitive T.Text) v)) where
-  fromAvro v = FMap . M.mapKeys FPrimitive <$> A.fromAvro v
-instance (HasAvroSchema' (FieldValue sch v), A.FromAvro (FieldValue sch v))
+  fromAvro v = FMap . M.mapKeys FPrimitive <$> AVal.fromAvro v
+instance (A.FromAvro (FieldValue sch v))
          => A.FromAvro (FieldValue sch ('TMap ('TPrimitive String) v)) where
-  fromAvro v = FMap . M.mapKeys (FPrimitive . T.unpack) <$> A.fromAvro v
+  fromAvro v = FMap . M.mapKeys (FPrimitive . T.unpack) <$> AVal.fromAvro v
 
 class FromAvroEnum (vs :: [ChoiceDef fn]) where
-  fromAvroEnum :: AVal.Value ASch.Schema -> Int -> A.Result (NS Proxy vs)
+  fromAvroEnum :: T.Text -> Either String (NS Proxy vs)
 instance FromAvroEnum '[] where
-  fromAvroEnum v _ = A.badValue v "element not found"
-instance FromAvroEnum vs => FromAvroEnum (v ': vs) where
-  fromAvroEnum _ 0 = pure (Z Proxy)
-  fromAvroEnum v n = S <$> fromAvroEnum v (n-1)
+  fromAvroEnum _ = Left "enum choice not found"
+instance (KnownName name, FromAvroEnum vs)
+         => FromAvroEnum ('ChoiceDef name ': vs) where
+  fromAvroEnum s
+    | s == fieldName = pure $ Z Proxy
+    | otherwise      = S <$> fromAvroEnum s
+    where fieldName = nameText (Proxy @name)
 
 class FromAvroUnion sch choices where
-  fromAvroU :: ASch.Schema -> AVal.Value ASch.Schema
-            -> ASch.Result (NS (FieldValue sch) choices)
+  fromAvroU :: Int -> AVal.Value -> Either String (NS (FieldValue sch) choices)
 instance FromAvroUnion sch '[] where
-  fromAvroU _ v = A.badValue v "union choice not found"
+  fromAvroU _ _ = Left "union choice not found"
 instance (A.FromAvro (FieldValue sch u), FromAvroUnion sch us)
          => FromAvroUnion sch (u ': us) where
-  fromAvroU branch v
-    | ASch.matches branch (unTagged (A.schema @(FieldValue sch u)))
-    = Z <$> A.fromAvro v
-    | otherwise
-    = S <$> fromAvroU branch v
+  fromAvroU 0 v = Z <$> AVal.fromAvro v
+  fromAvroU n v = S <$> fromAvroU (n-1) v
 
 class FromAvroFields sch (fs :: [FieldDef Symbol Symbol]) where
-  fromAvroF :: HM.HashMap T.Text (AVal.Value ASch.Schema)
-            -> A.Result (NP (Field sch) fs)
+  fromAvroF :: HM.HashMap T.Text AVal.Value
+            -> Either String (NP (Field sch) fs)
 instance FromAvroFields sch '[] where
   fromAvroF _ = pure Nil
 instance (KnownName name, A.FromAvro (FieldValue sch t), FromAvroFields sch fs)
          => FromAvroFields sch ('FieldDef name t ': fs) where
   fromAvroF v = case HM.lookup fieldName v of
-                  Nothing -> A.badValue v "field not found"
-                  Just f  -> (:*) <$> (Field <$> A.fromAvro f) <*> fromAvroF v
+                  Nothing -> Left "field not found"
+                  Just f  -> (:*) <$> (Field <$> AVal.fromAvro f) <*> fromAvroF v
     where fieldName = nameText (Proxy @name)
 
 -- ToAvro instances
 
-instance (KnownName name, HasAvroSchemaFields sch args, ToAvroFields sch args)
+instance (KnownName name, ToAvroFields sch args)
          => A.ToAvro (Term sch ('DRecord name args)) where
-  toAvro (TRecord fields) = AVal.Record wholeSchema (toAvroF fields)
-    where wholeSchema = unTagged (A.schema @(Term sch ('DRecord name args)))
-instance (KnownName name, HasAvroSchemaEnum choices, ToAvroEnum choices)
+  toAvro s (TRecord fields) = A.record s $ toAvroF fields
+instance (KnownName name, ToAvroEnum choices)
           => A.ToAvro (Term sch ('DEnum name choices)) where
-  toAvro (TEnum n) = AVal.Enum wholeSchema choice text
-    where wholeSchema = unTagged (A.schema @(Term sch ('DEnum name choices)))
-          (choice, text) = toAvroE n
-instance (HasAvroSchema' (FieldValue sch t), A.ToAvro (FieldValue sch t))
+  toAvro ASch.Enum { ASch.symbols = ss } (TEnum n)
+    = word8 $ fromIntegral $ toAvroE ss n
+  toAvro _ _ = error "this should never happen"
+instance (A.ToAvro (FieldValue sch t))
          => A.ToAvro (Term sch ('DSimple t)) where
-  toAvro (TSimple v) = A.toAvro v
+  toAvro s (TSimple v) = A.toAvro s v
 
 instance A.ToAvro (FieldValue sch 'TNull) where
-  toAvro FNull = AVal.Null
+  toAvro _ FNull = mempty
 instance A.ToAvro t => A.ToAvro (FieldValue sch ('TPrimitive t)) where
-  toAvro (FPrimitive v) = A.toAvro v
-instance ( KnownName t, HasAvroSchema' (Term sch (sch :/: t))
-         , A.ToAvro (Term sch (sch :/: t)) )
+  toAvro s (FPrimitive v) = A.toAvro s v
+instance ( KnownName t, A.ToAvro (Term sch (sch :/: t)) )
          => A.ToAvro (FieldValue sch ('TSchematic t)) where
-  toAvro (FSchematic v) = A.toAvro v
-instance forall sch choices.
-         (HasAvroSchemaUnion (FieldValue sch) choices, ToAvroUnion sch choices)
+  toAvro s (FSchematic v) = A.toAvro s v
+instance (ToAvroUnion sch choices)
          => A.ToAvro (FieldValue sch ('TUnion choices)) where
-  toAvro (FUnion v) = AVal.Union wholeSchema' chosenTy chosenVal
-    where wholeSchema = schemaU (Proxy @(FieldValue sch)) (Proxy @choices) []
-          wholeSchema' = V.fromList (NonEmptyList.toList wholeSchema)
-          (chosenTy, chosenVal) = toAvroU v
-instance (HasAvroSchema' (FieldValue sch t), A.ToAvro (FieldValue sch t))
+  toAvro (ASch.Union vs) (FUnion v) = toAvroU vs 0 v
+  toAvro _ _                        = error "this should never happen"
+instance (A.ToAvro (FieldValue sch t))
          => A.ToAvro (FieldValue sch ('TOption t)) where
-  toAvro (FOption v) = A.toAvro v
-instance (HasAvroSchema' (FieldValue sch t), A.ToAvro (FieldValue sch t))
+  toAvro s (FOption v) = A.toAvro s v
+instance (A.ToAvro (FieldValue sch t))
          => A.ToAvro (FieldValue sch ('TList t)) where
-  toAvro (FList v) = AVal.Array $ V.fromList $ A.toAvro <$> v
+  toAvro s (FList v) = A.toAvro s v
 -- These are the only two versions of Map supported by the library
-instance (HasAvroSchema' (FieldValue sch v), A.ToAvro (FieldValue sch v))
+instance (A.ToAvro (FieldValue sch v))
          => A.ToAvro (FieldValue sch ('TMap ('TPrimitive T.Text) v)) where
-  toAvro (FMap v) = A.toAvro $ M.mapKeys (\(FPrimitive k) -> k) v
-instance (HasAvroSchema' (FieldValue sch v), A.ToAvro (FieldValue sch v))
+  toAvro s (FMap v) = A.toAvro s $ M.mapKeys (\(FPrimitive k) -> k) v
+instance (A.ToAvro (FieldValue sch v))
          => A.ToAvro (FieldValue sch ('TMap ('TPrimitive String) v)) where
-  toAvro (FMap v) = A.toAvro $ M.mapKeys (\(FPrimitive k) -> k) v
-
-class ToAvroUnion sch choices where
-  toAvroU :: NS (FieldValue sch) choices -> (ASch.Schema, AVal.Value ASch.Schema)
-instance ToAvroUnion sch '[] where
-  toAvroU _ = error "ToAvro in an empty union"
-instance forall sch u us.
-         (A.ToAvro (FieldValue sch u), ToAvroUnion sch us)
-         => ToAvroUnion sch (u ': us) where
-  toAvroU (Z v) = (unTagged (A.schema @(FieldValue sch u)), A.toAvro v)
-  toAvroU (S n) = toAvroU n
+  toAvro s (FMap v) = A.toAvro s $ M.mapKeys (\(FPrimitive k) -> T.pack k) v
 
 class ToAvroEnum choices where
-  toAvroE :: NS Proxy choices -> (Int, T.Text)
+  toAvroE :: V.Vector T.Text -> NS Proxy choices -> Int
 instance ToAvroEnum '[] where
   toAvroE = error "ToAvro in an empty enum"
 instance (KnownName u, ToAvroEnum us)
          => ToAvroEnum ('ChoiceDef u ': us) where
-  toAvroE (Z _) = (0, nameText (Proxy @u))
-  toAvroE (S v) = let (n, t) = toAvroE v in (n + 1, t)
+  toAvroE s (Z _) = fromJust $ nameText (Proxy @u) `V.elemIndex` s
+  toAvroE s (S v) = toAvroE s v
+
+class ToAvroUnion sch choices where
+  toAvroU :: V.Vector ASch.Schema
+          -> Int -> NS (FieldValue sch) choices -> Builder
+instance ToAvroUnion sch '[] where
+  toAvroU = error "this should never happen"
+instance (A.ToAvro (FieldValue sch u), ToAvroUnion sch us)
+         => ToAvroUnion sch (u ': us) where
+  toAvroU allSch n (Z v)
+    = putIndexedValue n allSch v
+  toAvroU allSch n (S v)
+    = toAvroU allSch (n+1) v
 
 class ToAvroFields sch (fs :: [FieldDef Symbol Symbol]) where
-  toAvroF :: NP (Field sch) fs -> HM.HashMap T.Text (AVal.Value ASch.Schema)
+  toAvroF :: NP (Field sch) fs -> [(T.Text, A.Encoder)]
 instance ToAvroFields sch '[] where
-  toAvroF _ = HM.empty
+  toAvroF _ = []
 instance (KnownName name, A.ToAvro (FieldValue sch t), ToAvroFields sch fs)
          => ToAvroFields sch ('FieldDef name t ': fs) where
-  toAvroF (Field v :* rest) = HM.insert fieldName fieldValue (toAvroF rest)
+  toAvroF (Field v :* rest) = (fieldName A..= v) : toAvroF rest
     where fieldName  = nameText (Proxy @name)
-          fieldValue = A.toAvro v
 
 -- Conversion of symbols to other things
 nameText :: KnownName s => proxy s -> T.Text

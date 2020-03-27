@@ -29,7 +29,7 @@ library
 
   build-depends:
       aeson
-    , avro                  >=0.4.7
+    , avro                  >=0.5
     , base                  >=4.12  && <5
     , bytestring
     , containers
@@ -53,7 +53,7 @@ library
 executable test-avro
   main-is:          Avro.hs
   build-depends:
-      avro        >=0.4.7
+      avro        >=0.5
     , base        >=4.12  && <5
     , bytestring
     , mu-avro     >=0.2.0

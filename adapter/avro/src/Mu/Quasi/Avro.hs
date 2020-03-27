@@ -28,8 +28,8 @@ module Mu.Quasi.Avro (
 
 import           Control.Monad.IO.Class
 import           Data.Aeson                 (decode)
-import qualified Data.Avro.Schema           as A
-import           Data.Avro.Types.Decimal    as D
+import           Data.Avro.Schema.Decimal   as D
+import qualified Data.Avro.Schema.Schema    as A
 import qualified Data.ByteString            as B
 import           Data.ByteString.Lazy.Char8 (pack)
 import           Data.Int
