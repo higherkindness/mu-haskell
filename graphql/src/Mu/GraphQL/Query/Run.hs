@@ -692,6 +692,12 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
           ("deprecationReason", [])
             -> pure $ Just Aeson.Null
 
+          -- this is used by __InputValue,
+          -- which is required when the field
+          -- is inside an INPUT_OBJECT
+          ("defaultValue", [])
+            -> pure $ Just Aeson.Null
+
           ("type", _)
             -> runIntroType fpath' s fty innerss
           ("args", _)
