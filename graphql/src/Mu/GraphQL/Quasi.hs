@@ -99,19 +99,28 @@ typeToDec (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
 --   , _iotdValueDefinitions :: ![InputValueDefinition] FIXME:
 --   }
 
-schemaFromGQL :: [GQL.Value] -> Q Type
-schemaFromGQL = (typesToList <$>) . traverse schemaFromGQLType
+schemaFromGQL :: [GQL.ValueConst] -> Q Type
+schemaFromGQL = (typesToList <$>) . traverse schemaFromGQLValue
 
-schemaFromGQLType :: GQL.Value -> Q Type
-  -- | VVariable !Variable
-schemaFromGQLType (GQL.VInt _) = [t|'TPrimitive Int32|]
-  -- | VFloat !Double
-  -- | VString !StringValue
-  -- | VBoolean !Bool
-  -- | VNull
-  -- | VEnum !EnumValue
-  -- | VList !ListValue
-  -- | VObject !ObjectValue
+schemaFromGQLValue :: GQL.ValueConst -> Q Type
+schemaFromGQLValue (GQL.VCInt _)     = [t|'TPrimitive Int32|]
+schemaFromGQLValue (GQL.VCFloat _)   = [t|'TPrimitive Double|]
+schemaFromGQLValue (GQL.VCString _)  = [t|'TPrimitive T.Text|]
+schemaFromGQLValue (GQL.VCBoolean _) = [t|'TPrimitive Bool|]
+schemaFromGQLValue GQL.VCNull        = [t|'TPrimitive 'TNull|]
+-- schemaFromGQLValue (GQL.VCEnum !EnumValue
+schemaFromGQLValue (GQL.VCList vals) = [t|'TList $(schemaFromGQL $ GQL.unListValue vals)|]
+-- schemaFromGQLValue (GQL.VCObject !ObjectValueC
+
+-- newtype ObjectValueG a
+--   = ObjectValueG {unObjectValue :: [ObjectFieldG a]}
+
+-- type ObjectValueC = ObjectValueG ValueConst
+
+-- data ObjectFieldG a
+--   = ObjectFieldG
+--   { _ofName  :: Name
+--   , _ofValue :: a
 
 typesToList :: [Type] -> Type
 typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
