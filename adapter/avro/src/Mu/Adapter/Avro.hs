@@ -144,7 +144,7 @@ instance (KnownName name, HasAvroSchemaFields sch args)
   schema' visited
     = if recordName `elem` visited
          then Tagged $ ASch.NamedType recordName
-         else Tagged $ ASch.Record recordName [] Nothing Nothing fields
+         else Tagged $ ASch.Record recordName [] Nothing fields
     where recordName = nameTypeName (Proxy @name)
           fields = schemaF (Proxy @sch) (Proxy @args) visited
 instance (KnownName name, HasAvroSchemaEnum choices)

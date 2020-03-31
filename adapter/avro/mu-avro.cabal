@@ -29,7 +29,7 @@ library
 
   build-depends:
       aeson
-    , avro                  >=0.5
+    , avro                  >=0.5.1
     , base                  >=4.12  && <5
     , bytestring
     , containers

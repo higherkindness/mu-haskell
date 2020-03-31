@@ -103,7 +103,7 @@ schemaFromAvro =
   (typesToList <$>) . mapM schemaDecFromAvroType . flattenAvroDecls
 
 schemaDecFromAvroType :: A.Schema -> Q Type
-schemaDecFromAvroType (A.Record name _ _ _ fields) =
+schemaDecFromAvroType (A.Record name _ _ fields) =
   [t|'DRecord $(textToStrLit $ A.baseName name)
               $(typesToList <$> mapM avroFieldToType fields)|]
   where
@@ -156,15 +156,15 @@ flattenAvroDecls :: [A.Schema] -> [A.Schema]
 flattenAvroDecls = concatMap (uncurry (:) . flattenDecl)
   where
     flattenDecl :: A.Schema -> (A.Schema, [A.Schema])
-    flattenDecl (A.Record name a d o fields) =
+    flattenDecl (A.Record name a d fields) =
       let (flds, tts) = unzip (flattenAvroField <$> fields)
-       in (A.Record name a d o flds, concat tts)
+       in (A.Record name a d flds, concat tts)
     flattenDecl (A.Union _) = error "should never happen, please, file an issue"
     flattenDecl t = (t, [])
     flattenAvroType :: A.Schema -> (A.Schema, [A.Schema])
-    flattenAvroType (A.Record name a d o fields) =
+    flattenAvroType (A.Record name a d fields) =
       let (flds, tts) = unzip (flattenAvroField <$> fields)
-       in (A.NamedType name, A.Record name a d o flds : concat tts)
+       in (A.NamedType name, A.Record name a d flds : concat tts)
     flattenAvroType (A.Union (V.toList -> ts)) =
       let (us, tts) = unzip (map flattenAvroType ts)
        in (A.Union $ V.fromList us, concat tts)

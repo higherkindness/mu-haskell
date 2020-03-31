@@ -31,7 +31,7 @@ main = do -- Obtain the filenames
   -- Read the file produced by Python
   putStrLn "haskell/consume"
   cbs <- BS.readFile conFile
-  let [people] = decodeContainer @Person cbs
+  let people = decodeContainer @Person cbs
   print people
   -- Encode a couple of values
   putStrLn "haskell/generate"
