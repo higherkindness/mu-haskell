@@ -184,6 +184,10 @@ class ProtoBridgeOneFieldValue (sch :: Schema tn fn) (t :: FieldType tn) where
   defaultOneFieldValue :: Maybe (FieldValue sch t)
   oneFieldValueToProto :: FieldNumber -> FieldValue sch t -> PBEnc.MessageBuilder
   protoToOneFieldValue :: PBDec.Parser PBDec.RawPrimitive (FieldValue sch t)
+  -- support for packed encodings
+  -- https://developers.google.com/protocol-buffers/docs/encoding#packed
+  supportsPacking         :: Proxy (FieldValue sch t) -> Bool
+  protoToPackedFieldValue :: PBDec.Parser PBDec.RawPrimitive [FieldValue sch t]
 
 class ProtoBridgeUnionFieldValue (ids :: [Nat]) (sch :: Schema tn fn) (ts :: [FieldType tn]) where
   unionFieldValueToProto :: NS (FieldValue sch) ts -> PBEnc.MessageBuilder
@@ -287,8 +291,13 @@ instance {-# OVERLAPS #-}
          => ProtoBridgeField sch ty ('FieldDef name ('TList t)) where
   fieldToProto (Field (FList xs))  = foldMap (oneFieldValueToProto fieldId) xs
     where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
-  protoToField = Field . FList <$> (PBDec.repeated protoToOneFieldValue `at` fieldId <|> pure [])
+  protoToField = Field . FList <$> go
     where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
+          base = PBDec.repeated protoToOneFieldValue `at` fieldId <|> pure []
+          go | supportsPacking (Proxy @(FieldValue sch t))
+             = PBDec.one protoToPackedFieldValue [] `at` fieldId <|> base
+             | otherwise
+             = base
 
 instance TypeError ('Text "maps are not currently supported")
          => ProtoBridgeField sch ty ('FieldDef name ('TMap k v)) where
@@ -324,57 +333,79 @@ instance TypeError ('Text "null cannot be converted to protobuf")
   defaultOneFieldValue = error "null cannot be converted to protobuf"
   oneFieldValueToProto = error "null cannot be converted to protobuf"
   protoToOneFieldValue = error "null cannot be converted to protobuf"
+  supportsPacking _ = False
+  protoToPackedFieldValue = error "null cannot be converted to protobuf"
 
 instance ProtoBridgeOneFieldValue sch ('TPrimitive Int) where
   defaultOneFieldValue = Just $ FPrimitive 0
   oneFieldValueToProto fid (FPrimitive n) = PBEnc.int32 fid (fromIntegral n)
   protoToOneFieldValue = FPrimitive . fromIntegral <$> PBDec.int32
+  supportsPacking _ = True
+  protoToPackedFieldValue = map FPrimitive <$> PBDec.packedVarints
 
 instance ProtoBridgeOneFieldValue sch ('TPrimitive Int32) where
   defaultOneFieldValue = Just $ FPrimitive 0
   oneFieldValueToProto fid (FPrimitive n) = PBEnc.int32 fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.int32
+  supportsPacking _ = True
+  protoToPackedFieldValue = map FPrimitive <$> PBDec.packedVarints
 
 instance ProtoBridgeOneFieldValue sch ('TPrimitive Int64) where
   defaultOneFieldValue = Just $ FPrimitive 0
   oneFieldValueToProto fid (FPrimitive n) = PBEnc.int64 fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.int64
+  supportsPacking _ = True
+  protoToPackedFieldValue = map FPrimitive <$> PBDec.packedVarints
 
 -- WARNING! These instances may go out of bounds
 instance ProtoBridgeOneFieldValue sch ('TPrimitive Integer) where
   defaultOneFieldValue = Just $ FPrimitive 0
   oneFieldValueToProto fid (FPrimitive n) = PBEnc.int64 fid (fromInteger n)
   protoToOneFieldValue = FPrimitive . fromIntegral <$> PBDec.int64
+  supportsPacking _ = True
+  protoToPackedFieldValue = map FPrimitive <$> PBDec.packedVarints
 
 instance ProtoBridgeOneFieldValue sch ('TPrimitive Float) where
   defaultOneFieldValue = Just $ FPrimitive 0
   oneFieldValueToProto fid (FPrimitive n) = PBEnc.float fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.float
+  supportsPacking _ = True
+  protoToPackedFieldValue = map FPrimitive <$> PBDec.packedFloats
 
 instance ProtoBridgeOneFieldValue sch ('TPrimitive Double) where
   defaultOneFieldValue = Just $ FPrimitive 0
   oneFieldValueToProto fid (FPrimitive n) = PBEnc.double fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.double
+  supportsPacking _ = True
+  protoToPackedFieldValue = map FPrimitive <$> PBDec.packedDoubles
 
 instance ProtoBridgeOneFieldValue sch ('TPrimitive Bool) where
   defaultOneFieldValue = Just $ FPrimitive False
   oneFieldValueToProto fid (FPrimitive n) = PBEnc.enum fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.bool
+  supportsPacking _ = True
+  protoToPackedFieldValue = map (\(i :: Integer) -> FPrimitive (i /= 0)) <$> PBDec.packedVarints
 
 instance ProtoBridgeOneFieldValue sch ('TPrimitive T.Text) where
   defaultOneFieldValue = Just $ FPrimitive ""
   oneFieldValueToProto fid (FPrimitive n) = PBEnc.text fid (LT.fromStrict n)
   protoToOneFieldValue = FPrimitive . LT.toStrict <$> PBDec.text
+  supportsPacking _ = False
+  protoToPackedFieldValue = error "this is a bug, since we declare we do not support packed encoding"
 
 instance ProtoBridgeOneFieldValue sch ('TPrimitive LT.Text) where
   defaultOneFieldValue = Just $ FPrimitive ""
   oneFieldValueToProto fid (FPrimitive n) = PBEnc.text fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.text
+  supportsPacking _ = False
+  protoToPackedFieldValue = error "this is a bug, since we declare we do not support packed encoding"
 
 instance ProtoBridgeOneFieldValue sch ('TPrimitive BS.ByteString) where
   defaultOneFieldValue = Just $ FPrimitive ""
   oneFieldValueToProto fid (FPrimitive n) = PBEnc.byteString fid n
   protoToOneFieldValue = FPrimitive <$> PBDec.byteString
+  supportsPacking _ = False
+  protoToPackedFieldValue = error "this is a bug, since we declare we do not support packed encoding"
 
 -- Note that Maybes and Lists require that we recur on the OneFieldValue class
 
@@ -383,24 +414,32 @@ instance TypeError ('Text "optionals cannot be nested in protobuf")
   defaultOneFieldValue = error "optionals cannot be nested in protobuf"
   oneFieldValueToProto = error "optionals cannot be nested in protobuf"
   protoToOneFieldValue = error "optionals cannot be nested in protobuf"
+  supportsPacking      = error "optionals cannot be nested in protobuf"
+  protoToPackedFieldValue = error "optionals cannot be nested in protobuf"
 
 instance TypeError ('Text "lists cannot be nested in protobuf")
          => ProtoBridgeOneFieldValue sch ('TList t) where
   defaultOneFieldValue = error "lists cannot be nested in protobuf"
   oneFieldValueToProto = error "lists cannot be nested in protobuf"
   protoToOneFieldValue = error "lists cannot be nested in protobuf"
+  supportsPacking      = error "lists cannot be nested in protobuf"
+  protoToPackedFieldValue = error "lists cannot be nested in protobuf"
 
 instance TypeError ('Text "maps are not currently supported")
          => ProtoBridgeOneFieldValue sch ('TMap k v) where
   defaultOneFieldValue = error "maps are not currently supported"
   oneFieldValueToProto = error "maps are not currently supported"
   protoToOneFieldValue = error "maps are not currently supported"
+  supportsPacking      = error "maps are not currently supported"
+  protoToPackedFieldValue = error "maps are not currently supported"
 
 instance TypeError ('Text "nested unions are not currently supported")
          => ProtoBridgeOneFieldValue sch ('TUnion choices) where
   defaultOneFieldValue = error "nested unions are not currently supported"
   oneFieldValueToProto = error "nested unions are not currently supported"
   protoToOneFieldValue = error "nested unions are not currently supported"
+  supportsPacking      = error "nested unions are not currently supported"
+  protoToPackedFieldValue = error "nested unions are not currently supported"
 
 -- UNIONS
 -- ------
