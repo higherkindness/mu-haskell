@@ -67,18 +67,17 @@ avro =
 avroFile :: QuasiQuoter
 avroFile = quoteFile avro
 
--- | Reads a @.proto@ file and generates:
---   * A 'Mu.Schema.Definition.Schema' with all the message
+-- | Reads a @.avdl@ file and generates:
+--   * A 'Mu.Schema.Definition.Schema' with all the record
 --     types, using the name given as first argument.
---   * A 'Service' declaration for each service in the file,
---     where the name is obtained by applying the function
---     given as second argument to the name in the file.
+--   * A 'Service' declaration containing all the methods
+--     defined in the file.
 avdl :: String -> String -> FilePath -> FilePath -> Q [Dec]
 avdl schemaName serviceName baseDir initialFile
   = do r <- liftIO $ readWithImports baseDir initialFile
        case r of
          Left e
-           -> fail ("could not parse protocol buffers spec: " ++ show e)
+           -> fail ("could not parse Avro IDL: " ++ show e)
          Right p
            -> avdlToDecls schemaName serviceName p
 
