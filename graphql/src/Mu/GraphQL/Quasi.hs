@@ -1,3 +1,4 @@
+{-# language DataKinds         #-}
 {-# language OverloadedStrings #-}
 {-# language TemplateHaskell   #-}
 
@@ -14,31 +15,44 @@ import           Language.Haskell.TH
 import           Mu.Schema.Definition
 
 -- | Imports an graphql definition written in-line as a 'Schema'.
-graphql :: T.Text -> Q [Dec]
-graphql schema =
+graphql :: String -> String -> T.Text -> Q [Dec]
+graphql scName svName schema =
   case parseSchemaDoc schema of
     Left e  -> fail ("could not parse graphql spec: " ++ show e)
-    Right p -> graphqlToDecls p
+    Right p -> graphqlToDecls scName svName p
 
-graphqlToDecls :: GQL.SchemaDocument -> Q [Dec]
-graphqlToDecls (GQL.SchemaDocument types) = traverse typeToDec types
+data Result =
+    GQLSchema Type
+  | GQLService Type
+  deriving (Show, Eq)
 
-typeToDec :: GQL.TypeDefinition -> Q Dec
+graphqlToDecls :: String -> String -> GQL.SchemaDocument -> Q [Dec]
+graphqlToDecls schemaName serviceName (GQL.SchemaDocument types) = do
+  rs <- traverse typeToDec types
+  let schemaTypes  = [x | GQLSchema  x <- rs]
+      serviceTypes = [x | GQLService x <- rs]
+      schemaName'  = mkName schemaName
+      serviceName' = mkName serviceName
+  schemaDec <- tySynD schemaName' [] (pure $ typesToList schemaTypes)
+  serviceDec <- tySynD serviceName' [] (pure $ typesToList serviceTypes)
+  pure [schemaDec, serviceDec]
+
+typeToDec :: GQL.TypeDefinition -> Q Result
 typeToDec (GQL.TypeDefinitionScalar _)          = fail "scalar types are not supported"
 typeToDec (GQL.TypeDefinitionObject objs)       = objToDec objs
   where
-    objToDec :: GQL.ObjectTypeDefinition -> Q Dec
-    objToDec = error "not implemented" -- TODO:
+    objToDec :: GQL.ObjectTypeDefinition -> Q Result
+    objToDec = error "not implemented" -- TODO: this will return a `GQLService`
 typeToDec (GQL.TypeDefinitionInterface _)       = fail "interface types are not supported"
 typeToDec (GQL.TypeDefinitionUnion _)           = fail "union types are not supported"
 typeToDec (GQL.TypeDefinitionEnum enums)        = enumToDecl enums
   where
-    enumToDecl :: GQL.EnumTypeDefinition -> Q Dec
-    enumToDecl = error "not implemented" -- TODO:
+    enumToDecl :: GQL.EnumTypeDefinition -> Q Result
+    enumToDecl = error "not implemented" -- TODO: this will return a `GQLSchema`
 typeToDec (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
   where
-    inputObjToDec :: GQL.InputObjectTypeDefinition -> Q Dec
-    inputObjToDec = error "not implemented" -- TODO:
+    inputObjToDec :: GQL.InputObjectTypeDefinition -> Q Result
+    inputObjToDec = error "not implemented" -- TODO: this will return a `GQLSchema`
 
 -- data ObjectTypeDefinition
 --   = ObjectTypeDefinition
@@ -54,21 +68,21 @@ typeToDec (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
 --   { _fldDescription         :: !(Maybe Description)
 --   , _fldName                :: !Name
 --   , _fldArgumentsDefinition :: !ArgumentsDefinition
---   , _fldType                :: !GType TODO:
+--   , _fldType                :: !GType
 --   , _fldDirectives          :: ![Directive]
 --   }
 
--- type ArgumentsDefinition = [InputValueDefinition] FIXME:
+-- type ArgumentsDefinition = [InputValueDefinition]
 
 -- data InputValueDefinition
 --   = InputValueDefinition
 --   { _ivdDescription  :: !(Maybe Description)
 --   , _ivdName         :: !Name
---   , _ivdType         :: !GType TODO:
+--   , _ivdType         :: !GType
 --   , _ivdDefaultValue :: !(Maybe DefaultValue)
 --   }
 
--- data GType TODO:
+-- data GType
 --   = TypeNamed !Nullability !NamedType
 --   | TypeList !Nullability !ListType
 
@@ -80,8 +94,6 @@ typeToDec (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
 
 -- newtype ListType
 --   = ListType {unListType :: GType }
-
----
 
 -- data EnumTypeDefinition
 --   = EnumTypeDefinition
@@ -96,7 +108,7 @@ typeToDec (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
 --   { _iotdDescription      :: !(Maybe Description)
 --   , _iotdName             :: !Name
 --   , _iotdDirectives       :: ![Directive]
---   , _iotdValueDefinitions :: ![InputValueDefinition] FIXME:
+--   , _iotdValueDefinitions :: ![InputValueDefinition]
 --   }
 
 schemaFromGQL :: [GQL.ValueConst] -> Q Type
