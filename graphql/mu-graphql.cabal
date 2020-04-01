@@ -62,12 +62,12 @@ executable library-graphql
   default-language: Haskell2010
   ghc-options:      -Wall
   build-depends:
-      base             >=4.12   && <5
+      base        >=4.12    && <5
     , conduit
     , mu-graphql
     , mu-rpc
     , mu-schema
-    , regex-tdfa       >=1.3.1.0
+    , regex-tdfa  >=1.3.1.0
     , text
-    , warp
     , wai-extra
+    , warp
