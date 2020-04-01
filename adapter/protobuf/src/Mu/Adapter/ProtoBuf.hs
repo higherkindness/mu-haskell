@@ -175,6 +175,10 @@ class ProtoBridgeTerm (sch :: Schema tn fn) (t :: TypeDef tn fn) where
 class ProtoBridgeEmbedTerm (sch :: Schema tn fn) (t :: TypeDef tn fn) where
   termToEmbedProto :: FieldNumber -> Term sch t -> PBEnc.MessageBuilder
   embedProtoToOneFieldValue :: PBDec.Parser PBDec.RawPrimitive (Term sch t)
+  -- support for packed encodings
+  -- https://developers.google.com/protocol-buffers/docs/encoding#packed
+  supportsPackingTerm :: Proxy (Term sch t) -> Bool
+  embedProtoToPackedFieldValue :: PBDec.Parser PBDec.RawPrimitive [Term sch t]
 
 class ProtoBridgeField (sch :: Schema tn fn) (ty :: tn) (f :: FieldDef tn fn) where
   fieldToProto :: Field sch f -> PBEnc.MessageBuilder
@@ -221,6 +225,8 @@ instance ProtoBridgeTerm sch ('DRecord name args)
          => ProtoBridgeEmbedTerm sch ('DRecord name args) where
   termToEmbedProto fid v = PBEnc.embedded fid (termToProto v)
   embedProtoToOneFieldValue = PBDec.embedded' (protoToTerm @_ @_ @sch @('DRecord name args))
+  supportsPackingTerm _ = False
+  embedProtoToPackedFieldValue = error "this is a bug, since we declare we do not support packed encoding"
 
 -- ENUMERATIONS
 -- ------------
@@ -233,8 +239,10 @@ instance TypeError ('Text "protobuf requires wrapping enums in a message")
 instance ProtoBridgeEnum sch name choices
          => ProtoBridgeEmbedTerm sch ('DEnum name choices) where
   termToEmbedProto fid (TEnum v) = enumToProto @_ @_ @sch @name fid v
-  embedProtoToOneFieldValue = do n <- PBDec.int32
-                                 TEnum <$> protoToEnum @_ @_ @sch @name n
+  embedProtoToOneFieldValue = PBDec.int32 >>= fmap TEnum . protoToEnum @_ @_ @sch @name
+  supportsPackingTerm _ = True
+  embedProtoToPackedFieldValue =
+    PBDec.packedVarints >>= traverse (fmap TEnum . protoToEnum @_ @_ @sch @name)
 
 class ProtoBridgeEnum (sch :: Schema tn fn) (ty :: tn) (choices :: [ChoiceDef fn]) where
   enumToProto :: FieldNumber -> NS Proxy choices -> PBEnc.MessageBuilder
@@ -324,6 +332,8 @@ instance ProtoBridgeEmbedTerm sch (sch :/: t)
   defaultOneFieldValue = Nothing
   oneFieldValueToProto fid (FSchematic v) = termToEmbedProto fid v
   protoToOneFieldValue = FSchematic <$> embedProtoToOneFieldValue
+  supportsPacking _ = supportsPackingTerm (Proxy @(Term sch (sch :/: t)))
+  protoToPackedFieldValue = map FSchematic <$> embedProtoToPackedFieldValue
 
 -- PRIMITIVE TYPES
 -- ---------------

@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\rexample.proto\"n\n\x06person\x12\x11\n\tfirstName\x18\x01 \x01(\t\x12\x10\n\x08lastName\x18\x02 \x01(\t\x12\x0b\n\x03\x61ge\x18\x03 \x01(\x05\x12\x17\n\x06gender\x18\x04 \x01(\x0e\x32\x07.gender\x12\x19\n\x07\x61\x64\x64ress\x18\x05 \x01(\x0b\x32\x08.address\",\n\x07\x61\x64\x64ress\x12\x10\n\x08postcode\x18\x01 \x01(\t\x12\x0f\n\x07\x63ountry\x18\x02 \x01(\t*&\n\x06gender\x12\x06\n\x02nb\x10\x00\x12\x08\n\x04male\x10\x01\x12\n\n\x06\x66\x65male\x10\x02\x62\x06proto3')
+  serialized_pb=_b('\n\rexample.proto\"\x89\x01\n\x06person\x12\x11\n\tfirstName\x18\x01 \x01(\t\x12\x10\n\x08lastName\x18\x02 \x01(\t\x12\x0b\n\x03\x61ge\x18\x03 \x01(\x05\x12\x17\n\x06gender\x18\x04 \x01(\x0e\x32\x07.gender\x12\x19\n\x07\x61\x64\x64ress\x18\x05 \x01(\x0b\x32\x08.address\x12\x19\n\rlucky_numbers\x18\x06 \x03(\x05\x42\x02\x10\x01\",\n\x07\x61\x64\x64ress\x12\x10\n\x08postcode\x18\x01 \x01(\t\x12\x0f\n\x07\x63ountry\x18\x02 \x01(\t*&\n\x06gender\x12\x06\n\x02nb\x10\x00\x12\x08\n\x04male\x10\x01\x12\n\n\x06\x66\x65male\x10\x02\x62\x06proto3')
 )
 
 _GENDER = _descriptor.EnumDescriptor(
@@ -45,8 +45,8 @@ _GENDER = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=175,
-  serialized_end=213,
+  serialized_start=203,
+  serialized_end=241,
 )
 _sym_db.RegisterEnumDescriptor(_GENDER)
 
@@ -99,6 +99,13 @@ _PERSON = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='lucky_numbers', full_name='person.lucky_numbers', index=5,
+      number=6, type=5, cpp_type=1, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=_b('\020\001'), file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -111,8 +118,8 @@ _PERSON = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=17,
-  serialized_end=127,
+  serialized_start=18,
+  serialized_end=155,
 )
 
 
@@ -149,8 +156,8 @@ _ADDRESS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=129,
-  serialized_end=173,
+  serialized_start=157,
+  serialized_end=201,
 )
 
 _PERSON.fields_by_name['gender'].enum_type = _GENDER
@@ -175,4 +182,5 @@ address = _reflection.GeneratedProtocolMessageType('address', (_message.Message,
 _sym_db.RegisterMessage(address)
 
 
+_PERSON.fields_by_name['lucky_numbers']._options = None
 # @@protoc_insertion_point(module_scope)

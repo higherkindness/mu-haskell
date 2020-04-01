@@ -9,6 +9,8 @@ example_person.firstName = "Pythonio"
 example_person.lastName = "van Gogh"
 example_person.age = 30
 example_person.gender = male
+for i in [1,2,3]:
+  example_person.lucky_numbers.append(i)
 example_person.address.CopyFrom(example_address)
 
 f = open(sys.argv[1], "wb")

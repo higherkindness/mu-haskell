@@ -6,6 +6,7 @@ message person {
   int32 age = 3;
   gender gender = 4;
   address address = 5;
+  repeated int32 lucky_numbers = 6 [packed=true];
 }
 
 message address {
