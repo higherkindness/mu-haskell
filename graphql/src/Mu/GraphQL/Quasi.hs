@@ -1,17 +1,17 @@
 {-# language DataKinds         #-}
 {-# language OverloadedStrings #-}
 {-# language TemplateHaskell   #-}
+{-# language ViewPatterns      #-}
 
 module Mu.GraphQL.Quasi where
 
-import           Data.Int
 import qualified Data.Text                     as T
 import           Language.GraphQL.Draft.Parser (parseSchemaDoc)
 import qualified Language.GraphQL.Draft.Syntax as GQL
 import           Language.Haskell.TH
 
 import           Mu.Rpc
-import           Mu.Schema.Definition
+import           Mu.Schema.Definition          ()
 
 -- | Imports an graphql definition written in-line as a 'Schema'.
 graphql :: String -> String -> T.Text -> Q [Dec]
@@ -37,25 +37,32 @@ graphqlToDecls schemaName serviceName (GQL.SchemaDocument types) = do
   pure [schemaDec, serviceDec]
 
 typeToDec :: Name -> GQL.TypeDefinition -> Q Result
-typeToDec _ (GQL.TypeDefinitionScalar _)          = fail "scalar types are not supported"
-typeToDec schemaName (GQL.TypeDefinitionObject objs)       = objToDec objs
+typeToDec _ (GQL.TypeDefinitionScalar _)             = error "not implemented" -- TODO: handle "well-known scalars"
+typeToDec schemaName (GQL.TypeDefinitionObject objs) = objToDec objs
   where
     objToDec :: GQL.ObjectTypeDefinition -> Q Result
     objToDec (GQL.ObjectTypeDefinition _ nm _ _ flds) =
       GQLService <$> [t| 'Service $(textToStrLit $ GQL.unName nm) '[]
           $(typesToList <$> traverse gqlFieldToType flds) |]
     gqlFieldToType :: GQL.FieldDefinition -> Q Type
-    gqlFieldToType (GQL.FieldDefinition _ fnm args ftyp _) =
-      [t| 'Method $(textToStrLit $ GQL.unName fnm) '[]
-        $(typesToList <$> traverse argToType args)
-        $(retToType ftyp) |]
+    gqlFieldToType (GQL.FieldDefinition _ (GQL.unName -> fnm) args ftyp _) =
+      [t| 'Method $(textToStrLit fnm) '[]
+            $(typesToList <$> traverse argToType args)
+            'RetSingle $(retToType ftyp) |]
     argToType :: GQL.InputValueDefinition -> Q Type
     argToType (GQL.InputValueDefinition _ aname _ _) =
       [t| 'ArgSingle 'Nothing '[] ('SchemaRef $(conT schemaName) $(textToStrLit (GQL.unName aname))) |]
     retToType :: GQL.GType -> Q Type
-    retToType (GQL.TypeNamed _ a) =
-      [t| 'RetSingle ('SchemaRef $(conT schemaName) $(textToStrLit . GQL.unName . GQL.unNamedType $ a)) |]
-    retToType _ = fail "only named types may be used as results"
+    retToType (GQL.TypeNamed (GQL.unNullability -> False) (GQL.unName . GQL.unNamedType -> a)) =
+      [t| 'ObjectRef $(textToStrLit a) |]
+    retToType (GQL.TypeNamed (GQL.unNullability -> True) (GQL.unName . GQL.unNamedType -> a)) =
+      [t| 'OptionalRef ('ObjectRef $(textToStrLit a)) |]
+    retToType (GQL.TypeList (GQL.unNullability -> False) (GQL.unListType -> a)) =
+      [t| 'ListRef $(retToType a) |]
+    retToType (GQL.TypeList (GQL.unNullability -> True) (GQL.unListType -> a)) =
+      [t| 'OptionalRef ('ListRef $(retToType a)) |]
+    retToType (GQL.TypeNamed _ _) = fail "this should not happen, please, file an issue"
+    retToType (GQL.TypeList _ _) = fail "this should not happen, please, file an issue"
 typeToDec _ (GQL.TypeDefinitionInterface _)       = fail "interface types are not supported"
 typeToDec _ (GQL.TypeDefinitionUnion _)           = fail "union types are not supported"
 typeToDec _ (GQL.TypeDefinitionEnum enums)        = enumToDecl enums
@@ -123,19 +130,6 @@ typeToDec _ (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
 --   , _iotdDirectives       :: ![Directive]
 --   , _iotdValueDefinitions :: ![InputValueDefinition]
 --   }
-
-schemaFromGQL :: [GQL.ValueConst] -> Q Type
-schemaFromGQL = (typesToList <$>) . traverse schemaFromGQLValue
-
-schemaFromGQLValue :: GQL.ValueConst -> Q Type
-schemaFromGQLValue (GQL.VCInt _)     = [t|'TPrimitive Int32|]
-schemaFromGQLValue (GQL.VCFloat _)   = [t|'TPrimitive Double|]
-schemaFromGQLValue (GQL.VCString _)  = [t|'TPrimitive T.Text|]
-schemaFromGQLValue (GQL.VCBoolean _) = [t|'TPrimitive Bool|]
-schemaFromGQLValue GQL.VCNull        = [t|'TPrimitive 'TNull|]
-schemaFromGQLValue (GQL.VCEnum _ {- !EnumValue -}) = undefined -- TODO:
-schemaFromGQLValue (GQL.VCList vals) = [t|'TList $(schemaFromGQL $ GQL.unListValue vals)|]
-schemaFromGQLValue (GQL.VCObject _ {- !ObjectValueC -}) = undefined -- TODO:
 
 -- newtype ObjectValueG a
 --   = ObjectValueG {unObjectValue :: [ObjectFieldG a]}
