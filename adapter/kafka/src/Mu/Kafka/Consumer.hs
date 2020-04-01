@@ -35,7 +35,8 @@ import           Mu.Kafka.Internal
 
 fromCR
   :: ( FromSchema sch sty t
-     , A.FromAvro (Term sch (sch :/: sty)) )
+     , A.FromAvro (WithSchema sch sty t)
+     , A.HasAvroSchema (WithSchema sch sty t) )
   => Proxy sch
   -> ConsumerRecord (Maybe ByteString) (Maybe ByteString)
   -> ConsumerRecord (Maybe ByteString) (Maybe t)
@@ -50,7 +51,8 @@ fromCR proxy (ConsumerRecord t p o ts k v)
 kafkaSource
   :: ( MonadResource m
      , FromSchema sch sty t
-     , A.FromAvro (Term sch (sch :/: sty)) )
+     , A.FromAvro (WithSchema sch sty t)
+     , A.HasAvroSchema (WithSchema sch sty t) )
   => Proxy sch
   -> ConsumerProperties -> Subscription -> Timeout
   -> ConduitT () (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t))) m ()
@@ -62,7 +64,8 @@ kafkaSource proxy props sub ts =
 kafkaSourceNoClose
   :: ( MonadIO m
      , FromSchema sch sty t
-     , A.FromAvro (Term sch (sch :/: sty)) )
+     , A.FromAvro (WithSchema sch sty t)
+     , A.HasAvroSchema (WithSchema sch sty t) )
   => Proxy sch
   -> KafkaConsumer -> Timeout
   -> ConduitT () (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t))) m ()
@@ -75,7 +78,8 @@ kafkaSourceNoClose proxy c t
 kafkaSourceAutoClose
   :: ( MonadResource m
      , FromSchema sch sty t
-     , A.FromAvro (Term sch (sch :/: sty)) )
+     , A.FromAvro (WithSchema sch sty t)
+     , A.HasAvroSchema (WithSchema sch sty t) )
   => Proxy sch
   -> KafkaConsumer -> Timeout
   -> ConduitT () (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t))) m ()
