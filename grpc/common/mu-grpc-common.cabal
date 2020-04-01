@@ -25,7 +25,7 @@ library
     Mu.GRpc.Bridge
 
   build-depends:
-      avro                    >=0.4.7
+      avro                    >=0.5
     , base                    >=4.12  && <5
     , binary
     , bytestring
