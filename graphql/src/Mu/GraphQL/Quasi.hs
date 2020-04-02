@@ -28,6 +28,7 @@ data Result =
   | GQLService Type
   deriving (Show, Eq)
 
+-- | Constructs the GraphQL tree splitting between Schemas and Services.
 graphqlToDecls :: String -> String -> GQL.SchemaDocument -> Q [Dec]
 graphqlToDecls schemaName serviceName (GQL.SchemaDocument types) = do
   let schemaName'  = mkName schemaName
@@ -39,6 +40,7 @@ graphqlToDecls schemaName serviceName (GQL.SchemaDocument types) = do
   serviceDec <- tySynD serviceName' [] (pure $ typesToList serviceTypes)
   pure [schemaDec, serviceDec]
 
+-- | Reads a GraphQL 'TypeDefinition' and returns a 'Result'.
 typeToDec :: Name -> GQL.TypeDefinition -> Q Result
 typeToDec _ (GQL.TypeDefinitionScalar (GQL.ScalarTypeDefinition _ s _)) = GQLSchema <$> scalarToType s
   where
@@ -65,16 +67,6 @@ typeToDec _ (GQL.TypeDefinitionObject objs) = objToDec objs
       [t| 'ArgSingle ('Just $(textToStrLit aname)) '[] $(gtypeToType atype) |]
     argToType (GQL.InputValueDefinition _ (GQL.unName -> aname) atype (Just defs)) =
       [t| 'ArgSingle ('Just $(textToStrLit aname)) '[] {-$(fromGQLValueConst defs)-} $(gtypeToType atype) |]
-    gtypeToType :: GQL.GType -> Q Type
-    gtypeToType (GQL.TypeNamed (GQL.unNullability -> False) (GQL.unName . GQL.unNamedType -> a)) =
-      [t| 'ObjectRef $(textToStrLit a) |]
-    gtypeToType (GQL.TypeNamed (GQL.unNullability -> True) (GQL.unName . GQL.unNamedType -> a)) =
-      [t| 'OptionalRef ('ObjectRef $(textToStrLit a)) |]
-    gtypeToType (GQL.TypeList (GQL.unNullability -> False) (GQL.unListType -> a)) =
-      [t| 'ListRef $(gtypeToType a) |]
-    gtypeToType (GQL.TypeList (GQL.unNullability -> True) (GQL.unListType -> a)) =
-      [t| 'OptionalRef ('ListRef $(gtypeToType a)) |]
-    gtypeToType _ = fail "this should not happen, please, file an issue"
 typeToDec _ (GQL.TypeDefinitionInterface _)       = fail "interface types are not supported"
 typeToDec _ (GQL.TypeDefinitionUnion _)           = fail "union types are not supported"
 typeToDec _ (GQL.TypeDefinitionEnum enums)        = enumToDecl enums
@@ -89,14 +81,23 @@ typeToDec _ (GQL.TypeDefinitionEnum enums)        = enumToDecl enums
 typeToDec _ (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
   where
     inputObjToDec :: GQL.InputObjectTypeDefinition -> Q Result
-    inputObjToDec = error "not implemented" -- TODO: this will return a `GQLSchema`
+    inputObjToDec (GQL.InputObjectTypeDefinition _ (GQL.unName -> name) _ fields) =
+        GQLSchema <$> [t|'DRecord $(textToStrLit name)
+                                  $(typesToList <$> traverse gqlFieldToType fields)|]
+    gqlFieldToType :: GQL.InputValueDefinition -> Q Type
+    gqlFieldToType (GQL.InputValueDefinition _ (GQL.unName -> fname) ftype _) =
+      [t|'FieldDef $(textToStrLit fname) $(gtypeToType ftype)|]
 
--- data ScalarTypeDefinition
---   = ScalarTypeDefinition
---   { _stdDescription :: !(Maybe Description)
---   , _stdName        :: !Name
---   , _stdDirectives  :: ![Directive]
---   }
+gtypeToType :: GQL.GType -> Q Type
+gtypeToType (GQL.TypeNamed (GQL.unNullability -> False) (GQL.unName . GQL.unNamedType -> a)) =
+  [t| 'ObjectRef $(textToStrLit a) |]
+gtypeToType (GQL.TypeNamed (GQL.unNullability -> True) (GQL.unName . GQL.unNamedType -> a)) =
+  [t| 'OptionalRef ('ObjectRef $(textToStrLit a)) |]
+gtypeToType (GQL.TypeList (GQL.unNullability -> False) (GQL.unListType -> a)) =
+  [t| 'ListRef $(gtypeToType a) |]
+gtypeToType (GQL.TypeList (GQL.unNullability -> True) (GQL.unListType -> a)) =
+  [t| 'OptionalRef ('ListRef $(gtypeToType a)) |]
+gtypeToType _ = fail "this should not happen, please, file an issue"
 
 -- type ArgumentsDefinition = [InputValueDefinition]
 
