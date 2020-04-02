@@ -21,11 +21,12 @@ import           Mu.Schema
 import           Mu.Schema.Examples
 
 data MPerson
-  = MPerson { firstName :: T.Text
-            , lastName  :: T.Text
-            , age       :: Maybe Int
-            , gender    :: Maybe Gender
-            , address   :: MAddress }
+  = MPerson { firstName     :: T.Text
+            , lastName      :: T.Text
+            , age           :: Maybe Int
+            , gender        :: Maybe Gender
+            , address       :: MAddress
+            , lucky_numbers :: [Int] }
   deriving (Eq, Show, Generic)
   deriving (ToSchema ExampleSchema "person")
   deriving (FromSchema ExampleSchema "person")
@@ -38,16 +39,17 @@ data MAddress
   deriving (FromSchema ExampleSchema "address")
 
 type instance AnnotatedSchema ProtoBufAnnotation ExampleSchema
-  = '[ 'AnnField "gender" "male"   ('ProtoBufId 1)
-     , 'AnnField "gender" "female" ('ProtoBufId 2)
-     , 'AnnField "gender" "nb"     ('ProtoBufId 3)
-     , 'AnnField "address" "postcode" ('ProtoBufId 1)
-     , 'AnnField "address" "country"  ('ProtoBufId 2)
-     , 'AnnField "person" "firstName" ('ProtoBufId 1)
-     , 'AnnField "person" "lastName"  ('ProtoBufId 2)
-     , 'AnnField "person" "age"       ('ProtoBufId 3)
-     , 'AnnField "person" "gender"    ('ProtoBufId 4)
-     , 'AnnField "person" "address"   ('ProtoBufId 5) ]
+  = '[ 'AnnField "gender" "male"   ('ProtoBufId 1 'True)
+     , 'AnnField "gender" "female" ('ProtoBufId 2 'True)
+     , 'AnnField "gender" "nb"     ('ProtoBufId 3 'True)
+     , 'AnnField "address" "postcode" ('ProtoBufId 1 'True)
+     , 'AnnField "address" "country"  ('ProtoBufId 2 'True)
+     , 'AnnField "person" "firstName" ('ProtoBufId 1 'True)
+     , 'AnnField "person" "lastName"  ('ProtoBufId 2 'True)
+     , 'AnnField "person" "age"       ('ProtoBufId 3 'True)
+     , 'AnnField "person" "gender"    ('ProtoBufId 4 'True)
+     , 'AnnField "person" "address"   ('ProtoBufId 5 'True)
+     , 'AnnField "person" "lucky_numbers" ('ProtoBufId 6 'True) ]
 
 exampleAddress :: MAddress
 exampleAddress = MAddress "1111BB" "Spain"
@@ -55,10 +57,10 @@ exampleAddress = MAddress "1111BB" "Spain"
 examplePerson1, examplePerson2 :: MPerson
 examplePerson1 = MPerson "Haskellio" "Gómez"
                          (Just 30) (Just Male)
-                         exampleAddress
+                         exampleAddress [1,2,3]
 examplePerson2 = MPerson "Cuarenta" "Siete"
                          Nothing Nothing
-                         exampleAddress
+                         exampleAddress []
 
 main :: IO ()
 main = do -- Obtain the filenames
