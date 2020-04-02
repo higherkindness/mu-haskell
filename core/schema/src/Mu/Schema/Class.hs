@@ -148,7 +148,7 @@ instance (Generic t, GFromSchemaTypeDef sch fmap (sch :/: sty) (Rep t))
 -- Note: it turns out that GHC.Generics generates some weird
 -- instances for records in the form (x :*: y) :*: z
 -- and we cover them with the special HereLeft and HereRight
-data Where = Here | HereLeft | HereRight | There Where
+data Where = Here | HereLeft | HereRight | HereRightThenLeft | HereTwoRights | There Where
 
 type family Find (xs :: [k]) (x :: k) :: Where where
   Find '[]       y = TypeError ('Text "Could not find " ':<>: 'ShowType y)
@@ -166,6 +166,8 @@ type family FindSel (xs :: * -> *) (x :: Symbol) :: Where where
   FindSel (S1 ('MetaSel ('Just x) u ss ds) f :*: rest) x = 'Here
   FindSel ((S1 ('MetaSel ('Just x) u ss ds) f :*: other) :*: rest) x = 'HereLeft
   FindSel ((other :*: S1 ('MetaSel ('Just x) u ss ds) f) :*: rest) x = 'HereRight
+  FindSel ((other1 :*: (S1 ('MetaSel ('Just x) u ss ds) f :*: other2)) :*: rest) x = 'HereRightThenLeft
+  FindSel ((other1 :*: (other2 :*: S1 ('MetaSel ('Just x) u ss ds) f)) :*: rest) x = 'HereTwoRights
   FindSel (other :*: rest) x = 'There (FindSel rest x)
   FindSel nothing          x = TypeError ('Text "Could not find selector " ':<>: 'ShowType x)
 
@@ -499,6 +501,12 @@ instance GToSchemaFieldType sch t v
 instance GToSchemaFieldType sch t v
          => GToSchemaRecordSearch sch t ((other :*: S1 m (K1 i v)) :*: rest) 'HereRight where
   toSchemaRecordSearch _ ((_ :*: M1 (K1 x)) :*: _) = toSchemaFieldType x
+instance GToSchemaFieldType sch t v
+         => GToSchemaRecordSearch sch t ((other1 :*: (S1 m (K1 i v) :*: other2)) :*: rest) 'HereRightThenLeft where
+  toSchemaRecordSearch _ ((_ :*: (M1 (K1 x) :*: _)) :*: _) = toSchemaFieldType x
+instance GToSchemaFieldType sch t v
+         => GToSchemaRecordSearch sch t ((other1 :*: (other2 :*: S1 m (K1 i v))) :*: rest) 'HereTwoRights where
+  toSchemaRecordSearch _ ((_ :*: (_ :*: M1 (K1 x))) :*: _) = toSchemaFieldType x
 instance forall sch t other rest n.
          GToSchemaRecordSearch sch t rest n
          => GToSchemaRecordSearch sch t (other :*: rest) ('There n) where

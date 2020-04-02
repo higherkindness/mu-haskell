@@ -29,11 +29,12 @@ import           Mu.Schema
 import           Mu.Schema.Conversion.SchemaToTypes
 
 data Person
-  = Person { firstName :: T.Text
-           , lastName  :: T.Text
-           , age       :: Maybe Int
-           , gender    :: Maybe Gender
-           , address   :: Address }
+  = Person { firstName     :: T.Text
+           , lastName      :: T.Text
+           , age           :: Maybe Int
+           , gender        :: Maybe Gender
+           , address       :: Address
+           , lucky_numbers :: [Int] }
   deriving (Eq, Show, Generic)
   deriving (ToSchema ExampleSchema "person", FromSchema ExampleSchema "person")
   deriving (J.ToJSON, J.FromJSON)
@@ -73,7 +74,8 @@ type ExampleSchema
                  , 'FieldDef "lastName"  ('TPrimitive T.Text)
                  , 'FieldDef "age"       ('TOption ('TPrimitive Int))
                  , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
-                 , 'FieldDef "address"   ('TSchematic "address") ]
+                 , 'FieldDef "address"   ('TSchematic "address")
+                 , 'FieldDef "lucky_numbers" ('TList ('TPrimitive Int)) ]
      ]
 
 $(generateTypesFromSchema (++"Msg") ''ExampleSchema)

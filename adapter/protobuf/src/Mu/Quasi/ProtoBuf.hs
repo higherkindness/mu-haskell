@@ -1,8 +1,9 @@
-{-# language CPP             #-}
-{-# language DataKinds       #-}
-{-# language LambdaCase      #-}
-{-# language NamedFieldPuns  #-}
-{-# language TemplateHaskell #-}
+{-# language CPP               #-}
+{-# language DataKinds         #-}
+{-# language LambdaCase        #-}
+{-# language NamedFieldPuns    #-}
+{-# language OverloadedStrings #-}
+{-# language TemplateHaskell   #-}
 {-|
 Description : Quasi-quoters for Protocol Buffers schemas
 
@@ -78,7 +79,7 @@ pbTypeDeclToType (P.DEnum name _ fields) = do
     pbChoiceToType :: P.EnumField -> Q (Type, Type)
     pbChoiceToType (P.EnumField nm number _)
       = (,) <$> [t|'ChoiceDef $(textToStrLit nm) |]
-            <*> [t|'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit number)) |]
+            <*> [t|'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit number) 'True) |]
 pbTypeDeclToType (P.DMessage name _ _ fields _) = do
   (tys, anns) <- unzip <$> mapM pbMsgFieldToType fields
   (,) <$> [t|'DRecord $(textToStrLit name) $(pure $ typesToList tys)|] <*> pure anns
@@ -88,18 +89,18 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) = do
     -- it's possible to distinguish whether it's missing on wire
     -- or should be set to the default, so use Option
     -- +info -> https://github.com/higherkindness/mu-haskell/pull/130#issuecomment-596433307
-    pbMsgFieldToType (P.NormalField P.Single ty@(P.TOther _) nm n _)
+    pbMsgFieldToType (P.NormalField P.Single ty@(P.TOther _) nm n opts)
       = (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TOption $(pbFieldTypeToType ty)) |]
-            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n)) |]
-    pbMsgFieldToType (P.NormalField P.Single ty nm n _)
+            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n) $(pbOptionsToPacked opts)) |]
+    pbMsgFieldToType (P.NormalField P.Single ty nm n opts)
       = (,) <$> [t| 'FieldDef $(textToStrLit nm) $(pbFieldTypeToType ty) |]
-            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n)) |]
-    pbMsgFieldToType (P.NormalField P.Repeated ty nm n _)
+            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n) $(pbOptionsToPacked opts)) |]
+    pbMsgFieldToType (P.NormalField P.Repeated ty nm n opts)
       = (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TList $(pbFieldTypeToType ty)) |]
-            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n)) |]
-    pbMsgFieldToType (P.MapField k v nm n _)
+            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n) $(pbOptionsToPacked opts)) |]
+    pbMsgFieldToType (P.MapField k v nm n opts)
       = (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TMap $(pbFieldTypeToType k) $(pbFieldTypeToType v)) |]
-            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n)) |]
+            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n) $(pbOptionsToPacked opts)) |]
     pbMsgFieldToType (P.OneOfField nm vs)
       | any (not . hasFieldNumber) vs
       = fail "nested oneof fields are not supported"
@@ -140,6 +141,15 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) = do
     pbOneOfFieldToType (P.MapField k v _ _ _)
       = [t| 'TMap $(pbFieldTypeToType k) $(pbFieldTypeToType v) |]
     pbOneOfFieldToType _ = error "this should never happen"
+
+    pbOptionsToPacked []
+      = [t| 'True |]
+    pbOptionsToPacked (P.Option ["packed"] val : _)
+      | P.KBool True  <- val = [t| 'True  |]
+      | P.KBool False <- val = [t| 'False |]
+      | otherwise = fail "'packed' with a non-boolean value"
+    pbOptionsToPacked (_ : rest)
+      = pbOptionsToPacked rest
 
 typesToList :: [Type] -> Type
 typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT

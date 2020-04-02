@@ -18,8 +18,8 @@ exampleAddress :: Address
 exampleAddress = Address "1111BB" "Spain"
 
 examplePerson1, examplePerson2 :: Person
-examplePerson1 = Person "Haskellio" "Gomez" (Just 30) (Just Male) exampleAddress
-examplePerson2 = Person "Cuarenta" "Siete" Nothing Nothing exampleAddress
+examplePerson1 = Person "Haskellio" "Gomez" (Just 30) (Just Male) exampleAddress [1,2,3]
+examplePerson2 = Person "Cuarenta" "Siete" Nothing Nothing exampleAddress []
 
 deriving via (WithSchema ExampleSchema "person" Person) instance HasAvroSchema Person
 deriving via (WithSchema ExampleSchema "person" Person) instance FromAvro Person
