@@ -5,7 +5,9 @@
 
 module Mu.GraphQL.Quasi where
 
+import           Data.Int                      (Int32)
 import qualified Data.Text                     as T
+import           Data.UUID                     (UUID)
 import           Language.GraphQL.Draft.Parser (parseSchemaDoc)
 import qualified Language.GraphQL.Draft.Syntax as GQL
 import           Language.Haskell.TH
@@ -38,7 +40,15 @@ graphqlToDecls schemaName serviceName (GQL.SchemaDocument types) = do
   pure [schemaDec, serviceDec]
 
 typeToDec :: Name -> GQL.TypeDefinition -> Q Result
-typeToDec _ (GQL.TypeDefinitionScalar _)             = error "not implemented" -- TODO: handle "well-known scalars"
+typeToDec _ (GQL.TypeDefinitionScalar (GQL.ScalarTypeDefinition _ s _)) = GQLSchema <$> scalarToType s
+  where
+    scalarToType :: GQL.Name -> Q Type
+    scalarToType (GQL.unName -> "Int")     = [t|'TPrimitive Int32|]
+    scalarToType (GQL.unName -> "Float")   = [t|'TPrimitive Double|]
+    scalarToType (GQL.unName -> "String")  = [t|'TPrimitive T.Text|]
+    scalarToType (GQL.unName -> "Boolean") = [t|'TPrimitive Bool|]
+    scalarToType (GQL.unName -> "ID")      = [t|'TPrimitive UUID|]
+    scalarToType _                         = fail "not well-known scalar types are not supported"
 typeToDec _ (GQL.TypeDefinitionObject objs) = objToDec objs
   where
     objToDec :: GQL.ObjectTypeDefinition -> Q Result
