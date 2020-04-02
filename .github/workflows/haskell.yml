@@ -20,7 +20,7 @@ jobs:
         key: ${{ runner.os }}-stack-work-${{ hashFiles('stack.yaml') }}-${{ '**/*.hs' }}
         restore-keys: |
           ${{ runner.os }}-stack-work-
-    - name: Get rdkafka
-      run: sudo apt-get install librdkafka-dev
+    # - name: Get rdkafka
+    #   run: sudo apt-get install librdkafka-dev
     - name: Compile with Stack
       run: stack build
