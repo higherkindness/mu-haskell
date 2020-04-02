@@ -205,33 +205,6 @@ instance ( KnownName name
 
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
-         , handler ~ (CompressMode -> IO (ConduitT v Void IO (GRpcReply r))) )
-         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname aanns vref ]
-                                      ('RetSingle rref)) handler where
-  gRpcMethodCall rpc _ client compress
-    = do -- Create a new TMChan
-         chan <- newTMChanIO :: IO (TMChan v)
-         -- Start executing the client in another thread
-         promise <- async $
-            fmap (fmap (unGRpcOWTy (Proxy @p) (Proxy @rref))) $
-            simplifyResponse $
-            buildGRpcReply2 <$>
-            rawStreamClient @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r) rpc client ()
-                            (\_ -> do nextVal <- liftIO $ atomically $ readTMChan chan
-                                      case nextVal of
-                                        Nothing -> pure ((), Left StreamDone)
-                                        Just v  -> pure ((), Right (compress, buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
-         -- This conduit feeds information to the other thread
-         let go = do x <- await
-                     case x of
-                       Just v  -> do liftIO $ atomically $ writeTMChan chan v
-                                     go
-                       Nothing -> do liftIO $ atomically $ closeTMChan chan
-                                     liftIO $ wait promise
-         pure go
-
-instance ( KnownName name
-         , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
          , handler ~ (v -> IO (ConduitT () (GRpcReply r) IO ())) )
          => GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname aanns vref ]
                                       ('RetStream rref)) handler where
@@ -259,6 +232,54 @@ instance ( KnownName name
                          sourceTMChan chan .| C.map GRpcOk
                        e -> yield $ (\_ -> error "this should never happen") <$> e
          pure go
+
+instance ( KnownName name
+         , GRpcInputWrapper p vref v, GRPCOutput (RPCTy p) ()
+         , handler ~ (CompressMode -> IO (ConduitT v Void IO (GRpcReply ()))) )
+         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname aanns vref ]
+                                      'RetNothing) handler where
+  gRpcMethodCall rpc _ client compress
+    = do -- Create a new TMChan
+         chan <- newTMChanIO :: IO (TMChan v)
+         -- Start executing the client in another thread
+         promise <- async $
+            simplifyResponse $
+            buildGRpcReply2 <$>
+            rawStreamClient @_ @(GRpcIWTy p vref v) @() rpc client ()
+                            (\_ -> do nextVal <- liftIO $ atomically $ readTMChan chan
+                                      case nextVal of
+                                        Nothing -> pure ((), Left StreamDone)
+                                        Just v  -> pure ((), Right (compress, buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
+         pure (conduitFromChannel chan promise)
+
+instance ( KnownName name
+         , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
+         , handler ~ (CompressMode -> IO (ConduitT v Void IO (GRpcReply r))) )
+         => GRpcMethodCall p ('Method name anns '[ 'ArgStream aname aanns vref ]
+                                      ('RetSingle rref)) handler where
+  gRpcMethodCall rpc _ client compress
+    = do -- Create a new TMChan
+         chan <- newTMChanIO :: IO (TMChan v)
+         -- Start executing the client in another thread
+         promise <- async $
+            fmap (fmap (unGRpcOWTy (Proxy @p) (Proxy @rref))) $
+            simplifyResponse $
+            buildGRpcReply2 <$>
+            rawStreamClient @_ @(GRpcIWTy p vref v) @(GRpcOWTy p rref r) rpc client ()
+                            (\_ -> do nextVal <- liftIO $ atomically $ readTMChan chan
+                                      case nextVal of
+                                        Nothing -> pure ((), Left StreamDone)
+                                        Just v  -> pure ((), Right (compress, buildGRpcIWTy (Proxy @p) (Proxy @vref) v)))
+         pure (conduitFromChannel chan promise)
+
+conduitFromChannel :: MonadIO m => TMChan a -> Async b -> ConduitT a o m b
+conduitFromChannel chan promise = go
+  where go = do x <- await
+                case x of
+                  Just v  -> do liftIO $ atomically $ writeTMChan chan v
+                                go
+                  Nothing -> do liftIO $ atomically $ closeTMChan chan
+                                liftIO $ wait promise
 
 instance ( KnownName name
          , GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r
