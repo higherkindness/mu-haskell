@@ -99,26 +99,8 @@ gtypeToType (GQL.TypeList (GQL.unNullability -> True) (GQL.unListType -> a)) =
   [t| 'OptionalRef ('ListRef $(gtypeToType a)) |]
 gtypeToType _ = fail "this should not happen, please, file an issue"
 
--- type ArgumentsDefinition = [InputValueDefinition]
-
--- data InputValueDefinition
---   = InputValueDefinition
---   { _ivdDescription  :: !(Maybe Description)
---   , _ivdName         :: !Name
---   , _ivdType         :: !GType
---   , _ivdDefaultValue :: !(Maybe DefaultValue)
---   }
-
--- data InputObjectTypeDefinition
---   = InputObjectTypeDefinition
---   { _iotdDescription      :: !(Maybe Description)
---   , _iotdName             :: !Name
---   , _iotdDirectives       :: ![Directive]
---   , _iotdValueDefinitions :: ![InputValueDefinition]
---   }
-
 typesToList :: [Type] -> Type
-typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
+typesToList = foldr (AppT . AppT PromotedConsT) PromotedNilT
 
 textToStrLit :: T.Text -> Q Type
-textToStrLit s = litT $ strTyLit $ T.unpack s
+textToStrLit = litT . strTyLit . T.unpack
