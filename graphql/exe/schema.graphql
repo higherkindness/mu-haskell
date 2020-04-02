@@ -1,0 +1,19 @@
+scalar String
+scalar Int
+
+input Persona {
+  nombre: String
+  apellidos: String
+}
+
+type Query {
+  edad(p: Persona!): Int
+  aficiones(p: Persona!): [Aficion!]
+}
+
+enum TipoAficion { TRANQUIS, MOVIDA }
+
+type Aficion {
+  nombre: String!
+  tipo: TipoAficion
+}

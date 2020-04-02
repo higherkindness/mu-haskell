@@ -1,13 +1,15 @@
+{-# language CPP                   #-}
 {-# language DataKinds             #-}
 {-# language FlexibleContexts      #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
+{-# language TemplateHaskell       #-}
 {-# language TupleSections         #-}
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
-{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures -ddump-splices #-}
 
 module Main where
 
@@ -23,12 +25,18 @@ import           Text.Regex.TDFA.Text              ()
 import           Network.Wai.Handler.Warp          (run)
 import           Network.Wai.Middleware.AddHeaders (addHeaders)
 
-
 import           Mu.GraphQL.Annotations
+import           Mu.GraphQL.Quasi
 import           Mu.GraphQL.Server
 import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
+
+-- #if __GHCIDE__
+-- graphql "Esquema" "Servicio" "graphql/exe/schema.graphql"
+-- #else
+-- graphql "Esquema" "Servicio" "exe/schema.graphql"
+-- #endif
 
 -- GraphQL App
 
