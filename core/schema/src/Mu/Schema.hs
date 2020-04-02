@@ -25,7 +25,7 @@ module Mu.Schema (
 , Term(..), Field(..), FieldValue(..)
 , NS(..), NP(..), Proxy(..)
   -- * Conversion from types to schemas
-, WithSchema(..)
+, WithSchema(..), unWithSchema
 , FromSchema(..), fromSchema'
 , ToSchema(..), toSchema'
 , CustomFieldMapping(..)
