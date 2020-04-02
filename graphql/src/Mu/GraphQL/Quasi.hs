@@ -10,8 +10,9 @@ import           Language.GraphQL.Draft.Parser (parseSchemaDoc)
 import qualified Language.GraphQL.Draft.Syntax as GQL
 import           Language.Haskell.TH
 
+import           Mu.GraphQL.Annotations
 import           Mu.Rpc
-import           Mu.Schema.Definition          ()
+import           Mu.Schema.Definition
 
 -- | Imports an graphql definition written in-line as a 'Schema'.
 graphql :: String -> String -> T.Text -> Q [Dec]
@@ -38,7 +39,7 @@ graphqlToDecls schemaName serviceName (GQL.SchemaDocument types) = do
 
 typeToDec :: Name -> GQL.TypeDefinition -> Q Result
 typeToDec _ (GQL.TypeDefinitionScalar _)             = error "not implemented" -- TODO: handle "well-known scalars"
-typeToDec schemaName (GQL.TypeDefinitionObject objs) = objToDec objs
+typeToDec _ (GQL.TypeDefinitionObject objs) = objToDec objs
   where
     objToDec :: GQL.ObjectTypeDefinition -> Q Result
     objToDec (GQL.ObjectTypeDefinition _ nm _ _ flds) =
@@ -50,8 +51,10 @@ typeToDec schemaName (GQL.TypeDefinitionObject objs) = objToDec objs
             $(typesToList <$> traverse argToType args)
             'RetSingle $(gtypeToType ftyp) |]
     argToType :: GQL.InputValueDefinition -> Q Type
-    argToType (GQL.InputValueDefinition _ (GQL.unName -> aname) atype _) =
+    argToType (GQL.InputValueDefinition _ (GQL.unName -> aname) atype Nothing) =
       [t| 'ArgSingle ('Just $(textToStrLit aname)) '[] $(gtypeToType atype) |]
+    argToType (GQL.InputValueDefinition _ (GQL.unName -> aname) atype (Just defs)) =
+      [t| 'ArgSingle ('Just $(textToStrLit aname)) '[] {-$(fromGQLValueConst defs)-} $(gtypeToType atype) |]
     gtypeToType :: GQL.GType -> Q Type
     gtypeToType (GQL.TypeNamed (GQL.unNullability -> False) (GQL.unName . GQL.unNamedType -> a)) =
       [t| 'ObjectRef $(textToStrLit a) |]
@@ -67,28 +70,22 @@ typeToDec _ (GQL.TypeDefinitionUnion _)           = fail "union types are not su
 typeToDec _ (GQL.TypeDefinitionEnum enums)        = enumToDecl enums
   where
     enumToDecl :: GQL.EnumTypeDefinition -> Q Result
-    enumToDecl = error "not implemented" -- TODO: this will return a `GQLSchema`
+    enumToDecl (GQL.EnumTypeDefinition _ (GQL.unName -> name) _ symbols) =
+      GQLSchema <$> [t|'DEnum $(textToStrLit name)
+                              $(typesToList <$> traverse gqlChoiceToType symbols)|]
+    gqlChoiceToType :: GQL.EnumValueDefinition -> Q Type
+    gqlChoiceToType (GQL.EnumValueDefinition _ (GQL.unName . GQL.unEnumValue -> c) _) =
+      [t|'ChoiceDef $(textToStrLit c)|]
 typeToDec _ (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
   where
     inputObjToDec :: GQL.InputObjectTypeDefinition -> Q Result
     inputObjToDec = error "not implemented" -- TODO: this will return a `GQLSchema`
 
--- data ObjectTypeDefinition
---   = ObjectTypeDefinition
---   { _otdDescription          :: !(Maybe Description)
---   , _otdName                 :: !Name
---   , _otdImplementsInterfaces :: ![NamedType]
---   , _otdDirectives           :: ![Directive]
---   , _otdFieldsDefinition     :: ![FieldDefinition]
---   }
-
--- data FieldDefinition
---   = FieldDefinition
---   { _fldDescription         :: !(Maybe Description)
---   , _fldName                :: !Name
---   , _fldArgumentsDefinition :: !ArgumentsDefinition
---   , _fldType                :: !GType
---   , _fldDirectives          :: ![Directive]
+-- data ScalarTypeDefinition
+--   = ScalarTypeDefinition
+--   { _stdDescription :: !(Maybe Description)
+--   , _stdName        :: !Name
+--   , _stdDirectives  :: ![Directive]
 --   }
 
 -- type ArgumentsDefinition = [InputValueDefinition]
@@ -101,27 +98,6 @@ typeToDec _ (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
 --   , _ivdDefaultValue :: !(Maybe DefaultValue)
 --   }
 
--- data GType
---   = TypeNamed !Nullability !NamedType
---   | TypeList !Nullability !ListType
-
--- newtype Nullability
---   = Nullability { unNullability :: Bool }
-
--- newtype NamedType
---   = NamedType { unNamedType :: Name }
-
--- newtype ListType
---   = ListType {unListType :: GType }
-
--- data EnumTypeDefinition
---   = EnumTypeDefinition
---   { _etdDescription      :: !(Maybe Description)
---   , _etdName             :: !Name
---   , _etdDirectives       :: ![Directive]
---   , _etdValueDefinitions :: ![EnumValueDefinition]
---   }
-
 -- data InputObjectTypeDefinition
 --   = InputObjectTypeDefinition
 --   { _iotdDescription      :: !(Maybe Description)
@@ -129,16 +105,6 @@ typeToDec _ (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
 --   , _iotdDirectives       :: ![Directive]
 --   , _iotdValueDefinitions :: ![InputValueDefinition]
 --   }
-
--- newtype ObjectValueG a
---   = ObjectValueG {unObjectValue :: [ObjectFieldG a]}
-
--- type ObjectValueC = ObjectValueG ValueConst
-
--- data ObjectFieldG a
---   = ObjectFieldG
---   { _ofName  :: Name
---   , _ofValue :: a
 
 typesToList :: [Type] -> Type
 typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
