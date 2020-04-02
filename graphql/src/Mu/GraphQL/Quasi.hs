@@ -66,7 +66,17 @@ typeToDec _ (GQL.TypeDefinitionObject objs) = objToDec objs
     argToType (GQL.InputValueDefinition _ (GQL.unName -> aname) atype Nothing) =
       [t| 'ArgSingle ('Just $(textToStrLit aname)) '[] $(gtypeToType atype) |]
     argToType (GQL.InputValueDefinition _ (GQL.unName -> aname) atype (Just defs)) =
-      [t| 'ArgSingle ('Just $(textToStrLit aname)) '[] {-$(fromGQLValueConst defs)-} $(gtypeToType atype) |]
+      [t| 'ArgSingle ('Just $(textToStrLit aname)) '[] {-DefaultValue $(fromGQLValueConst defs)]-} $(gtypeToType atype) |]
+    gtypeToType :: GQL.GType -> Q Type
+    gtypeToType (GQL.TypeNamed (GQL.unNullability -> False) (GQL.unName . GQL.unNamedType -> a)) =
+      [t| 'ObjectRef $(textToStrLit a) |]
+    gtypeToType (GQL.TypeNamed (GQL.unNullability -> True) (GQL.unName . GQL.unNamedType -> a)) =
+      [t| 'OptionalRef ('ObjectRef $(textToStrLit a)) |]
+    gtypeToType (GQL.TypeList (GQL.unNullability -> False) (GQL.unListType -> a)) =
+      [t| 'ListRef $(gtypeToType a) |]
+    gtypeToType (GQL.TypeList (GQL.unNullability -> True) (GQL.unListType -> a)) =
+      [t| 'OptionalRef ('ListRef $(gtypeToType a)) |]
+    gtypeToType _ = fail "this should not happen, please, file an issue"
 typeToDec _ (GQL.TypeDefinitionInterface _)       = fail "interface types are not supported"
 typeToDec _ (GQL.TypeDefinitionUnion _)           = fail "union types are not supported"
 typeToDec _ (GQL.TypeDefinitionEnum enums)        = enumToDecl enums
@@ -86,18 +96,9 @@ typeToDec _ (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
                                   $(typesToList <$> traverse gqlFieldToType fields)|]
     gqlFieldToType :: GQL.InputValueDefinition -> Q Type
     gqlFieldToType (GQL.InputValueDefinition _ (GQL.unName -> fname) ftype _) =
-      [t|'FieldDef $(textToStrLit fname) $(gtypeToType ftype)|]
-
-gtypeToType :: GQL.GType -> Q Type
-gtypeToType (GQL.TypeNamed (GQL.unNullability -> False) (GQL.unName . GQL.unNamedType -> a)) =
-  [t| 'ObjectRef $(textToStrLit a) |]
-gtypeToType (GQL.TypeNamed (GQL.unNullability -> True) (GQL.unName . GQL.unNamedType -> a)) =
-  [t| 'OptionalRef ('ObjectRef $(textToStrLit a)) |]
-gtypeToType (GQL.TypeList (GQL.unNullability -> False) (GQL.unListType -> a)) =
-  [t| 'ListRef $(gtypeToType a) |]
-gtypeToType (GQL.TypeList (GQL.unNullability -> True) (GQL.unListType -> a)) =
-  [t| 'OptionalRef ('ListRef $(gtypeToType a)) |]
-gtypeToType _ = fail "this should not happen, please, file an issue"
+      [t|'FieldDef $(textToStrLit fname) $(ginputTypeToType ftype)|]
+    ginputTypeToType :: GQL.GType -> TypeQ
+    ginputTypeToType = error "not implemented"
 
 typesToList :: [Type] -> Type
 typesToList = foldr (AppT . AppT PromotedConsT) PromotedNilT
