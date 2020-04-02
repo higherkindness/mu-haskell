@@ -48,21 +48,20 @@ typeToDec schemaName (GQL.TypeDefinitionObject objs) = objToDec objs
     gqlFieldToType (GQL.FieldDefinition _ (GQL.unName -> fnm) args ftyp _) =
       [t| 'Method $(textToStrLit fnm) '[]
             $(typesToList <$> traverse argToType args)
-            'RetSingle $(retToType ftyp) |]
+            'RetSingle $(gtypeToType ftyp) |]
     argToType :: GQL.InputValueDefinition -> Q Type
-    argToType (GQL.InputValueDefinition _ aname _ _) =
-      [t| 'ArgSingle 'Nothing '[] ('SchemaRef $(conT schemaName) $(textToStrLit (GQL.unName aname))) |]
-    retToType :: GQL.GType -> Q Type
-    retToType (GQL.TypeNamed (GQL.unNullability -> False) (GQL.unName . GQL.unNamedType -> a)) =
+    argToType (GQL.InputValueDefinition _ (GQL.unName -> aname) atype _) =
+      [t| 'ArgSingle ('Just $(textToStrLit aname)) '[] $(gtypeToType atype) |]
+    gtypeToType :: GQL.GType -> Q Type
+    gtypeToType (GQL.TypeNamed (GQL.unNullability -> False) (GQL.unName . GQL.unNamedType -> a)) =
       [t| 'ObjectRef $(textToStrLit a) |]
-    retToType (GQL.TypeNamed (GQL.unNullability -> True) (GQL.unName . GQL.unNamedType -> a)) =
+    gtypeToType (GQL.TypeNamed (GQL.unNullability -> True) (GQL.unName . GQL.unNamedType -> a)) =
       [t| 'OptionalRef ('ObjectRef $(textToStrLit a)) |]
-    retToType (GQL.TypeList (GQL.unNullability -> False) (GQL.unListType -> a)) =
-      [t| 'ListRef $(retToType a) |]
-    retToType (GQL.TypeList (GQL.unNullability -> True) (GQL.unListType -> a)) =
-      [t| 'OptionalRef ('ListRef $(retToType a)) |]
-    retToType (GQL.TypeNamed _ _) = fail "this should not happen, please, file an issue"
-    retToType (GQL.TypeList _ _) = fail "this should not happen, please, file an issue"
+    gtypeToType (GQL.TypeList (GQL.unNullability -> False) (GQL.unListType -> a)) =
+      [t| 'ListRef $(gtypeToType a) |]
+    gtypeToType (GQL.TypeList (GQL.unNullability -> True) (GQL.unListType -> a)) =
+      [t| 'OptionalRef ('ListRef $(gtypeToType a)) |]
+    gtypeToType _ = fail "this should not happen, please, file an issue"
 typeToDec _ (GQL.TypeDefinitionInterface _)       = fail "interface types are not supported"
 typeToDec _ (GQL.TypeDefinitionUnion _)           = fail "union types are not supported"
 typeToDec _ (GQL.TypeDefinitionEnum enums)        = enumToDecl enums
