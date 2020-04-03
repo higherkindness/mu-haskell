@@ -12,6 +12,7 @@ category:      Network
 build-type:    Simple
 homepage:      https://higherkindness.io/mu-haskell/
 bug-reports:   https://github.com/higherkindness/mu-haskell/issues
+data-files:    exe/*.graphql
 
 library
   exposed-modules:
