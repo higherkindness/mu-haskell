@@ -1,19 +1,18 @@
-scalar String
-scalar Int
+type Author {
+    id: Int!
+    name: String!
+    books: [Book!]!
+}
 
-input Persona {
-  nombre: String
-  apellidos: String
+type Book {
+    id: Int!
+    author: Author!
+    title: String!
 }
 
 type Query {
-  edad(p: Persona!): Int
-  aficiones(p: Persona!): [Aficion!]
-}
-
-enum TipoAficion { TRANQUIS, MOVIDA }
-
-type Aficion {
-  nombre: String!
-  tipo: TipoAficion
+    author(name: String! = ".*"): Author
+    authors: [Author!]!
+    book(title: String! = ".*"): Book
+    books: [Book!]!
 }

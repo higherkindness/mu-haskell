@@ -17,7 +17,7 @@ jobs:
       name: Cache .stack-work
       with:
         path: .stack-work
-        key: ${{ runner.os }}-stack-work-${{ hashFiles('stack.yaml') }}-${{ hashFiles('**/*.hs') }}
+        key: ${{ runner.os }}-stack-work-${{ hashFiles('stack.yaml') }}-${{ '**/*.hs' }}
         restore-keys: |
           ${{ runner.os }}-stack-work-
     - name: Get rdkafka

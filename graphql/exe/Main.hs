@@ -32,11 +32,11 @@ import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
 
--- #if __GHCIDE__
--- graphql "Esquema" "Servicio" "graphql/exe/schema.graphql"
--- #else
--- graphql "Esquema" "Servicio" "exe/schema.graphql"
--- #endif
+#if __GHCIDE__
+graphql "GQLSchema" "GQLService" "graphql/exe/schema.graphql"
+#else
+graphql "GQLSchema" "GQLService" "exe/schema.graphql"
+#endif
 
 -- GraphQL App
 
