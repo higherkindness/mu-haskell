@@ -9,7 +9,7 @@
 {-# language TupleSections         #-}
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
-{-# OPTIONS_GHC -fno-warn-partial-type-signatures -ddump-splices #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 
 module Main where
 
@@ -25,17 +25,15 @@ import           Text.Regex.TDFA.Text              ()
 import           Network.Wai.Handler.Warp          (run)
 import           Network.Wai.Middleware.AddHeaders (addHeaders)
 
-import           Mu.GraphQL.Annotations
 import           Mu.GraphQL.Quasi
 import           Mu.GraphQL.Server
-import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
 
 #if __GHCIDE__
-graphql "GQLSchema" "GQLService" "graphql/exe/schema.graphql"
+graphql "GQLSchema" "ServiceDefinition" "graphql/exe/schema.graphql"
 #else
-graphql "GQLSchema" "GQLService" "exe/schema.graphql"
+graphql "GQLSchema" "ServiceDefinition" "exe/schema.graphql"
 #endif
 
 -- GraphQL App
@@ -47,38 +45,8 @@ main = do
              ("Access-Control-Allow-Origin", "*")
            , ("Access-Control-Allow-Headers", "Content-Type")
            ]
-  run 8000 $ {- hm $ -} graphQLApp libraryServer
-    (Proxy @('Just "Query")) (Proxy @'Nothing) (Proxy @('Just "Subscription"))
-
-type ServiceDefinition
-  = 'Package ('Just "library")
-      '[ Object "Book" '[]
-        '[ ObjectField "id"     '[] '[] ('RetSingle ('PrimitiveRef Integer))
-         , ObjectField "title"  '[] '[] ('RetSingle ('PrimitiveRef T.Text))
-         , ObjectField "author" '[] '[] ('RetSingle ('ObjectRef "Author"))
-         ]
-      , Object "Author" '[]
-        '[ ObjectField "id"    '[] '[] ('RetSingle ('PrimitiveRef Integer))
-         , ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef T.Text))
-         , ObjectField "books" '[] '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
-         ]
-      , Object "Query" '[]
-         '[ ObjectField "author" '[]
-              '[ 'ArgSingle ('Just "name") '[DefaultValue ('VCString ".*")] ('PrimitiveRef T.Text)]
-              ('RetSingle ('OptionalRef ('ObjectRef "Author")))
-          , ObjectField "book" '[]
-              '[ 'ArgSingle ('Just "title") '[DefaultValue ('VCString ".*")] ('PrimitiveRef T.Text)]
-              ('RetSingle ('OptionalRef ('ObjectRef "Book")))
-          , ObjectField "authors" '[]
-              '[] ('RetSingle ('ListRef ('ObjectRef "Author")))
-          , ObjectField "books" '[]
-              '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
-          ]
-      , Object "Subscription" '[]
-         '[ ObjectField "books" '[]
-              '[] ('RetStream ('ObjectRef "Book"))
-          ]
-      ]
+  run 8000 $ hm $ graphQLAppQuery libraryServer (Proxy @"Query")
+  -- (Proxy @'Nothing) (Proxy @('Just "Subscription"))
 
 type ServiceMapping = '[
     "Book"   ':-> (Integer, Integer)
@@ -101,7 +69,7 @@ libraryServer
                       :<||>: noContext allAuthors
                       :<||>: noContext allBooks'
                       :<||>: H0)
-               :<&>: (noContext allBooksConduit :<||>: H0)
+              --  :<&>: (noContext allBooksConduit :<||>: H0)
                :<&>: S0
   where
     findBook i = find ((==i) . fst3) library
@@ -127,8 +95,7 @@ libraryServer
     allBooks' = pure allBooks
 
     allBooksConduit :: ConduitM (Integer, Integer) Void m () -> m ()
-    allBooksConduit sink
-      = runConduit $ yieldMany allBooks .| sink
+    allBooksConduit sink = runConduit $ yieldMany allBooks .| sink -- TODO: support this!
 
 -- helpers
 

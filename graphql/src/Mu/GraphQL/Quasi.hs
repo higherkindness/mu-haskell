@@ -40,7 +40,9 @@ graphqlToDecls schemaName serviceName (GQL.SchemaDocument types) = do
   let schemaTypes  = [x | GQLSchema  x <- rs]
       serviceTypes = [x | GQLService x <- rs]
   schemaDec <- tySynD schemaName' [] (pure $ typesToList schemaTypes)
-  serviceDec <- tySynD serviceName' [] (pure $ typesToList serviceTypes)
+  serviceDec <- tySynD serviceName' []
+    [t| 'Package ('Just $(textToStrLit $ T.pack serviceName))
+                  $(pure $ typesToList serviceTypes) |]
   pure [schemaDec, serviceDec]
 
 -- | Reads a GraphQL 'TypeDefinition' and returns a 'Result'.
