@@ -50,17 +50,17 @@ typeToDec _ (GQL.TypeDefinitionObject objs) = objToDec objs
   where
     objToDec :: GQL.ObjectTypeDefinition -> Q Result
     objToDec (GQL.ObjectTypeDefinition _ nm _ _ flds) =
-      GQLService <$> [t| 'Service $(textToStrLit $ GQL.unName nm) '[]
+      GQLService <$> [t| 'Service $(textToStrLit $ coerce nm) '[]
           $(typesToList <$> traverse gqlFieldToType flds) |]
     gqlFieldToType :: GQL.FieldDefinition -> Q Type
-    gqlFieldToType (GQL.FieldDefinition _ (GQL.unName -> fnm) args ftyp _) =
+    gqlFieldToType (GQL.FieldDefinition _ (coerce -> fnm) args ftyp _) =
       [t| 'Method $(textToStrLit fnm) '[]
             $(typesToList <$> traverse argToType args)
             ('RetSingle $(gtypeToType ftyp)) |]
     argToType :: GQL.InputValueDefinition -> Q Type
-    argToType (GQL.InputValueDefinition _ (GQL.unName -> aname) atype Nothing) =
+    argToType (GQL.InputValueDefinition _ (coerce -> aname) atype Nothing) =
       [t| 'ArgSingle ('Just $(textToStrLit aname)) '[] $(gtypeToType atype) |]
-    argToType (GQL.InputValueDefinition _ (GQL.unName -> aname) atype (Just defs)) =
+    argToType (GQL.InputValueDefinition _ (coerce -> aname) atype (Just defs)) =
       [t| 'ArgSingle ('Just $(textToStrLit aname))
                       '[DefaultValue $( defToVConst defs )] $(gtypeToType atype) |]
     defToVConst :: GQL.DefaultValue -> Q Type
@@ -73,15 +73,15 @@ typeToDec _ (GQL.TypeDefinitionObject objs) = objToDec objs
     defToVConst (GQL.VCList (GQL.ListValueG xs))      = [t| 'VCList $(typesToList <$> traverse defToVConst xs) |]
     defToVConst (GQL.VCObject (GQL.ObjectValueG obj)) = [t| 'VCObject $(typesToList <$> traverse fromGQLField obj) |]
     fromGQLField :: GQL.ObjectFieldG GQL.ValueConst -> Q Type
-    fromGQLField (GQL.ObjectFieldG (coerce -> n) v) = [t| ($(textToStrLit n), $(defToVConst v)) |]
+    fromGQLField (GQL.ObjectFieldG (coerce -> n) v)   = [t| ($(textToStrLit n), $(defToVConst v)) |]
     gtypeToType :: GQL.GType -> Q Type
-    gtypeToType (GQL.TypeNamed (GQL.unNullability -> False) (GQL.unNamedType -> a)) =
+    gtypeToType (GQL.TypeNamed (coerce -> False) (coerce -> a)) =
       [t| $(scalarToType a) |]
-    gtypeToType (GQL.TypeNamed (GQL.unNullability -> True) (GQL.unNamedType -> a)) =
+    gtypeToType (GQL.TypeNamed (coerce -> True) (coerce -> a)) =
       [t| 'OptionalRef $(scalarToType a) |]
-    gtypeToType (GQL.TypeList (GQL.unNullability -> False) (GQL.unListType -> a)) =
+    gtypeToType (GQL.TypeList (coerce -> False) (coerce -> a)) =
       [t| 'ListRef $(gtypeToType a) |]
-    gtypeToType (GQL.TypeList (GQL.unNullability -> True) (GQL.unListType -> a)) =
+    gtypeToType (GQL.TypeList (coerce -> True) (coerce -> a)) =
       [t| 'OptionalRef ('ListRef $(gtypeToType a)) |]
     gtypeToType _ = fail "this should not happen, please, file an issue"
 typeToDec _ (GQL.TypeDefinitionInterface _)       = fail "interface types are not supported"
@@ -89,29 +89,29 @@ typeToDec _ (GQL.TypeDefinitionUnion _)           = fail "union types are not su
 typeToDec _ (GQL.TypeDefinitionEnum enums)        = enumToDecl enums
   where
     enumToDecl :: GQL.EnumTypeDefinition -> Q Result
-    enumToDecl (GQL.EnumTypeDefinition _ (GQL.unName -> name) _ symbols) =
+    enumToDecl (GQL.EnumTypeDefinition _ (coerce -> name) _ symbols) =
       GQLSchema <$> [t|'DEnum $(textToStrLit name)
                               $(typesToList <$> traverse gqlChoiceToType symbols)|]
     gqlChoiceToType :: GQL.EnumValueDefinition -> Q Type
-    gqlChoiceToType (GQL.EnumValueDefinition _ (GQL.unName . GQL.unEnumValue -> c) _) =
+    gqlChoiceToType (GQL.EnumValueDefinition _ (coerce -> c) _) =
       [t|'ChoiceDef $(textToStrLit c)|]
 typeToDec _ (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
   where
     inputObjToDec :: GQL.InputObjectTypeDefinition -> Q Result
-    inputObjToDec (GQL.InputObjectTypeDefinition _ (GQL.unName -> name) _ fields) = -- TODO:
+    inputObjToDec (GQL.InputObjectTypeDefinition _ (coerce -> name) _ fields) = -- TODO:
         GQLSchema <$> [t|'DRecord $(textToStrLit name)
                                   $(typesToList <$> traverse gqlFieldToType fields)|]
     gqlFieldToType :: GQL.InputValueDefinition -> Q Type
-    gqlFieldToType (GQL.InputValueDefinition _ (GQL.unName -> fname) ftype _) =
+    gqlFieldToType (GQL.InputValueDefinition _ (coerce -> fname) ftype _) =
       [t|'FieldDef $(textToStrLit fname) $(ginputTypeToType ftype)|]
     ginputTypeToType :: GQL.GType -> Q Type
-    ginputTypeToType (GQL.TypeNamed (GQL.unNullability -> False) (GQL.unName . GQL.unNamedType -> a)) =
+    ginputTypeToType (GQL.TypeNamed (coerce -> False) (coerce -> a)) =
       [t| 'ObjectRef $(textToStrLit a) |]
-    ginputTypeToType (GQL.TypeNamed (GQL.unNullability -> True) (GQL.unName . GQL.unNamedType -> a)) =
+    ginputTypeToType (GQL.TypeNamed (coerce -> True) (coerce -> a)) =
       [t| 'OptionalRef ('ObjectRef $(textToStrLit a)) |]
-    ginputTypeToType (GQL.TypeList (GQL.unNullability -> False) (GQL.unListType -> a)) =
+    ginputTypeToType (GQL.TypeList (coerce -> False) (coerce -> a)) =
       [t| 'ListRef $(ginputTypeToType a) |]
-    ginputTypeToType (GQL.TypeList (GQL.unNullability -> True) (GQL.unListType -> a)) =
+    ginputTypeToType (GQL.TypeList (coerce -> True) (coerce -> a)) =
       [t| 'OptionalRef ('ListRef $(ginputTypeToType a)) |]
     ginputTypeToType _ = fail "this should not happen, please, file an issue"
 
@@ -121,7 +121,7 @@ scalarToType (GQL.unName -> "Float")   = [t|'PrimitiveRef Double|]
 scalarToType (GQL.unName -> "String")  = [t|'PrimitiveRef T.Text|]
 scalarToType (GQL.unName -> "Boolean") = [t|'PrimitiveRef Bool|]
 scalarToType (GQL.unName -> "ID")      = [t|'PrimitiveRef UUID|]
-scalarToType (GQL.unName -> name)      = [t|'ObjectRef $(textToStrLit name)|]
+scalarToType (coerce -> name)          = [t|'ObjectRef $(textToStrLit name)|]
 
 typesToList :: [Type] -> Type
 typesToList = foldr (AppT . AppT PromotedConsT) PromotedNilT
