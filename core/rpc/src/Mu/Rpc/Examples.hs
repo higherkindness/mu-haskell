@@ -73,10 +73,9 @@ quickstartServer :: forall m. (MonadServer m)
                  => ServerT '[] QuickStartService m _
 quickstartServer
   -- = Server (sayHello :<|>: sayHi :<|>: sayManyHellos :<|>: H0)
-  = singleService $ method @"SayHello" sayHello
-                :|: method @"SayManyHellos" sayManyHellos
-                :|: method @"SayHi" sayHi
-                :|: N0
+  = singleService ( method @"SayHello" sayHello
+                  , method @"SayManyHellos" sayManyHellos
+                  , method @"SayHi" sayHi )
   where
     sayHello :: HelloRequest -> m HelloResponse
     sayHello (HelloRequest nm)
@@ -125,9 +124,11 @@ type ApolloBookAuthor = '[
 
 apolloServer :: forall m. (MonadServer m) => ServerT ApolloBookAuthor ApolloService m _
 apolloServer
-  = Services $ (pure . fst :<||>: pure . snd :<||>: H0)
-               :<&>: (authorName :<||>: authorBooks :<||>: H0)
-               :<&>: S0
+  = resolver
+      ( object @"Author" ( field @"name"   authorName
+                         , field @"books"  authorBooks )
+      , object @"Book"   ( field @"author" (pure . snd)
+                         , field @"title"  (pure . fst) ) )
   where
     authorName :: Integer -> m String
     authorName _ = pure "alex"  -- this would run in the DB
