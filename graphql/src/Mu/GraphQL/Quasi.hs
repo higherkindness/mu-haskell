@@ -27,7 +27,8 @@ graphql scName svName file = do
     Right p -> graphqlToDecls scName svName p
 
 data Result =
-    GQLSchema Type
+    GQLScalar
+  | GQLSchema Type
   | GQLService Type
   deriving (Show, Eq)
 
@@ -47,7 +48,7 @@ graphqlToDecls schemaName serviceName (GQL.SchemaDocument types) = do
 
 -- | Reads a GraphQL 'TypeDefinition' and returns a 'Result'.
 typeToDec :: Name -> GQL.TypeDefinition -> Q Result
-typeToDec _ (GQL.TypeDefinitionScalar (GQL.ScalarTypeDefinition _ _s _)) = undefined -- TODO:
+typeToDec _ (GQL.TypeDefinitionScalar (GQL.ScalarTypeDefinition _ s _)) = GQLScalar <$ scalarToType s
 typeToDec _ (GQL.TypeDefinitionObject objs) = objToDec objs
   where
     objToDec :: GQL.ObjectTypeDefinition -> Q Result
@@ -97,7 +98,7 @@ typeToDec _ (GQL.TypeDefinitionEnum enums)        = enumToDecl enums
     gqlChoiceToType :: GQL.EnumValueDefinition -> Q Type
     gqlChoiceToType (GQL.EnumValueDefinition _ (coerce -> c) _) =
       [t|'ChoiceDef $(textToStrLit c)|]
-typeToDec _ (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
+typeToDec schemaName (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
   where
     inputObjToDec :: GQL.InputObjectTypeDefinition -> Q Result
     inputObjToDec (GQL.InputObjectTypeDefinition _ (coerce -> name) _ fields) = -- TODO:
@@ -108,14 +109,21 @@ typeToDec _ (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
       [t|'FieldDef $(textToStrLit fname) $(ginputTypeToType ftype)|]
     ginputTypeToType :: GQL.GType -> Q Type
     ginputTypeToType (GQL.TypeNamed (coerce -> False) (coerce -> a)) =
-      [t| 'ObjectRef $(textToStrLit a) |]
+      [t| $(typeToPrimType a) |]
     ginputTypeToType (GQL.TypeNamed (coerce -> True) (coerce -> a)) =
-      [t| 'OptionalRef ('ObjectRef $(textToStrLit a)) |]
+      [t| 'OptionalRef $(typeToPrimType a) |]
     ginputTypeToType (GQL.TypeList (coerce -> False) (coerce -> a)) =
       [t| 'ListRef $(ginputTypeToType a) |]
     ginputTypeToType (GQL.TypeList (coerce -> True) (coerce -> a)) =
       [t| 'OptionalRef ('ListRef $(ginputTypeToType a)) |]
     ginputTypeToType _ = fail "this should not happen, please, file an issue"
+    typeToPrimType :: GQL.Name -> Q Type
+    typeToPrimType (GQL.unName -> "Int")     = [t|'TPrimitive Integer|]
+    typeToPrimType (GQL.unName -> "Float")   = [t|'TPrimitive Double|]
+    typeToPrimType (GQL.unName -> "String")  = [t|'TPrimitive T.Text|]
+    typeToPrimType (GQL.unName -> "Boolean") = [t|'TPrimitive Bool|]
+    typeToPrimType (GQL.unName -> "ID")      = [t|'TPrimitive UUID|]
+    typeToPrimType (coerce -> name)          = [t|'TSchematic $(textToStrLit name)|]
 
 scalarToType :: GQL.Name -> Q Type
 scalarToType (GQL.unName -> "Int")     = [t|'PrimitiveRef Integer|]
@@ -124,6 +132,7 @@ scalarToType (GQL.unName -> "String")  = [t|'PrimitiveRef T.Text|]
 scalarToType (GQL.unName -> "Boolean") = [t|'PrimitiveRef Bool|]
 scalarToType (GQL.unName -> "ID")      = [t|'PrimitiveRef UUID|]
 scalarToType (coerce -> name)          = [t|'ObjectRef $(textToStrLit name)|]
+-- TODO: [t|'SchemaRef $(conT schemaName) $(textToStrLit name)|]
 
 typesToList :: [Type] -> Type
 typesToList = foldr (AppT . AppT PromotedConsT) PromotedNilT
