@@ -3,7 +3,9 @@
 {-# language TemplateHaskell   #-}
 {-# language ViewPatterns      #-}
 
-module Mu.GraphQL.Quasi where
+module Mu.GraphQL.Quasi (
+  graphql
+) where
 
 import           Control.Monad.IO.Class        (liftIO)
 import           Data.Coerce                   (coerce)
@@ -80,7 +82,7 @@ typeToDec schemaName tm (GQL.TypeDefinitionObject objs) = objToDec objs
     gqlFieldToType (GQL.FieldDefinition _ (coerce -> fnm) args ftyp _) =
       [t| 'Method $(textToStrLit fnm) '[]
             $(typesToList <$> traverse argToType args)
-            ('RetSingle $(gtypeToType ftyp)) |]
+            ('RetSingle $(gtypeToType ftyp)) |] -- TODO: `RetStream` if it's a subscription!
     argToType :: GQL.InputValueDefinition -> Q Type
     argToType (GQL.InputValueDefinition _ (coerce -> aname) atype Nothing) =
       [t| 'ArgSingle ('Just $(textToStrLit aname)) '[] $(gtypeToType atype) |]

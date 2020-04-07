@@ -1,18 +1,27 @@
 type Book {
-    id: Int!
-    title: String!
-    author: Author!
+  id: Int!
+  title: String!
+  author: Author!
 }
 
 type Author {
-    id: Int!
-    name: String!
-    books: [Book!]!
+  id: Int!
+  name: String!
+  books: [Book!]!
 }
 
 type Query {
-    author(name: String! = ".*"): Author
-    book(title: String! = ".*"): Book
-    authors: [Author!]!
-    books: [Book!]!
+  author(name: String! = ".*"): Author
+  book(title: String! = ".*"): Book
+  authors: [Author!]!
+  books: [Book!]!
 }
+
+# type Subscription {
+#   books: Book!
+# }
+
+# schema {
+#   query: Query
+#   subscription: Subscription
+# }
