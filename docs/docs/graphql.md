@@ -79,6 +79,7 @@ The following schema shows the way we traverse a GraphQL query and the types inv
     }
   }
 }
+```
 
 ```haskell
 {-# language ScopedTypeVariables, PartialTypeSignatures #-}
