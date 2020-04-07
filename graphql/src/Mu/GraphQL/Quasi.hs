@@ -4,6 +4,7 @@
 {-# language ViewPatterns      #-}
 
 module Mu.GraphQL.Quasi (
+  -- * 'Schema' generation from @.graphql@ files
   graphql
 ) where
 

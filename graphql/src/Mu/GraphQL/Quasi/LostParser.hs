@@ -1,43 +1,38 @@
 module Mu.GraphQl.Quasi.LostParser (
+  -- * The Lost 'Parser'™️
   parseTypeSysDefinition
 ) where
 
 import           Control.Applicative           ((<|>))
-import           Data.Attoparsec.Text
+import           Data.Attoparsec.Text          (Parser, many1)
 import qualified Data.Text                     as T
-import           Language.GraphQL.Draft.Parser (runParser, schemaDocument)
+import           Language.GraphQL.Draft.Parser (nameParser, runParser, schemaDocument)
 import qualified Language.GraphQL.Draft.Syntax as GQL
-import           Text.Parser.Token             (whiteSpace)
+import           Text.Parser.Token             (braces, symbol, whiteSpace)
 
 schemaDefinition :: Parser GQL.SchemaDefinition
-schemaDefinition = error "not implemented" -- TODO:
+schemaDefinition = symbol "schema" *> braces (
+    GQL.SchemaDefinition
+      <$> pure Nothing -- ignore [Directive]
+      <*> many1 rootOperationParser
+  )
 
--- data SchemaDefinition
---   = SchemaDefinition
---   { _sdDirectives                   :: !(Maybe [Directive]) -- ignore -> Nothing
---   , _sdRootOperationTypeDefinitions :: ![RootOperationTypeDefinition]
---   }
+rootOperationParser :: Parser GQL.RootOperationTypeDefinition
+rootOperationParser =
+  GQL.RootOperationTypeDefinition
+    <$> (operationTypeParser <* symbol ":")
+    <*> (GQL.NamedType <$> nameParser)
 
--- data RootOperationTypeDefinition
---   = RootOperationTypeDefinition
---   { _rotdOperationType     :: !OperationType
---   , _rotdOperationTypeType :: !NamedType -- FIXME: coerces to `Name`!
---   }
-
--- data OperationType
---   = OperationTypeQuery
---   | OperationTypeMutation
---   | OperationTypeSubscription
+operationTypeParser :: Parser GQL.OperationType
+operationTypeParser =
+  GQL.OperationTypeQuery <$ symbol "query"
+  <|> GQL.OperationTypeMutation <$ symbol "mutation"
+  <|> GQL.OperationTypeSubscription <$ symbol "subscription"
 
 typeSystemDefinition :: Parser [GQL.TypeSystemDefinition]
-typeSystemDefinition =
-   whiteSpace *> fmap concat (many1 (
-       (\(GQL.SchemaDocument d) -> map GQL.TypeSystemDefinitionType d) <$> schemaDocument
-   <|> (: []) . GQL.TypeSystemDefinitionSchema <$> schemaDefinition ) )
-
--- data TypeSystemDefinition
---   = TypeSystemDefinitionSchema !SchemaDefinition
---   | TypeSystemDefinitionType !TypeDefinition
+typeSystemDefinition = whiteSpace *> (concat <$> many1 (
+      (\(GQL.SchemaDocument d) -> GQL.TypeSystemDefinitionType <$> d) <$> schemaDocument
+  <|> (: []) . GQL.TypeSystemDefinitionSchema <$> schemaDefinition ))
 
 parseTypeSysDefinition :: T.Text -> Either T.Text [GQL.TypeSystemDefinition]
 parseTypeSysDefinition = runParser typeSystemDefinition
