@@ -21,7 +21,7 @@ library
     Mu.GraphQL.Server
 
   other-modules:
-    Mu.GraphQl.Quasi.LostParser
+    Mu.GraphQL.Quasi.LostParser
     Mu.GraphQL.Query.Definition
     Mu.GraphQL.Query.Introspection
     Mu.GraphQL.Query.Parse
