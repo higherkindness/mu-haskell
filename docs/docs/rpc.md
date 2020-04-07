@@ -1,10 +1,10 @@
 ---
 layout: docs
-title: Services and servers
+title: RPC services
 permalink: rpc/
 ---
 
-# Services and servers
+# RPC services
 
 There are several formats in the wild used to declare service APIs, including [Avro IDL](https://avro.apache.org/docs/current/idl.html), [gRPC](https://grpc.io/), and [OpenAPI](https://swagger.io/specification/). `mu-rpc` abstract the commonalities into a single type-level format for declaring these services, building on the format-independent schema facilities of `mu-schema`. In addition, this package provides a generic notion of *server* of a service. One such server defines one behavior for each method in the service, but does not bother with (de)serialization mechanisms.
 
@@ -98,28 +98,3 @@ In order to support both [Avro IDL](https://avro.apache.org/docs/current/idl.htm
 * The *return types* gives the same two choices under the names `RetSingle` or `RetStream`, and additionally supports the declaration of methods which may raise exceptions using `RetThrows`, or methods which do not retun any useful information using `RetNothing`.
 
 Note that depending on the concrete implementation you use to run the server, one or more of these choices may not be available. For example, gRPC only supports one argument and return value, either single or streaming, but not exceptions.
-
-## Implementing the service
-
-In order to implement the service, you have to define the behavior of each method by means of a *handler*. You can use Haskell types for your handlers, given that you had previously declared that they can be mapped back and forth the schema types using `ToSchema` and `FromSchema`. For example, the following is a handler for the `SayHello` method in `Greeter`:
-
-```haskell
-sayHello :: (MonadServer m) => HelloRequest -> m HelloResponse
-sayHello (HelloRequest nm) = pure $ HelloResponse ("hi, " <> nm)
-```
-
-Notice the use of `MonadServer` in this case. This gives us the ability to:
-
-* Run arbitrary `IO` actions by using `liftIO`,
-* Return an error code by calling `serverError`.
-
-Being polymorphic here allows us to run the same server in multiple back-ends. Furthermore, by enlarging the set of abilities required for our monad `m`, we can [integrate with other libraries](transformer.md), including logging and resource pools.
-
-Since you can declare more than one method in a service, you need to join them into a `Server`. You do so by using `(:<|>:)` between each handler and ending the sequence with `H0`. In addition to the name of the service, `Server` has an additional parameter which records the types of the handlers. Since that list may become quite long, we can ask GHC to write it for us by using the `PartialTypeSignatures` extension and writing an underscore `_` in that position.
-
-```haskell
-{-# language PartialTypeSignatures #-}
-
-quickstartServer :: (MonadServer m) => ServerT QuickstartService m _
-quickstartServer = Server (sayHello :<|>: H0)
-```

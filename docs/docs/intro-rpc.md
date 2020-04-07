@@ -73,7 +73,7 @@ data HelloReplyMessage
            , FromSchema TheSchema "HelloReply")
 ```
 
-These data types should be added to the file `src/Schema.hs`, under the line that starts `grpc ...`. (See the [gRPC page]({% link docs/grpc.md %}) for information about what that line is doing.)
+These data types should be added to the file `src/Schema.hs`, under the line that starts `grpc ...`. (See the [RPC services page]({% link docs/rpc.md %}) for information about what that line is doing.)
 
 You can give the data types and their constructors any name you like. However, keep in mind that:
 
