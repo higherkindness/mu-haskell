@@ -57,7 +57,7 @@ module Mu.Server (
 import           Control.Monad.Except
 import           Data.Conduit
 import           Data.Kind
-import           GHC.TypeLits         (Symbol)
+import           GHC.TypeLits
 
 import           Mu.Rpc
 import           Mu.Schema
@@ -269,6 +269,15 @@ instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named 
 instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named n5 h5, Named n6 h6)
                      '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4), '(n5, h5), '(n6, h6) ] where
   toNamedList (n1, n2, n3, n4, n5, n6) = n1 :|: n2 :|: n3 :|: n4 :|: n5 :|: n6 :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named n5 h5, Named n6 h6, Named n7 h7)
+                     '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4), '(n5, h5), '(n6, h6), '(n7, h7) ] where
+  toNamedList (n1, n2, n3, n4, n5, n6, n7) = n1 :|: n2 :|: n3 :|: n4 :|: n5 :|: n6 :|: n7 :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named n5 h5, Named n6 h6, Named n7 h7, Named n8 h8)
+                     '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4), '(n5, h5), '(n6, h6), '(n7, h7), '(n8, h8) ] where
+  toNamedList (n1, n2, n3, n4, n5, n6, n7, n8) = n1 :|: n2 :|: n3 :|: n4 :|: n5 :|: n6 :|: n7 :|: n8 :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named n5 h5, Named n6 h6, Named n7 h7, Named n8 h8, Named n9 h9)
+                     '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4), '(n5, h5), '(n6, h6), '(n7, h7), '(n8, h8), '(n9, h9) ] where
+  toNamedList (n1, n2, n3, n4, n5, n6, n7, n8, n9) = n1 :|: n2 :|: n3 :|: n4 :|: n5 :|: n6 :|: n7 :|: n8 :|: n9 :|: N0
 
 class ToHandlers chn inh ms m hs nl | chn inh ms m nl -> hs where
   toHandlers :: NamedList nl
@@ -282,11 +291,9 @@ instance (FindHandler name inh h nl, Handles chn args ret m h, ToHandlers chn in
 
 class FindHandler name inh h nl | name nl -> inh h where
   findHandler :: Proxy name -> NamedList nl -> inh -> h
-{-
-instance TypeError ('Text "cannot find handler for " ':<>: 'ShowType name)
+instance (inh ~ h, h ~ TypeError ('Text "cannot find handler for " ':<>: 'ShowType name))
          => FindHandler name inh h '[] where
   findHandler = error "this should never be called"
--}
 instance {-# OVERLAPS #-} (inh ~ inh', h ~ h')
          => FindHandler name inh h ( '(name, inh' -> h') ': rest ) where
   findHandler _ (Named f :|: _) = f
@@ -307,11 +314,9 @@ instance ( FindService name (HandlersT chn (MappingRight chn name) methods m h) 
 
 class FindService name h nl | name nl -> h where
   findService :: Proxy name -> NamedList nl -> h
-{-
-instance TypeError ('Text "cannot find handler for " ':<>: 'ShowType name)
+instance (h ~ TypeError ('Text "cannot find handler for " ':<>: 'ShowType name))
          => FindService name h '[] where
   findService = error "this should never be called"
--}
 instance {-# OVERLAPS #-} (h ~ h')
          => FindService name h ( '(name, h') ': rest ) where
   findService _ (Named f :|: _) = f

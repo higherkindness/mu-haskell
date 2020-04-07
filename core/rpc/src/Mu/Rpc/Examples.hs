@@ -91,20 +91,7 @@ quickstartServer
     sayManyHellos source sink
       = runConduit $ source .| C.mapM sayHello .| sink
 
-{-
-From https://www.apollographql.com/docs/apollo-server/schema/schema/
-
-type Book {
-  title: String
-  author: Author
-}
-
-type Author {
-  name: String
-  books: [Book]
-}
--}
-
+-- From https://www.apollographql.com/docs/apollo-server/schema/schema/
 type ApolloService
   = 'Package ('Just "apollo")
       '[ Object "Book" '[]
