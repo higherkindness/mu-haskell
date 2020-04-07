@@ -47,7 +47,7 @@ graphql "Schema" "ServiceDefinition" "schema.graphql"
 
 This might be surprising for people already used to GraphQL, the separation between input objects and enumerations, and the rest of the objects may seem quite artificial. However, this is needed because Mu-Haskell strongly separates those part of a service which only hold data, from those which may have some behavior associated with it (sometimes called *resolvers*).
 
-## Implementing a server
+## Mapping each object type
 
 Unsurprisingly, in order to implement a server for this schema you need to define a resolver for each of the objects and fields. There's one question to be answered beforehand, though: how do you represent *result* type of those resolvers, that is, how do we represent a (**not** input) *object*? We define those using a *type mapping*, which specifies the type associated to each GraphQL object type, except for the root types like `Query`.
 
@@ -70,16 +70,29 @@ You might be wondering why this is so complicated? The reason is that we don't w
 
 The following schema shows the way we traverse a GraphQL query and the types involved in it.
 
-```haskell
+```graphql
 {
   author(name: ".*Ende.*") {   --> 1. return a Maybe AuthorId
-    name                       --> 2. from that (optional) AuthorId return a String
+    name                       --> 2. from that (optional) AuthorId return a Text
     books {                    --> 3. from that AuthorId return [(BookId, AuthorId)]
-      title                    --> 4. from each (BookId, AuthorId) return a String
+      title                    --> 4. from each (BookId, AuthorId) return a Text
     }
   }
 }
 ```
+
+Note that we could have made `Book` be represented simply by a `BookId` and then query some database to figure our the author. However, in this case we assume this query is going to be quite common, and we cache this information since the beginning. Note that from the implementation point of view, the resolver for the `author` field of `Book` should have the type:
+
+```haskell
+bookAuthor :: (BookId, AuthorId) -> m AuthorId
+bookAuthor (_, aid) = pure aid
+```
+
+The argument and result types come from the type mapping, since they are both object types. Given that we have cached that information, we can return it right away.
+
+## Implementing the server
+
+The whole implementation looks as a big list defining each of the resolvers for each of the objects and their fields. There's only one subtlety: for *root* operations we use `method` instead of `field`. The reason is that those fields do not take any information passed by, they are the initial requests.
 
 ```haskell
 {-# language ScopedTypeVariables, PartialTypeSignatures #-}
@@ -95,8 +108,51 @@ libraryServer :: forall m. (MonadServer m)
       , object @"Book"   ( field  @"id"     bookId
                          , field  @"author" bookAuthor
                          , field  @"title"  bookTitle ) )
+  where -- Query fields
+        findAuthor :: Text -> m (Maybe AuthorId)
+        allBooks   :: m [(BookId, AuthorId)]
+        -- Author fields
+        authorId    :: AuthorId -> m Int
+        authorName  :: AuthorId -> m Text
+        authorBooks :: AuthorId -> m [(BookId, AuthorId)]
+        -- Book fields
+        bookId     :: (BookId, AuthorId) -> m Int
+        bookAuthor :: (BookId, AuthorId) -> m AuthorId
+        bookAuthor (_, aid) = pure aid
+        bookTitle  :: (BookId, AuthorId) -> m Text
+        -- implementation
+```
+
+In the above code we have defined all fields in a big `where` block, but of course those may be defined as top-level functions, or inline in call to `field` or `method`.
+
+The final touch is to start the GraphQL server defined by `libraryServer`. The `Mu.GraphQL.Server` module defines tons of different ways to configure how the server behaves; the simplest option just requires a port and the name of the root type for queries.
+
+```haskell
+main = runGraphQLAppQuery 8080 libraryServer (Proxy @"Query")
 ```
 
 ## Subscriptions as streams
 
-## Comparison with other libraries
+## Comparison with other libraries
+
+There are other libraries targeting GraphQL server definition in Haskell.
+
+[`graphql-api`](https://github.com/haskell-graphql/graphql-api#readme) shares with Mu the encoding of the GraphQL schema in the type-level. In fact, as the [tutorial](https://haskell-graphql-api.readthedocs.io/en/latest/tutorial/Introduction.html) shows, its encoding is much closer to GraphQL's schema definition.
+
+```haskell
+type Hello
+  = Object "Hello" '[]
+           '[ Argument "who" Text :> Field "greeting" Text ]
+```
+
+This is expected: Mu's ability to target both RPC and GraphQL microservices means that sometimes there's some mismatch.
+
+[Morpheus GraphQL](https://morpheusgraphql.com/) also exposes GraphQL servers from Haskell code. Morpheus shared with Mu the ability to import a GraphQL schema into Haskell code. However, the types and fields are not represented by a type-level encoding, but *directly* as Haskell *records*.
+
+```haskell
+type Hello m = Hello { greeting :: Text -> m Text }
+```
+
+At the moment of writing, Mu has the ability to use records for schema types. In GraphQL terms, that means that you can use Haskell records for input objects and enumerations, but resolvers for each object fields need to be defined separately, as described above.
+
+Another interesting comparison point is how the different libraries ensure that only the required data is ever consulted. This is quite important, since otherwise we might end up in infinite loops (find an author, query the books, for each book query the author, for each author the books, ...). Both `graphql-api` and Morpheus rely on Haskell's laziness, whereas Mu asks to define a type mapping which is then used as connecting point between objects.
