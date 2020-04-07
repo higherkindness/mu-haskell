@@ -1,4 +1,4 @@
-module Mu.GraphQl.Quasi.LostParser (
+module Mu.GraphQL.Quasi.LostParser (
   -- * The Lost 'Parser'™️
   parseTypeSysDefinition
 ) where
