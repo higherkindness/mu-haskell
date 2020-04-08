@@ -12,13 +12,16 @@ category:      Network
 build-type:    Simple
 homepage:      https://higherkindness.io/mu-haskell/
 bug-reports:   https://github.com/higherkindness/mu-haskell/issues
+data-files:    exe/*.graphql
 
 library
   exposed-modules:
     Mu.GraphQL.Annotations
+    Mu.GraphQL.Quasi
     Mu.GraphQL.Server
 
   other-modules:
+    Mu.GraphQL.Quasi.LostParser
     Mu.GraphQL.Query.Definition
     Mu.GraphQL.Query.Introspection
     Mu.GraphQL.Query.Parse
@@ -29,6 +32,7 @@ library
   build-depends:
       aeson
     , async
+    , attoparsec
     , base                  >=4.12 && <5
     , bytestring
     , conduit
@@ -38,14 +42,17 @@ library
     , mtl
     , mu-rpc
     , mu-schema
+    , parsers
     , scientific
     , sop-core
     , stm
     , stm-chans
     , stm-conduit
     , stm-containers
+    , template-haskell
     , text
     , unordered-containers
+    , uuid
     , wai
     , wai-websockets
     , warp
