@@ -17,11 +17,11 @@ type Query {
   books: [Book!]!
 }
 
-# type Subscription {
-#   books: Book!
-# }
+type Subscription {
+  books: Book!
+}
 
-# schema {
-#   query: Query
-#   subscription: Subscription
-# }
+schema {
+  query: Query
+  subscription: Subscription
+}

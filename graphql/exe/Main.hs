@@ -45,8 +45,10 @@ main = do
              ("Access-Control-Allow-Origin", "*")
            , ("Access-Control-Allow-Headers", "Content-Type")
            ]
-  run 8000 $ hm $ graphQLAppQuery libraryServer (Proxy @"Query")
-  -- (Proxy @'Nothing) (Proxy @('Just "Subscription"))
+  run 8000 $ hm $ graphQLApp libraryServer
+    (Proxy @('Just "Query"))
+    (Proxy @'Nothing)
+    (Proxy @('Just "Subscription"))
 
 type ServiceMapping = '[
     "Book"   ':-> (Integer, Integer)
@@ -69,7 +71,7 @@ libraryServer
                       :<||>: noContext allAuthors
                       :<||>: noContext allBooks'
                       :<||>: H0)
-              --  :<&>: (noContext allBooksConduit :<||>: H0)
+               :<&>: (noContext allBooksConduit :<||>: H0)
                :<&>: S0
   where
     findBook i = find ((==i) . fst3) library
@@ -95,7 +97,7 @@ libraryServer
     allBooks' = pure allBooks
 
     allBooksConduit :: ConduitM (Integer, Integer) Void m () -> m ()
-    allBooksConduit sink = runConduit $ yieldMany allBooks .| sink -- TODO: support this!
+    allBooksConduit sink = runConduit $ yieldMany allBooks .| sink
 
 -- helpers
 
