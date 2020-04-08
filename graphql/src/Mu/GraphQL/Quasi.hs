@@ -11,6 +11,7 @@ module Mu.GraphQL.Quasi (
 import           Control.Monad.IO.Class        (liftIO)
 import           Data.Coerce                   (coerce)
 import qualified Data.HashMap.Strict           as HM
+import           Data.List                     (foldl')
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.UUID                     (UUID)
@@ -46,12 +47,12 @@ data GQLType =
   | Other
 
 classifySchema :: [GQL.SchemaDefinition] -> SchemaMap
-classifySchema = HM.fromList . concatMap schemaToMap
+classifySchema = foldl' schemaToMap HM.empty
   where
-    schemaToMap :: GQL.SchemaDefinition -> [(T.Text, GQL.OperationType)]
-    schemaToMap (GQL.SchemaDefinition _ ops) = operationToKeyValue <$> ops
-    operationToKeyValue :: GQL.RootOperationTypeDefinition -> (T.Text, GQL.OperationType)
-    operationToKeyValue (GQL.RootOperationTypeDefinition opType (coerce -> name)) = (name, opType)
+    schemaToMap :: SchemaMap -> GQL.SchemaDefinition -> SchemaMap
+    schemaToMap mp (GQL.SchemaDefinition _ ops) = foldl' operationToKeyValue mp ops
+    operationToKeyValue :: SchemaMap -> GQL.RootOperationTypeDefinition -> SchemaMap
+    operationToKeyValue mp (GQL.RootOperationTypeDefinition opType (coerce -> name)) = HM.insert name opType mp
 
 classify :: [GQL.TypeDefinition] -> TypeMap
 classify = HM.fromList . (typeToKeyValue <$>)

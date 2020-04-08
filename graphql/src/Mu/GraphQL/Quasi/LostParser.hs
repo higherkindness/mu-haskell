@@ -25,7 +25,7 @@ rootOperationParser =
 
 operationTypeParser :: Parser GQL.OperationType
 operationTypeParser =
-  GQL.OperationTypeQuery <$ symbol "query"
+      GQL.OperationTypeQuery <$ symbol "query"
   <|> GQL.OperationTypeMutation <$ symbol "mutation"
   <|> GQL.OperationTypeSubscription <$ symbol "subscription"
 
