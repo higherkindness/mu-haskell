@@ -64,15 +64,18 @@ library
 
 libraryServer :: forall m. (MonadServer m) => ServerT ServiceMapping ServiceDefinition m _
 libraryServer
-  = Services $ (bookId :<||>: bookTitle :<||>: bookAuthor :<||>: H0)
-               :<&>: (authorId :<||>: authorName :<||>: authorBooks :<||>: H0)
-               :<&>: (noContext findAuthor
-                      :<||>: noContext findBookTitle
-                      :<||>: noContext allAuthors
-                      :<||>: noContext allBooks'
-                      :<||>: H0)
-               :<&>: (noContext allBooksConduit :<||>: H0)
-               :<&>: S0
+  = resolver ( object @"Book"   ( field  @"id"      bookId
+                                , field  @"title"   bookTitle
+                                , field  @"author"  bookAuthor )
+             , object @"Author" ( field  @"id"      authorId
+                                , field  @"name"    authorName
+                                , field  @"books"   authorBooks )
+             , object @"Query"  ( method @"author"  findAuthor
+                                , method @"book"    findBookTitle
+                                , method @"authors" allAuthors
+                                , method @"books"   allBooks' )
+             , object @"Subscription" ( method @"books" allBooksConduit )
+             )
   where
     findBook i = find ((==i) . fst3) library
 

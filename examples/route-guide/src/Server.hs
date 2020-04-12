@@ -1,7 +1,9 @@
+{-# language DataKinds             #-}
 {-# language DuplicateRecordFields #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
 {-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 
 module Main where
@@ -68,8 +70,11 @@ calcDistance (Point lat1 lon1) (Point lat2 lon2)
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/routeguide/server/src/main/scala/handlers/RouteGuideServiceHandler.scala
 
 server :: Features -> TBMChan RouteNote -> ServerIO RouteGuideService _
-server f m = Server
-  (getFeature f :<|>: listFeatures f  :<|>: recordRoute f :<|>: routeChat m :<|>: H0)
+server f m
+  = singleService ( method @"GetFeature"   $ getFeature f
+                  , method @"ListFeatures" $ listFeatures f
+                  , method @"RecordRoute"  $ recordRoute f
+                  , method @"RouteChat"    $ routeChat m)
 
 getFeature :: Features -> Point -> ServerErrorIO Feature
 getFeature fs p = pure $ fromMaybe nilFeature (findFeatureIn fs p)

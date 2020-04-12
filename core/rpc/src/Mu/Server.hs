@@ -3,11 +3,13 @@
 {-# language ExistentialQuantification #-}
 {-# language FlexibleContexts          #-}
 {-# language FlexibleInstances         #-}
+{-# language FunctionalDependencies    #-}
 {-# language GADTs                     #-}
-{-# language MultiParamTypeClasses     #-}
 {-# language PatternSynonyms           #-}
 {-# language PolyKinds                 #-}
 {-# language RankNTypes                #-}
+{-# language ScopedTypeVariables       #-}
+{-# language TypeApplications          #-}
 {-# language TypeFamilies              #-}
 {-# language TypeOperators             #-}
 {-# language UndecidableInstances      #-}
@@ -36,10 +38,12 @@ We recommend you to catch exceptions and return custom
 -}
 module Mu.Server (
   -- * Servers and handlers
-  MonadServer
-, SingleServerT
-, ServerT(.., Server), ServicesT(..), HandlersT(.., (:<|>:))
-, ServiceChain, noContext
+  MonadServer, ServiceChain, noContext
+  -- ** Definitions by name
+, singleService, method, resolver, object, field, NamedList(..)
+  -- ** Definitions by position
+, SingleServerT, pattern Server
+, ServerT(..), ServicesT(..), HandlersT(.., (:<|>:))
   -- ** Simple servers using only IO
 , ServerErrorIO, ServerIO
   -- * Errors which might be raised
@@ -53,6 +57,7 @@ module Mu.Server (
 import           Control.Monad.Except
 import           Data.Conduit
 import           Data.Kind
+import           GHC.TypeLits
 
 import           Mu.Rpc
 import           Mu.Schema
@@ -207,3 +212,114 @@ instance (MonadError ServerError m, ToRef chn ref v, handler ~ m v)
          => Handles chn '[] ('RetSingle ref) m handler
 instance (MonadError ServerError m, ToRef chn ref v, handler ~ (ConduitT v Void m () -> m ()))
          => Handles chn '[] ('RetStream ref) m handler
+
+-- SIMPLER WAY TO DECLARE SERVICES
+
+method :: forall n p. p -> Named n (() -> p)
+method f = Named (\() -> f)
+field :: forall n h. h -> Named n h
+field  = Named
+
+singleService
+  :: (ToNamedList p nl, ToHandlers chn () methods m hs nl, MappingRight chn sname ~ ())
+  => p -> ServerT chn ('Package pname '[ 'Service sname sanns methods ]) m '[hs]
+singleService nl = Server $ toHandlers $ toNamedList nl
+
+object
+  :: forall sname p nl chn ms m hs.
+     (ToNamedList p nl, ToHandlers chn (MappingRight chn sname) ms m hs nl)
+  => p -> Named sname (HandlersT chn (MappingRight chn sname) ms m hs)
+object nl = Named $ toHandlers $ toNamedList nl
+
+resolver
+  :: (ToNamedList p nl, ToServices chn ss m hs nl)
+  => p -> ServerT chn ('Package pname ss) m hs
+resolver nl = Services $ toServices $ toNamedList nl
+
+data Named n h where
+  Named :: forall n h. h -> Named n h
+
+infixr 4 :|:
+data NamedList (hs :: [(Symbol, *)]) where
+  N0    :: NamedList '[]
+  (:|:) :: Named n h -> NamedList hs
+        -> NamedList ('(n, h) ': hs)
+
+class ToNamedList p nl | p -> nl where
+  toNamedList :: p -> NamedList nl
+
+instance ToNamedList (NamedList nl) nl where
+  toNamedList = id
+instance ToNamedList () '[] where
+  toNamedList _ = N0
+instance ToNamedList (Named n h) '[ '(n, h) ] where
+  toNamedList n = n :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2)
+                     '[ '(n1, h1), '(n2, h2) ] where
+  toNamedList (n1, n2) = n1 :|: n2 :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3)
+                     '[ '(n1, h1), '(n2, h2), '(n3, h3) ] where
+  toNamedList (n1, n2, n3) = n1 :|: n2 :|: n3 :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4)
+                     '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4) ] where
+  toNamedList (n1, n2, n3, n4) = n1 :|: n2 :|: n3 :|: n4 :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named n5 h5)
+                     '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4), '(n5, h5) ] where
+  toNamedList (n1, n2, n3, n4, n5) = n1 :|: n2 :|: n3 :|: n4 :|: n5 :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named n5 h5, Named n6 h6)
+                     '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4), '(n5, h5), '(n6, h6) ] where
+  toNamedList (n1, n2, n3, n4, n5, n6) = n1 :|: n2 :|: n3 :|: n4 :|: n5 :|: n6 :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named n5 h5, Named n6 h6, Named n7 h7)
+                     '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4), '(n5, h5), '(n6, h6), '(n7, h7) ] where
+  toNamedList (n1, n2, n3, n4, n5, n6, n7) = n1 :|: n2 :|: n3 :|: n4 :|: n5 :|: n6 :|: n7 :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named n5 h5, Named n6 h6, Named n7 h7, Named n8 h8)
+                     '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4), '(n5, h5), '(n6, h6), '(n7, h7), '(n8, h8) ] where
+  toNamedList (n1, n2, n3, n4, n5, n6, n7, n8) = n1 :|: n2 :|: n3 :|: n4 :|: n5 :|: n6 :|: n7 :|: n8 :|: N0
+instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named n5 h5, Named n6 h6, Named n7 h7, Named n8 h8, Named n9 h9)
+                     '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4), '(n5, h5), '(n6, h6), '(n7, h7), '(n8, h8), '(n9, h9) ] where
+  toNamedList (n1, n2, n3, n4, n5, n6, n7, n8, n9) = n1 :|: n2 :|: n3 :|: n4 :|: n5 :|: n6 :|: n7 :|: n8 :|: n9 :|: N0
+
+class ToHandlers chn inh ms m hs nl | chn inh ms m nl -> hs where
+  toHandlers :: NamedList nl
+             -> HandlersT chn inh ms m hs
+
+instance ToHandlers chn inh '[] m '[] nl where
+  toHandlers _ = H0
+instance (FindHandler name inh h nl, Handles chn args ret m h, ToHandlers chn inh ms m hs nl)
+         => ToHandlers chn inh ('Method name anns args ret ': ms) m (h ': hs) nl where
+  toHandlers nl = findHandler (Proxy @name) nl :<||>: toHandlers nl
+
+class FindHandler name inh h nl | name nl -> inh h where
+  findHandler :: Proxy name -> NamedList nl -> inh -> h
+instance (inh ~ h, h ~ TypeError ('Text "cannot find handler for " ':<>: 'ShowType name))
+         => FindHandler name inh h '[] where
+  findHandler = error "this should never be called"
+instance {-# OVERLAPS #-} (inh ~ inh', h ~ h')
+         => FindHandler name inh h ( '(name, inh' -> h') ': rest ) where
+  findHandler _ (Named f :|: _) = f
+instance {-# OVERLAPPABLE #-} FindHandler name inh h rest
+         => FindHandler name inh h (thing ': rest) where
+  findHandler p (_ :|: rest) = findHandler p rest
+
+class ToServices chn ss m hs nl | chn ss m nl -> hs where
+  toServices :: NamedList nl
+             -> ServicesT chn ss m hs
+
+instance ToServices chn '[] m '[] nl where
+  toServices _ = S0
+instance ( FindService name (HandlersT chn (MappingRight chn name) methods m h) nl
+         , ToServices chn ss m hs nl)
+         => ToServices chn ('Service name anns methods ': ss) m (h ': hs) nl where
+  toServices nl = findService (Proxy @name) nl :<&>: toServices nl
+
+class FindService name h nl | name nl -> h where
+  findService :: Proxy name -> NamedList nl -> h
+instance (h ~ TypeError ('Text "cannot find handler for " ':<>: 'ShowType name))
+         => FindService name h '[] where
+  findService = error "this should never be called"
+instance {-# OVERLAPS #-} (h ~ h')
+         => FindService name h ( '(name, h') ': rest ) where
+  findService _ (Named f :|: _) = f
+instance {-# OVERLAPPABLE #-} FindService name h rest
+         => FindService name h (thing ': rest) where
+  findService p (_ :|: rest) = findService p rest

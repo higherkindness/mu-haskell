@@ -41,8 +41,13 @@ type StatusMap = M.Map T.Text T.Text
 type StatusUpdates = TBMChan HealthStatusMsg
 
 server :: StatusMap -> StatusUpdates -> ServerIO HealthCheckService _
-server m upd = Server (setStatus_ m upd :<|>: checkH_ m :<|>: clearStatus_ m :<|>:
-  checkAll_ m :<|>: cleanAll_ m :<|>: watch_ upd :<|>: H0)
+server m upd
+  = singleService ( method @"setStatus"   $ setStatus_ m upd
+                  , method @"check"       $ checkH_ m
+                  , method @"clearStatus" $ clearStatus_ m
+                  , method @"checkAll"    $ checkAll_ m
+                  , method @"cleanAll"    $ cleanAll_ m
+                  , method @"watch"       $ watch_ upd)
 
 setStatus_ :: StatusMap -> StatusUpdates -> HealthStatusMsg -> ServerErrorIO ()
 setStatus_ m upd

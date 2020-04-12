@@ -2,6 +2,7 @@
 {-# language NamedFieldPuns        #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
+{-# language TypeApplications      #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 
 module Main where
@@ -31,8 +32,13 @@ type Id = TVar Int32
 type TodoList = TVar [TodoListMessage]
 
 server :: Id -> TodoList -> ServerIO TodoListService _
-server i t = Server
-  (reset i t :<|>: insert i t :<|>: retrieve t :<|>: list_ t :<|>: update t :<|>: destroy t :<|>: H0)
+server i t
+  = singleService ( method @"reset"    $ reset i t
+                  , method @"insert"   $ insert i t
+                  , method @"retrieve" $ retrieve t
+                  , method @"list"     $ list_ t
+                  , method @"update"   $ update t
+                  , method @"destroy"  $ destroy t )
 
 reset :: Id -> TodoList -> ServerErrorIO MessageId
 reset i t = alwaysOk $ do
