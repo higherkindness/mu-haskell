@@ -19,6 +19,9 @@ options:
     - title: Registry
       url: registry/
 
+    - title: Mu-Optics
+      url: optics/
+
   - title: Services and servers
     url: rpc/
     nested_options:
