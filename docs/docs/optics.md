@@ -13,10 +13,10 @@ We created a new package `mu-optics` in the **release v0.3 of Mu-Haskell** to gi
 When you want to refer to a method of your type-level schema, whereas in the server or the client, you can use the get operation from the lens (`^.`) in conjunction with the `OverloadedLabels` extension to access that field, as in this example:
 
 ```haskell
-watching :: GRpcConnection PersistentService 'MsgProtoBuf -> IO ()
-watching client = do
-  replies <- client ^. #allPeople -- <- example usage
-  runConduit $ replies .| C.mapM_ print
+{-# language OverloadedLabels #-}
+
+sayHello :: MonadServer m => HelloRequestMessage' -> m HelloReplyMessage'
+sayHello (HelloRequestMessage nm) = pure $ record ("hi, " <> nm ^. #name)
 ```
 
 ## Generate records with `record` and `record1`
