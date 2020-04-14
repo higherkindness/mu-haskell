@@ -79,6 +79,7 @@ Following with the example above, if you need to read an enum value, you can do 
 
 ```haskell
 {-# language MultiWayIf #-}
+{-# language OverloadedLabels #-}
 
 if | e `is` #sunny -> ...
    | e `is` #cloudy -> ...
