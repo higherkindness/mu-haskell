@@ -45,13 +45,9 @@ add client nm ag = do
   putStrLn $ "ADD: was creating successful? " ++ show response
 ```
 
-## Accesing enums with prisms!
-
-bla bla bla ña ña ña
-
 ## Generating enums with `enum`
 
-Sometimes, you'll have your types defined as something like enums, as in this protobuf example:
+Sometimes, besides using records, you'll have your types defined as something like enums, as in this protobuf example:
 
 ```protobuf
 enum Weather {
@@ -74,3 +70,17 @@ sunnyDays n = replicate n (enum @"SUNNY") -- <- see the magic here! ✨
 ```
 
 Simply enable `TypeApplications` and provide the value you are looking for to construct the enum! 🚀
+
+## Accesing enums with prisms!
+
+Following with the example above, if you need to read an enum value, you can do so using prisms!
+
+```haskell
+{-# language MultiWayIf #-}
+
+if | e `is` #SUNNY -> ...
+   | e `is` #CLOUDY -> ...
+   | e `is` #RAINY -> ...
+```
+
+Again, notice the use of `OverloadedLabels` to refer to the possible enum values and our special `is` prism helper, which is just `is s k = isJust (preview k s)`, got it? isJust... badum tss! 🥁

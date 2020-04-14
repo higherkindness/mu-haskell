@@ -1,5 +1,6 @@
 {-# language AllowAmbiguousTypes    #-}
 {-# language DataKinds              #-}
+{-# language FlexibleContexts       #-}
 {-# language FlexibleInstances      #-}
 {-# language FunctionalDependencies #-}
 {-# language GADTs                  #-}
@@ -36,10 +37,13 @@ module Mu.Schema.Optics (
 , _U0, _Next, _U1, _U2, _U3
   -- * Re-exported for convenience.
 , module Optics.Core
+  -- * Additional utilities.
+, is
 ) where
 
 import           Data.Kind
 import           Data.Map
+import           Data.Maybe   (isJust)
 import           Data.Proxy
 import           GHC.TypeLits
 import           Optics.Core
@@ -192,3 +196,8 @@ _U2 = _Next % _U1
 _U3 :: forall (sch :: Schema') a b c d xs r. TypeLabel sch d r
     => Prism' (NS (FieldValue sch) (a ': b ': c ': d ': xs)) r
 _U3 = _Next % _U2
+
+-- * Complementary helper to @isn't@.
+is :: Is k An_AffineFold => s -> Optic' k is s a -> Bool
+is s k = isJust (preview k s)
+{-# INLINE is #-}
