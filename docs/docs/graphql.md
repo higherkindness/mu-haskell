@@ -135,7 +135,7 @@ main = runGraphQLAppQuery 8080 libraryServer (Proxy @"Query")
 
 ## Comparison with other libraries
 
-There are other libraries targeting GraphQL server definition in Haskell.
+There are other libraries targeting GraphQL server definition in Haskell: `graphql-api` and Morpheus GraphQL. The latter also supports defining GraphQL *clients*, a feature not (yet) implemented in Mu.
 
 [`graphql-api`](https://github.com/haskell-graphql/graphql-api#readme) shares with Mu the encoding of the GraphQL schema in the type-level. In fact, as the [tutorial](https://haskell-graphql-api.readthedocs.io/en/latest/tutorial/Introduction.html) shows, its encoding is much closer to GraphQL's schema definition.
 
@@ -150,7 +150,8 @@ This is expected: Mu's ability to target both RPC and GraphQL microservices mean
 [Morpheus GraphQL](https://morpheusgraphql.com/) also exposes GraphQL servers from Haskell code. Morpheus shared with Mu the ability to import a GraphQL schema into Haskell code. However, the types and fields are not represented by a type-level encoding, but *directly* as Haskell *records*.
 
 ```haskell
-type Hello m = Hello { greeting :: Text -> m Text }
+data GreetingArgs = GreetingArgs { argname :: Text } deriving (Generic, GQLType)
+data Hello m = Hello { greeting :: GreetingArgs -> m Text } deriving (Generic, GQLType)
 ```
 
 At the moment of writing, Mu has the ability to use records for schema types. In GraphQL terms, that means that you can use Haskell records for input objects and enumerations, but resolvers for each object fields need to be defined separately, as described above.
