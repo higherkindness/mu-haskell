@@ -6,20 +6,66 @@ permalink: optics/
 
 # Mu-Optics
 
-bla bla bla
+We created a new package `mu-optics` in the release v0.3 of Mu-Haskell to give an easier API to build servers and clients using lenses and prisms (probably the ultimate API 😉). This document aims to be a reference of how to use this new library and the common use cases for it.
 
 ## Accessing fields with `#field`
 
-bla bla bla
+When you want to refer to a method of your type-level schema, whereas in the server or the client, you can use the getter lens (`^.`) in conjunction with the `OverloadedLabels` extension to access that field, as in the example:
+
+```haskell
+watching :: GRpcConnection PersistentService 'MsgProtoBuf -> IO ()
+watching client = do
+  replies <- client ^. #allPeople -- <- example usage
+  runConduit $ replies .| C.mapM_ print
+```
 
 ## Generate records with `record` and `record1`
 
-bla bla bla
+Sometimes you need to create values that match the generated type-level schema representations, for example, to construct the request of a certain service. Usually, those types will be records, and to help you achieve that task we provided the helpers `record` and `record1`:
+
+```haskell
+get :: GRpcConnection PersistentService 'MsgProtoBuf -> String -> IO ()
+get client idPerson = do
+  let request = read idPerson
+  putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
+  response <- client ^. #getPerson $ record1 request -- <- using `record1` to create a request
+  putStrLn $ "GET: response was: " ++ show response
+```
+
+Why the difference? Well, due to some ambiguity in the context of our Schemas, we need to help GHC to know if the record we're creating contains only one field (`record1`) or more (`record`) contained in a tuple of elements.
+
+> This design might be improved in the future, by using "[OneTuple](https://hackage.haskell.org/package/OneTuple-0.2.2.1/docs/Data-Tuple-OneTuple.html) to rule them all"
+
+```haskell
+add :: GRpcConnection PersistentService 'MsgProtoBuf -> String -> String -> IO ()
+add client nm ag = do
+  let person = record (Nothing, T.pack nm, read ag) -- <- using `record` to create Person, a more complex type
+  putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
+  response <- client ^. #newPerson person
+  putStrLn $ "ADD: was creating successful? " ++ show response
+```
 
 ## Accesing enums with prisms!
 
-ña ña ña
+bla bla bla ña ña ña
 
 ## Generating enums with `enum`
 
-ña ña ña
+Sometimes, you'll have your types defined as something like enums, as in this protobuf example:
+
+```protobuf
+enum Weather {
+  SUNNY = 0;
+  CLOUDY = 1;
+  RAINY = 2;
+}
+```
+
+As expected, we also provided you with the tools you need to construct a valid enum-like value with the helper `enum`:
+
+```haskell
+sunnyDays :: Int -> [Weather]
+sunnyDays n = replicate n (enum @"SUNNY") -- <- see the magic here! ✨
+```
+
+Simply enable `TypeApplications` and provide the value you are looking for to construct the enum! 🚀
