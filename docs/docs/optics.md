@@ -60,6 +60,8 @@ enum Weather {
 As expected, we also provided you with the tools you need to construct a valid enum-like value with the helper `enum`:
 
 ```haskell
+{-# language TypeApplications #-}
+
 import Mu.Schema
 import Mu.Schema.Optics
 
