@@ -104,7 +104,7 @@ main :: IO ()
 main = runGRpcApp msgProtoBuf 8080 server
 
 server :: (MonadServer m) => ServerT Service m _
-server = Server H0
+server = singleService ()
 ```
 
 The simplest way to provide an implementation for a service is to define one function for each method. You can define those functions completely in terms of Haskell data types; in our case `HelloRequestMessage` and `HelloReplyMessage`. Here is an example definition:
@@ -127,10 +127,10 @@ sayHello (HelloRequestMessage nm)
   = pure $ record ("hi, " <> nm ^. #name)
 ```
 
-How does `server` know that `sayHello` (any of the two versions) is part of the implementation of the service? We have to tell it, by adding `sayHello` to the list of methods. Unfortunately, we cannot use a normal list, so we use `(:<|>:)` to join them, and `H0` to finish it.
+How does `server` know that `sayHello` (any of the two versions) is part of the implementation of the service? We have to tell it, by declaring that `sayHello` implements the `SayHello` method from the gRPC definition. If you had more methods, you list each of them using tuple syntax.
 
 ```haskell
-server = Server (sayHello :<|>: H0)
+server = singleService (method @"SayHello" sayHello)
 ```
 
 At this point you can build the project using `stack build`, and then execute via `stack run`. This spawns a gRPC server at port 8080, which you can test using applications such as [BloomRPC](https://github.com/uw-labs/bloomrpc).
