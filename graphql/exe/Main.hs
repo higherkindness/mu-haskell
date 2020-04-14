@@ -19,8 +19,8 @@ import           Data.List                         (find)
 import           Data.Maybe                        (fromMaybe, listToMaybe)
 import           Data.Proxy
 import qualified Data.Text                         as T
-import           Text.Regex.TDFA
-import           Text.Regex.TDFA.Text              ()
+import           Text.Regex.TDFA                   ((=~))
+import           Text.Regex.TDFA.Common            (fst3, snd3, thd3)
 
 import           Network.Wai.Handler.Warp          (run)
 import           Network.Wai.Middleware.AddHeaders (addHeaders)
@@ -64,25 +64,28 @@ library
 
 libraryServer :: forall m. (MonadServer m) => ServerT ServiceMapping ServiceDefinition m _
 libraryServer
-  = Services $ (bookId :<||>: bookTitle :<||>: bookAuthor :<||>: H0)
-               :<&>: (authorId :<||>: authorName :<||>: authorBooks :<||>: H0)
-               :<&>: (noContext findAuthor
-                      :<||>: noContext findBookTitle
-                      :<||>: noContext allAuthors
-                      :<||>: noContext allBooks'
-                      :<||>: H0)
-               :<&>: (noContext allBooksConduit :<||>: H0)
-               :<&>: S0
+  = resolver ( object @"Book"   ( field  @"id"      bookId
+                                , field  @"title"   bookTitle
+                                , field  @"author"  bookAuthor )
+             , object @"Author" ( field  @"id"      authorId
+                                , field  @"name"    authorName
+                                , field  @"books"   authorBooks )
+             , object @"Query"  ( method @"author"  findAuthor
+                                , method @"book"    findBookTitle
+                                , method @"authors" allAuthors
+                                , method @"books"   allBooks' )
+             , object @"Subscription" ( method @"books" allBooksConduit )
+             )
   where
     findBook i = find ((==i) . fst3) library
 
     bookId (_, bid) = pure bid
-    bookTitle (aid, bid) = pure $ maybe "" (fromMaybe "" . lookup bid . trd3) (findBook aid)
+    bookTitle (aid, bid) = pure $ maybe "" (fromMaybe "" . lookup bid . thd3) (findBook aid)
     bookAuthor (aid, _) = pure aid
 
     authorId = pure
     authorName aid = pure $ maybe "" snd3 (findBook aid)
-    authorBooks aid = pure $ maybe [] (map ((aid,) . fst) . trd3) (findBook aid)
+    authorBooks aid = pure $ maybe [] (map ((aid,) . fst) . thd3) (findBook aid)
 
     findAuthor rx = pure $ listToMaybe
       [aid | (aid, name, _) <- library, name =~ rx]
@@ -98,14 +101,3 @@ libraryServer
 
     allBooksConduit :: ConduitM (Integer, Integer) Void m () -> m ()
     allBooksConduit sink = runConduit $ yieldMany allBooks .| sink
-
--- helpers
-
-fst3 :: (a, b, c) -> a
-fst3 (x, _, _) = x
-
-snd3 :: (a, b, c) -> b
-snd3 (_, y, _) = y
-
-trd3 :: (a, b, c) -> c
-trd3 (_, _, z) = z

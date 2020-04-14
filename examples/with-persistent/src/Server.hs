@@ -1,3 +1,4 @@
+{-# language DataKinds             #-}
 {-# language FlexibleContexts      #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
@@ -27,7 +28,10 @@ main = do
       liftIO $ runGRpcApp msgProtoBuf 1234 (server conn)
 
 server :: SqlBackend -> SingleServerT PersistentService ServerErrorIO _
-server p = Server (getPerson p :<|>: newPerson p :<|>: allPeople p :<|>: H0)
+server p
+  = singleService ( method @"getPerson" $ getPerson p
+                  , method @"newPerson" $ newPerson p
+                  , method @"allPeople" $ allPeople p)
 
 getPerson :: SqlBackend -> MPersonRequest -> ServerErrorIO (Entity Person)
 getPerson conn (MPersonRequest idf) = do
