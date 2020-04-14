@@ -10,7 +10,7 @@ We created a new package `mu-optics` in the **release v0.3 of Mu-Haskell** to gi
 
 ## Accessing fields with `#field`
 
-When you want to refer to a method of your type-level schema, whereas in the server or the client, you can use the getter lens (`^.`) in conjunction with the `OverloadedLabels` extension to access that field, as in the example:
+When you want to refer to a method of your type-level schema, whereas in the server or the client, you can use the get operation from the lens (`^.`) in conjunction with the `OverloadedLabels` extension to access that field, as in this example:
 
 ```haskell
 watching :: GRpcConnection PersistentService 'MsgProtoBuf -> IO ()
@@ -51,9 +51,9 @@ Sometimes, besides using records, you'll have your types defined as something li
 
 ```protobuf
 enum Weather {
-  SUNNY = 0;
-  CLOUDY = 1;
-  RAINY = 2;
+  sunny = 0;
+  cloudy = 1;
+  rainy = 2;
 }
 ```
 
@@ -68,7 +68,7 @@ import Mu.Schema.Optics
 type Weather = Term WeatherProtocol (WeatherProtocol :/: "Weather")
 
 sunnyDays :: Int -> [Weather]
-sunnyDays n = replicate n (enum @"SUNNY") -- <- see the magic here! ✨
+sunnyDays n = replicate n (enum @"sunny") -- <- see the magic here! ✨
 ```
 
 Simply enable `TypeApplications` and provide the value you are looking for to construct the enum! 🚀
@@ -80,9 +80,9 @@ Following with the example above, if you need to read an enum value, you can do 
 ```haskell
 {-# language MultiWayIf #-}
 
-if | e `is` #SUNNY -> ...
-   | e `is` #CLOUDY -> ...
-   | e `is` #RAINY -> ...
+if | e `is` #sunny -> ...
+   | e `is` #cloudy -> ...
+   | e `is` #rainy -> ...
 ```
 
 Again, notice the use of `OverloadedLabels` to refer to the possible enum values and our special `is` prism helper, which is just `is s k = isJust (preview k s)`, got it? isJust... badum tss! 🥁
