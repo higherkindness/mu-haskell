@@ -6,7 +6,7 @@ permalink: optics/
 
 # Mu-Optics
 
-We created a new package `mu-optics` in the release v0.3 of Mu-Haskell to give an easier API to build servers and clients using lenses and prisms (probably the ultimate API 😉). This document aims to be a reference of how to use this new library and the common use cases for it.
+We created a new package `mu-optics` in the **release v0.3 of Mu-Haskell** to give an easier API to build servers and clients using lenses and prisms (probably the ultimate API 😉). This document aims to be a reference of how to use this new library and the common use cases for it.
 
 ## Accessing fields with `#field`
 
@@ -64,6 +64,8 @@ enum Weather {
 As expected, we also provided you with the tools you need to construct a valid enum-like value with the helper `enum`:
 
 ```haskell
+import Mu.Schema.Optics
+
 sunnyDays :: Int -> [Weather]
 sunnyDays n = replicate n (enum @"SUNNY") -- <- see the magic here! ✨
 ```
