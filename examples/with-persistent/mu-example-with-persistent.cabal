@@ -80,7 +80,8 @@ executable persistent-client-optics
   build-depends:
       base                 >=4.12  && <5
     , conduit
-    , mu-grpc-client       >=0.2.0
+    , mu-grpc-client       >=0.3.0.0
+    , mu-optics            >=0.3.0.0
     , mu-persistent        >=0.2.0
     , mu-protobuf          >=0.2.0
     , mu-rpc               >=0.2.0
