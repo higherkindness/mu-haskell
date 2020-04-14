@@ -6,7 +6,7 @@ permalink: grpc/client/
 
 # gRPC clients
 
-There are several options for building clients: you can choose between optics, records, and `TypeApplications`. To give a proper introduction to both options let's consider in detail an example client for the following services:
+There are several options for building clients: you can choose between optics, records, and `TypeApplications`. Let's consider in detail an example client for the following service:
 
 ```protobuf
 service Service {

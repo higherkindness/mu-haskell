@@ -6,7 +6,7 @@ permalink: transformer/
 
 # Integration using transformers
 
-You might be wondering: how can I integrate my favorite logging library with `mu-grpc-server`? Our [explanation of services](rpc.md) introduced `MonadServer` as the simplest set of capabilities required for a server:
+You might be wondering: how can I integrate my favorite logging library with `mu-grpc-server`? Our [explanation of services]({% link docs/rpc.md %}) introduced `MonadServer` as the simplest set of capabilities required for a server:
 
 * Finish successfully by `return`ing,
 * Finish with an error code via `serverError`,
@@ -18,7 +18,7 @@ But you are not tied to that simple set! You can create servers which need more 
 
 One simple example of a capability is having one single piece of information you can access. This is useful to thread configuration data, or if you use a transactional variable as information, as a way to share data between concurrent threads. This is traditionally done using a `Reader` monad.
 
-Let us extend our [`sayHello` example](rpc.md) with a piece of configuration which states the word to use when greeting:
+Let us extend our [`sayHello` example]({% link docs/grpc-server.md %}) with a piece of configuration which states the word to use when greeting:
 
 ```haskell
 import Control.Monad.Reader
@@ -56,7 +56,7 @@ sayHello (HelloRequest nm) = do
   pure $ HelloResponse ("hi, " <> nm)
 ```
 
-The most important addition with respect to the [original code](rpc.md) is in the signature. Before we only had `MonadServer m`, now we have an additional `MonadLogger m` there.
+The most important addition with respect to the original code is in the signature. Before we only had `MonadServer m`, now we have an additional `MonadLogger m` there.
 
 As we have done with the Reader example, we need to define how to handle `MonadLogger`. `monad-logger` provides [three different monad transformers](http://hackage.haskell.org/package/monad-logger-0.3.31/docs/Control-Monad-Logger.html#g:3), so you can choose whether your logging will be completely ignored, will become a Haskell value, or would fire some `IO` action like printing in the console. Each of these monad transformers comes with a `run` action which declares how to handle it; the extended function `runGRpcAppTrans` takes that handler as argument.
 

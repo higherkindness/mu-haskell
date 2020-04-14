@@ -17,7 +17,7 @@ Once we have done that you can use functions like `fromRegistry` to try to parse
 
 ## Using the Registry
 
-By default, [service definition](rpc.md) talks about concrete schemas and types. If you define a registry, you can also use it to accomodate different schemas. In this case, apart from the registry itself, we need to specify the *Haskell* type to use during (de)serialization, and the *version number* to use for serialization.
+By default, [service definition]({% link docs/rpc.md %}) talks about concrete schemas and types. If you define a registry, you can also use it to accomodate different schemas. In this case, apart from the registry itself, we need to specify the *Haskell* type to use during (de)serialization, and the *version number* to use for serialization.
 
 ```haskell
 type QuickstartService
