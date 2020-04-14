@@ -64,7 +64,10 @@ enum Weather {
 As expected, we also provided you with the tools you need to construct a valid enum-like value with the helper `enum`:
 
 ```haskell
+import Mu.Schema
 import Mu.Schema.Optics
+
+type Weather = Term WeatherProtocol (WeatherProtocol :/: "Weather")
 
 sunnyDays :: Int -> [Weather]
 sunnyDays n = replicate n (enum @"SUNNY") -- <- see the magic here! ✨
