@@ -15,7 +15,10 @@ category:           Network
 build-type:         Simple
 cabal-version:      >=1.10
 extra-source-files: README.md
-data-files:         seed.proto
+data-files:
+  *.proto
+  *.avdl
+
 homepage:
   https://github.com/higherkindness/mu-haskell/examples/seed/protobuf#readme
 
@@ -49,11 +52,11 @@ executable seed-server-optics
       base            >=4.12  && <5
     , conduit
     , monad-logger
-    , mu-grpc-server  >=0.2.0
-    , mu-optics       >=0.2.0
-    , mu-protobuf     >=0.2.0
-    , mu-rpc          >=0.2.0
-    , mu-schema       >=0.2.0
+    , mu-grpc-server  >=0.3.0
+    , mu-optics       >=0.3.0
+    , mu-protobuf     >=0.3.0
+    , mu-rpc          >=0.3.0
+    , mu-schema       >=0.3.0
     , stm
     , text
 
