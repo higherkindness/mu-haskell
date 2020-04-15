@@ -81,9 +81,11 @@ Following with the example above, if you need to read an enum value, you can do 
 {-# language MultiWayIf #-}
 {-# language OverloadedLabels #-}
 
-if | e `is` #sunny -> ...
-   | e `is` #cloudy -> ...
-   | e `is` #rainy -> ...
+getWeather :: Weather -> IO ()
+getWeather e = if | e `is` #sunny -> putStrLn "is sunny! :)"
+                  | e `is` #cloudy -> putStrLn "is cloudy :/"
+                  | e `is` #rainy -> putStrLn "is rainy... :("
+                  | otherwise -> putStrLn "I don't know the weather!"
 ```
 
 Again, notice the use of `OverloadedLabels` to refer to the possible enum values and our special `is` prism helper, which is just `is s k = isJust (preview k s)`, got it? isJust... badum tss! 🥁
