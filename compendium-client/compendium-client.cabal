@@ -1,5 +1,5 @@
 name:          compendium-client
-version:       0.2.0.0
+version:       0.3.0.0
 synopsis:      Client for the Compendium schema server
 description:
   Client for the <https://github.com/higherkindness/compendium Compendium> schema server
