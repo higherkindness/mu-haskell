@@ -29,7 +29,7 @@ library
   build-depends:
       base          >=4.7   && <5
     , monad-logger
-    , mu-schema     >=0.2.0
+    , mu-schema     >=0.3.0
     , persistent
     , resourcet
     , transformers
