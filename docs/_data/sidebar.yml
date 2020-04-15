@@ -22,14 +22,17 @@ options:
     - title: Mu-Optics
       url: optics/
 
-  - title: Services and servers
+  - title: RPC services
     url: rpc/
     nested_options:
-    - title: gRPC
-      url: grpc/
+    - title: gRPC servers
+      url: grpc/server/
 
-    - title: Streams
-      url: stream/
+    - title: gRPC clients
+      url: grpc/client/
+
+  - title: GraphQL services
+    url: graphql/
 
   - title: Integrations
     nested_options:
