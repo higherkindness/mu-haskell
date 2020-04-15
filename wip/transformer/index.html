@@ -206,10 +206,10 @@
        
       <a
         href="/mu-haskell/wip/rpc/"
-        title="Services and servers"
+        title="RPC services"
         class="drop-nested"
       >
-        Services and servers
+        RPC services
       </a>
       <div class="caret"></div>
       
@@ -220,23 +220,49 @@
         
         <a
           class=""
-          href="/mu-haskell/wip/grpc/"
-          title="gRPC"
+          href="/mu-haskell/wip/grpc/server/"
+          title="gRPC servers"
         >
-          gRPC
+          gRPC servers
         </a>
         
         
         
         <a
           class=""
-          href="/mu-haskell/wip/stream/"
-          title="Streams"
+          href="/mu-haskell/wip/grpc/client/"
+          title="gRPC clients"
         >
-          Streams
+          gRPC clients
         </a>
         
       </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/mu-haskell/wip/graphql/"
+        class=""
+        title="GraphQL services"
+      >
+        GraphQL services
+      </a>
       
     </div>
     
@@ -394,7 +420,7 @@
     <div class="doc-content">
         <h1 id="integration-using-transformers">Integration using transformers</h1>
 
-<p>You might be wondering: how can I integrate my favorite logging library with <code class="highlighter-rouge">mu-grpc-server</code>? Our <a href="rpc.md">explanation of services</a> introduced <code class="highlighter-rouge">MonadServer</code> as the simplest set of capabilities required for a server:</p>
+<p>You might be wondering: how can I integrate my favorite logging library with <code class="highlighter-rouge">mu-grpc-server</code>? Our <a href="/mu-haskell/wip/rpc/">explanation of services</a> introduced <code class="highlighter-rouge">MonadServer</code> as the simplest set of capabilities required for a server:</p>
 
 <ul>
   <li>Finish successfully by <code class="highlighter-rouge">return</code>ing,</li>
@@ -408,7 +434,7 @@
 
 <p>One simple example of a capability is having one single piece of information you can access. This is useful to thread configuration data, or if you use a transactional variable as information, as a way to share data between concurrent threads. This is traditionally done using a <code class="highlighter-rouge">Reader</code> monad.</p>
 
-<p>Let us extend our <a href="rpc.md"><code class="highlighter-rouge">sayHello</code> example</a> with a piece of configuration which states the word to use when greeting:</p>
+<p>Let us extend our <a href="/mu-haskell/wip/grpc/server/"><code class="highlighter-rouge">sayHello</code> example</a> with a piece of configuration which states the word to use when greeting:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Control.Monad.Reader</span>
 
@@ -442,7 +468,7 @@
   <span class="n">pure</span> <span class="o">$</span> <span class="kt">HelloResponse</span> <span class="p">(</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>The most important addition with respect to the <a href="rpc.md">original code</a> is in the signature. Before we only had <code class="highlighter-rouge">MonadServer m</code>, now we have an additional <code class="highlighter-rouge">MonadLogger m</code> there.</p>
+<p>The most important addition with respect to the original code is in the signature. Before we only had <code class="highlighter-rouge">MonadServer m</code>, now we have an additional <code class="highlighter-rouge">MonadLogger m</code> there.</p>
 
 <p>As we have done with the Reader example, we need to define how to handle <code class="highlighter-rouge">MonadLogger</code>. <code class="highlighter-rouge">monad-logger</code> provides <a href="http://hackage.haskell.org/package/monad-logger-0.3.31/docs/Control-Monad-Logger.html#g:3">three different monad transformers</a>, so you can choose whether your logging will be completely ignored, will become a Haskell value, or would fire some <code class="highlighter-rouge">IO</code> action like printing in the console. Each of these monad transformers comes with a <code class="highlighter-rouge">run</code> action which declares how to handle it; the extended function <code class="highlighter-rouge">runGRpcAppTrans</code> takes that handler as argument.</p>
 

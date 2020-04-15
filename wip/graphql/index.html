@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="UTF-8">
+
+    
+
+    <title>Mu-Haskell: GraphQL services</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Mu is a purely functional library for building microservices.">
+    <meta name="keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory">
+
+    <meta property="og:image" content="/mu-haskell/wip/img/poster.png" />
+    <meta property="og:title" content="Mu-Haskell: GraphQL services" />
+    <meta property="og:site_name" content="Mu-Haskell: GraphQL services" />
+    <meta property="og:url" content="https://higherkindess.io/mu-haskell" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="Mu is a purely functional library for building microservices." />
+    <meta property="og:keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory" />
+
+    <meta name="twitter:text:description" content="Mu is a purely functional library for building microservices." />
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@47deg">
+    <meta name="twitter:creator" content="@47deg">
+    <meta name="twitter:image" content="/mu-haskell/wip/img/poster.png" />
+
+    <meta property="github-info" data-github-owner="higherkindness" data-github-repo="mu-haskell" />
+
+    <script defer src="/mu-haskell/wip/js/docs.js"></script>
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/mu-haskell/wip/img/favicon.png">
+
+    <!-- mu-haskell docs css -->
+    <link rel="stylesheet" type="text/css" href="/mu-haskell/wip/css/docs.css">
+</head>
+
+    <body>
+        <div id="site-sidebar" class="site-sidebar">
+  <div class="sidebar-brand">
+    <a href="/mu-haskell/wip/" class="brand" title="Mu-Haskell">
+      <img
+        src="/mu-haskell/wip/img/nav-brand-white.svg"
+        alt="Mu-Haskell"
+        class="brand-wrapper"
+      />
+      <span>Mu-Haskell</span>
+    </a>
+    <button
+      id="main-toggle"
+      type="button"
+      title="Close"
+      class="button sidebar-toggle"
+    >
+      <span class="close"></span>
+    </button>
+  </div>
+  <div class="sidebar-menu">
+    
+      
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/mu-haskell/wip/"
+        class=""
+        title="Start"
+      >
+        Start
+      </a>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <button
+        type="button"
+        title="Open Introduction"
+        class="button drop-nested"
+      >
+        Introduction
+      </button>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/intro-rpc/"
+          title="For RPC"
+        >
+          For RPC
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/intro-graphql/"
+          title="For GraphQL"
+        >
+          For GraphQL
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <a
+        href="/mu-haskell/wip/schema/"
+        title="Schemas"
+        class="drop-nested"
+      >
+        Schemas
+      </a>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/serializers/"
+          title="Serialization formats"
+        >
+          Serialization formats
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/registry/"
+          title="Registry"
+        >
+          Registry
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <a
+        href="/mu-haskell/wip/rpc/"
+        title="RPC services"
+        class="drop-nested"
+      >
+        RPC services
+      </a>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/grpc/server/"
+          title="gRPC servers"
+        >
+          gRPC servers
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/grpc/client/"
+          title="gRPC clients"
+        >
+          gRPC clients
+        </a>
+        
+      </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item active ">
+      
+      <a
+        href="/mu-haskell/wip/graphql/"
+        class="active"
+        title="GraphQL services"
+      >
+        GraphQL services
+      </a>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+       
+      <button
+        type="button"
+        title="Open Integrations"
+        class="button drop-nested"
+      >
+        Integrations
+      </button>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/db/"
+          title="Databases"
+        >
+          Databases
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/transformer/"
+          title="Transformers"
+        >
+          Transformers
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/wip/middleware/"
+          title="Middleware"
+        >
+          Middleware
+        </a>
+        
+      </div>
+      
+    </div>
+    
+    
+  </div>
+</div>
+
+        <main id="site-doc" class="site-doc">
+    <div class="doc-header">
+      <button
+        id="menu-toggle"
+        type="button"
+        class="button doc-toggle"
+        title="Toggle">
+          <img src="/mu-haskell/wip/img/sidebar-icon-open.svg" alt="Toggle" title="Toggle">
+      </button>
+
+      <div class="link-container">
+        
+        <div id="version-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="Version">
+      
+        <i class="nav-item-icon fa fa-lg " aria-hidden="true"></i>
+        <span class="nav-item-text">Version</span>
+      
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Stable" href="https://higherkindness.io/mu-haskell/" target="_blank" rel="noopener noreferrer">
+            <span>
+              Stable
+            </span>
+        </a>
+      </li>
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Next" href="https://higherkindness.io/mu-haskell/wip" target="_blank" rel="noopener noreferrer">
+            <span>
+              Next
+            </span>
+        </a>
+      </li>
+      
+    </ul>
+
+</div>
+
+        
+        <div id="api-docs-dropdown" class="link-item">
+
+    <button class="button link-like strong" onclick="openDropdown(event)" title="API Docs">
+      
+        <i class="nav-item-icon fa fa-lg " aria-hidden="true"></i>
+        <span class="nav-item-text">API Docs</span>
+      
+    </button>
+
+    <ul class="dropdown dropdown-content">
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Stable" href="https://higherkindness.io/mu-haskell/haddock" target="_blank" rel="noopener noreferrer">
+            <span>
+              Stable
+            </span>
+        </a>
+      </li>
+      
+      <li class="dropdown-item">
+        <a class="dropdown-item-link" title="Next" href="https://higherkindness.io/mu-haskell/wip/haddock" target="_blank" rel="noopener noreferrer">
+            <span>
+              Next
+            </span>
+        </a>
+      </li>
+      
+    </ul>
+
+</div>
+
+        
+        <div class="link-item">
+          <a href="https://github.com/higherkindness/mu-haskell" title="GitHub repo" target="_blank" rel="noopener noreferrer">
+            <span class="strong">GitHub</span>
+            <span id="stars-count"></span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+    <div class="doc-content">
+        <h1 id="graphql-services">GraphQL services</h1>
+
+<p><a href="https://graphql.github.io/">GraphQL</a> defines a language for queries, mutations, and subscriptions much more powerful than RPC or REST-based microservices. The key ingredient is a more complex query language, in which you do not only specify what you want to obtain, but also precisely describe the parts of the data you require.</p>
+
+<p>We are going to implement a server for the following GraphQL schema, which is roughly based on the one in the <a href="https://www.apollographql.com/docs/apollo-server/schema/schema/">Apollo Server docs</a>. For those not used to the GraphQL schema language, we define a <code class="highlighter-rouge">Query</code> type with two <em>fields</em>, which represent the different queries we can do against the server. The <code class="highlighter-rouge">author</code> field takes one <em>argument</em>; the exclamation mark means that they are <em>not</em> optional, although they have a default value. <code class="highlighter-rouge">Book</code>s and <code class="highlighter-rouge">Author</code>s define <em>object</em> types which can be further queried; note in particular that there is a recursive reference between them, this is allowed in GraphQL schemas.</p>
+
+<div class="language-graphql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="w"> </span><span class="n">Query</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">author</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">!</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">".*"</span><span class="p">):</span><span class="w"> </span><span class="n">Author</span><span class="w">
+  </span><span class="n">books</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="n">Book</span><span class="p">!]!</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="k">type</span><span class="w"> </span><span class="n">Book</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="nb">Int</span><span class="p">!</span><span class="w">
+  </span><span class="n">title</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">!</span><span class="w">
+  </span><span class="n">author</span><span class="p">:</span><span class="w"> </span><span class="n">Author</span><span class="p">!</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="k">type</span><span class="w"> </span><span class="n">Author</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="nb">Int</span><span class="p">!</span><span class="w">
+  </span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">!</span><span class="w">
+  </span><span class="n">books</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="n">Book</span><span class="p">!]!</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="importing-the-schema">Importing the schema</h2>
+
+<p>The first step is to import this schema as a type-level definition for Mu. The <code class="highlighter-rouge">graphql</code> function takes three arguments:</p>
+
+<ul>
+  <li>The first one defines the name of the <em>schema</em> type, which includes the enumerations and the input objects in the schema.</li>
+  <li>The second one defines the name of the <em>service declaration</em>, in which we find the (result) objects from the GraphQL schema.</li>
+  <li>The third argument is the route to the file <em>with respect to the project root</em>.</li>
+</ul>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TemplateHaskell #-}</span>
+
+<span class="kr">import</span> <span class="nn">Mu.GraphQL.Quasi</span>
+
+<span class="n">graphql</span> <span class="s">"Schema"</span> <span class="s">"ServiceDefinition"</span> <span class="s">"schema.graphql"</span>
+</code></pre></div></div>
+
+<p>This might be surprising for people already used to GraphQL, the separation between input objects and enumerations, and the rest of the objects may seem quite artificial. However, this is needed because Mu-Haskell strongly separates those part of a service which only hold data, from those which may have some behavior associated with it (sometimes called <em>resolvers</em>).</p>
+
+<h2 id="mapping-each-object-type">Mapping each object type</h2>
+
+<p>Unsurprisingly, in order to implement a server for this schema you need to define a resolver for each of the objects and fields. There’s one question to be answered beforehand, though: how do you represent <em>result</em> type of those resolvers, that is, how do we represent a (<strong>not</strong> input) <em>object</em>? We define those using a <em>type mapping</em>, which specifies the type associated to each GraphQL object type, except for the root types like <code class="highlighter-rouge">Query</code>.</p>
+
+<p>This is better explained with the example. The question here is: how do we represent an <code class="highlighter-rouge">Author</code>? Our type mapping says that simply using an <code class="highlighter-rouge">AuthorId</code>:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TypeApplications, DataKinds #-}</span>
+
+<span class="kr">type</span> <span class="kt">TypeMapping</span>
+  <span class="o">=</span> <span class="sc">'[</span><span class="err"> </span><span class="s">"Author"</span> <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="kt">AuthorId</span>
+     <span class="p">,</span> <span class="s">"Book"</span>   <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="p">(</span><span class="kt">BookId</span><span class="p">,</span> <span class="kt">AuthorId</span><span class="p">)</span> <span class="p">]</span>
+</code></pre></div></div>
+
+<p>This means <em>two</em> things:</p>
+
+<ol>
+  <li>The result the <code class="highlighter-rouge">author</code> method in <code class="highlighter-rouge">Query</code> should be <code class="highlighter-rouge">Maybe AuthorId</code>. We obtain this type by noticing that in the definition of that field, <code class="highlighter-rouge">Author</code> has no exclamation mark, so it’s optional, and the type mapping says that <code class="highlighter-rouge">Author</code> is mapped to an <code class="highlighter-rouge">AuthorId</code>.</li>
+  <li>The resolver for each of the fields for <code class="highlighter-rouge">Author</code> take an <em>additional</em> argument given by this type mapping. For example, the resolver for the <code class="highlighter-rouge">name</code> field should have type <code class="highlighter-rouge">AuthorId -&gt; m String</code>, the argument coming from the type mapping, and the result type being defined by the schema.</li>
+</ol>
+
+<p>You might be wondering why this is so complicated? The reason is that we don’t want to do too much work upfront. In a traditional RPC service you would return the <em>whole</em> <code class="highlighter-rouge">Author</code>, with every field inside. In contrast, a GraphQL query defines <em>exactly</em> which fields are required, and we only want to run the resolvers we need. On the other hand, we still need to have a way to connect the dots, and we use the author identifier for that.</p>
+
+<p>The following schema shows the way we traverse a GraphQL query and the types involved in it.</p>
+
+<div class="language-graphql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="n">author</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="s2">".*Ende.*"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">   </span><span class="err">--&gt;</span><span class="w"> </span><span class="err">1.</span><span class="w"> </span><span class="n">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">Maybe</span><span class="w"> </span><span class="n">AuthorId</span><span class="w">
+    </span><span class="n">name</span><span class="w">                       </span><span class="err">--&gt;</span><span class="w"> </span><span class="err">2.</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">that</span><span class="w"> </span><span class="p">(</span><span class="n">optional</span><span class="p">)</span><span class="w"> </span><span class="n">AuthorId</span><span class="w"> </span><span class="n">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">Text</span><span class="w">
+    </span><span class="n">books</span><span class="w"> </span><span class="p">{</span><span class="w">                    </span><span class="err">--&gt;</span><span class="w"> </span><span class="err">3.</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">that</span><span class="w"> </span><span class="n">AuthorId</span><span class="w"> </span><span class="n">return</span><span class="w"> </span><span class="err">[(</span><span class="n">BookId</span><span class="p">,</span><span class="w"> </span><span class="n">AuthorId</span><span class="err">)]</span><span class="w">
+      </span><span class="n">title</span><span class="w">                    </span><span class="err">--&gt;</span><span class="w"> </span><span class="err">4.</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">each</span><span class="w"> </span><span class="p">(</span><span class="n">BookId</span><span class="p">,</span><span class="w"> </span><span class="n">AuthorId</span><span class="p">)</span><span class="w"> </span><span class="n">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">Text</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Note that we could have made <code class="highlighter-rouge">Book</code> be represented simply by a <code class="highlighter-rouge">BookId</code> and then query some database to figure our the author. However, in this case we assume this query is going to be quite common, and we cache this information since the beginning. Note that from the implementation point of view, the resolver for the <code class="highlighter-rouge">author</code> field of <code class="highlighter-rouge">Book</code> should have the type:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bookAuthor</span> <span class="o">::</span> <span class="p">(</span><span class="kt">BookId</span><span class="p">,</span> <span class="kt">AuthorId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">AuthorId</span>
+<span class="n">bookAuthor</span> <span class="p">(</span><span class="kr">_</span><span class="p">,</span> <span class="n">aid</span><span class="p">)</span> <span class="o">=</span> <span class="n">pure</span> <span class="n">aid</span>
+</code></pre></div></div>
+
+<p>The argument and result types come from the type mapping, since they are both object types. Given that we have cached that information, we can return it right away.</p>
+
+<h2 id="implementing-the-server">Implementing the server</h2>
+
+<p>The whole implementation looks as a big list defining each of the resolvers for each of the objects and their fields. There’s only one subtlety: for <em>root</em> operations we use <code class="highlighter-rouge">method</code> instead of <code class="highlighter-rouge">field</code>. The reason is that those fields do not take any information passed by, they are the initial requests.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language ScopedTypeVariables, PartialTypeSignatures #-}</span>
+
+<span class="n">libraryServer</span> <span class="o">::</span> <span class="n">forall</span> <span class="n">m</span><span class="o">.</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span>
+              <span class="o">=&gt;</span> <span class="kt">ServerT</span> <span class="kt">TypeMapping</span> <span class="kt">ServiceDefinition</span> <span class="n">m</span> <span class="kr">_</span>
+ <span class="o">=</span> <span class="n">resolver</span>
+      <span class="p">(</span> <span class="n">object</span> <span class="o">@</span><span class="s">"Query"</span>  <span class="p">(</span> <span class="n">method</span> <span class="o">@</span><span class="s">"author"</span> <span class="n">findAuthor</span>
+                         <span class="p">,</span> <span class="n">method</span> <span class="o">@</span><span class="s">"books"</span>  <span class="n">allBooks</span> <span class="p">)</span>
+      <span class="p">,</span> <span class="n">object</span> <span class="o">@</span><span class="s">"Author"</span> <span class="p">(</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"id"</span>     <span class="n">authorId</span>
+                         <span class="p">,</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"name"</span>   <span class="n">authorName</span>
+                         <span class="p">,</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"books"</span>  <span class="n">authorBooks</span> <span class="p">)</span>
+      <span class="p">,</span> <span class="n">object</span> <span class="o">@</span><span class="s">"Book"</span>   <span class="p">(</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"id"</span>     <span class="n">bookId</span>
+                         <span class="p">,</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"author"</span> <span class="n">bookAuthor</span>
+                         <span class="p">,</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"title"</span>  <span class="n">bookTitle</span> <span class="p">)</span> <span class="p">)</span>
+  <span class="kr">where</span> <span class="c1">-- Query fields</span>
+        <span class="n">findAuthor</span> <span class="o">::</span> <span class="kt">Text</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="p">(</span><span class="kt">Maybe</span> <span class="kt">AuthorId</span><span class="p">)</span>
+        <span class="n">allBooks</span>   <span class="o">::</span> <span class="n">m</span> <span class="p">[(</span><span class="kt">BookId</span><span class="p">,</span> <span class="kt">AuthorId</span><span class="p">)]</span>
+        <span class="c1">-- Author fields</span>
+        <span class="n">authorId</span>    <span class="o">::</span> <span class="kt">AuthorId</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Int</span>
+        <span class="n">authorName</span>  <span class="o">::</span> <span class="kt">AuthorId</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Text</span>
+        <span class="n">authorBooks</span> <span class="o">::</span> <span class="kt">AuthorId</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="p">[(</span><span class="kt">BookId</span><span class="p">,</span> <span class="kt">AuthorId</span><span class="p">)]</span>
+        <span class="c1">-- Book fields</span>
+        <span class="n">bookId</span>     <span class="o">::</span> <span class="p">(</span><span class="kt">BookId</span><span class="p">,</span> <span class="kt">AuthorId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Int</span>
+        <span class="n">bookAuthor</span> <span class="o">::</span> <span class="p">(</span><span class="kt">BookId</span><span class="p">,</span> <span class="kt">AuthorId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">AuthorId</span>
+        <span class="n">bookAuthor</span> <span class="p">(</span><span class="kr">_</span><span class="p">,</span> <span class="n">aid</span><span class="p">)</span> <span class="o">=</span> <span class="n">pure</span> <span class="n">aid</span>
+        <span class="n">bookTitle</span>  <span class="o">::</span> <span class="p">(</span><span class="kt">BookId</span><span class="p">,</span> <span class="kt">AuthorId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Text</span>
+        <span class="c1">-- implementation</span>
+</code></pre></div></div>
+
+<p>In the above code we have defined all fields in a big <code class="highlighter-rouge">where</code> block, but of course those may be defined as top-level functions, or inline in call to <code class="highlighter-rouge">field</code> or <code class="highlighter-rouge">method</code>.</p>
+
+<p>The final touch is to start the GraphQL server defined by <code class="highlighter-rouge">libraryServer</code>. The <code class="highlighter-rouge">Mu.GraphQL.Server</code> module defines tons of different ways to configure how the server behaves; the simplest option just requires a port and the name of the root type for queries.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGraphQLAppQuery</span> <span class="mi">8080</span> <span class="n">libraryServer</span> <span class="p">(</span><span class="kt">Proxy</span> <span class="o">@</span><span class="s">"Query"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="subscriptions-as-streams">Subscriptions as streams</h2>
+
+<h2 id="comparison-with-other-libraries">Comparison with other libraries</h2>
+
+<p>There are other libraries targeting GraphQL server definition in Haskell: <code class="highlighter-rouge">graphql-api</code> and Morpheus GraphQL. The latter also supports defining GraphQL <em>clients</em>, a feature not (yet) implemented in Mu.</p>
+
+<p><a href="https://github.com/haskell-graphql/graphql-api#readme"><code class="highlighter-rouge">graphql-api</code></a> shares with Mu the encoding of the GraphQL schema in the type-level. In fact, as the <a href="https://haskell-graphql-api.readthedocs.io/en/latest/tutorial/Introduction.html">tutorial</a> shows, its encoding is much closer to GraphQL’s schema definition.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">Hello</span>
+  <span class="o">=</span> <span class="kt">Object</span> <span class="s">"Hello"</span> <span class="sc">'[</span><span class="err">]</span>
+           <span class="sc">'[</span><span class="err"> </span><span class="kt">Argument</span> <span class="s">"who"</span> <span class="kt">Text</span> <span class="o">:&gt;</span> <span class="kt">Field</span> <span class="s">"greeting"</span> <span class="kt">Text</span> <span class="p">]</span>
+</code></pre></div></div>
+
+<p>This is expected: Mu’s ability to target both RPC and GraphQL microservices means that sometimes there’s some mismatch.</p>
+
+<p><a href="https://morpheusgraphql.com/">Morpheus GraphQL</a> also exposes GraphQL servers from Haskell code. Morpheus shared with Mu the ability to import a GraphQL schema into Haskell code. However, the types and fields are not represented by a type-level encoding, but <em>directly</em> as Haskell <em>records</em>.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">GreetingArgs</span> <span class="o">=</span> <span class="kt">GreetingArgs</span> <span class="p">{</span> <span class="n">argname</span> <span class="o">::</span> <span class="kt">Text</span> <span class="p">}</span> <span class="kr">deriving</span> <span class="p">(</span><span class="kt">Generic</span><span class="p">,</span> <span class="kt">GQLType</span><span class="p">)</span>
+<span class="kr">data</span> <span class="kt">Hello</span> <span class="n">m</span> <span class="o">=</span> <span class="kt">Hello</span> <span class="p">{</span> <span class="n">greeting</span> <span class="o">::</span> <span class="kt">GreetingArgs</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Text</span> <span class="p">}</span> <span class="kr">deriving</span> <span class="p">(</span><span class="kt">Generic</span><span class="p">,</span> <span class="kt">GQLType</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>At the moment of writing, Mu has the ability to use records for schema types. In GraphQL terms, that means that you can use Haskell records for input objects and enumerations, but resolvers for each object fields need to be defined separately, as described above.</p>
+
+<p>Another interesting comparison point is how the different libraries ensure that only the required data is ever consulted. This is quite important, since otherwise we might end up in infinite loops (find an author, query the books, for each book query the author, for each author the books, …). Both <code class="highlighter-rouge">graphql-api</code> and Morpheus rely on Haskell’s laziness, whereas Mu asks to define a type mapping which is then used as connecting point between objects.</p>
+
+    </div>
+</main>
+
+    </body>
+</html>

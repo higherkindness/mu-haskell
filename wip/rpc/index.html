@@ -5,14 +5,14 @@
 
     
 
-    <title>Mu-Haskell: Services and servers</title>
+    <title>Mu-Haskell: RPC services</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Mu is a purely functional library for building microservices.">
     <meta name="keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory">
 
     <meta property="og:image" content="/mu-haskell/wip/img/poster.png" />
-    <meta property="og:title" content="Mu-Haskell: Services and servers" />
-    <meta property="og:site_name" content="Mu-Haskell: Services and servers" />
+    <meta property="og:title" content="Mu-Haskell: RPC services" />
+    <meta property="og:site_name" content="Mu-Haskell: RPC services" />
     <meta property="og:url" content="https://higherkindess.io/mu-haskell" />
     <meta property="og:type" content="website" />
     <meta property="og:description" content="Mu is a purely functional library for building microservices." />
@@ -206,10 +206,10 @@
        
       <a
         href="/mu-haskell/wip/rpc/"
-        title="Services and servers"
+        title="RPC services"
         class="drop-nested"
       >
-        Services and servers
+        RPC services
       </a>
       <div class="caret"></div>
       
@@ -220,23 +220,49 @@
         
         <a
           class=""
-          href="/mu-haskell/wip/grpc/"
-          title="gRPC"
+          href="/mu-haskell/wip/grpc/server/"
+          title="gRPC servers"
         >
-          gRPC
+          gRPC servers
         </a>
         
         
         
         <a
           class=""
-          href="/mu-haskell/wip/stream/"
-          title="Streams"
+          href="/mu-haskell/wip/grpc/client/"
+          title="gRPC clients"
         >
-          Streams
+          gRPC clients
         </a>
         
       </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/mu-haskell/wip/graphql/"
+        class=""
+        title="GraphQL services"
+      >
+        GraphQL services
+      </a>
       
     </div>
     
@@ -392,7 +418,7 @@
 
     </div>
     <div class="doc-content">
-        <h1 id="services-and-servers">Services and servers</h1>
+        <h1 id="rpc-services">RPC services</h1>
 
 <p>There are several formats in the wild used to declare service APIs, including <a href="https://avro.apache.org/docs/current/idl.html">Avro IDL</a>, <a href="https://grpc.io/">gRPC</a>, and <a href="https://swagger.io/specification/">OpenAPI</a>. <code class="highlighter-rouge">mu-rpc</code> abstract the commonalities into a single type-level format for declaring these services, building on the format-independent schema facilities of <code class="highlighter-rouge">mu-schema</code>. In addition, this package provides a generic notion of <em>server</em> of a service. One such server defines one behavior for each method in the service, but does not bother with (de)serialization mechanisms.</p>
 
@@ -486,31 +512,6 @@
 </ul>
 
 <p>Note that depending on the concrete implementation you use to run the server, one or more of these choices may not be available. For example, gRPC only supports one argument and return value, either single or streaming, but not exceptions.</p>
-
-<h2 id="implementing-the-service">Implementing the service</h2>
-
-<p>In order to implement the service, you have to define the behavior of each method by means of a <em>handler</em>. You can use Haskell types for your handlers, given that you had previously declared that they can be mapped back and forth the schema types using <code class="highlighter-rouge">ToSchema</code> and <code class="highlighter-rouge">FromSchema</code>. For example, the following is a handler for the <code class="highlighter-rouge">SayHello</code> method in <code class="highlighter-rouge">Greeter</code>:</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sayHello</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">HelloRequest</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">HelloResponse</span>
-<span class="n">sayHello</span> <span class="p">(</span><span class="kt">HelloRequest</span> <span class="n">nm</span><span class="p">)</span> <span class="o">=</span> <span class="n">pure</span> <span class="o">$</span> <span class="kt">HelloResponse</span> <span class="p">(</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>Notice the use of <code class="highlighter-rouge">MonadServer</code> in this case. This gives us the ability to:</p>
-
-<ul>
-  <li>Run arbitrary <code class="highlighter-rouge">IO</code> actions by using <code class="highlighter-rouge">liftIO</code>,</li>
-  <li>Return an error code by calling <code class="highlighter-rouge">serverError</code>.</li>
-</ul>
-
-<p>Being polymorphic here allows us to run the same server in multiple back-ends. Furthermore, by enlarging the set of abilities required for our monad <code class="highlighter-rouge">m</code>, we can <a href="transformer.md">integrate with other libraries</a>, including logging and resource pools.</p>
-
-<p>Since you can declare more than one method in a service, you need to join them into a <code class="highlighter-rouge">Server</code>. You do so by using <code class="highlighter-rouge">(:&lt;|&gt;:)</code> between each handler and ending the sequence with <code class="highlighter-rouge">H0</code>. In addition to the name of the service, <code class="highlighter-rouge">Server</code> has an additional parameter which records the types of the handlers. Since that list may become quite long, we can ask GHC to write it for us by using the <code class="highlighter-rouge">PartialTypeSignatures</code> extension and writing an underscore <code class="highlighter-rouge">_</code> in that position.</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language PartialTypeSignatures #-}</span>
-
-<span class="n">quickstartServer</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">ServerT</span> <span class="kt">QuickstartService</span> <span class="n">m</span> <span class="kr">_</span>
-<span class="n">quickstartServer</span> <span class="o">=</span> <span class="kt">Server</span> <span class="p">(</span><span class="n">sayHello</span> <span class="o">:&lt;|&gt;:</span> <span class="kt">H0</span><span class="p">)</span>
-</code></pre></div></div>
 
     </div>
 </main>

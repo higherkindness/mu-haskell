@@ -5,14 +5,14 @@
 
     
 
-    <title>Mu-Haskell: Streams</title>
+    <title>Mu-Haskell: gRPC servers</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Mu is a purely functional library for building microservices.">
     <meta name="keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory">
 
     <meta property="og:image" content="/mu-haskell/wip/img/poster.png" />
-    <meta property="og:title" content="Mu-Haskell: Streams" />
-    <meta property="og:site_name" content="Mu-Haskell: Streams" />
+    <meta property="og:title" content="Mu-Haskell: gRPC servers" />
+    <meta property="og:site_name" content="Mu-Haskell: gRPC servers" />
     <meta property="og:url" content="https://higherkindess.io/mu-haskell" />
     <meta property="og:type" content="website" />
     <meta property="og:description" content="Mu is a purely functional library for building microservices." />
@@ -206,10 +206,10 @@
        
       <a
         href="/mu-haskell/wip/rpc/"
-        title="Services and servers"
+        title="RPC services"
         class="drop-nested"
       >
-        Services and servers
+        RPC services
       </a>
       <div class="caret"></div>
       
@@ -219,24 +219,50 @@
         
         
         <a
-          class=""
-          href="/mu-haskell/wip/grpc/"
-          title="gRPC"
+          class="active"
+          href="/mu-haskell/wip/grpc/server/"
+          title="gRPC servers"
         >
-          gRPC
+          gRPC servers
         </a>
         
         
         
         <a
-          class="active"
-          href="/mu-haskell/wip/stream/"
-          title="Streams"
+          class=""
+          href="/mu-haskell/wip/grpc/client/"
+          title="gRPC clients"
         >
-          Streams
+          gRPC clients
         </a>
         
       </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/mu-haskell/wip/graphql/"
+        class=""
+        title="GraphQL services"
+      >
+        GraphQL services
+      </a>
       
     </div>
     
@@ -392,14 +418,50 @@
 
     </div>
     <div class="doc-content">
-        <h1 id="streams">Streams</h1>
+        <h1 id="grpc-servers">gRPC servers</h1>
 
-<p>In the docs about <a href="rpc.md">service definition</a> we had one single <code class="highlighter-rouge">SayHello</code> method which takes one value and produces one value. However, we can also declare methods which perform streaming, such as:</p>
+<p>Mu-Haskell defines a generic notion of service and server that implements it. This generic server can then be used by <code class="highlighter-rouge">mu-grpc-server</code>, to provide a concrete implementation using a specific wire format.</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">service</span> <span class="nc">Greeter</span> <span class="o">{</span>
-  <span class="n">rpc</span> <span class="nf">SayHello</span> <span class="o">(</span><span class="nc">HelloRequest</span><span class="o">)</span> <span class="n">returns</span> <span class="o">(</span><span class="nc">HelloReply</span><span class="o">)</span> <span class="o">{}</span>
-  <span class="n">rpc</span> <span class="nf">SayManyHellos</span> <span class="o">(</span><span class="n">stream</span> <span class="nc">HelloRequest</span><span class="o">)</span> <span class="n">returns</span> <span class="o">(</span><span class="n">stream</span> <span class="nc">HelloReply</span><span class="o">)</span> <span class="o">{}</span>
-<span class="o">}</span>
+<h2 id="implementing-the-service">Implementing the service</h2>
+
+<p>Let’s get back to the example we used in the <a href="/mu-haskell/wip/rpc/">generic RPC section</a>. In order to implement the corresponding service, you have to define the behavior of each method by means of a <em>handler</em>. You can use Haskell types for your handlers, given that you had previously declared that they can be mapped back and forth the schema types using <code class="highlighter-rouge">ToSchema</code> and <code class="highlighter-rouge">FromSchema</code>. For example, the following is a handler for the <code class="highlighter-rouge">SayHello</code> method in <code class="highlighter-rouge">Greeter</code>:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sayHello</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">HelloRequest</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">HelloResponse</span>
+<span class="n">sayHello</span> <span class="p">(</span><span class="kt">HelloRequest</span> <span class="n">nm</span><span class="p">)</span> <span class="o">=</span> <span class="n">pure</span> <span class="o">$</span> <span class="kt">HelloResponse</span> <span class="p">(</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Notice the use of <code class="highlighter-rouge">MonadServer</code> in this case. This gives us the ability to:</p>
+
+<ul>
+  <li>Run arbitrary <code class="highlighter-rouge">IO</code> actions by using <code class="highlighter-rouge">liftIO</code>,</li>
+  <li>Return an error code by calling <code class="highlighter-rouge">serverError</code>.</li>
+</ul>
+
+<p>Being polymorphic here allows us to run the same server in multiple back-ends. Furthermore, by enlarging the set of abilities required for our monad <code class="highlighter-rouge">m</code>, we can <a href="/mu-haskell/wip/transformer/">integrate with other libraries</a>, including logging and resource pools.</p>
+
+<p>Since you can declare more than one method in a service, you need to join them into a <code class="highlighter-rouge">ServerT</code>. You do so by using <code class="highlighter-rouge">singleService</code> (since gRPC servers may only expose one), and a <em>tuple</em> of methods indexed by their name <em>in the gRPC definition</em>. In addition to the name of the service, <code class="highlighter-rouge">ServerT</code> has an additional parameter which records the types of the handlers. Since that list may become quite long, we can ask GHC to write it for us by using the <code class="highlighter-rouge">PartialTypeSignatures</code> extension and writing an underscore <code class="highlighter-rouge">_</code> in that position.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language PartialTypeSignatures #-}</span>
+
+<span class="n">quickstartServer</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">ServerT</span> <span class="kt">QuickstartService</span> <span class="n">m</span> <span class="kr">_</span>
+<span class="n">quickstartServer</span> <span class="o">=</span> <span class="n">singleService</span> <span class="p">(</span><span class="n">method</span> <span class="o">@</span><span class="s">"SayHello"</span> <span class="n">sayHello</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="running-the-server-with-mu-grpc">Running the server with <code class="highlighter-rouge">mu-grpc</code></h2>
+
+<p>The combination of the declaration of a service API and a corresponding implementation as a <code class="highlighter-rouge">Server</code> may be served directly using a concrete wire protocol. One example is gRPC, provided by our sibling library <code class="highlighter-rouge">mu-grpc</code>. The following line starts a server at port <code class="highlighter-rouge">8080</code>, using Protocol Buffers as serialization layer:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="n">msgProtoBuf</span> <span class="mi">8080</span> <span class="n">quickstartServer</span>
+</code></pre></div></div>
+
+<h1 id="streams">Streams</h1>
+
+<p>In the docs about <a href="/mu-haskell/wip/rpc/">service definition</a> we had one single <code class="highlighter-rouge">SayHello</code> method which takes one value and produces one value. However, we can also declare methods which perform streaming, such as:</p>
+
+<div class="language-protobuf highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">service</span> <span class="n">Greeter</span> <span class="p">{</span>
+  <span class="k">rpc</span> <span class="n">SayHello</span> <span class="p">(</span><span class="n">HelloRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">HelloReply</span><span class="p">)</span> <span class="p">{}</span>
+  <span class="k">rpc</span> <span class="n">SayManyHellos</span> <span class="p">(</span><span class="n">stream</span> <span class="n">HelloRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">stream</span> <span class="n">HelloReply</span><span class="p">)</span> <span class="p">{}</span>
+<span class="p">}</span>
 </code></pre></div></div>
 
 <p>Adding this method to the service definition should be easy, we just need to use <code class="highlighter-rouge">ArgStream</code> and <code class="highlighter-rouge">RetStream</code> to declare that behavior (of course, this is done automatically if you import the service from a file):</p>
@@ -427,7 +489,8 @@
 
 <p>Since now the service has more than one method, we need to update our server declaration to bring together this new handler:</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">quickstartServer</span> <span class="o">=</span> <span class="kt">Server</span> <span class="p">(</span><span class="n">sayHello</span> <span class="o">:&lt;|&gt;:</span> <span class="n">sayManyHellos</span> <span class="o">:&lt;|&gt;:</span> <span class="kt">H0</span><span class="p">)</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">quickstartServer</span> <span class="o">=</span> <span class="n">singleService</span> <span class="p">(</span> <span class="n">method</span> <span class="o">@</span><span class="s">"SayHello"</span> <span class="n">sayHello</span>
+                                 <span class="p">,</span> <span class="n">method</span> <span class="o">@</span><span class="s">"SayManyHellos"</span> <span class="n">sayManyHellos</span> <span class="p">)</span>
 </code></pre></div></div>
 
     </div>

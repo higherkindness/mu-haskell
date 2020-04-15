@@ -206,10 +206,10 @@
        
       <a
         href="/mu-haskell/wip/rpc/"
-        title="Services and servers"
+        title="RPC services"
         class="drop-nested"
       >
-        Services and servers
+        RPC services
       </a>
       <div class="caret"></div>
       
@@ -220,23 +220,49 @@
         
         <a
           class=""
-          href="/mu-haskell/wip/grpc/"
-          title="gRPC"
+          href="/mu-haskell/wip/grpc/server/"
+          title="gRPC servers"
         >
-          gRPC
+          gRPC servers
         </a>
         
         
         
         <a
           class=""
-          href="/mu-haskell/wip/stream/"
-          title="Streams"
+          href="/mu-haskell/wip/grpc/client/"
+          title="gRPC clients"
         >
-          Streams
+          gRPC clients
         </a>
         
       </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/mu-haskell/wip/graphql/"
+        class=""
+        title="GraphQL services"
+      >
+        GraphQL services
+      </a>
       
     </div>
     
@@ -404,7 +430,7 @@
 
 <h2 id="using-the-registry">Using the Registry</h2>
 
-<p>By default, <a href="rpc.md">service definition</a> talks about concrete schemas and types. If you define a registry, you can also use it to accomodate different schemas. In this case, apart from the registry itself, we need to specify the <em>Haskell</em> type to use during (de)serialization, and the <em>version number</em> to use for serialization.</p>
+<p>By default, <a href="/mu-haskell/wip/rpc/">service definition</a> talks about concrete schemas and types. If you define a registry, you can also use it to accomodate different schemas. In this case, apart from the registry itself, we need to specify the <em>Haskell</em> type to use during (de)serialization, and the <em>version number</em> to use for serialization.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">QuickstartService</span>
   <span class="o">=</span> <span class="kt">'Service</span> <span class="s">"Greeter"</span>
