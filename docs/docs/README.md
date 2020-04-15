@@ -14,9 +14,10 @@ Mu-Haskell is a set of packages that help you build both servers and clients for
 * [Schemas]({% link docs/schema.md %})
   * [Serialization formats]({% link docs/serializers.md %}): Protocol Buffers and Avro
   * [Registry]({% link docs/registry.md %})
-* [Services and servers]({% link docs/rpc.md %})
-  * [gRPC servers and clients]({% link docs/grpc.md %})
-  * [Streams]({% link docs/stream.md %})
+* [RPC services]({% link docs/rpc.md %})
+  * [gRPC server]({% link docs/grpc-server.md %})
+  * [gRPC client]({% link docs/grpc-client.md %})
+* [GraphQL services]({% link docs/graphql.md %})
 * Integration with other libraries
   * [Databases]({% link docs/db.md %}), including resource pools
   * [Using transformers]({% link docs/transformer.md %}): look here for logging
