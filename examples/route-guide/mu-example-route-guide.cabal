@@ -26,10 +26,10 @@ executable route-guide-server
     , base            >=4.12  && <5
     , conduit
     , hashable
-    , mu-grpc-server  >=0.2.0
-    , mu-protobuf     >=0.2.0
-    , mu-rpc          >=0.2.0
-    , mu-schema       >=0.2.0
+    , mu-grpc-server  >=0.3.0
+    , mu-protobuf     >=0.3.0
+    , mu-rpc          >=0.3.0
+    , mu-schema       >=0.3.0
     , stm
     , stm-chans
     , text

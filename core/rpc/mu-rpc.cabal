@@ -30,7 +30,7 @@ library
       base              >=4.12  && <5
     , conduit
     , mtl
-    , mu-schema         >=0.2.0
+    , mu-schema         >=0.3.0
     , sop-core
     , template-haskell
     , text

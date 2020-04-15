@@ -27,7 +27,7 @@ library
   build-depends:
       base         >=4.12  && <5
     , containers
-    , mu-schema    >=0.2.0
+    , mu-schema    >=0.3.0
     , optics-core
     , sop-core
 

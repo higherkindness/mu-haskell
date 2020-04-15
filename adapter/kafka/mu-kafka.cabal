@@ -35,8 +35,8 @@ library
     , conduit
     , hw-kafka-client
     , hw-kafka-conduit
-    , mu-avro           >=0.2.0
-    , mu-schema         >=0.2.0
+    , mu-avro           >=0.3.0
+    , mu-schema         >=0.3.0
     , resourcet
 
   ghc-options:      -Wall
