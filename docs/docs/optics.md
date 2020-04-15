@@ -78,14 +78,13 @@ Simply enable `TypeApplications` and provide the value you are looking for to co
 Following with the example above, if you need to read an enum value, you can do so using prisms!
 
 ```haskell
-{-# language MultiWayIf #-}
 {-# language OverloadedLabels #-}
 
 getWeather :: Weather -> IO ()
-getWeather e = if | e `is` #sunny -> putStrLn "is sunny! :)"
-                  | e `is` #cloudy -> putStrLn "is cloudy :/"
-                  | e `is` #rainy -> putStrLn "is rainy... :("
-                  | otherwise -> putStrLn "I don't know the weather!"
+getWeather e
+  | e `is` #sunny  = putStrLn "is sunny! 😄"
+  | e `is` #cloudy = putStrLn "is cloudy 😟"
+  | e `is` #rainy  = putStrLn "is rainy... 😭"
 ```
 
 Again, notice the use of `OverloadedLabels` to refer to the possible enum values and our special `is` prism helper, which is just `is s k = isJust (preview k s)`, got it? isJust... badum tss! 🥁

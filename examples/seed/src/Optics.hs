@@ -1,7 +1,6 @@
 {-# language DataKinds             #-}
 {-# language DuplicateRecordFields #-}
 {-# language FlexibleContexts      #-}
-{-# language MultiWayIf            #-}
 {-# language OverloadedLabels      #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
@@ -43,10 +42,10 @@ evolvePerson :: PeopleRequest -> PeopleResponse
 evolvePerson req = record1 (Just $ record (req ^. #name, 18))
 
 getWeather :: Weather -> IO ()
-getWeather e = if | e `is` #sunny -> putStrLn "is sunny! :)"
-                  | e `is` #cloudy -> putStrLn "is cloudy :/"
-                  | e `is` #rainy -> putStrLn "is rainy... :("
-                  | otherwise -> putStrLn "I don't know the weather!"
+getWeather e
+  | e `is` #sunny  = putStrLn "is sunny! 😄"
+  | e `is` #cloudy = putStrLn "is cloudy 😟"
+  | e `is` #rainy  = putStrLn "is rainy... 😭"
 
 getPerson :: Monad m => PeopleRequest -> m PeopleResponse
 getPerson = pure . evolvePerson
