@@ -16,7 +16,7 @@ One of the features that WAI provides is the definition of *middleware* componen
 
 It's a common task in web servers to send some static content for a subset of URLs (think of resources such as images or JavaScript code). `wai-middleware-static` automates that task, and also serves as the simplest example of WAI middleware.
 
-Remember that in our [original code](intro.md) our `main` function looked as follows:
+Remember that in our [gRPC server example]({% link docs/grpc-server.md %}) our `main` function looked as follows:
 
 ```haskell
 main = runGRpcApp msgSerializer 8080 server
