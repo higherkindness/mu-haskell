@@ -26,6 +26,7 @@ import           Schema
 type Person         = Term SeedSchema (SeedSchema :/: "Person")
 type PeopleRequest  = Term SeedSchema (SeedSchema :/: "PeopleRequest")
 type PeopleResponse = Term SeedSchema (SeedSchema :/: "PeopleResponse")
+type Weather        = Term SeedSchema (SeedSchema :/: "Weather")
 
 main :: IO ()
 main = do
@@ -42,6 +43,12 @@ server = singleService
 
 evolvePerson :: PeopleRequest -> PeopleResponse
 evolvePerson req = record1 (Just $ record (req ^. #name, 18))
+
+getWeather :: Weather -> IO ()
+getWeather e
+  | e `is` #sunny  = putStrLn "is sunny! 😄"
+  | e `is` #cloudy = putStrLn "is cloudy 😟"
+  | e `is` #rainy  = putStrLn "is rainy... 😭"
 
 getPerson :: Monad m => PeopleRequest -> m PeopleResponse
 getPerson = pure . evolvePerson
