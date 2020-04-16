@@ -14,6 +14,7 @@ Mu-Haskell is a set of packages that help you build both servers and clients for
 * [Schemas]({% link docs/schema.md %})
   * [Serialization formats]({% link docs/serializers.md %}): Protocol Buffers and Avro
   * [Registry]({% link docs/registry.md %})
+  * [Optics]({% link docs/optics.md %})
 * [RPC services]({% link docs/rpc.md %})
   * [gRPC server]({% link docs/grpc-server.md %})
   * [gRPC client]({% link docs/grpc-client.md %})
