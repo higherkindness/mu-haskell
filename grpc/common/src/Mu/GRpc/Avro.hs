@@ -10,6 +10,15 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# options_ghc -fno-warn-orphans -fno-warn-simplifiable-class-constraints  #-}
+{-|
+Description : (Internal) Wrappers for Avro serialization
+
+Intended for internal use.
+
+This module provides the required instances of
+the common type classes from 'Mu.GRpc.Bridge'
+to make it work with Avro.
+-}
 module Mu.GRpc.Avro (
   AvroRPC(..)
 , ViaFromAvroTypeRef(..)
@@ -38,14 +47,21 @@ import           Mu.Rpc
 import           Mu.Schema
 
 -- | A proxy type for giving static information about RPCs.
+--   Intended for internal use.
 data AvroRPC = AvroRPC { pkg :: ByteString, srv :: ByteString, meth :: ByteString }
 
 instance IsRPC AvroRPC where
   path rpc = "/" <> pkg rpc <> "." <> srv rpc <> "/" <> meth rpc
   {-# INLINE path #-}
 
+-- | Wrapper used to tag a type with its corresponding
+--   'TypeRef' used for deserialization from Avro.
+--   Intended for internal use.
 newtype ViaFromAvroTypeRef (ref :: TypeRef snm) t
   = ViaFromAvroTypeRef { unViaFromAvroTypeRef :: t }
+-- | Wrapper used to tag a type with its corresponding
+--   'TypeRef' used for serialization to Avro.
+--   Intended for internal use.
 newtype ViaToAvroTypeRef (ref :: TypeRef snm) t
   = ViaToAvroTypeRef { unViaToAvroTypeRef :: t }
 

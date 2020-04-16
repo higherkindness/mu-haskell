@@ -65,6 +65,7 @@ type Object = 'Service
 --   in GraphQL lingo.
 type ObjectField = 'Method
 
+-- | Look up a service in a package definition using its name.
 type family LookupService (ss :: [Service snm mnm anm]) (s :: snm) :: Service snm mnm anm where
   LookupService '[] s = TypeError ('Text "could not find method " ':<>: 'ShowType s)
   LookupService ('Service s anns ms ': ss) s = 'Service s anns ms
@@ -76,6 +77,8 @@ type family LookupMethod (s :: [Method snm mnm anm]) (m :: mnm) :: Method snm mn
   LookupMethod ('Method m anns args r ': ms) m = 'Method m anns args r
   LookupMethod (other                 ': ms) m = LookupMethod ms m
 
+-- | Defines a reference to a type, either primitive or coming from the schema.
+--   'TypeRef's are used to define arguments and result types.
 data TypeRef serviceName where
   -- | A primitive type.
   PrimitiveRef :: Type -> TypeRef serviceName

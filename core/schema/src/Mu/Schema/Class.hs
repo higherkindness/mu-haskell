@@ -56,6 +56,8 @@ newtype WithSchema (sch :: Schema tn fn) (sty :: tn) a where
   WithSchema :: forall tn fn (sch :: Schema tn fn) (sty :: tn) a.
                 a -> WithSchema sch sty a
 
+-- | Accessor for 'WithSchema'.
+--   Intended for usage with @TypeApplications@.
 unWithSchema :: forall tn fn (sch :: Schema tn fn) (sty :: tn) a.
                 WithSchema sch sty a -> a
 unWithSchema (WithSchema x) = x
