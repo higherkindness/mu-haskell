@@ -20,4 +20,11 @@ stack exec --no-ghc-package-path standalone-haddock -- -o ${DOCSDIR} \
   grpc/common grpc/client grpc/server graphql
 
 echo "Setting Linuwial theme on Haddock generated docs"
-find ${DOCSDIR} -name "ocean.css" -exec cp -rf docs/css/linuwial.css {} \;
+if [ "$1" == "ocean" ]
+then
+  echo "Replacing ocean.css with linuwial.css"
+  find ${DOCSDIR} -name "ocean.css" -exec cp -rf docs/css/linuwial.css {} \;
+else
+  echo "Replacing linuwial.css with our own"
+  cp docs/css/linuwial.css ${DOCSDIR}
+fi
