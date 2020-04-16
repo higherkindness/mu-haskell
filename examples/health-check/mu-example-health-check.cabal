@@ -46,10 +46,10 @@ executable health-client-tyapps
   build-depends:
       base            >=4.12  && <5
     , conduit
-    , mu-grpc-client  >=0.2.0
-    , mu-protobuf     >=0.2.0
-    , mu-rpc          >=0.2.0
-    , mu-schema       >=0.2.0
+    , mu-grpc-client  >=0.3.0
+    , mu-protobuf     >=0.3.0
+    , mu-rpc          >=0.3.0
+    , mu-schema       >=0.3.0
     , text
 
   hs-source-dirs:   src
@@ -62,10 +62,10 @@ executable health-client-record
   build-depends:
       base            >=4.12  && <5
     , conduit
-    , mu-grpc-client  >=0.2.0
-    , mu-protobuf     >=0.2.0
-    , mu-rpc          >=0.2.0
-    , mu-schema       >=0.2.0
+    , mu-grpc-client  >=0.3.0
+    , mu-protobuf     >=0.3.0
+    , mu-rpc          >=0.3.0
+    , mu-schema       >=0.3.0
     , text
 
   hs-source-dirs:   src
