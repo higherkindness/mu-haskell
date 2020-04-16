@@ -88,3 +88,7 @@ getWeather e
 ```
 
 Again, notice the use of `OverloadedLabels` to refer to the possible enum values and our special `is` prism helper, which is just `is s k = isJust (preview k s)`, got it? isJust... badum tss! 🥁
+
+Besides this, you have `_U0`, `_U1`, ... and `_Next`, with the goal of giving prisms for the different possibilities of a union. So, lets say you have a field that is an union of `String` and `Int`, you can get prisms using `#field % _U0` and `#field % _U1`.
+
+> We know the naming of these might be terrible, but they follow the usual convention for this kind of stuff: `_` for a prism, `U` from "Union" and then the index.
