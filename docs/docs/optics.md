@@ -1,16 +1,16 @@
 ---
 layout: docs
-title: Mu-Optics
+title: Optics
 permalink: optics/
 ---
 
-# Mu-Optics
+# Optics
 
-We created a new package `mu-optics` in the **release v0.3 of Mu-Haskell** to give an easier API to build servers and clients using lenses and prisms (probably the ultimate API 😉). This document aims to be a reference of how to use this new library and the common use cases for it.
+We created a new package `mu-optics` is available from **release v0.3 of Mu-Haskell**, and provides an easier API to build both servers and clients using lenses and prisms (probably the ultimate API 😉). This document aims to be a reference of how to use this library and the common use cases for it.
 
 ## Accessing fields with `#field`
 
-When you want to refer to a method of your type-level schema, whereas in the server or the client, you can use the get operation from the lens (`^.`) in conjunction with the `OverloadedLabels` extension to access that field, as in this example:
+When you want to refer to a method of your type-level schema, whereas in the server or the client, you can use the get operation from the lens (`^.`) in conjunction with the `OverloadedLabels` extension to access that field, as in this example. In this case, the label `#name` should have the same name as the field declared in the corresponding schema definition file.
 
 ```haskell
 {-# language OverloadedLabels #-}
@@ -34,7 +34,7 @@ get client idPerson = do
 
 Why the difference? Well, due to some ambiguity in the context of our Schemas, we need to help GHC to know if the record we're creating contains only one field (`record1`) or more (`record`) contained in a tuple of elements.
 
-> This design might be improved in the future, by using "[OneTuple](https://hackage.haskell.org/package/OneTuple-0.2.2.1/docs/Data-Tuple-OneTuple.html) to rule them all"
+> This design might be improved in the future, by using "[OneTuple](https://hackage.haskell.org/package/OneTuple-0.2.2.1/docs/Data-Tuple-OneTuple.html) to rule them all."
 
 ```haskell
 add :: GRpcConnection PersistentService 'MsgProtoBuf -> String -> String -> IO ()
@@ -88,6 +88,8 @@ getWeather e
 ```
 
 Again, notice the use of `OverloadedLabels` to refer to the possible enum values and our special `is` prism helper, which is just `is s k = isJust (preview k s)`, got it? isJust... badum tss! 🥁
+
+## Accessing unions
 
 Besides this, you have `_U0`, `_U1`, ... and `_Next`, with the goal of giving prisms for the different possibilities of a union. So, lets say you have a field that is an union of `String` and `Int`, you can get prisms using `#field % _U0` and `#field % _U1`.
 
