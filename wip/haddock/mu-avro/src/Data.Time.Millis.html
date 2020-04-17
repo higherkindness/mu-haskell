@@ -1,20 +1,28 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# language GeneralizedNewtypeDeriving #-}</span><span>
-</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.Time.Millis</span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-3"></span><span>
-</span><span id="line-4"></span><span>
-</span><span id="line-5"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span>             </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
-</span><span id="line-6"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Avro.Encoding.FromAvro</span></span><span>
-</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Avro.Encoding.ToAvro</span></span><span>
-</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Avro.HasAvroSchema</span></span><span>
-</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Avro.Schema.Schema</span></span><span>     </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
-</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Int</span></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Int32</span></span><span class="hs-special">)</span><span>
-</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Tagged</span></span><span>
-</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Time</span></span><span>
-</span><span id="line-13"></span><span>
-</span><span id="line-14"></span><span class="hs-comment">-- |&#160;Wrapper for time difference expressed in milliseconds</span><span>
-</span><span id="line-15"></span><span class="hs-keyword">newtype</span><span> </span><span id="DiffTimeMs"><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-var">DiffTimeMs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DiffTimeMs"><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-var">DiffTimeMs</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unDiffTimeMs"><span class="annot"><span class="annottext">DiffTimeMs -&gt; DiffTime
+</span><span id="line-2"></span><span class="hs-comment">{-|
+Description : Time differences in milliseconds
+
+Avro defines a specific logical type for time
+differences expessed in milliseconds. This module
+provides a type which wraps the 'DiffTime' from
+the @time@ library (which uses nanoseconds),
+offering a millisecond-based interface.
+-}</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.Time.Millis</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span>             </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Avro.Encoding.FromAvro</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Avro.Encoding.ToAvro</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Avro.HasAvroSchema</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Avro.Schema.Schema</span></span><span>     </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Int</span></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Int32</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Tagged</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Time</span></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- |&#160;Wrapper for time difference expressed in milliseconds</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">newtype</span><span> </span><span id="DiffTimeMs"><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-var">DiffTimeMs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DiffTimeMs"><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-var">DiffTimeMs</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unDiffTimeMs"><span class="annot"><span class="annottext">DiffTimeMs -&gt; DiffTime
 </span><a href="Data.Time.Millis.html#unDiffTimeMs"><span class="hs-identifier hs-var hs-var">unDiffTimeMs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DiffTime</span></span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-16"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679158579"><span id="local-6989586621679158581"><span id="local-6989586621679158583"><span class="annot"><span class="annottext">Int -&gt; DiffTimeMs -&gt; ShowS
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679158579"><span id="local-6989586621679158581"><span id="local-6989586621679158583"><span class="annot"><span class="annottext">Int -&gt; DiffTimeMs -&gt; ShowS
 [DiffTimeMs] -&gt; ShowS
 DiffTimeMs -&gt; String
 (Int -&gt; DiffTimeMs -&gt; ShowS)
@@ -221,9 +229,9 @@ forall a. (a -&gt; ()) -&gt; NFData a
 rnf :: DiffTimeMs -&gt; ()
 $crnf :: DiffTimeMs -&gt; ()
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-17"></span><span>
-</span><span id="line-18"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasAvroSchema</span></span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-19"></span><span>  </span><span id="local-6989586621679158493"><span class="annot"><span class="annottext">schema :: Tagged DiffTimeMs Schema
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasAvroSchema</span></span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679158493"><span class="annot"><span class="annottext">schema :: Tagged DiffTimeMs Schema
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var">schema</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Schema -&gt; Tagged DiffTimeMs Schema
 forall k (s :: k) b. b -&gt; Tagged s b
 </span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="annot"><span class="annottext">(Schema -&gt; Tagged DiffTimeMs Schema)
@@ -234,9 +242,9 @@ forall a b. (a -&gt; b) -&gt; a -&gt; b
 forall a. a -&gt; Maybe a
 </span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">LogicalTypeInt
 </span><span class="hs-identifier hs-var">S.TimeMillis</span></span><span class="hs-special">)</span><span>
-</span><span id="line-20"></span><span>
-</span><span id="line-21"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToAvro</span></span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-22"></span><span>  </span><span id="local-6989586621679158486"><span class="annot"><span class="annottext">toAvro :: Schema -&gt; DiffTimeMs -&gt; Builder
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToAvro</span></span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679158486"><span class="annot"><span class="annottext">toAvro :: Schema -&gt; DiffTimeMs -&gt; Builder
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var">toAvro</span></span></span><span> </span><span id="local-6989586621679158484"><span class="annot"><span class="annottext">s :: Schema
 </span><a href="#local-6989586621679158484"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Schema -&gt; Int32 -&gt; Builder
 forall a. ToAvro a =&gt; Schema -&gt; a -&gt; Builder
@@ -251,9 +259,9 @@ forall a b. (Integral a, Num b) =&gt; a -&gt; b
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">DiffTimeMs -&gt; Integer
 </span><a href="Data.Time.Millis.html#diffTimeToMillis"><span class="hs-identifier hs-var">diffTimeToMillis</span></a></span><span>
-</span><span id="line-23"></span><span>
-</span><span id="line-24"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromAvro</span></span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-25"></span><span>  </span><span id="local-6989586621679158479"><span class="annot"><span class="annottext">fromAvro :: Value -&gt; Either String DiffTimeMs
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromAvro</span></span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679158479"><span class="annot"><span class="annottext">fromAvro :: Value -&gt; Either String DiffTimeMs
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var">fromAvro</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-identifier">_</span><span> </span><span id="local-6989586621679158476"><span class="annot"><span class="annottext">v :: Int32
 </span><a href="#local-6989586621679158476"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTimeMs -&gt; Either String DiffTimeMs
 forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
@@ -265,12 +273,13 @@ forall a b. (a -&gt; b) -&gt; a -&gt; b
 forall a. Integral a =&gt; a -&gt; Integer
 </span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="annot"><span class="annottext">Int32
 </span><a href="#local-6989586621679158476"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-26"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">fromAvro</span></span><span> </span><span class="hs-identifier">_</span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String DiffTimeMs
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">fromAvro</span></span><span> </span><span class="hs-identifier">_</span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String DiffTimeMs
 forall a b. a -&gt; Either a b
 </span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="annot"><span class="hs-string">&quot;expecting time_ms&quot;</span></span><span>
-</span><span id="line-27"></span><span>
-</span><span id="line-28"></span><span class="annot"><a href="Data.Time.Millis.html#diffTimeToMillis"><span class="hs-identifier hs-type">diffTimeToMillis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
-</span><span id="line-29"></span><span id="diffTimeToMillis"><span class="annot"><span class="annottext">diffTimeToMillis :: DiffTimeMs -&gt; Integer
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | Obtain the underlying time in milliseconds from a 'DiffTimeMs'.</span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Data.Time.Millis.html#diffTimeToMillis"><span class="hs-identifier hs-type">diffTimeToMillis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-38"></span><span id="diffTimeToMillis"><span class="annot"><span class="annottext">diffTimeToMillis :: DiffTimeMs -&gt; Integer
 </span><a href="Data.Time.Millis.html#diffTimeToMillis"><span class="hs-identifier hs-var hs-var">diffTimeToMillis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
 forall a. Integral a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="hs-number">1000000000</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Integer)
@@ -282,9 +291,10 @@ forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">DiffTimeMs -&gt; DiffTime
 </span><a href="Data.Time.Millis.html#unDiffTimeMs"><span class="hs-identifier hs-var hs-var">unDiffTimeMs</span></a></span><span>
-</span><span id="line-30"></span><span>
-</span><span id="line-31"></span><span class="annot"><a href="Data.Time.Millis.html#millisToDiffTime"><span class="hs-identifier hs-type">millisToDiffTime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span>
-</span><span id="line-32"></span><span id="millisToDiffTime"><span class="annot"><span class="annottext">millisToDiffTime :: Integer -&gt; DiffTimeMs
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | Build a 'DiffTimeMs' from an amount expressed in milliseconds.</span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Data.Time.Millis.html#millisToDiffTime"><span class="hs-identifier hs-type">millisToDiffTime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span>
+</span><span id="line-42"></span><span id="millisToDiffTime"><span class="annot"><span class="annottext">millisToDiffTime :: Integer -&gt; DiffTimeMs
 </span><a href="Data.Time.Millis.html#millisToDiffTime"><span class="hs-identifier hs-var hs-var">millisToDiffTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTimeMs
 </span><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-var">DiffTimeMs</span></a></span><span> </span><span class="annot"><span class="annottext">(DiffTime -&gt; DiffTimeMs)
 -&gt; (Integer -&gt; DiffTime) -&gt; Integer -&gt; DiffTimeMs
@@ -296,4 +306,4 @@ forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
 forall a. Num a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="hs-number">1000000000</span></span><span class="hs-special">)</span><span>
-</span><span id="line-33"></span></pre></body></html>
+</span><span id="line-43"></span></pre></body></html>
