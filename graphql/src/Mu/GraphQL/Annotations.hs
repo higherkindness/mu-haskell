@@ -6,6 +6,15 @@
 {-# language TypeApplications    #-}
 {-# language TypeOperators       #-}
 {-# language ViewPatterns        #-}
+{-|
+Description : Annotations for GraphQL services
+
+GraphQL schemas may contain some information which
+cannot be directly represented in a Mu schema or
+service definition. The types in this module
+can be used with the annotation mechanism in Mu
+to provide this additional information.
+-}
 module Mu.GraphQL.Annotations (
   ValueConst(..)
 , DefaultValue
@@ -24,15 +33,18 @@ import qualified Language.GraphQL.Draft.Syntax as GQL
 --   To be used as an annotation.
 data DefaultValue (v :: ValueConst Nat Symbol)
 
--- Our own constants
+-- | Type-level GraphQL constant values.
+--   Due to limitations in type-level literal values
+--   floating point constants cannot be represented.
 data ValueConst nat symbol
-  = VCInt nat
-  | VCString symbol
-  | VCBoolean Bool
-  | VCNull
-  | VCEnum symbol
-  | VCList [ValueConst nat symbol]
+  = VCInt nat        -- ^ Integer.
+  | VCString symbol  -- ^ String.
+  | VCBoolean Bool   -- ^ Boolean.
+  | VCNull           -- ^ Null.
+  | VCEnum symbol    -- ^ Enumeration value.
+  | VCList [ValueConst nat symbol]  -- ^ List of constant values.
   | VCObject [(symbol, ValueConst nat symbol)]
+      -- ^ Object represented by (key, value) tuples.
 
 -- | Turn a 'GQL.ValueConst' coming from parsing
 --   in the annotation data type. Mostly used
@@ -59,6 +71,10 @@ fromGQLValueConst (GQL.VCObject (coerce -> o))
           = (T.unpack n,) <$> fromGQLValueConst v
 fromGQLValueConst _ = empty
 
+-- | Obtain the GraphQL constant corresponding
+--   to a type-level constant. Inhabited by any
+--   'ValueConst', but still required to please
+--   the type checker.
 class ReflectValueConst (v :: ValueConst nat symbol) where
   -- | Obtain the GraphQL constant corresponding
   --   to a type-level constant.

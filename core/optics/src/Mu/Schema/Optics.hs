@@ -58,9 +58,14 @@ instance (FieldLabel sch args fieldName r)
   labelOptic = lens (\(TRecord r) -> fieldLensGet (Proxy @fieldName) r)
                     (\(TRecord r) x -> TRecord $ fieldLensSet (Proxy @fieldName) r x)
 
+-- | Build a Mu record 'Term' from a tuple of its values.
+--
+--   Note: if the record has exactly _one_ field,
+--   you must use 'record1' instead.
 record :: BuildRecord sch args r => r -> Term sch ('DRecord name args)
 record values = TRecord $ buildR values
 
+-- | Build a Mu record 'Term' with exactly one field.
 record1 :: TypeLabel sch t1 r1 => r1 -> Term sch ('DRecord name '[ 'FieldDef x1 t1 ])
 record1 value = TRecord $ Field (typeLensSet value) :* Nil
 
@@ -140,10 +145,20 @@ instance (r ~ NS (FieldValue sch) choices)
   typeLensGet (FUnion x) = x
   typeLensSet = FUnion
 
+-- | Build a Mu enumeration 'Term' from the name of the choice.
 enum :: forall (choiceName :: Symbol) choices sch name.
         EnumLabel choices choiceName
      => Term sch ('DEnum name choices)
 enum = TEnum $ enumPrismBuild (Proxy @choiceName)
+
+-- Useful utility to check whether a value
+-- matches a given enumeration choice.
+--
+-- > f e | e `is` #sunny = ...
+-- >     | e `is` #rainy = ...
+is :: Is k An_AffineFold => s -> Optic' k is s a -> Bool
+is s k = isJust (preview k s)
+{-# INLINE is #-}
 
 instance (EnumLabel choices choiceName, r ~ ())
          => LabelOptic choiceName A_Prism
@@ -172,12 +187,19 @@ instance {-# OVERLAPPABLE #-} EnumLabel rest c
   enumPrismMatch _ (Z _) = Nothing
   enumPrismMatch p (S x) = enumPrismMatch p x
 
+-- | Prism to access the first choice of a union.
 _U0 :: forall (sch :: Schema') x xs r. TypeLabel sch x r
     => Prism' (NS (FieldValue sch) (x ': xs)) r
 _U0 = prism' (Z . typeLensSet)
              (\case (Z x) -> Just $ typeLensGet x
                     (S _) -> Nothing)
 
+-- | Prism to access all other choices of a union
+--   except for the first. Intended to use be used
+--   iteratively until you reach the desired choice
+--   with '_U0'.
+--
+--   > _Next % _Next % _U0  -- access third choice
 _Next :: forall (sch :: Schema') x xs.
          Prism' (NS (FieldValue sch) (x ': xs))
                 (NS (FieldValue sch) xs)
@@ -185,19 +207,17 @@ _Next = prism' S
                (\case (Z _) -> Nothing
                       (S x) -> Just x)
 
+-- | Prism to access the second choice of a union.
 _U1 :: forall (sch :: Schema') a b xs r. TypeLabel sch b r
     => Prism' (NS (FieldValue sch) (a ': b ': xs)) r
 _U1 = _Next % _U0
 
+-- | Prism to access the third choice of a union.
 _U2 :: forall (sch :: Schema') a b c xs r. TypeLabel sch c r
     => Prism' (NS (FieldValue sch) (a ': b ': c ': xs)) r
 _U2 = _Next % _U1
 
+-- | Prism to access the fourth choice of a union.
 _U3 :: forall (sch :: Schema') a b c d xs r. TypeLabel sch d r
     => Prism' (NS (FieldValue sch) (a ': b ': c ': d ': xs)) r
 _U3 = _Next % _U2
-
--- * Complementary helper to @isn't@.
-is :: Is k An_AffineFold => s -> Optic' k is s a -> Bool
-is s k = isJust (preview k s)
-{-# INLINE is #-}

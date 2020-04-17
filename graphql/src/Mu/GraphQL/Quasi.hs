@@ -2,9 +2,13 @@
 {-# language OverloadedStrings #-}
 {-# language TemplateHaskell   #-}
 {-# language ViewPatterns      #-}
+{-|
+Description : Quasi-quoters for GraphQL schemas
 
+Read @.graphql@ files as a 'Mu.Schema.Definition.Schema'
+and 'Package' with one 'Service' per object in the schema.
+-}
 module Mu.GraphQL.Quasi (
-  -- * 'Schema' generation from @.graphql@ files
   graphql
 ) where
 

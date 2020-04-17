@@ -6,7 +6,18 @@
 {-# language RankNTypes          #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeApplications    #-}
+{-|
+Description : Execute a Mu 'Server' using GraphQL
 
+This module allows you to server a Mu 'Server'
+as a WAI 'Application' using GraphQL.
+
+The simples way is to use 'runGraphQLAppQuery'
+(if you only provide GraphQL queries) or
+'runGraphQLApp' (if you also have mutations
+or subscriptions). All other variants provide
+more control over the settings.
+-}
 module Mu.GraphQL.Server (
     GraphQLApp
   -- * Run an GraphQL resolver directly
@@ -16,9 +27,8 @@ module Mu.GraphQL.Server (
   , runGraphQLAppTrans
   -- * Build a WAI 'Application'
   , graphQLApp
-  , graphQLAppTrans
-  -- ** Query-only builders
   , graphQLAppQuery
+  , graphQLAppTrans
   , graphQLAppTransQuery
 ) where
 
@@ -56,10 +66,8 @@ instance A.FromJSON GraphQLInput where
       <*> v A..:? "operationName"
 
 -- | Turn a Mu GraphQL 'Server' into a WAI 'Application'.
---
---   These 'Application's can be later combined using,
---   for example, @wai-routes@, or you can add middleware
---   from @wai-extra@, among others.
+--   Use this version when your server has not only
+--   queries, but also mutations or subscriptions.
 graphQLApp ::
     ( GraphQLApp p qr mut sub ServerErrorIO chn hs )
     => ServerT chn p ServerErrorIO hs
@@ -69,6 +77,8 @@ graphQLApp ::
     -> Application
 graphQLApp = graphQLAppTrans id
 
+-- | Turn a Mu GraphQL 'Server' into a WAI 'Application'.
+--   Use this version when your server has only queries.
 graphQLAppQuery ::
     forall qr p chn hs.
     ( GraphQLApp p ('Just qr) 'Nothing 'Nothing ServerErrorIO chn hs )
@@ -78,6 +88,9 @@ graphQLAppQuery ::
 graphQLAppQuery svr _
   = graphQLApp svr (Proxy @('Just qr)) (Proxy @'Nothing) (Proxy @'Nothing)
 
+-- | Turn a Mu GraphQL 'Server' into a WAI 'Application'
+--   using a combined transformer stack.
+--   See also documentation for 'graphQLAppQuery'.
 graphQLAppTransQuery ::
     forall qr m p chn hs.
     ( GraphQLApp p ('Just qr) 'Nothing 'Nothing m chn hs )
@@ -88,6 +101,9 @@ graphQLAppTransQuery ::
 graphQLAppTransQuery f svr _
   = graphQLAppTrans f svr (Proxy @('Just qr)) (Proxy @'Nothing) (Proxy @'Nothing)
 
+-- | Turn a Mu GraphQL 'Server' into a WAI 'Application'
+--   using a combined transformer stack.
+--   See also documentation for 'graphQLApp'.
 graphQLAppTrans ::
     ( GraphQLApp p qr mut sub m chn hs )
     => (forall a. m a -> ServerErrorIO a)

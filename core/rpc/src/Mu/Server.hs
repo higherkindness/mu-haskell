@@ -21,15 +21,25 @@ A server (represented by 'ServerT') is a sequence
 of handlers (represented by 'HandlersT'), one for each
 operation in the corresponding Mu service declaration.
 
-In general, you should declare a server as:
+In general, you can declare a server by naming
+each of the methods with their handlers:
+
+> server :: MonadServer m => ServerT MyService m _
+> server = singleService ( method @"m1" h1
+>                        , method @"m2" h2
+>                        , ... )
+
+or by position:
 
 > server :: MonadServer m => ServerT MyService m _
 > server = Server (h1 :<|>: h2 :<|>: ... :<|>: H0)
 
 where each of @h1@, @h2@, ... handles each method in
 @MyService@ /in the order they were declared/.
-The @_@ in the type allows GHC to fill in the boring
-and long type you would need to write there otherwise.
+
+In both cases, the @_@ in the type allows GHC to fill
+in the boring and long type you would need to write
+there otherwise.
 
 /Implementation note/: exceptions raised in handlers
 produce an error to be sent as response to the client.
@@ -172,12 +182,16 @@ pattern (:<|>:) :: (Handles chn args ret m h)
 pattern x :<|>: xs <- (($ ()) -> x) :<||>: xs where
   x :<|>: xs = noContext x :<||>: xs
 
--- Define a relation for handling
+-- | Defines a relation for handling.
 class Handles (chn :: ServiceChain snm)
               (args :: [Argument snm anm]) (ret :: Return snm)
               (m :: Type -> Type) (h :: Type)
+-- | Defines whether a given type @t@
+--   can be turned into the 'TypeRef' @ref@.
 class ToRef   (chn :: ServiceChain snm)
               (ref :: TypeRef snm) (t :: Type)
+-- | Defines whether a given type @t@
+--   can be obtained from the 'TypeRef' @ref@.
 class FromRef (chn :: ServiceChain snm)
               (ref :: TypeRef snm) (t :: Type)
 
@@ -215,36 +229,67 @@ instance (MonadError ServerError m, ToRef chn ref v, handler ~ (ConduitT v Void 
 
 -- SIMPLER WAY TO DECLARE SERVICES
 
+-- | Declares the handler for a method in the service.
+--   Intended to be used with @TypeApplications@:
+--
+--   > method @"myMethod" myHandler
 method :: forall n p. p -> Named n (() -> p)
 method f = Named (\() -> f)
+
+-- | Declares the handler for a field in an object.
+--   Intended to be used with @TypeApplications@:
+--
+--   > field @"myField" myHandler
 field :: forall n h. h -> Named n h
 field  = Named
 
+-- | Defines a server for a package with a single service.
+--   Intended to be used with a tuple of 'method's:
+--
+--   > singleService (method @"m1" h1, method @"m2" h2)
 singleService
   :: (ToNamedList p nl, ToHandlers chn () methods m hs nl, MappingRight chn sname ~ ())
   => p -> ServerT chn ('Package pname '[ 'Service sname sanns methods ]) m '[hs]
 singleService nl = Server $ toHandlers $ toNamedList nl
 
+-- | Defines the implementation of a single GraphQL object,
+--   which translates as a single Mu service.
+--   Intended to be used with @TypeApplications@
+--   and a tuple of 'field's:
+--
+--   > object @"myObject" (field @"f1" h1, fielf @"f2" h2)
+--
+--   Note: for the root objects in GraphQL (query, mutation, subscription)
+--   use 'method' instead of 'object'.
 object
   :: forall sname p nl chn ms m hs.
      (ToNamedList p nl, ToHandlers chn (MappingRight chn sname) ms m hs nl)
   => p -> Named sname (HandlersT chn (MappingRight chn sname) ms m hs)
 object nl = Named $ toHandlers $ toNamedList nl
 
+-- | Combines the implementation of several GraphQL objects,
+--   which means a whole Mu service for a GraphQL server.
+--   Intented to be used with a tuple of 'objects':
+--
+--   > resolver (object @"o1" ..., object @"o2" ...)
 resolver
   :: (ToNamedList p nl, ToServices chn ss m hs nl)
   => p -> ServerT chn ('Package pname ss) m hs
 resolver nl = Services $ toServices $ toNamedList nl
 
+-- | A value tagged with a type-level name.
 data Named n h where
   Named :: forall n h. h -> Named n h
 
 infixr 4 :|:
+-- | Heterogeneous list in which each element
+--   is tagged with a type-level name.
 data NamedList (hs :: [(Symbol, *)]) where
   N0    :: NamedList '[]
   (:|:) :: Named n h -> NamedList hs
         -> NamedList ('(n, h) ': hs)
 
+-- | Used to turn tuples into 'NamedList's.
 class ToNamedList p nl | p -> nl where
   toNamedList :: p -> NamedList nl
 

@@ -1,6 +1,14 @@
 {-# language GeneralizedNewtypeDeriving #-}
-module Data.Time.Millis where
+{-|
+Description : Time differences in milliseconds
 
+Avro defines a specific logical type for time
+differences expessed in milliseconds. This module
+provides a type which wraps the 'DiffTime' from
+the @time@ library (which uses nanoseconds),
+offering a millisecond-based interface.
+-}
+module Data.Time.Millis where
 
 import           Control.DeepSeq             (NFData)
 import           Data.Avro.Encoding.FromAvro
@@ -25,8 +33,10 @@ instance FromAvro DiffTimeMs where
   fromAvro (Int _ v) = pure $ millisToDiffTime (toInteger v)
   fromAvro _         = Left "expecting time_ms"
 
+-- | Obtain the underlying time in milliseconds from a 'DiffTimeMs'.
 diffTimeToMillis :: DiffTimeMs -> Integer
 diffTimeToMillis = (`div` 1000000000) . diffTimeToPicoseconds . unDiffTimeMs
 
+-- | Build a 'DiffTimeMs' from an amount expressed in milliseconds.
 millisToDiffTime :: Integer -> DiffTimeMs
 millisToDiffTime = DiffTimeMs . picosecondsToDiffTime . (* 1000000000)
