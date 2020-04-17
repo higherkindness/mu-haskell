@@ -103,7 +103,7 @@ Open the `src/Main.hs` file. The contents are quite small right now: a `main` fu
 main :: IO ()
 main = runGRpcApp msgProtoBuf 8080 server
 
-server :: (MonadServer m) => ServerT Service m _
+server :: (MonadServer m) => SingleServerT Service m _
 server = singleService ()
 ```
 
