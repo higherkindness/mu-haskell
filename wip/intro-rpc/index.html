@@ -528,7 +528,7 @@
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="n">msgProtoBuf</span> <span class="mi">8080</span> <span class="n">server</span>
 
-<span class="n">server</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">ServerT</span> <span class="kt">Service</span> <span class="n">m</span> <span class="kr">_</span>
+<span class="n">server</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">SingleServerT</span> <span class="kt">Service</span> <span class="n">m</span> <span class="kr">_</span>
 <span class="n">server</span> <span class="o">=</span> <span class="n">singleService</span> <span class="nb">()</span>
 </code></pre></div></div>
 
