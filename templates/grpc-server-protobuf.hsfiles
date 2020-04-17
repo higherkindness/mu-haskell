@@ -19,24 +19,22 @@ executable {{name}}
   default-language:    Haskell2010
   build-depends:       base >= 4.12 && < 5
                      , text
-                     , mu-schema >= 0.2.0
-                     , mu-rpc >= 0.2.0
-                     , mu-protobuf >= 0.2.0
-                     , mu-grpc-server >= 0.2.0
+                     , mu-schema      >= 0.3.0
+                     , mu-rpc         >= 0.3.0
+                     , mu-protobuf    >= 0.3.0
+                     , mu-grpc-server >= 0.3.0
 
 {-# START_FILE stack.yaml #-}
-resolver: lts-14.27
+resolver: lts-15.8
 allow-newer: true
 extra-deps:
 # mu
-- mu-schema-0.2.0.0
-- mu-rpc-0.2.0.0
-- mu-optics-0.2.0.0
-- mu-avro-0.2.0.0
-- mu-protobuf-0.2.0.0
-- mu-grpc-server-0.2.0.0
-- mu-grpc-common-0.2.0.0
-- compendium-client-0.2.0.0
+- mu-schema-0.3.0.0
+- mu-rpc-0.3.0.0
+- mu-optics-0.3.0.0
+- mu-protobuf-0.3.0.0
+- mu-grpc-server-0.3.0.0
+- mu-grpc-common-0.3.0.0
 # dependencies of mu
 - http2-client-0.9.0.0
 - http2-grpc-types-0.5.0.0
@@ -44,9 +42,6 @@ extra-deps:
 - warp-grpc-0.3.0.0
 - proto3-wire-1.1.0
 - language-protobuf-1.0.1
-- language-avro-0.1.2.0
-- avro-0.4.7.0
-- HasBigDecimal-0.1.1
 
 {-# START_FILE Setup.hs #-}
 import Distribution.Simple
@@ -98,11 +93,11 @@ grpc "TheSchema" id "{{name}}.proto"
 -- data Message
 --   = Message { ... }
 --   deriving ( Eq, Show, Generic
---            , ToSchema   Maybe TheSchema "Message"
---            , FromSchema Maybe TheSchema "Message" )
+--            , ToSchema   TheSchema "Message"
+--            , FromSchema TheSchema "Message" )
 
 -- B. Use optics
-type Message = Term Maybe TheSchema (TheSchema :/: "Message")
+type Message = Term TheSchema (TheSchema :/: "Message")
 
 {-# START_FILE src/Main.hs #-}
 {-# language FlexibleContexts      #-}
@@ -120,5 +115,5 @@ import Schema
 main :: IO ()
 main = runGRpcApp msgProtoBuf 8080 server
 
-server :: (MonadServer m) => ServerT Maybe Service m _
-server = Server H0
+server :: MonadServer m => ServerT Service m _
+server = singleService ()
