@@ -1,0 +1,94 @@
+{-# START_FILE {{name}}.cabal #-}
+name:               {{name}}
+version:            0.1.0.0
+
+-- synopsis:
+-- description:
+homepage:           https://github.com/{{github-username}}{{^github-username}}githubuser{{/github-username}}/{{name}}#readme
+author:             {{author-name}}{{^author-name}}Author name here{{/author-name}}
+maintainer:         {{author-email}}{{^author-email}}example@example.com{{/author-email}}
+copyright:          {{copyright}}{{^copyright}}{{year}}{{^year}}2020{{/year}} {{author-name}}{{^author-name}}Author name here{{/author-name}}{{/copyright}}
+category:           {{category}}{{^category}}Web{{/category}}
+build-type:         Simple
+cabal-version:      >=1.10
+extra-source-files: README.md
+
+executable {{name}}
+  hs-source-dirs:   src
+  main-is:          Main.hs
+  default-language: Haskell2010
+  build-depends:
+      base        >=4.12  && <5
+    , conduit
+    , mu-graphql  >=0.3.0
+    , mu-rpc      >=0.3.0
+    , mu-schema   >=0.3.0
+    , text
+    , wai-extra
+    , warp
+
+
+{-# START_FILE stack.yaml #-}
+resolver: lts-15.8
+allow-newer: true
+extra-deps:
+- mu-schema-0.3.0.0
+- mu-rpc-0.3.0.0
+- mu-graphql-0.3.0.0
+- git: https://github.com/hasura/graphql-parser-hs.git
+  commit: 1380495a7b3269b70a7ab3081d745a5f54171a9c
+
+{-# START_FILE Setup.hs #-}
+import Distribution.Simple
+main = defaultMain
+
+{-# START_FILE .gitignore #-}
+.stack-work/
+stack*.yaml.lock
+*~
+
+{-# START_FILE README.md #-}
+# {{name}}
+
+{-# START_FILE schema.graphql #-}
+type Query {
+  hello: String
+}
+
+{-# START_FILE src/Main.hs #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language OverloadedStrings     #-}
+{-# language PartialTypeSignatures #-}
+{-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TemplateHaskell       #-}
+{-# language TupleSections         #-}
+{-# language TypeApplications      #-}
+{-# language TypeOperators         #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+
+module Main where
+
+import           Data.Proxy
+import qualified Data.Text                as T
+import           Network.Wai.Handler.Warp (run)
+
+import           Mu.GraphQL.Quasi
+import           Mu.GraphQL.Server
+import           Mu.Schema
+import           Mu.Server
+
+graphql "MySchema" "ServiceDefinition" "schema.graphql"
+
+-- GraphQL App
+
+main :: IO ()
+main = do
+  putStrLn "starting GraphQL server on port 8000"
+  run 8000 $ graphQLAppQuery server (Proxy @"Query")
+
+type ServiceMapping = '[]
+
+server :: forall m. MonadServer m => ServerT ServiceMapping ServiceDefinition m _
+server = resolver ( object @"Query" ( method @"hello" undefined ) )
