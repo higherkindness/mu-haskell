@@ -41,6 +41,7 @@ import           Mu.GRpc.Bridge
 import           Mu.Rpc
 import           Mu.Schema
 
+-- | Initialize a connection to a gRPC server.
 setupGrpcClient' :: GrpcClientConfig -> IO (Either ClientError GrpcClient)
 setupGrpcClient' = runExceptT . setupGrpcClient
 
