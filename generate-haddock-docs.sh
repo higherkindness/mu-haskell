@@ -27,4 +27,5 @@ then
 else
   echo "Replacing linuwial.css with our own"
   cp docs/css/linuwial.css ${DOCSDIR}
+  find ${DOCSDIR} -name "linuwial.css" -exec cp -rf docs/css/linuwial.css {} \;
 fi
