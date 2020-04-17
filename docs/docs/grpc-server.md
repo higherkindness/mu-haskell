@@ -24,12 +24,12 @@ Notice the use of `MonadServer` in this case. This gives us the ability to:
 
 Being polymorphic here allows us to run the same server in multiple back-ends. Furthermore, by enlarging the set of abilities required for our monad `m`, we can [integrate with other libraries]({% link docs/transformer.md %}), including logging and resource pools.
 
-Since you can declare more than one method in a service, you need to join them into a `ServerT`. You do so by using `singleService` (since gRPC servers may only expose one), and a *tuple* of methods indexed by their name *in the gRPC definition*. In addition to the name of the service, `ServerT` has an additional parameter which records the types of the handlers. Since that list may become quite long, we can ask GHC to write it for us by using the `PartialTypeSignatures` extension and writing an underscore `_` in that position.
+Since you can declare more than one method in a service, you need to join them into a `SingleServerT`. You do so by using `singleService` (since gRPC servers may only expose one), and a *tuple* of methods indexed by their name *in the gRPC definition*. In addition to the name of the service, `SingleServerT` has an additional parameter which records the types of the handlers. Since that list may become quite long, we can ask GHC to write it for us by using the `PartialTypeSignatures` extension and writing an underscore `_` in that position.
 
 ```haskell
 {-# language PartialTypeSignatures #-}
 
-quickstartServer :: (MonadServer m) => ServerT QuickstartService m _
+quickstartServer :: (MonadServer m) => SingleServerT QuickstartService m _
 quickstartServer = singleService (method @"SayHello" sayHello)
 ```
 

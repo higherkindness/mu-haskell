@@ -40,7 +40,7 @@ library
     , stm-conduit
     , wai
     , warp
-    , warp-grpc
+    , warp-grpc         >=0.4
     , warp-tls
 
   hs-source-dirs:   src
