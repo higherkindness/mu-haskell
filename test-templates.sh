@@ -13,5 +13,10 @@ cd muprotobuf
 stack build
 cd ..
 
+stack new mugraphql https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/graphql-server.hsfiles -p "author-email:haskell.curry@47deg.com" -p "author-name:Haskell Curry"
+cd mugraphql
+stack build
+cd ..
+
 cd ..
 rm -rf template-check
