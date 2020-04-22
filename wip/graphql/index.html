@@ -457,16 +457,15 @@
 <p>The first step is to import this schema as a type-level definition for Mu. The <code class="highlighter-rouge">graphql</code> function takes three arguments:</p>
 
 <ul>
-  <li>The first one defines the name of the <em>schema</em> type, which includes the enumerations and the input objects in the schema.</li>
-  <li>The second one defines the name of the <em>service declaration</em>, in which we find the (result) objects from the GraphQL schema.</li>
-  <li>The third argument is the route to the file <em>with respect to the project root</em>.</li>
+  <li>The first one defines the name of the <em>service declaration</em>, in which we find the (result) objects from the GraphQL schema.</li>
+  <li>The second one is the route to the file <em>with respect to the project root</em>.</li>
 </ul>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TemplateHaskell #-}</span>
 
 <span class="kr">import</span> <span class="nn">Mu.GraphQL.Quasi</span>
 
-<span class="n">graphql</span> <span class="s">"Schema"</span> <span class="s">"ServiceDefinition"</span> <span class="s">"schema.graphql"</span>
+<span class="n">graphql</span> <span class="s">"ServiceDefinition"</span> <span class="s">"schema.graphql"</span>
 </code></pre></div></div>
 
 <p>This might be surprising for people already used to GraphQL, the separation between input objects and enumerations, and the rest of the objects may seem quite artificial. However, this is needed because Mu-Haskell strongly separates those part of a service which only hold data, from those which may have some behavior associated with it (sometimes called <em>resolvers</em>).</p>
