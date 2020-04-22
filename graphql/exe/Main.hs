@@ -31,9 +31,9 @@ import           Mu.Schema
 import           Mu.Server
 
 #if __GHCIDE__
-graphql "GQLSchema" "ServiceDefinition" "graphql/exe/schema.graphql"
+graphql "ServiceDefinition" "graphql/exe/schema.graphql"
 #else
-graphql "GQLSchema" "ServiceDefinition" "exe/schema.graphql"
+graphql "ServiceDefinition" "exe/schema.graphql"
 #endif
 
 -- GraphQL App

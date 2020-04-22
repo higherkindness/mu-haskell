@@ -9,7 +9,8 @@ Read @.graphql@ files as a 'Mu.Schema.Definition.Schema'
 and 'Package' with one 'Service' per object in the schema.
 -}
 module Mu.GraphQL.Quasi (
-  graphql
+    graphql
+  , graphql'
 ) where
 
 import           Control.Monad.IO.Class        (liftIO)
@@ -28,8 +29,13 @@ import           Mu.Rpc
 import           Mu.Schema.Definition
 
 -- | Imports an graphql definition written in-line as a 'Schema'.
-graphql :: String -> String -> FilePath -> Q [Dec]
-graphql scName svName file = do
+graphql :: String -> FilePath -> Q [Dec]
+graphql name = graphql' (name <> "Schema") name
+
+-- | Imports an graphql definition written in-line as a 'Schema'.
+--   This version allows a custom name for the schema and the services.
+graphql' :: String -> String -> FilePath -> Q [Dec]
+graphql' scName svName file = do
   schema <- liftIO $ TIO.readFile file
   case parseTypeSysDefinition schema of
     Left e  -> fail ("could not parse graphql spec: " ++ show e)
