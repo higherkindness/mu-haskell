@@ -9,8 +9,8 @@ Read @.graphql@ files as a 'Mu.Schema.Definition.Schema'
 and 'Package' with one 'Service' per object in the schema.
 -}
 module Mu.GraphQL.Quasi (
-    graphql
-  , graphql'
+  graphql
+, graphql'
 ) where
 
 import           Control.Monad.IO.Class        (liftIO)
