@@ -28,13 +28,17 @@ import           Mu.GraphQL.Quasi.LostParser   (parseTypeSysDefinition)
 import           Mu.Rpc
 import           Mu.Schema.Definition
 
--- | Imports an graphql definition written in-line as a 'Schema'.
-graphql :: String -> FilePath -> Q [Dec]
+-- | Imports an GraphQL schema definition from a file.
+graphql :: String   -- ^ Name for the 'Package' type, the 'Schema' is derived from it
+        -> FilePath -- ^ Route to the file
+        -> Q [Dec]
 graphql name = graphql' (name <> "Schema") name
 
--- | Imports an graphql definition written in-line as a 'Schema'.
---   This version allows a custom name for the schema and the services.
-graphql' :: String -> String -> FilePath -> Q [Dec]
+-- | Imports an GraphQL schema definition from a file.
+graphql' :: String   -- ^ Name for the 'Schema' type
+         -> String   -- ^ Name for the 'Package' type
+         -> FilePath -- ^ Route to the file
+         -> Q [Dec]
 graphql' scName svName file = do
   schema <- liftIO $ TIO.readFile file
   case parseTypeSysDefinition schema of
