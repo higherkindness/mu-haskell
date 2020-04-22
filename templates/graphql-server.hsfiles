@@ -76,7 +76,7 @@ import           Mu.GraphQL.Server
 import           Mu.Schema
 import           Mu.Server
 
-graphql "MySchema" "ServiceDefinition" "schema.graphql"
+graphql "ServiceDefinition" "schema.graphql"
 
 -- GraphQL App
 

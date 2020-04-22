@@ -33,16 +33,15 @@ type Author {
 
 The first step is to import this schema as a type-level definition for Mu. The `graphql` function takes three arguments:
 
-* The first one defines the name of the *schema* type, which includes the enumerations and the input objects in the schema.
-* The second one defines the name of the *service declaration*, in which we find the (result) objects from the GraphQL schema.
-* The third argument is the route to the file *with respect to the project root*.
+* The first one defines the name of the *service declaration*, in which we find the (result) objects from the GraphQL schema.
+* The second one is the route to the file *with respect to the project root*.
 
 ```haskell
 {-# language TemplateHaskell #-}
 
 import Mu.GraphQL.Quasi
 
-graphql "Schema" "ServiceDefinition" "schema.graphql"
+graphql "ServiceDefinition" "schema.graphql"
 ```
 
 This might be surprising for people already used to GraphQL, the separation between input objects and enumerations, and the rest of the objects may seem quite artificial. However, this is needed because Mu-Haskell strongly separates those part of a service which only hold data, from those which may have some behavior associated with it (sometimes called *resolvers*).
