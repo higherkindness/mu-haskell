@@ -20,7 +20,7 @@ After doing this you'll have a compiling project with all the dependencies in pl
 
 ## Defining your GraphQL Schema
 
-The template will generate a `schema.graphql` file with a basic "hello" query, feel free to change it with your domain types. For the sake of this intro we'll use our beloved library example from the Apollo GraphQL docs:
+The template will generate a `schema.graphql` file with a basic "hello" query, feel free to change it with your domain types. For the sake of this intro we'll use our beloved library example from the [Apollo GraphQL docs](https://www.apollographql.com/docs/apollo-server/schema/schema/):
 
 ```graphql
 type Book {
@@ -39,7 +39,7 @@ type Query {
 }
 ```
 
-This simple schema defines **three types: a book, an author, and a query**. All GraphQL APIs have a query type which defines all the possible queries you can ask. In our case, we have a query asking for all the authors in the library and another one for all the books, simple. 📚
+This schema defines **three types: a book, an author, and a query**. All GraphQL APIs have a query type which defines all the possible queries you can ask. In our case, we have a query asking for all the authors in the library and another one for all the books. 📚 The exclamation marks all over the place (`!`) in GraphQL mean that the data is required to be returned, removing those would result in a `Maybe type` in Haskell! 😉
 
 ## Implementing the GraphQL Server
 
@@ -165,10 +165,12 @@ allBooks = pure [(author, title) | (author, books) <- library, title <- books]
 
 What is that `m` that appears everywhere? Well, since we are using `ScopedTypeVariables`, that `m` refers to the above typeclass constrain `MonadServer m`. That is also why we need to lift with `pure` all of our results into the `MonadServer`.
 
+We tend to put all those resolver functions in a `where` block, but of course you are free to move them around wherever you want! 😉
+
 ## Where to go from here
 
 Here's a [more complete example](https://github.com/higherkindness/mu-haskell/tree/master/graphql/exe) of how a finished server looks like.
 
 If you are confused or you'd like to know more about how this all works, have a look at our [GraphQL docs](https://higherkindness.io/mu-haskell/graphql/), or feel free to [open an issue](https://github.com/higherkindness/mu-haskell/issues) in the repo and we'll be happy to help!
 
-Happy hacking! 🚀
+Happy hacking! 🔥
