@@ -20,7 +20,7 @@ After doing this you'll have a compiling project with all the dependencies in pl
 
 ## Defining your GraphQL Schema
 
-The template will generate a `schema.graphql` file with a basic "hello" query, feel free to change it with your domain types. For the sake of this intro we'll use our beloved library example from the [Apollo GraphQL docs](https://www.apollographql.com/docs/apollo-server/schema/schema/):
+The template will generate a `schema.graphql` file with a basic "hello" query, feel free to change it with your domain types. For the sake of this intro we'll use the library example from the [Apollo GraphQL docs](https://www.apollographql.com/docs/apollo-server/schema/schema/):
 
 ```graphql
 type Book {
@@ -165,7 +165,7 @@ allBooks = pure [(author, title) | (author, books) <- library, title <- books]
 
 What is that `m` that appears everywhere? Well, since we are using `ScopedTypeVariables`, that `m` refers to the above typeclass constrain `MonadServer m`. That is also why we need to lift with `pure` all of our results into the `MonadServer`.
 
-We tend to put all those resolver functions in a `where` block, but of course you are free to move them around wherever you want! 😉
+We tend to put all those resolver functions in a `where` block, but of course you are free to move them around wherever you want! 😜
 
 ## Where to go from here
 
