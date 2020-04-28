@@ -130,7 +130,35 @@ The final touch is to start the GraphQL server defined by `libraryServer`. The `
 main = runGraphQLAppQuery 8080 libraryServer (Proxy @"Query")
 ```
 
+## Mutations
+
+Queries are not the only [operation](https://graphql.github.io/learn/queries/#operation-name) supported by GraphQL. The next simpler one are *mutations*. The format of requests to the server do not change between them both, but the semantics do, as hinted by their names: whereas queries are intended for requests which do not change the underlying data, mutations are the converse.
+
+Unfortunately, we cannot guarantee those properties in the Mu handlers: in both cases we can perform any operation allowed by `IO`. The bright side is that implementing the mutation part of a GraphQL schema looks exactly like implementing the query part. The only difference is that we can no longer use the `runGraphQLAppQuery` function to start the server, we need to use the more complex variant in which you specify the names of query, mutations, and subscription types.
+
+```haskell
+main = runGraphQLApp 8080 libraryServer
+         (Proxy @('Just "Query"))
+         (Proxy @('Just "Mutation"))
+         (Proxy @Nothing)
+```
+
+GraphQL does not mandate for any of these sections to be present, hence the use of a (type-level) `Maybe` to indicate whether the corresponding operation is present or absent.
+
 ## Subscriptions as streams
+
+The third type of operations are _subscriptions_. In contrast to queries and mutations, which return a single value, subscriptions keep an open connection from which a stream of values can be obtained. Within Mu, these streams are represented using [Conduit](https://github.com/snoyberg/conduit). In particular, a subscription resolver gets an additional _sink_ argument to which you should write the returned values.
+
+For example, let's create a version of `allBooks` which produces a stream of books instead of a single list. As discussed above, the argument is the sink to where elements must be "dumped".
+
+```haskell
+allBooksStream :: ConduitM (BookId, AuthorId) Void m () -> m ()
+allBooksStream sink = runConduit $ yieldMany allBooks .| sink
+```
+
+We do not want to repeat here the awesome [Conduit tutorial](https://github.com/snoyberg/conduit#synopsis), so we shall give just a few strokes of how it works. The `yieldMany` combinator simply takes a list and turns it into a stream. Then we connect that stream to the provided `sink` by means of `(.|)`. All this on itself does nothing: a Conduit is just a description of a computation. To really execute it, we wrap everything on `runConduit`.
+
+Of course, in real code you would not just return a list. The Conduit ecosystem has adapter to the file system, [databases]({% link docs/db.md %}), messaging queues, and many others.
 
 ## Comparison with other libraries
 
