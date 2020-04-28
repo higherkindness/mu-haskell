@@ -430,6 +430,169 @@
     <div class="doc-content">
         <h1 id="introduction-to-mu-haskell-for-graphql">Introduction to Mu-Haskell for GraphQL</h1>
 
+<p>This document will help you get started in writing your first GraphQL server using Mu-Haskell and <code class="highlighter-rouge">mu-graphql</code>!</p>
+
+<h2 id="using-the-stack-template">Using the Stack template</h2>
+
+<p>First of all, we’ve prepared a Stack template to boostrap your project easily, just run:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>stack new your-project https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/graphql-server.hsfiles <span class="nt">-p</span> <span class="s2">"author-email:haskell.curry@47deg.com"</span> <span class="nt">-p</span> <span class="s2">"author-name:Haskell Curry"</span>
+</code></pre></div></div>
+
+<p>After doing this you’ll have a compiling project with all the dependencies in place and a simple <code class="highlighter-rouge">Main.hs</code> file created.</p>
+
+<h2 id="defining-your-graphql-schema">Defining your GraphQL Schema</h2>
+
+<p>The template will generate a <code class="highlighter-rouge">schema.graphql</code> file with a basic “hello” query, feel free to change it with your domain types. For the sake of this intro we’ll use the library example from the <a href="https://www.apollographql.com/docs/apollo-server/schema/schema/">Apollo GraphQL docs</a>:</p>
+
+<div class="language-graphql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="w"> </span><span class="n">Book</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">title</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">!</span><span class="w">
+  </span><span class="n">author</span><span class="p">:</span><span class="w"> </span><span class="n">Author</span><span class="p">!</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="k">type</span><span class="w"> </span><span class="n">Author</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">!</span><span class="w">
+  </span><span class="n">books</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="n">Book</span><span class="p">!]!</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="k">type</span><span class="w"> </span><span class="n">Query</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">authors</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="n">Author</span><span class="p">!]!</span><span class="w">
+  </span><span class="n">books</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="n">Book</span><span class="p">!]!</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>This schema defines <strong>three types: a book, an author, and a query</strong>. All GraphQL APIs have a query type which defines all the possible queries you can ask. In our case, we have a query asking for all the authors in the library and another one for all the books. 📚 The exclamation marks all over the place (<code class="highlighter-rouge">!</code>) in GraphQL mean that the data is required to be returned, removing those would result in a <code class="highlighter-rouge">Maybe type</code> in Haskell! 😉</p>
+
+<h2 id="implementing-the-graphql-server">Implementing the GraphQL Server</h2>
+
+<p>Now let’s have a look at the already finished <code class="highlighter-rouge">src/Main.hs</code> and we’ll go bit by bit explaining what is going on:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">graphql</span> <span class="s">"ServiceDefinition"</span> <span class="s">"schema.graphql"</span>
+
+<span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">main</span> <span class="o">=</span> <span class="kr">do</span>
+  <span class="n">putStrLn</span> <span class="s">"starting GraphQL server on port 8080"</span>
+  <span class="n">runGraphQLAppQuery</span> <span class="mi">8080</span> <span class="n">server</span> <span class="p">(</span><span class="kt">Proxy</span> <span class="o">@</span><span class="s">"Query"</span><span class="p">)</span>
+
+<span class="kr">type</span> <span class="kt">ServiceMapping</span> <span class="o">=</span> <span class="sc">'[</span><span class="err">
+ </span>   <span class="s">"Book"</span>   <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="p">(</span><span class="kt">Text</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)</span>
+  <span class="p">,</span> <span class="s">"Author"</span> <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="kt">Text</span>
+  <span class="p">]</span>
+
+<span class="n">library</span> <span class="o">::</span> <span class="p">[(</span><span class="kt">Text</span><span class="p">,</span> <span class="p">[</span><span class="kt">Text</span><span class="p">])]</span>
+<span class="n">library</span>
+  <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span class="s">"Robert Louis Stevenson"</span><span class="p">,</span> <span class="p">[</span><span class="s">"Treasure Island"</span><span class="p">,</span> <span class="s">"Strange Case of Dr Jekyll and Mr Hyde"</span><span class="p">])</span>
+    <span class="p">,</span> <span class="p">(</span><span class="s">"Immanuel Kant"</span><span class="p">,</span> <span class="p">[</span><span class="s">"Critique of Pure Reason"</span><span class="p">])</span>
+    <span class="p">,</span> <span class="p">(</span><span class="s">"Michael Ende"</span><span class="p">,</span> <span class="p">[</span><span class="s">"The Neverending Story"</span><span class="p">,</span> <span class="s">"Momo"</span><span class="p">])</span>
+    <span class="p">]</span>
+
+<span class="n">server</span> <span class="o">::</span> <span class="n">forall</span> <span class="n">m</span><span class="o">.</span> <span class="kt">MonadServer</span> <span class="n">m</span> <span class="o">=&gt;</span> <span class="kt">ServerT</span> <span class="kt">ServiceMapping</span> <span class="kt">ServiceDefinition</span> <span class="n">m</span> <span class="kr">_</span>
+<span class="n">server</span> <span class="o">=</span> <span class="n">resolver</span>
+  <span class="p">(</span> <span class="n">object</span> <span class="o">@</span><span class="s">"Book"</span>
+    <span class="p">(</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"title"</span>  <span class="n">bookTitle</span>
+    <span class="p">,</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"author"</span> <span class="n">bookAuthor</span> <span class="p">)</span>
+  <span class="p">,</span> <span class="n">object</span> <span class="o">@</span><span class="s">"Author"</span>
+    <span class="p">(</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"name"</span>  <span class="n">authorName</span>
+    <span class="p">,</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"books"</span> <span class="n">authorBooks</span> <span class="p">)</span>
+  <span class="p">,</span> <span class="n">object</span> <span class="o">@</span><span class="s">"Query"</span>
+    <span class="p">(</span> <span class="n">method</span> <span class="o">@</span><span class="s">"authors"</span> <span class="n">allAuthors</span>
+    <span class="p">,</span> <span class="n">method</span> <span class="o">@</span><span class="s">"books"</span>   <span class="n">allBooks</span> <span class="p">)</span>
+  <span class="p">)</span>
+  <span class="kr">where</span>
+    <span class="n">bookTitle</span> <span class="o">::</span> <span class="p">(</span><span class="kt">Text</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Text</span>
+    <span class="n">bookTitle</span> <span class="p">(</span><span class="kr">_</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span> <span class="o">=</span> <span class="n">pure</span> <span class="n">title</span>
+    <span class="n">bookAuthor</span> <span class="o">::</span> <span class="p">(</span><span class="kt">Text</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Text</span>
+    <span class="n">bookAuthor</span> <span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="kr">_</span><span class="p">)</span> <span class="o">=</span> <span class="n">pure</span> <span class="n">auth</span>
+
+    <span class="n">authorName</span> <span class="o">::</span> <span class="kt">Text</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Text</span>
+    <span class="n">authorName</span> <span class="o">=</span> <span class="n">pure</span>
+    <span class="n">authorBooks</span> <span class="o">::</span> <span class="kt">Text</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="p">[(</span><span class="kt">Text</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)]</span>
+    <span class="n">authorBooks</span> <span class="n">name</span> <span class="o">=</span> <span class="n">pure</span> <span class="o">$</span> <span class="p">(</span><span class="n">name</span><span class="p">,)</span> <span class="o">&lt;$&gt;</span> <span class="n">maybe</span> <span class="kt">[]</span> <span class="n">snd</span> <span class="p">(</span><span class="n">find</span> <span class="p">((</span><span class="o">==</span><span class="n">name</span><span class="p">)</span> <span class="o">.</span> <span class="n">fst</span><span class="p">)</span> <span class="n">library</span><span class="p">)</span>
+
+    <span class="n">allAuthors</span> <span class="o">::</span> <span class="n">m</span> <span class="p">[</span><span class="kt">Text</span><span class="p">]</span>
+    <span class="n">allAuthors</span> <span class="o">=</span> <span class="n">pure</span> <span class="o">$</span> <span class="n">fst</span> <span class="o">&lt;$&gt;</span> <span class="n">library</span>
+    <span class="n">allBooks</span> <span class="o">::</span> <span class="n">m</span> <span class="p">[(</span><span class="kt">Text</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)]</span>
+    <span class="n">allBooks</span> <span class="o">=</span> <span class="n">pure</span> <span class="p">[(</span><span class="n">author</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">author</span><span class="p">,</span> <span class="n">books</span><span class="p">)</span> <span class="o">&lt;-</span> <span class="n">library</span><span class="p">,</span> <span class="n">title</span> <span class="o">&lt;-</span> <span class="n">books</span><span class="p">]</span>
+</code></pre></div></div>
+
+<h2 id="schema-generation-explained">Schema generation explained</h2>
+
+<p>Notice this important line:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">graphql</span> <span class="s">"ServiceDefinition"</span> <span class="s">"schema.graphql"</span>
+</code></pre></div></div>
+
+<p>This is where your <code class="highlighter-rouge">schema.graphql</code> file gets converted to a type-level expression that represents your Schema in terms of Mu-Haskell. Here, we’re assigning the new schema the name <code class="highlighter-rouge">ServiceDefinition</code>, which will be later use in the next section below.</p>
+
+<h2 id="server-declaration-explained">Server declaration explained</h2>
+
+<p>As you’ve seen, we declare the GraphQL server the following way:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">server</span> <span class="o">::</span> <span class="n">forall</span> <span class="n">m</span><span class="o">.</span> <span class="kt">MonadServer</span> <span class="n">m</span> <span class="o">=&gt;</span> <span class="kt">ServerT</span> <span class="kt">ServiceMapping</span> <span class="kt">ServiceDefinition</span> <span class="n">m</span> <span class="kr">_</span>
+<span class="n">server</span> <span class="o">=</span> <span class="n">resolver</span>
+  <span class="p">(</span> <span class="n">object</span> <span class="o">@</span><span class="s">"Book"</span>
+    <span class="p">(</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"title"</span>  <span class="n">bookTitle</span>
+    <span class="p">,</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"author"</span> <span class="n">bookAuthor</span> <span class="p">)</span>
+  <span class="p">,</span> <span class="n">object</span> <span class="o">@</span><span class="s">"Author"</span>
+    <span class="p">(</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"name"</span>  <span class="n">authorName</span>
+    <span class="p">,</span> <span class="n">field</span>  <span class="o">@</span><span class="s">"books"</span> <span class="n">authorBooks</span> <span class="p">)</span>
+  <span class="p">,</span> <span class="n">object</span> <span class="o">@</span><span class="s">"Query"</span>
+    <span class="p">(</span> <span class="n">method</span> <span class="o">@</span><span class="s">"authors"</span> <span class="n">allAuthors</span>
+    <span class="p">,</span> <span class="n">method</span> <span class="o">@</span><span class="s">"books"</span>   <span class="n">allBooks</span> <span class="p">)</span>
+  <span class="p">)</span>
+</code></pre></div></div>
+
+<p>Here we use the given name <code class="highlighter-rouge">ServiceMapping</code> for the type-level generated GraphQL Schema that we’ve created for you!</p>
+
+<p>To declare the server, you need provide a resolver for each field, using the <code class="highlighter-rouge">object</code> and <code class="highlighter-rouge">field</code> functions. Use <code class="highlighter-rouge">method</code> for the fields in “Query”, since it’s a special case for us (you can read more about <a href="https://higherkindness.io/mu-haskell/graphql/#implementing-the-server">why here</a>).</p>
+
+<blockquote>
+  <p>The ordering here is casual, you can declare each type wherever you like (as long as it is inside of the same tuple, of course) and it will still work! 🎉</p>
+</blockquote>
+
+<h2 id="servicemapping-explained"><code class="highlighter-rouge">ServiceMapping</code> explained</h2>
+
+<p>You might have noticed this strange piece of code:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">ServiceMapping</span> <span class="o">=</span> <span class="sc">'[</span><span class="err">
+ </span>   <span class="s">"Book"</span>   <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="p">(</span><span class="kt">Text</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)</span>
+  <span class="p">,</span> <span class="s">"Author"</span> <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="kt">Text</span>
+  <span class="p">]</span>
+</code></pre></div></div>
+
+<p>This is where we establish the <em>relationship</em> between the types. You may have notice that the GraphQL schema contained <strong>recursive</strong> references for the types, that is OK both for GraphQL and for Haskell, but it would not be the case for <em>other languages!</em></p>
+
+<h2 id="resolvers-explained">Resolvers explained</h2>
+
+<p>Now let’s get to the meat. Although GraphQL will use the least amount of calls possible to find the result to your query, you need to provide “paths” or roads to every possible piece of your data. Although the example here is a hardcoded list, it could be anything ranging from a text file to a fully-fledged database! 🚀</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bookTitle</span> <span class="o">::</span> <span class="p">(</span><span class="kt">Text</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Text</span>
+<span class="n">bookTitle</span> <span class="p">(</span><span class="kr">_</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span> <span class="o">=</span> <span class="n">pure</span> <span class="n">title</span>
+<span class="n">bookAuthor</span> <span class="o">::</span> <span class="p">(</span><span class="kt">Text</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Text</span>
+<span class="n">bookAuthor</span> <span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="kr">_</span><span class="p">)</span> <span class="o">=</span> <span class="n">pure</span> <span class="n">auth</span>
+
+<span class="n">authorName</span> <span class="o">::</span> <span class="kt">Text</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">Text</span>
+<span class="n">authorName</span> <span class="o">=</span> <span class="n">pure</span>
+<span class="n">authorBooks</span> <span class="o">::</span> <span class="kt">Text</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="p">[(</span><span class="kt">Text</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)]</span>
+<span class="n">authorBooks</span> <span class="n">name</span> <span class="o">=</span> <span class="n">pure</span> <span class="o">$</span> <span class="p">(</span><span class="n">name</span><span class="p">,)</span> <span class="o">&lt;$&gt;</span> <span class="n">maybe</span> <span class="kt">[]</span> <span class="n">snd</span> <span class="p">(</span><span class="n">find</span> <span class="p">((</span><span class="o">==</span><span class="n">name</span><span class="p">)</span> <span class="o">.</span> <span class="n">fst</span><span class="p">)</span> <span class="n">library</span><span class="p">)</span>
+
+<span class="n">allAuthors</span> <span class="o">::</span> <span class="n">m</span> <span class="p">[</span><span class="kt">Text</span><span class="p">]</span>
+<span class="n">allAuthors</span> <span class="o">=</span> <span class="n">pure</span> <span class="o">$</span> <span class="n">fst</span> <span class="o">&lt;$&gt;</span> <span class="n">library</span>
+<span class="n">allBooks</span> <span class="o">::</span> <span class="n">m</span> <span class="p">[(</span><span class="kt">Text</span><span class="p">,</span> <span class="kt">Text</span><span class="p">)]</span>
+<span class="n">allBooks</span> <span class="o">=</span> <span class="n">pure</span> <span class="p">[(</span><span class="n">author</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">author</span><span class="p">,</span> <span class="n">books</span><span class="p">)</span> <span class="o">&lt;-</span> <span class="n">library</span><span class="p">,</span> <span class="n">title</span> <span class="o">&lt;-</span> <span class="n">books</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>What is that <code class="highlighter-rouge">m</code> that appears everywhere? Well, since we are using <code class="highlighter-rouge">ScopedTypeVariables</code>, that <code class="highlighter-rouge">m</code> refers to the above typeclass constrain <code class="highlighter-rouge">MonadServer m</code>. That is also why we need to lift with <code class="highlighter-rouge">pure</code> all of our results into the <code class="highlighter-rouge">MonadServer</code>.</p>
+
+<p>We tend to put all those resolver functions in a <code class="highlighter-rouge">where</code> block, but of course you are free to move them around wherever you want! 😜</p>
+
+<h2 id="where-to-go-from-here">Where to go from here</h2>
+
+<p>Here’s a <a href="https://github.com/higherkindness/mu-haskell/tree/master/graphql/exe">more complete example</a> of how a finished server looks like.</p>
+
+<p>If you are confused or you’d like to know more about how this all works, have a look at our <a href="https://higherkindness.io/mu-haskell/graphql/">GraphQL docs</a>, or feel free to <a href="https://github.com/higherkindness/mu-haskell/issues">open an issue</a> in the repo and we’ll be happy to help!</p>
+
+<p>Happy hacking! 🔥</p>
 
     </div>
 </main>
