@@ -99,14 +99,40 @@
       
 
     <div class="sidebar-menu-item  ">
-      
-      <a
-        href="/mu-haskell/intro/"
-        class=""
-        title="Introduction"
+       
+      <button
+        type="button"
+        title="Open Introduction"
+        class="button drop-nested"
       >
         Introduction
-      </a>
+      </button>
+      <div class="caret"></div>
+      
+
+      <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/intro-rpc/"
+          title="For RPC"
+        >
+          For RPC
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/intro-graphql/"
+          title="For GraphQL"
+        >
+          For GraphQL
+        </a>
+        
+      </div>
       
     </div>
     
@@ -158,6 +184,16 @@
           Registry
         </a>
         
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/optics/"
+          title="Mu-Optics"
+        >
+          Mu-Optics
+        </a>
+        
       </div>
       
     </div>
@@ -180,10 +216,10 @@
        
       <a
         href="/mu-haskell/rpc/"
-        title="Services and servers"
+        title="RPC services"
         class="drop-nested"
       >
-        Services and servers
+        RPC services
       </a>
       <div class="caret"></div>
       
@@ -194,33 +230,49 @@
         
         <a
           class=""
-          href="/mu-haskell/grpc/"
-          title="gRPC"
+          href="/mu-haskell/grpc/server/"
+          title="gRPC servers"
         >
-          gRPC
+          gRPC servers
         </a>
         
         
         
         <a
           class=""
-          href="/mu-haskell/stream/"
-          title="Streams"
+          href="/mu-haskell/grpc/client/"
+          title="gRPC clients"
         >
-          Streams
-        </a>
-        
-        
-        
-        <a
-          class=""
-          href="/mu-haskell/db/"
-          title="Databases"
-        >
-          Databases
+          gRPC clients
         </a>
         
       </div>
+      
+    </div>
+    
+
+      
+      
+      
+      
+
+      
+      
+      
+
+      
+
+      
+
+    <div class="sidebar-menu-item  ">
+      
+      <a
+        href="/mu-haskell/graphql/"
+        class=""
+        title="GraphQL services"
+      >
+        GraphQL services
+      </a>
       
     </div>
     
@@ -251,6 +303,16 @@
       
 
       <div class="sub-menu">
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/db/"
+          title="Databases"
+        >
+          Databases
+        </a>
         
         
         
@@ -390,16 +452,14 @@
 
 <p>This asks the compiler to load the <code class="highlighter-rouge">defn.proto</code> file in order to create a series of (Haskell) types. The first one, which is called <code class="highlighter-rouge">"Schema"</code>, as the first argument shows, includes the definition of all the schema types. Then, for every service defined in the file (since <code class="highlighter-rouge">.proto</code> files may have more than one), the second function is applied to obtain the name of the corresponding Haskell type. In this case we want to use the same names, so we use the identity function.</p>
 
-<p>When defining the conversion, it is important for <code class="highlighter-rouge">FromSchema</code> and <code class="highlighter-rouge">ToSchema</code> to receive <code class="highlighter-rouge">Maybe</code> as first argument:</p>
-
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">PersonMsg</span>
-  <span class="o">=</span> <span class="kt">PersonMsg</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">Maybe</span> <span class="kt">Text</span><span class="p">,</span> <span class="n">age</span> <span class="o">::</span> <span class="kt">Maybe</span> <span class="kt">Int</span> <span class="p">}</span>
+  <span class="o">=</span> <span class="kt">PersonMsg</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">Text</span><span class="p">,</span> <span class="n">age</span> <span class="o">::</span> <span class="kt">Int</span> <span class="p">}</span>
   <span class="kr">deriving</span> <span class="p">(</span> <span class="kt">Eq</span><span class="p">,</span> <span class="kt">Show</span><span class="p">,</span> <span class="kt">Ord</span><span class="p">,</span> <span class="kt">Generic</span>
-           <span class="p">,</span> <span class="kt">ToSchema</span>   <span class="kt">Maybe</span> <span class="kt">Schema</span> <span class="s">"Person"</span>
-           <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Maybe</span> <span class="kt">Schema</span> <span class="s">"Person"</span> <span class="p">)</span>
+           <span class="p">,</span> <span class="kt">ToSchema</span>   <span class="kt">Schema</span> <span class="s">"Person"</span>
+           <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Schema</span> <span class="s">"Person"</span> <span class="p">)</span>
 </code></pre></div></div>
 
-<p>This indicates that every field in the record should we wrapped by a <code class="highlighter-rouge">Maybe</code> layer. This is required because Protocol Buffers version 3 mandates all fields to be optional. This also means that every field in your Haskell types must be wrapped in that <code class="highlighter-rouge">Maybe</code> layer.</p>
+<p>Protocol Buffers version 3 has complicated rules about when a field may or may not appear in the message. For example it is not possible to distinguish whether the empty string is to be transmitted, or that field is missing. In that case, deserialization from a Protocol Buffers message returns the default value. However, for references to other message we can spot the difference, so those references <em>must</em> be wrapped in a <code class="highlighter-rouge">Maybe</code>.</p>
 
 <p>Finally, when starting a server or client you must provide <code class="highlighter-rouge">msgProtoBuf</code> as argument. For example, a server is started by running:</p>
 
@@ -418,15 +478,13 @@
 
 <p>Each <code class="highlighter-rouge">.avdl</code> file defines just one protocol, so instead of a function like in the case of Protocol Buffers, the second argument is simply the name of the Haskell type to create. But you might have noticed that there’s an additional argument, which in this case is <code class="highlighter-rouge">"."</code>. The reason for this argument is that <code class="highlighter-rouge">.avdl</code> files routinely <em>import</em> other files. This third argument indicates the <em>base directory</em> to search for those files.</p>
 
-<p>The conversion is almost identical to Protocol Buffers too, except that instead of <code class="highlighter-rouge">Maybe</code> you have to use <code class="highlighter-rouge">Identity</code>. This is because Avro makes fields <em>required</em> by default, so there’s no need to have an additional <code class="highlighter-rouge">Maybe</code> layer. Of course, those fields which are optional (usually specified as a union with <code class="highlighter-rouge">null</code>) must still use <code class="highlighter-rouge">Maybe</code>:</p>
+<p>The conversion is almost identical to Protocol Buffers too. In Avro fields are required by default, only those fields which are optional (usually specified as a union with <code class="highlighter-rouge">null</code>) must still use <code class="highlighter-rouge">Maybe</code>:</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Data.Functor.Identity</span>
-
-<span class="kr">data</span> <span class="kt">PersonMsg</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">PersonMsg</span>
   <span class="o">=</span> <span class="kt">PersonMsg</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">Text</span><span class="p">,</span> <span class="n">age</span> <span class="o">::</span> <span class="kt">Int</span> <span class="p">}</span>
   <span class="kr">deriving</span> <span class="p">(</span> <span class="kt">Eq</span><span class="p">,</span> <span class="kt">Show</span><span class="p">,</span> <span class="kt">Ord</span><span class="p">,</span> <span class="kt">Generic</span>
-           <span class="p">,</span> <span class="kt">ToSchema</span>   <span class="kt">Identity</span> <span class="kt">Schema</span> <span class="s">"Person"</span>
-           <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Identity</span> <span class="kt">Schema</span> <span class="s">"Person"</span> <span class="p">)</span>
+           <span class="p">,</span> <span class="kt">ToSchema</span>   <span class="kt">Schema</span> <span class="s">"Person"</span>
+           <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Schema</span> <span class="s">"Person"</span> <span class="p">)</span>
 </code></pre></div></div>
 
 <p>Finally, when starting a server or client you must provide <code class="highlighter-rouge">msgAvro</code> as argument. For example, a server is started by running:</p>

@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# language FlexibleContexts #-}</span><span>
-</span><a name="line-2"></a><span class="hs-pragma">{-# language TypeFamilies     #-}</span><span>
-</span><a name="line-3"></a><span class="hs-pragma">{-# language TypeOperators    #-}</span><span>
-</span><a name="line-4"></a><span class="hs-comment">{-|
+</span><span id="line-2"></span><span class="hs-pragma">{-# language TypeFamilies     #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# language TypeOperators    #-}</span><span>
+</span><span id="line-4"></span><span class="hs-comment">{-|
 Description : Kafka consumers as streams of Mu terms
 
 This module allows you to receive values from
@@ -11,75 +11,353 @@ your Haskell types if a conversion exists.
 This module is a wrapper over 'Kafka.Conduit.Source'
 from the (awesome) package @hw-kafka-client@.
 -}</span><span>
-</span><a name="line-14"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Mu.Kafka.Consumer</span><span> </span><span class="hs-special">(</span><span>
-</span><a name="line-15"></a><span>  </span><a href="Mu.Kafka.Consumer.html#kafkaSource"><span class="hs-identifier hs-var">kafkaSource</span></a><span>
-</span><a name="line-16"></a><span class="hs-special">,</span><span> </span><a href="Mu.Kafka.Consumer.html#kafkaSourceNoClose"><span class="hs-identifier hs-var">kafkaSourceNoClose</span></a><span>
-</span><a name="line-17"></a><span class="hs-special">,</span><span> </span><a href="Mu.Kafka.Consumer.html#kafkaSourceAutoClose"><span class="hs-identifier hs-var">kafkaSourceAutoClose</span></a><span>
-</span><a name="line-18"></a><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">X</span><span>
-</span><a name="line-19"></a><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
-</span><a name="line-20"></a><span>
-</span><a name="line-21"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Conduit</span><span>                      </span><span class="hs-special">(</span><span class="hs-identifier hs-var">mapC</span><span class="hs-special">)</span><span>
-</span><a name="line-22"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Control.Monad.IO.Class</span><span>
-</span><a name="line-23"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Control.Monad.Trans.Resource</span><span>
-</span><a name="line-24"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data.Avro</span><span>                    </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">A</span><span>
-</span><a name="line-25"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.ByteString</span><span>
-</span><a name="line-26"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.Conduit</span><span>
-</span><a name="line-27"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.Functor.Identity</span><span>
-</span><a name="line-28"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Mu.Schema</span><span>
-</span><a name="line-29"></a><span>
-</span><a name="line-30"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Kafka.Conduit.Source</span><span>         </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">S</span><span>
-</span><a name="line-31"></a><span>
-</span><a name="line-32"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Kafka.Conduit.Combinators</span><span>    </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">X</span><span>
-</span><a name="line-33"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Kafka.Consumer</span><span>               </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">X</span><span>
-</span><a name="line-34"></a><span>
-</span><a name="line-35"></a><span class="hs-keyword">import</span><span>           </span><a href="Mu.Kafka.Internal.html"><span class="hs-identifier">Mu.Kafka.Internal</span></a><span>
-</span><a name="line-36"></a><span>
-</span><a name="line-37"></a><span class="hs-identifier">fromCR</span><span>
-</span><a name="line-38"></a><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-type">FromSchema</span><span> </span><span class="hs-identifier hs-type">Identity</span><span> </span><a href="#local-6989586621679083375"><span class="hs-identifier hs-type">sch</span></a><span> </span><a href="#local-6989586621679083376"><span class="hs-identifier hs-type">sty</span></a><span> </span><a href="#local-6989586621679083377"><span class="hs-identifier hs-type">t</span></a><span>
-</span><a name="line-39"></a><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">A.FromAvro</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Term</span><span> </span><span class="hs-identifier hs-type">Identity</span><span> </span><a href="#local-6989586621679083375"><span class="hs-identifier hs-type">sch</span></a><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">sch</span><span> </span><span class="hs-operator hs-type">:/:</span><span> </span><a href="#local-6989586621679083376"><span class="hs-identifier hs-type">sty</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
-</span><a name="line-40"></a><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-identifier hs-type">Proxy</span><span> </span><a href="#local-6989586621679083375"><span class="hs-identifier hs-type">sch</span></a><span>
-</span><a name="line-41"></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">ConsumerRecord</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">ByteString</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">ByteString</span><span class="hs-special">)</span><span>
-</span><a name="line-42"></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">ConsumerRecord</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">ByteString</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><a href="#local-6989586621679083377"><span class="hs-identifier hs-type">t</span></a><span class="hs-special">)</span><span>
-</span><a name="line-43"></a><a name="fromCR"><a href="Mu.Kafka.Consumer.html#fromCR"><span class="hs-identifier">fromCR</span></a></a><span> </span><a name="local-6989586621679083378"><a href="#local-6989586621679083378"><span class="hs-identifier">proxy</span></a></a><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">ConsumerRecord</span><span> </span><a name="local-6989586621679083379"><a href="#local-6989586621679083379"><span class="hs-identifier">t</span></a></a><span> </span><a name="local-6989586621679083380"><a href="#local-6989586621679083380"><span class="hs-identifier">p</span></a></a><span> </span><a name="local-6989586621679083381"><a href="#local-6989586621679083381"><span class="hs-identifier">o</span></a></a><span> </span><a name="local-6989586621679083382"><a href="#local-6989586621679083382"><span class="hs-identifier">ts</span></a></a><span> </span><a name="local-6989586621679083383"><a href="#local-6989586621679083383"><span class="hs-identifier">k</span></a></a><span> </span><a name="local-6989586621679083384"><a href="#local-6989586621679083384"><span class="hs-identifier">v</span></a></a><span class="hs-special">)</span><span>
-</span><a name="line-44"></a><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">ConsumerRecord</span><span> </span><a href="#local-6989586621679083379"><span class="hs-identifier hs-var">t</span></a><span> </span><a href="#local-6989586621679083380"><span class="hs-identifier hs-var">p</span></a><span> </span><a href="#local-6989586621679083381"><span class="hs-identifier hs-var">o</span></a><span> </span><a href="#local-6989586621679083382"><span class="hs-identifier hs-var">ts</span></a><span> </span><a href="#local-6989586621679083383"><span class="hs-identifier hs-var">k</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679083384"><span class="hs-identifier hs-var">v</span></a><span> </span><span class="hs-operator hs-var">&gt;&gt;=</span><span> </span><a href="Mu.Kafka.Internal.html#fromBS"><span class="hs-identifier hs-var">fromBS</span></a><span> </span><a href="#local-6989586621679083378"><span class="hs-identifier hs-var">proxy</span></a><span class="hs-special">)</span><span>
-</span><a name="line-45"></a><span>
-</span><a name="line-46"></a><span class="hs-comment">-- | Creates a kafka producer for given properties and returns a `Source`.</span><span>
-</span><a name="line-47"></a><span class="hs-comment">--</span><span>
-</span><a name="line-48"></a><span class="hs-comment">-- This method of creating a `Source` represents a simple case</span><span>
-</span><a name="line-49"></a><span class="hs-comment">-- and does not provide access to `KafkaProducer`. For more complex scenarious</span><span>
-</span><a name="line-50"></a><span class="hs-comment">-- 'kafkaSinkNoClose' or 'kafkaSinkAutoClose' can be used.</span><span>
-</span><a name="line-51"></a><span class="hs-identifier">kafkaSource</span><span>
-</span><a name="line-52"></a><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-type">MonadResource</span><span> </span><a href="#local-6989586621679083074"><span class="hs-identifier hs-type">m</span></a><span>
-</span><a name="line-53"></a><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">FromSchema</span><span> </span><span class="hs-identifier hs-type">Identity</span><span> </span><a href="#local-6989586621679083075"><span class="hs-identifier hs-type">sch</span></a><span> </span><a href="#local-6989586621679083076"><span class="hs-identifier hs-type">sty</span></a><span> </span><a href="#local-6989586621679083077"><span class="hs-identifier hs-type">t</span></a><span>
-</span><a name="line-54"></a><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">A.FromAvro</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Term</span><span> </span><span class="hs-identifier hs-type">Identity</span><span> </span><a href="#local-6989586621679083075"><span class="hs-identifier hs-type">sch</span></a><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">sch</span><span> </span><span class="hs-operator hs-type">:/:</span><span> </span><a href="#local-6989586621679083076"><span class="hs-identifier hs-type">sty</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
-</span><a name="line-55"></a><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-identifier hs-type">Proxy</span><span> </span><a href="#local-6989586621679083075"><span class="hs-identifier hs-type">sch</span></a><span>
-</span><a name="line-56"></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">ConsumerProperties</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">Subscription</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">Timeout</span><span>
-</span><a name="line-57"></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">ConduitT</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Either</span><span> </span><span class="hs-identifier hs-type">KafkaError</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">ConsumerRecord</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">ByteString</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><a href="#local-6989586621679083077"><span class="hs-identifier hs-type">t</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679083074"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><a name="line-58"></a><a name="kafkaSource"><a href="Mu.Kafka.Consumer.html#kafkaSource"><span class="hs-identifier">kafkaSource</span></a></a><span> </span><a name="local-6989586621679083385"><a href="#local-6989586621679083385"><span class="hs-identifier">proxy</span></a></a><span> </span><a name="local-6989586621679083386"><a href="#local-6989586621679083386"><span class="hs-identifier">props</span></a></a><span> </span><a name="local-6989586621679083387"><a href="#local-6989586621679083387"><span class="hs-identifier">sub</span></a></a><span> </span><a name="local-6989586621679083388"><a href="#local-6989586621679083388"><span class="hs-identifier">ts</span></a></a><span> </span><span class="hs-glyph">=</span><span>
-</span><a name="line-59"></a><span>  </span><span class="hs-identifier hs-var">S.kafkaSource</span><span> </span><a href="#local-6989586621679083386"><span class="hs-identifier hs-var">props</span></a><span> </span><a href="#local-6989586621679083387"><span class="hs-identifier hs-var">sub</span></a><span> </span><a href="#local-6989586621679083388"><span class="hs-identifier hs-var">ts</span></a><span> </span><span class="hs-operator hs-var">.|</span><span> </span><span class="hs-identifier hs-var">mapC</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">fmap</span><span> </span><span class="hs-special">(</span><a href="Mu.Kafka.Consumer.html#fromCR"><span class="hs-identifier hs-var">fromCR</span></a><span> </span><a href="#local-6989586621679083385"><span class="hs-identifier hs-var">proxy</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><a name="line-60"></a><span>
-</span><a name="line-61"></a><span class="hs-comment">-- | Create a `Source` for a given `KafkaConsumer`.</span><span>
-</span><a name="line-62"></a><span class="hs-comment">-- The consumer will NOT be closed automatically when the `Source` is closed.</span><span>
-</span><a name="line-63"></a><span class="hs-identifier">kafkaSourceNoClose</span><span>
-</span><a name="line-64"></a><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-type">MonadIO</span><span> </span><a href="#local-6989586621679083070"><span class="hs-identifier hs-type">m</span></a><span>
-</span><a name="line-65"></a><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">FromSchema</span><span> </span><span class="hs-identifier hs-type">Identity</span><span> </span><a href="#local-6989586621679083071"><span class="hs-identifier hs-type">sch</span></a><span> </span><a href="#local-6989586621679083072"><span class="hs-identifier hs-type">sty</span></a><span> </span><a href="#local-6989586621679083073"><span class="hs-identifier hs-type">t</span></a><span>
-</span><a name="line-66"></a><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">A.FromAvro</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Term</span><span> </span><span class="hs-identifier hs-type">Identity</span><span> </span><a href="#local-6989586621679083071"><span class="hs-identifier hs-type">sch</span></a><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">sch</span><span> </span><span class="hs-operator hs-type">:/:</span><span> </span><a href="#local-6989586621679083072"><span class="hs-identifier hs-type">sty</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
-</span><a name="line-67"></a><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-identifier hs-type">Proxy</span><span> </span><a href="#local-6989586621679083071"><span class="hs-identifier hs-type">sch</span></a><span>
-</span><a name="line-68"></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">KafkaConsumer</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">Timeout</span><span>
-</span><a name="line-69"></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">ConduitT</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Either</span><span> </span><span class="hs-identifier hs-type">KafkaError</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">ConsumerRecord</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">ByteString</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><a href="#local-6989586621679083073"><span class="hs-identifier hs-type">t</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679083070"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><a name="line-70"></a><a name="kafkaSourceNoClose"><a href="Mu.Kafka.Consumer.html#kafkaSourceNoClose"><span class="hs-identifier">kafkaSourceNoClose</span></a></a><span> </span><a name="local-6989586621679083615"><a href="#local-6989586621679083615"><span class="hs-identifier">proxy</span></a></a><span> </span><a name="local-6989586621679083616"><a href="#local-6989586621679083616"><span class="hs-identifier">c</span></a></a><span> </span><a name="local-6989586621679083617"><a href="#local-6989586621679083617"><span class="hs-identifier">t</span></a></a><span>
-</span><a name="line-71"></a><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">S.kafkaSourceNoClose</span><span> </span><a href="#local-6989586621679083616"><span class="hs-identifier hs-var">c</span></a><span> </span><a href="#local-6989586621679083617"><span class="hs-identifier hs-var">t</span></a><span> </span><span class="hs-operator hs-var">.|</span><span> </span><span class="hs-identifier hs-var">mapC</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">fmap</span><span> </span><span class="hs-special">(</span><a href="Mu.Kafka.Consumer.html#fromCR"><span class="hs-identifier hs-var">fromCR</span></a><span> </span><a href="#local-6989586621679083615"><span class="hs-identifier hs-var">proxy</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><a name="line-72"></a><span>
-</span><a name="line-73"></a><span>
-</span><a name="line-74"></a><span class="hs-comment">-- | Create a `Source` for a given `KafkaConsumer`.</span><span>
-</span><a name="line-75"></a><span class="hs-comment">-- The consumer will be closed automatically when the `Source` is closed.</span><span>
-</span><a name="line-76"></a><span class="hs-identifier">kafkaSourceAutoClose</span><span>
-</span><a name="line-77"></a><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-type">MonadResource</span><span> </span><a href="#local-6989586621679082924"><span class="hs-identifier hs-type">m</span></a><span>
-</span><a name="line-78"></a><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">FromSchema</span><span> </span><span class="hs-identifier hs-type">Identity</span><span> </span><a href="#local-6989586621679082925"><span class="hs-identifier hs-type">sch</span></a><span> </span><a href="#local-6989586621679082926"><span class="hs-identifier hs-type">sty</span></a><span> </span><a href="#local-6989586621679082927"><span class="hs-identifier hs-type">t</span></a><span>
-</span><a name="line-79"></a><span>     </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">A.FromAvro</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Term</span><span> </span><span class="hs-identifier hs-type">Identity</span><span> </span><a href="#local-6989586621679082925"><span class="hs-identifier hs-type">sch</span></a><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">sch</span><span> </span><span class="hs-operator hs-type">:/:</span><span> </span><a href="#local-6989586621679082926"><span class="hs-identifier hs-type">sty</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
-</span><a name="line-80"></a><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-identifier hs-type">Proxy</span><span> </span><a href="#local-6989586621679082925"><span class="hs-identifier hs-type">sch</span></a><span>
-</span><a name="line-81"></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">KafkaConsumer</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">Timeout</span><span>
-</span><a name="line-82"></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">ConduitT</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Either</span><span> </span><span class="hs-identifier hs-type">KafkaError</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">ConsumerRecord</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">ByteString</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><a href="#local-6989586621679082927"><span class="hs-identifier hs-type">t</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679082924"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><a name="line-83"></a><a name="kafkaSourceAutoClose"><a href="Mu.Kafka.Consumer.html#kafkaSourceAutoClose"><span class="hs-identifier">kafkaSourceAutoClose</span></a></a><span> </span><a name="local-6989586621679083618"><a href="#local-6989586621679083618"><span class="hs-identifier">proxy</span></a></a><span> </span><a name="local-6989586621679083619"><a href="#local-6989586621679083619"><span class="hs-identifier">c</span></a></a><span> </span><a name="local-6989586621679083620"><a href="#local-6989586621679083620"><span class="hs-identifier">t</span></a></a><span>
-</span><a name="line-84"></a><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">S.kafkaSourceAutoClose</span><span> </span><a href="#local-6989586621679083619"><span class="hs-identifier hs-var">c</span></a><span> </span><a href="#local-6989586621679083620"><span class="hs-identifier hs-var">t</span></a><span> </span><span class="hs-operator hs-var">.|</span><span> </span><span class="hs-identifier hs-var">mapC</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">fmap</span><span> </span><span class="hs-special">(</span><a href="Mu.Kafka.Consumer.html#fromCR"><span class="hs-identifier hs-var">fromCR</span></a><span> </span><a href="#local-6989586621679083618"><span class="hs-identifier hs-var">proxy</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><a name="line-85"></a></pre></body></html>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Mu.Kafka.Consumer</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Mu.Kafka.Consumer.html#kafkaSource"><span class="hs-identifier">kafkaSource</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Kafka.Consumer.html#kafkaSourceNoClose"><span class="hs-identifier">kafkaSourceNoClose</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Kafka.Consumer.html#kafkaSourceAutoClose"><span class="hs-identifier">kafkaSourceAutoClose</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">X</span></span><span>
+</span><span id="line-19"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Conduit</span></span><span>                      </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">mapC</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.IO.Class</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Resource</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Avro</span></span><span>                    </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">A</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Conduit</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Mu.Schema</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Kafka.Conduit.Source</span></span><span>         </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Kafka.Conduit.Combinators</span></span><span>    </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">X</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Kafka.Consumer</span></span><span>               </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">X</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Mu.Kafka.Internal.html"><span class="hs-identifier">Mu.Kafka.Internal</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span id="local-6989586621679139953"><span id="local-6989586621679139954"><span id="local-6989586621679139955"><span class="annot"><a href="Mu.Kafka.Consumer.html#fromCR"><span class="hs-identifier hs-type">fromCR</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139955"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139954"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139953"><span class="hs-identifier hs-type">t</span></a></span><span>
+</span><span id="line-38"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.FromAvro</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">WithSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139955"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139954"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139953"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.HasAvroSchema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">WithSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139955"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139954"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139953"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679139955"><span class="hs-identifier hs-type">sch</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConsumerRecord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConsumerRecord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679139953"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-43"></span><span id="fromCR"><span class="annot"><span class="annottext">fromCR :: Proxy sch
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe ByteString)
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe t)
+</span><a href="Mu.Kafka.Consumer.html#fromCR"><span class="hs-identifier hs-var hs-var">fromCR</span></a></span></span><span> </span><span id="local-6989586621679139937"><span class="annot"><span class="annottext">proxy :: Proxy sch
+</span><a href="#local-6989586621679139937"><span class="hs-identifier hs-var">proxy</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ConsumerRecord</span></span><span> </span><span id="local-6989586621679139935"><span class="annot"><span class="annottext">t :: TopicName
+</span><a href="#local-6989586621679139935"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679139934"><span class="annot"><span class="annottext">p :: PartitionId
+</span><a href="#local-6989586621679139934"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679139933"><span class="annot"><span class="annottext">o :: Offset
+</span><a href="#local-6989586621679139933"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span id="local-6989586621679139932"><span class="annot"><span class="annottext">ts :: Timestamp
+</span><a href="#local-6989586621679139932"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span id="local-6989586621679139931"><span class="annot"><span class="annottext">k :: Maybe ByteString
+</span><a href="#local-6989586621679139931"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679139930"><span class="annot"><span class="annottext">v :: Maybe ByteString
+</span><a href="#local-6989586621679139930"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TopicName
+-&gt; PartitionId
+-&gt; Offset
+-&gt; Timestamp
+-&gt; Maybe ByteString
+-&gt; Maybe t
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe t)
+forall k v.
+TopicName
+-&gt; PartitionId
+-&gt; Offset
+-&gt; Timestamp
+-&gt; k
+-&gt; v
+-&gt; ConsumerRecord k v
+</span><span class="hs-identifier hs-var">ConsumerRecord</span></span><span> </span><span class="annot"><span class="annottext">TopicName
+</span><a href="#local-6989586621679139935"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">PartitionId
+</span><a href="#local-6989586621679139934"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Offset
+</span><a href="#local-6989586621679139933"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp
+</span><a href="#local-6989586621679139932"><span class="hs-identifier hs-var">ts</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679139931"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679139930"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString -&gt; (ByteString -&gt; Maybe t) -&gt; Maybe t
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Proxy sch -&gt; ByteString -&gt; Maybe t
+forall (sch :: Schema * *) sty t.
+(FromSchema sch sty t, FromAvro (WithSchema sch sty t),
+ HasAvroSchema (WithSchema sch sty t)) =&gt;
+Proxy sch -&gt; ByteString -&gt; Maybe t
+</span><a href="Mu.Kafka.Internal.html#fromBS"><span class="hs-identifier hs-var">fromBS</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy sch
+</span><a href="#local-6989586621679139937"><span class="hs-identifier hs-var">proxy</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | Creates a kafka producer for given properties and returns a `Source`.</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- This method of creating a `Source` represents a simple case</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- and does not provide access to `KafkaProducer`. For more complex scenarious</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- 'kafkaSinkNoClose' or 'kafkaSinkAutoClose' can be used.</span><span>
+</span><span id="line-51"></span><span id="local-6989586621679139925"><span id="local-6989586621679139926"><span id="local-6989586621679139927"><span id="local-6989586621679139928"><span class="annot"><a href="Mu.Kafka.Consumer.html#kafkaSource"><span class="hs-identifier hs-type">kafkaSource</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadResource</span></span><span> </span><span class="annot"><a href="#local-6989586621679139928"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-53"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139927"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139926"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139925"><span class="hs-identifier hs-type">t</span></a></span><span>
+</span><span id="line-54"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.FromAvro</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">WithSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139927"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139926"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139925"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.HasAvroSchema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">WithSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139927"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139926"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139925"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679139927"><span class="hs-identifier hs-type">sch</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConsumerProperties</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Subscription</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Timeout</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitT</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">KafkaError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ConsumerRecord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679139925"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679139928"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-59"></span><span id="kafkaSource"><span class="annot"><span class="annottext">kafkaSource :: Proxy sch
+-&gt; ConsumerProperties
+-&gt; Subscription
+-&gt; Timeout
+-&gt; ConduitT
+     ()
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+</span><a href="Mu.Kafka.Consumer.html#kafkaSource"><span class="hs-identifier hs-var hs-var">kafkaSource</span></a></span></span><span> </span><span id="local-6989586621679139924"><span class="annot"><span class="annottext">proxy :: Proxy sch
+</span><a href="#local-6989586621679139924"><span class="hs-identifier hs-var">proxy</span></a></span></span><span> </span><span id="local-6989586621679139923"><span class="annot"><span class="annottext">props :: ConsumerProperties
+</span><a href="#local-6989586621679139923"><span class="hs-identifier hs-var">props</span></a></span></span><span> </span><span id="local-6989586621679139922"><span class="annot"><span class="annottext">sub :: Subscription
+</span><a href="#local-6989586621679139922"><span class="hs-identifier hs-var">sub</span></a></span></span><span> </span><span id="local-6989586621679139921"><span class="annot"><span class="annottext">ts :: Timeout
+</span><a href="#local-6989586621679139921"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="annottext">ConsumerProperties
+-&gt; Subscription
+-&gt; Timeout
+-&gt; ConduitT
+     ()
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     m
+     ()
+forall (m :: * -&gt; *).
+MonadResource m =&gt;
+ConsumerProperties
+-&gt; Subscription
+-&gt; Timeout
+-&gt; ConduitT
+     ()
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     m
+     ()
+</span><span class="hs-identifier hs-var">S.kafkaSource</span></span><span> </span><span class="annot"><span class="annottext">ConsumerProperties
+</span><a href="#local-6989586621679139923"><span class="hs-identifier hs-var">props</span></a></span><span> </span><span class="annot"><span class="annottext">Subscription
+</span><a href="#local-6989586621679139922"><span class="hs-identifier hs-var">sub</span></a></span><span> </span><span class="annot"><span class="annottext">Timeout
+</span><a href="#local-6989586621679139921"><span class="hs-identifier hs-var">ts</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitT
+  ()
+  (Either
+     KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+  m
+  ()
+-&gt; ConduitM
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+-&gt; ConduitT
+     ()
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+forall (m :: * -&gt; *) a b c r.
+Monad m =&gt;
+ConduitM a b m () -&gt; ConduitM b c m r -&gt; ConduitM a c m r
+</span><span class="hs-operator hs-var">.|</span></span><span>&#160;</span><span class="annot"><span class="annottext">(Either
+   KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString))
+ -&gt; Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+-&gt; ConduitM
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; b) -&gt; ConduitT a b m ()
+</span><span class="hs-identifier hs-var">mapC</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ConsumerRecord (Maybe ByteString) (Maybe ByteString)
+ -&gt; ConsumerRecord (Maybe ByteString) (Maybe t))
+-&gt; Either
+     KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString))
+-&gt; Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy sch
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe ByteString)
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe t)
+forall (sch :: Schema * *) sty t.
+(FromSchema sch sty t, FromAvro (WithSchema sch sty t),
+ HasAvroSchema (WithSchema sch sty t)) =&gt;
+Proxy sch
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe ByteString)
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe t)
+</span><a href="Mu.Kafka.Consumer.html#fromCR"><span class="hs-identifier hs-var">fromCR</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy sch
+</span><a href="#local-6989586621679139924"><span class="hs-identifier hs-var">proxy</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- | Create a `Source` for a given `KafkaConsumer`.</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- The consumer will NOT be closed automatically when the `Source` is closed.</span><span>
+</span><span id="line-64"></span><span id="local-6989586621679139915"><span id="local-6989586621679139916"><span id="local-6989586621679139917"><span id="local-6989586621679139918"><span class="annot"><a href="Mu.Kafka.Consumer.html#kafkaSourceNoClose"><span class="hs-identifier hs-type">kafkaSourceNoClose</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679139918"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-66"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139917"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139916"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139915"><span class="hs-identifier hs-type">t</span></a></span><span>
+</span><span id="line-67"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.FromAvro</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">WithSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139917"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139916"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139915"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.HasAvroSchema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">WithSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139917"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139916"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139915"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679139917"><span class="hs-identifier hs-type">sch</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KafkaConsumer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Timeout</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitT</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">KafkaError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ConsumerRecord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679139915"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679139918"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-72"></span><span id="kafkaSourceNoClose"><span class="annot"><span class="annottext">kafkaSourceNoClose :: Proxy sch
+-&gt; KafkaConsumer
+-&gt; Timeout
+-&gt; ConduitT
+     ()
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+</span><a href="Mu.Kafka.Consumer.html#kafkaSourceNoClose"><span class="hs-identifier hs-var hs-var">kafkaSourceNoClose</span></a></span></span><span> </span><span id="local-6989586621679139914"><span class="annot"><span class="annottext">proxy :: Proxy sch
+</span><a href="#local-6989586621679139914"><span class="hs-identifier hs-var">proxy</span></a></span></span><span> </span><span id="local-6989586621679139913"><span class="annot"><span class="annottext">c :: KafkaConsumer
+</span><a href="#local-6989586621679139913"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679139912"><span class="annot"><span class="annottext">t :: Timeout
+</span><a href="#local-6989586621679139912"><span class="hs-identifier hs-var">t</span></a></span></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KafkaConsumer
+-&gt; Timeout
+-&gt; ConduitT
+     ()
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     m
+     ()
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+KafkaConsumer
+-&gt; Timeout
+-&gt; ConduitT
+     ()
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     m
+     ()
+</span><span class="hs-identifier hs-var">S.kafkaSourceNoClose</span></span><span> </span><span class="annot"><span class="annottext">KafkaConsumer
+</span><a href="#local-6989586621679139913"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Timeout
+</span><a href="#local-6989586621679139912"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitT
+  ()
+  (Either
+     KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+  m
+  ()
+-&gt; ConduitM
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+-&gt; ConduitT
+     ()
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+forall (m :: * -&gt; *) a b c r.
+Monad m =&gt;
+ConduitM a b m () -&gt; ConduitM b c m r -&gt; ConduitM a c m r
+</span><span class="hs-operator hs-var">.|</span></span><span> </span><span class="annot"><span class="annottext">(Either
+   KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString))
+ -&gt; Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+-&gt; ConduitM
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; b) -&gt; ConduitT a b m ()
+</span><span class="hs-identifier hs-var">mapC</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ConsumerRecord (Maybe ByteString) (Maybe ByteString)
+ -&gt; ConsumerRecord (Maybe ByteString) (Maybe t))
+-&gt; Either
+     KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString))
+-&gt; Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy sch
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe ByteString)
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe t)
+forall (sch :: Schema * *) sty t.
+(FromSchema sch sty t, FromAvro (WithSchema sch sty t),
+ HasAvroSchema (WithSchema sch sty t)) =&gt;
+Proxy sch
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe ByteString)
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe t)
+</span><a href="Mu.Kafka.Consumer.html#fromCR"><span class="hs-identifier hs-var">fromCR</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy sch
+</span><a href="#local-6989586621679139914"><span class="hs-identifier hs-var">proxy</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- | Create a `Source` for a given `KafkaConsumer`.</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- The consumer will be closed automatically when the `Source` is closed.</span><span>
+</span><span id="line-78"></span><span id="local-6989586621679139907"><span id="local-6989586621679139908"><span id="local-6989586621679139909"><span id="local-6989586621679139910"><span class="annot"><a href="Mu.Kafka.Consumer.html#kafkaSourceAutoClose"><span class="hs-identifier hs-type">kafkaSourceAutoClose</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadResource</span></span><span> </span><span class="annot"><a href="#local-6989586621679139910"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-80"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139909"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139908"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139907"><span class="hs-identifier hs-type">t</span></a></span><span>
+</span><span id="line-81"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.FromAvro</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">WithSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139909"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139908"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139907"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.HasAvroSchema</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">WithSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679139909"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139908"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139907"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679139909"><span class="hs-identifier hs-type">sch</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KafkaConsumer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Timeout</span></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConduitT</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">KafkaError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ConsumerRecord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679139907"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679139910"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-86"></span><span id="kafkaSourceAutoClose"><span class="annot"><span class="annottext">kafkaSourceAutoClose :: Proxy sch
+-&gt; KafkaConsumer
+-&gt; Timeout
+-&gt; ConduitT
+     ()
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+</span><a href="Mu.Kafka.Consumer.html#kafkaSourceAutoClose"><span class="hs-identifier hs-var hs-var">kafkaSourceAutoClose</span></a></span></span><span> </span><span id="local-6989586621679139906"><span class="annot"><span class="annottext">proxy :: Proxy sch
+</span><a href="#local-6989586621679139906"><span class="hs-identifier hs-var">proxy</span></a></span></span><span> </span><span id="local-6989586621679139905"><span class="annot"><span class="annottext">c :: KafkaConsumer
+</span><a href="#local-6989586621679139905"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679139904"><span class="annot"><span class="annottext">t :: Timeout
+</span><a href="#local-6989586621679139904"><span class="hs-identifier hs-var">t</span></a></span></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KafkaConsumer
+-&gt; Timeout
+-&gt; ConduitT
+     ()
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     m
+     ()
+forall (m :: * -&gt; *).
+MonadResource m =&gt;
+KafkaConsumer
+-&gt; Timeout
+-&gt; ConduitT
+     ()
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     m
+     ()
+</span><span class="hs-identifier hs-var">S.kafkaSourceAutoClose</span></span><span> </span><span class="annot"><span class="annottext">KafkaConsumer
+</span><a href="#local-6989586621679139905"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Timeout
+</span><a href="#local-6989586621679139904"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitT
+  ()
+  (Either
+     KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+  m
+  ()
+-&gt; ConduitM
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+-&gt; ConduitT
+     ()
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+forall (m :: * -&gt; *) a b c r.
+Monad m =&gt;
+ConduitM a b m () -&gt; ConduitM b c m r -&gt; ConduitM a c m r
+</span><span class="hs-operator hs-var">.|</span></span><span> </span><span class="annot"><span class="annottext">(Either
+   KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString))
+ -&gt; Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+-&gt; ConduitM
+     (Either
+        KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString)))
+     (Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t)))
+     m
+     ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; b) -&gt; ConduitT a b m ()
+</span><span class="hs-identifier hs-var">mapC</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ConsumerRecord (Maybe ByteString) (Maybe ByteString)
+ -&gt; ConsumerRecord (Maybe ByteString) (Maybe t))
+-&gt; Either
+     KafkaError (ConsumerRecord (Maybe ByteString) (Maybe ByteString))
+-&gt; Either KafkaError (ConsumerRecord (Maybe ByteString) (Maybe t))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy sch
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe ByteString)
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe t)
+forall (sch :: Schema * *) sty t.
+(FromSchema sch sty t, FromAvro (WithSchema sch sty t),
+ HasAvroSchema (WithSchema sch sty t)) =&gt;
+Proxy sch
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe ByteString)
+-&gt; ConsumerRecord (Maybe ByteString) (Maybe t)
+</span><a href="Mu.Kafka.Consumer.html#fromCR"><span class="hs-identifier hs-var">fromCR</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy sch
+</span><a href="#local-6989586621679139906"><span class="hs-identifier hs-var">proxy</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span></pre></body></html>
