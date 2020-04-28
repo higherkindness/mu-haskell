@@ -33,7 +33,7 @@ library
   build-depends:
       base                    >=4.12  && <5
     , bytestring
-    , compendium-client       >=0.3.0
+    , compendium-client       >=0.2.0
     , http-client
     , http2-grpc-proto3-wire
     , language-protobuf
