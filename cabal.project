@@ -1,4 +1,4 @@
-allow-newer: all
+allow-newer: http2, http2-client, template-haskell, proto3-wire
 
 packages: compendium-client/
           core/schema/
