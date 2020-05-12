@@ -51,8 +51,9 @@ instance SLess.ToSchemalessTerm AVal.Value where
   toSchemalessTerm (AVal.Record s r)
     = case s of
         RSch.Record { RSch.fields = fs }
-          -> SLess.TRecord $ map (\(k,v) -> SLess.Field k (SLess.toSchemalessValue v))
-                           $ zip (map RSch.fldName fs) (V.toList r)
+          -> SLess.TRecord $
+               zipWith (\k v -> SLess.Field k (SLess.toSchemalessValue v))
+                       (map RSch.fldName fs) (V.toList r)
         _ -> error ("this should never happen:\n" ++ show s)
   toSchemalessTerm (AVal.Enum _ i _)
     = SLess.TEnum i
@@ -102,9 +103,13 @@ instance ( ToSchema sch sty t
          , KnownNat (IxOf sch sty) )
          => A.ToAvro (WithSchema sch sty t) where
   toAvro (ASch.Union vs) (WithSchema v)
+    {- this version adds an initial byte for the union place
     = putIndexedValue (fromInteger $ natVal (Proxy @(IxOf sch sty)))
                       vs
                       (toSchema' @_ @_ @sch v)
+    -}
+    = A.toAvro (vs V.! styPlace) (toSchema' @_ @_ @sch v)
+    where styPlace = fromInteger $ natVal (Proxy @(IxOf sch sty))
   toAvro s _ = error ("this should never happen:\n" ++ show s)
 
 class HasAvroSchemas (r :: Schema tn fn) (sch :: Schema tn fn) where
