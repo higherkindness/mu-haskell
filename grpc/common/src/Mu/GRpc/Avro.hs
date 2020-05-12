@@ -76,8 +76,11 @@ instance GRPCOutput AvroRPC () where
 encodeEmpty :: Compression -> Builder
 encodeEmpty compression =
     mconcat [ singleton (if _compressionByteSet compression then 1 else 0)
-            , putWord32be 0
+            , putWord32be (fromIntegral $ ByteString.length bin)
+            , fromByteString bin
             ]
+  where
+    bin = _compressionFunction compression ""
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          ( HasAvroSchema (WithSchema sch sty i)
