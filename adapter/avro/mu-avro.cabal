@@ -42,6 +42,7 @@ library
     , template-haskell      >=2.12
     , text
     , time
+    , transformers
     , unordered-containers
     , uuid
     , vector

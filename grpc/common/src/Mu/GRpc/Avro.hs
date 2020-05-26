@@ -66,12 +66,21 @@ newtype ViaToAvroTypeRef (ref :: TypeRef snm) t
   = ViaToAvroTypeRef { unViaToAvroTypeRef :: t }
 
 instance GRPCInput AvroRPC () where
-  encodeInput _ _ () = mempty
+  encodeInput _ c () = encodeEmpty c
   decodeInput _ _ = runGetIncremental $ pure $ Right ()
 
 instance GRPCOutput AvroRPC () where
-  encodeOutput _ _ () = mempty
+  encodeOutput _ c () = encodeEmpty c
   decodeOutput _ _ = runGetIncremental $ pure $ Right ()
+
+encodeEmpty :: Compression -> Builder
+encodeEmpty compression =
+    mconcat [ singleton (if _compressionByteSet compression then 1 else 0)
+            , putWord32be (fromIntegral $ ByteString.length bin)
+            , fromByteString bin
+            ]
+  where
+    bin = _compressionFunction compression ""
 
 instance forall (sch :: Schema') (sty :: Symbol) (i :: Type).
          ( HasAvroSchema (WithSchema sch sty i)
