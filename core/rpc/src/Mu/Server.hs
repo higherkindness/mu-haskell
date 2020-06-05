@@ -135,7 +135,7 @@ data ServerT (chn :: ServiceChain snm) (s :: Package snm mnm anm)
 
 pattern Server :: (MappingRight chn sname ~ ())
                => HandlersT chn () methods m hs
-               -> ServerT chn ('Package pname '[ 'Service sname sanns methods ]) m '[hs]
+               -> ServerT chn ('Package pname '[ 'Service sname methods ]) m '[hs]
 pattern Server svr = Services (svr :<&>: S0)
 
 infixr 3 :<&>:
@@ -145,7 +145,7 @@ data ServicesT (chn :: ServiceChain snm) (s :: [Service snm mnm anm])
   S0 :: ServicesT chn '[] m '[]
   (:<&>:) :: HandlersT chn (MappingRight chn sname) methods m hs
           -> ServicesT chn rest m hss
-          -> ServicesT chn ('Service sname anns methods ': rest) m (hs ': hss)
+          -> ServicesT chn ('Service sname methods ': rest) m (hs ': hss)
 
 infixr 4 :<||>:
 -- | 'HandlersT' is a sequence of handlers.
@@ -173,12 +173,12 @@ data HandlersT (chn :: ServiceChain snm)
   H0 :: HandlersT chn inh '[] m '[]
   (:<||>:) :: Handles chn args ret m h
            => (RpcInfo -> inh -> h) -> HandlersT chn inh ms m hs
-           -> HandlersT chn inh ('Method name anns args ret ': ms) m (h ': hs)
+           -> HandlersT chn inh ('Method name args ret ': ms) m (h ': hs)
 
 infixr 4 :<|>:
 pattern (:<|>:) :: (Handles chn args ret m h)
                 => h -> HandlersT chn () ms m hs
-                -> HandlersT chn () ('Method name anns args ret ': ms) m (h ': hs)
+                -> HandlersT chn () ('Method name args ret ': ms) m (h ': hs)
 pattern x :<|>: xs <- (($ ()) . ($ NoRpcInfo) -> x) :<||>: xs where
   x :<|>: xs = noContext x :<||>: xs
 
@@ -213,10 +213,10 @@ instance (FromRef chn ref t, Maybe t ~ s) => FromRef chn ('OptionalRef ref) s
 -- Arguments
 instance (FromRef chn ref t, Handles chn args ret m h,
           handler ~ (t -> h))
-         => Handles chn ('ArgSingle aname anns ref ': args) ret m handler
+         => Handles chn ('ArgSingle aname ref ': args) ret m handler
 instance (MonadError ServerError m, FromRef chn ref t, Handles chn args ret m h,
           handler ~ (ConduitT () t m () -> h))
-         => Handles chn ('ArgStream aname anns ref ': args) ret m handler
+         => Handles chn ('ArgStream aname ref ': args) ret m handler
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
          => Handles chn '[] 'RetNothing m handler
@@ -233,14 +233,14 @@ instance (MonadError ServerError m, ToRef chn ref v, handler ~ (ConduitT v Void 
 --   Intended to be used with @TypeApplications@:
 --
 --   > method @"myMethod" myHandler
-method :: forall n p. p -> Named n (() -> p)
-method f = Named (\() -> f)
+method :: forall n a p. (a -> p) -> Named n (a -> () -> p)
+method f = Named (\x () -> f x)
 
 -- | Declares the handler for a field in an object.
 --   Intended to be used with @TypeApplications@:
 --
 --   > field @"myField" myHandler
-field :: forall n h. h -> Named n h
+field :: forall n h. (RpcInfo -> h) -> Named n (RpcInfo -> h)
 field  = Named
 
 -- | Defines a server for a package with a single service.
@@ -249,7 +249,7 @@ field  = Named
 --   > singleService (method @"m1" h1, method @"m2" h2)
 singleService
   :: (ToNamedList p nl, ToHandlers chn () methods m hs nl, MappingRight chn sname ~ ())
-  => p -> ServerT chn ('Package pname '[ 'Service sname sanns methods ]) m '[hs]
+  => p -> ServerT chn ('Package pname '[ 'Service sname methods ]) m '[hs]
 singleService nl = Server $ toHandlers $ toNamedList nl
 
 -- | Defines the implementation of a single GraphQL object,
@@ -331,7 +331,7 @@ class ToHandlers chn inh ms m hs nl | chn inh ms m nl -> hs where
 instance ToHandlers chn inh '[] m '[] nl where
   toHandlers _ = H0
 instance (FindHandler name inh h nl, Handles chn args ret m h, ToHandlers chn inh ms m hs nl)
-         => ToHandlers chn inh ('Method name anns args ret ': ms) m (h ': hs) nl where
+         => ToHandlers chn inh ('Method name args ret ': ms) m (h ': hs) nl where
   toHandlers nl = findHandler (Proxy @name) nl :<||>: toHandlers nl
 
 class FindHandler name inh h nl | name nl -> inh h where
@@ -354,7 +354,7 @@ instance ToServices chn '[] m '[] nl where
   toServices _ = S0
 instance ( FindService name (HandlersT chn (MappingRight chn name) methods m h) nl
          , ToServices chn ss m hs nl)
-         => ToServices chn ('Service name anns methods ': ss) m (h ': hs) nl where
+         => ToServices chn ('Service name methods ': ss) m (h ': hs) nl where
   toServices nl = findService (Proxy @name) nl :<&>: toServices nl
 
 class FindService name h nl | name nl -> h where

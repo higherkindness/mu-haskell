@@ -20,7 +20,6 @@ import           Data.Coerce                   (coerce)
 import qualified Data.Foldable                 as F
 import qualified Data.HashMap.Strict           as HM
 import           Data.Int                      (Int32)
-import           Data.Kind
 import           Data.List                     (find)
 import           Data.Maybe
 import           Data.Proxy
@@ -33,6 +32,7 @@ import qualified Language.GraphQL.Draft.Syntax as GQL
 import           Mu.GraphQL.Annotations
 import           Mu.GraphQL.Query.Definition
 import           Mu.Rpc
+import           Mu.Rpc.Annotations
 import           Mu.Schema
 
 type VariableMapC = HM.HashMap T.Text GQL.ValueConst
@@ -118,12 +118,12 @@ class ParseTypedDoc (p :: Package')
 
 instance
   ( p ~ 'Package pname ss,
-    LookupService ss qr ~ 'Service qr qanns qmethods,
-    KnownName qr, ParseMethod p qmethods,
-    LookupService ss mut ~ 'Service mut manns mmethods,
-    KnownName mut, ParseMethod p mmethods,
-    LookupService ss sub ~ 'Service sub sanns smethods,
-    KnownName sub, ParseMethod p smethods
+    LookupService ss qr ~ 'Service qr qmethods,
+    KnownName qr, ParseMethod p ('Service qr qmethods) qmethods,
+    LookupService ss mut ~ 'Service mut mmethods,
+    KnownName mut, ParseMethod p ('Service mut mmethods) mmethods,
+    LookupService ss sub ~ 'Service sub smethods,
+    KnownName sub, ParseMethod p ('Service sub smethods) smethods
   ) => ParseTypedDoc p ('Just qr) ('Just mut) ('Just sub) where
   parseTypedDocQuery vmap frmap sset
     = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
@@ -137,10 +137,10 @@ instance
 
 instance
   ( p ~ 'Package pname ss,
-    LookupService ss qr ~ 'Service qr qanns qmethods,
-    KnownName qr, ParseMethod p qmethods,
-    LookupService ss mut ~ 'Service mut manns mmethods,
-    KnownName mut, ParseMethod p mmethods
+    LookupService ss qr ~ 'Service qr qmethods,
+    KnownName qr, ParseMethod p ('Service qr qmethods) qmethods,
+    LookupService ss mut ~ 'Service mut mmethods,
+    KnownName mut, ParseMethod p ('Service mut mmethods) mmethods
   ) => ParseTypedDoc p ('Just qr) ('Just mut) 'Nothing where
   parseTypedDocQuery vmap frmap sset
     = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
@@ -151,10 +151,10 @@ instance
 
 instance
   ( p ~ 'Package pname ss,
-    LookupService ss qr ~ 'Service qr qanns qmethods,
-    KnownName qr, ParseMethod p qmethods,
-    LookupService ss sub ~ 'Service sub sanns smethods,
-    KnownName sub, ParseMethod p smethods
+    LookupService ss qr ~ 'Service qr qmethods,
+    KnownName qr, ParseMethod p ('Service qr qmethods) qmethods,
+    LookupService ss sub ~ 'Service sub smethods,
+    KnownName sub, ParseMethod p ('Service sub smethods) smethods
   ) => ParseTypedDoc p ('Just qr) 'Nothing ('Just sub) where
   parseTypedDocQuery vmap frmap sset
     = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
@@ -168,8 +168,8 @@ instance
 
 instance
   ( p ~ 'Package pname ss,
-    LookupService ss qr ~ 'Service qr qanns qmethods,
-    KnownName qr, ParseMethod p qmethods
+    LookupService ss qr ~ 'Service qr qmethods,
+    KnownName qr, ParseMethod p ('Service qr qmethods) qmethods
   ) => ParseTypedDoc p ('Just qr) 'Nothing 'Nothing where
   parseTypedDocQuery vmap frmap sset
     = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
@@ -180,10 +180,10 @@ instance
 
 instance
   ( p ~ 'Package pname ss,
-    LookupService ss mut ~ 'Service mut manns mmethods,
-    KnownName mut, ParseMethod p mmethods,
-    LookupService ss sub ~ 'Service sub sanns smethods,
-    KnownName sub, ParseMethod p smethods
+    LookupService ss mut ~ 'Service mut mmethods,
+    KnownName mut, ParseMethod p ('Service mut mmethods) mmethods,
+    LookupService ss sub ~ 'Service sub smethods,
+    KnownName sub, ParseMethod p ('Service sub smethods) smethods
   ) => ParseTypedDoc p 'Nothing ('Just mut) ('Just sub) where
   parseTypedDocQuery _ _ _
     = throwError "no queries are defined in the schema"
@@ -197,8 +197,8 @@ instance
 
 instance
   ( p ~ 'Package pname ss,
-    LookupService ss mut ~ 'Service mut manns mmethods,
-    KnownName mut, ParseMethod p mmethods
+    LookupService ss mut ~ 'Service mut mmethods,
+    KnownName mut, ParseMethod p ('Service mut mmethods) mmethods
   ) => ParseTypedDoc p 'Nothing ('Just mut) 'Nothing where
   parseTypedDocQuery _ _ _
     = throwError "no queries are defined in the schema"
@@ -209,8 +209,8 @@ instance
 
 instance
   ( p ~ 'Package pname ss,
-    LookupService ss sub ~ 'Service sub sanns smethods,
-    KnownName sub, ParseMethod p smethods
+    LookupService ss sub ~ 'Service sub smethods,
+    KnownName sub, ParseMethod p ('Service sub smethods) smethods
   ) => ParseTypedDoc p 'Nothing 'Nothing ('Just sub) where
   parseTypedDocQuery _ _ _
     = throwError "no queries are defined in the schema"
@@ -250,10 +250,10 @@ constToValue (GQL.VCObject (GQL.ObjectValueG n))
       [ GQL.ObjectFieldG a (constToValue v) | GQL.ObjectFieldG a v <- n ]
 
 parseQuery ::
-  forall (p :: Package') (s :: Symbol) pname ss sanns methods f.
+  forall (p :: Package') (s :: Symbol) pname ss methods f.
   ( MonadError T.Text f, p ~ 'Package pname ss,
-    LookupService ss s ~ 'Service s sanns methods,
-    KnownName s, ParseMethod p methods
+    LookupService ss s ~ 'Service s methods,
+    KnownName s, ParseMethod p ('Service s methods) methods
   ) =>
   Proxy p ->
   Proxy s ->
@@ -264,7 +264,7 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
   = (++) <$> (maybeToList <$> fieldToMethod fld)
          <*> parseQuery pp ps vmap frmap ss
   where
-    fieldToMethod :: GQL.Field -> f (Maybe (OneMethodQuery p ('Service sname sanns methods)))
+    fieldToMethod :: GQL.Field -> f (Maybe (OneMethodQuery p ('Service sname methods)))
     fieldToMethod (GQL.Field alias name args dirs sels)
       | any (shouldSkip vmap) dirs
       = pure Nothing
@@ -289,7 +289,7 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
           _ -> throwError "__type requires one single argument"
       | otherwise
       = Just . OneMethodQuery (GQL.unName . GQL.unAlias <$> alias)
-         <$> selectMethod (T.pack $ nameVal (Proxy @s)) vmap frmap name args sels
+         <$> selectMethod (Proxy @('Service s methods)) (T.pack $ nameVal (Proxy @s)) vmap frmap name args sels
 parseQuery pp ps vmap frmap (GQL.SelectionFragmentSpread (GQL.FragmentSpread nm dirs) : ss)
   | Just fr <- HM.lookup (GQL.unName nm) frmap
   = if not (any (shouldSkip vmap) dirs) && not (any (shouldSkip vmap) $ GQL._fdDirectives fr)
@@ -328,9 +328,10 @@ unFragment frmap (GQL.SelectionField (GQL.Field al nm args dir innerss) : ss)
 unFragment _ _
   = throwError "inline fragments are not (yet) supported"
 
-class ParseMethod (p :: Package') (ms :: [Method']) where
+class ParseMethod (p :: Package') (s :: Service') (ms :: [Method']) where
   selectMethod ::
     MonadError T.Text f =>
+    Proxy s ->
     T.Text ->
     VariableMap ->
     FragmentMap ->
@@ -339,82 +340,89 @@ class ParseMethod (p :: Package') (ms :: [Method']) where
     GQL.SelectionSet ->
     f (NS (ChosenMethodQuery p) ms)
 
-instance ParseMethod p '[] where
-  selectMethod tyName _ _ (GQL.unName -> wanted) _ _
+instance ParseMethod p s '[] where
+  selectMethod _ tyName _ _ (GQL.unName -> wanted) _ _
     = throwError $ "field '" <> wanted <> "' was not found on type '" <> tyName <> "'"
 instance
-  (KnownSymbol mname, ParseMethod p ms, ParseArgs p args, ParseDifferentReturn p r) =>
-  ParseMethod p ('Method mname manns args r ': ms)
+  ( KnownSymbol mname, ParseMethod p s ms
+  , ParseArgs p s ('Method mname args r) args
+  , ParseDifferentReturn p r) =>
+  ParseMethod p s ('Method mname args r ': ms)
   where
-  selectMethod tyName vmap frmap w@(GQL.unName -> wanted) args sels
+  selectMethod s tyName vmap frmap w@(GQL.unName -> wanted) args sels
     | wanted == mname
-    = Z <$> (ChosenMethodQuery <$> parseArgs vmap args
+    = Z <$> (ChosenMethodQuery <$> parseArgs (Proxy @s) (Proxy @('Method mname args r))
+                                             vmap args
                                <*> parseDiffReturn vmap frmap wanted sels)
     | otherwise
-    = S <$> selectMethod tyName vmap frmap w args sels
+    = S <$> selectMethod s tyName vmap frmap w args sels
     where
       mname = T.pack $ nameVal (Proxy @mname)
 
-class ParseArgs (p :: Package') (args :: [Argument']) where
+class ParseArgs (p :: Package') (s :: Service') (m :: Method') (args :: [Argument']) where
   parseArgs :: MonadError T.Text f
-            => VariableMap
+            => Proxy s -> Proxy m
+            -> VariableMap
             -> [GQL.Argument]
             -> f (NP (ArgumentValue p) args)
 
-instance ParseArgs p '[] where
-  parseArgs _ _ = pure Nil
+instance ParseArgs p s m '[] where
+  parseArgs _ _ _ _ = pure Nil
 -- one single argument without name
 instance ParseArg p a
-         => ParseArgs p '[ 'ArgSingle 'Nothing anns a ] where
-  parseArgs vmap [GQL.Argument _ x]
+         => ParseArgs p s m '[ 'ArgSingle 'Nothing a ] where
+  parseArgs _ _ vmap [GQL.Argument _ x]
     = (\v -> ArgumentValue v :* Nil) <$> parseArg' vmap "arg" x
-  parseArgs _ _
+  parseArgs _ _ _ _
     = throwError "this field receives one single argument"
 instance ParseArg p a
-         => ParseArgs p '[ 'ArgStream 'Nothing anns a ] where
-  parseArgs vmap [GQL.Argument _ x]
+         => ParseArgs p s m '[ 'ArgStream 'Nothing a ] where
+  parseArgs _ _ vmap [GQL.Argument _ x]
     = (\v -> ArgumentStream v :* Nil) <$> parseArg' vmap "arg" x
-  parseArgs _ _
+  parseArgs _ _ _ _
     = throwError "this field receives one single argument"
 -- more than one argument
-instance (KnownName aname, ParseArg p a, ParseArgs p as, FindDefaultArgValue aanns)
-         => ParseArgs p ('ArgSingle ('Just aname) aanns a ': as) where
-  parseArgs vmap args
+instance ( KnownName aname, ParseArg p a, ParseArgs p s m as
+         , s ~ 'Service snm sms, m ~ 'Method mnm margs mr
+         , ann ~ GetArgAnnotationMay (AnnotatedPackage DefaultValue p) snm mnm aname
+         , FindDefaultArgValue ann )
+         => ParseArgs p s m ('ArgSingle ('Just aname) a ': as) where
+  parseArgs ps pm vmap args
     = let aname = T.pack $ nameVal (Proxy @aname)
       in case find ((== nameVal (Proxy @aname)) . T.unpack . GQL.unName . GQL._aName) args of
         Just (GQL.Argument _ x)
           -> (:*) <$> (ArgumentValue <$> parseArg' vmap aname x)
-                  <*> parseArgs vmap args
+                  <*> parseArgs ps pm vmap args
         Nothing
-          -> do x <- findDefaultArgValue (Proxy @aanns) aname
+          -> do x <- findDefaultArgValue (Proxy @ann) aname
                 (:*) <$> (ArgumentValue <$> parseArg' vmap aname (constToValue x))
-                     <*> parseArgs vmap args
-instance (KnownName aname, ParseArg p a, ParseArgs p as, FindDefaultArgValue aanns)
-         => ParseArgs p ('ArgStream ('Just aname) aanns a ': as) where
-  parseArgs vmap args
+                     <*> parseArgs ps pm vmap args
+instance ( KnownName aname, ParseArg p a, ParseArgs p s m as
+         , s ~ 'Service snm sms, m ~ 'Method mnm margs mr
+         , ann ~ GetArgAnnotationMay (AnnotatedPackage DefaultValue p) snm mnm aname
+         , FindDefaultArgValue ann )
+         => ParseArgs p s m ('ArgStream ('Just aname) a ': as) where
+  parseArgs ps pm vmap args
     = let aname = T.pack $ nameVal (Proxy @aname)
       in case find ((== nameVal (Proxy @aname)) . T.unpack . GQL.unName . GQL._aName) args of
         Just (GQL.Argument _ x)
           -> (:*) <$> (ArgumentStream <$> parseArg' vmap aname x)
-                  <*> parseArgs vmap args
+                  <*> parseArgs ps pm vmap args
         Nothing
-          -> do x <- findDefaultArgValue (Proxy @aanns) aname
+          -> do x <- findDefaultArgValue (Proxy @ann) aname
                 (:*) <$> (ArgumentStream <$> parseArg' vmap aname (constToValue x))
-                     <*> parseArgs vmap args
+                     <*> parseArgs ps pm vmap args
 
-class FindDefaultArgValue (vs :: [Type]) where
+class FindDefaultArgValue (vs :: Maybe DefaultValue) where
   findDefaultArgValue :: MonadError T.Text f
                       => Proxy vs
                       -> T.Text
                       -> f GQL.ValueConst
-instance FindDefaultArgValue '[] where
+instance FindDefaultArgValue 'Nothing where
   findDefaultArgValue _ aname
     = throwError $ "argument '" <> aname <> "' was not given a value, and has no default one"
-instance {-# OVERLAPPABLE #-} FindDefaultArgValue xs
-         => FindDefaultArgValue (x ': xs) where
-  findDefaultArgValue _ = findDefaultArgValue (Proxy @xs)
-instance {-# OVERLAPS #-} ReflectValueConst v
-         => FindDefaultArgValue (DefaultValue v ': xs) where
+instance ReflectValueConst v
+         => FindDefaultArgValue ('Just ('DefaultValue v)) where
   findDefaultArgValue _ _ = pure $ reflectValueConst (Proxy @v)
 
 parseArg' :: (ParseArg p a, MonadError T.Text f)
@@ -654,8 +662,8 @@ instance ParseReturn p r
   parseReturn vmap frmap fname s
     = RetOptional <$> parseReturn vmap frmap fname s
 instance ( p ~ 'Package pname ss,
-           LookupService ss s ~ 'Service s sanns methods,
-           KnownName s, ParseMethod p methods
+           LookupService ss s ~ 'Service s methods,
+           KnownName s, ParseMethod p ('Service s methods) methods
          ) => ParseReturn p ('ObjectRef s) where
   parseReturn vmap frmap _ s
     = RetObject <$> parseQuery (Proxy @p) (Proxy @s) vmap frmap s

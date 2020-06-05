@@ -15,15 +15,15 @@ import           Mu.Schema
 data Document (p :: Package snm mnm anm)
               (qr :: Maybe snm) (mut :: Maybe snm) (sub :: Maybe snm) where
   QueryDoc
-    :: LookupService ss qr ~ 'Service qr qanns qms
+    :: LookupService ss qr ~ 'Service qr qms
     => ServiceQuery ('Package pname ss) (LookupService ss qr)
     -> Document ('Package pname ss) ('Just qr) mut sub
   MutationDoc
-    :: LookupService ss mut ~ 'Service mut manns mms
+    :: LookupService ss mut ~ 'Service mut mms
     => ServiceQuery ('Package pname ss) (LookupService ss mut)
     -> Document ('Package pname ss) qr ('Just mut) sub
   SubscriptionDoc
-    :: LookupService ss sub ~ 'Service sub manns mms
+    :: LookupService ss sub ~ 'Service sub mms
     => OneMethodQuery ('Package pname ss) (LookupService ss sub)
     -> Document ('Package pname ss) qr mut ('Just sub)
 
@@ -34,33 +34,33 @@ data OneMethodQuery (p :: Package snm mnm anm) (s :: Service snm mnm anm) where
   OneMethodQuery
     :: Maybe Text
     -> NS (ChosenMethodQuery p) ms
-    -> OneMethodQuery p ('Service nm anns ms)
+    -> OneMethodQuery p ('Service nm ms)
   -- the special '__typename' field
   TypeNameQuery
     :: Maybe Text
-    -> OneMethodQuery p ('Service nm anns ms)
+    -> OneMethodQuery p ('Service nm ms)
   -- introspection fields
   SchemaQuery
     :: Maybe Text
     -> GQL.SelectionSet
-    -> OneMethodQuery p ('Service nm anns ms)
+    -> OneMethodQuery p ('Service nm ms)
   TypeQuery
     :: Maybe Text
     -> Text
     -> GQL.SelectionSet
-    -> OneMethodQuery p ('Service nm anns ms)
+    -> OneMethodQuery p ('Service nm ms)
 
 data ChosenMethodQuery (p :: Package snm mnm anm) (m :: Method snm mnm anm) where
   ChosenMethodQuery
     :: NP (ArgumentValue p) args
     -> ReturnQuery p r
-    -> ChosenMethodQuery p ('Method mname anns args r)
+    -> ChosenMethodQuery p ('Method mname args r)
 
 data ArgumentValue (p :: Package snm mnm anm) (a :: Argument snm anm) where
   ArgumentValue  :: ArgumentValue' p r
-                 -> ArgumentValue p ('ArgSingle aname anns r)
+                 -> ArgumentValue p ('ArgSingle aname r)
   ArgumentStream :: ArgumentValue' p ('ListRef r)
-                 -> ArgumentValue p ('ArgStream aname anns r)
+                 -> ArgumentValue p ('ArgStream aname r)
 
 data ArgumentValue' (p :: Package snm mnm anm) (r :: TypeRef snm) where
   ArgPrimitive :: t -> ArgumentValue' p ('PrimitiveRef t)

@@ -19,6 +19,7 @@ module Mu.Rpc.Annotations (
 , GetServiceAnnotation
 , GetMethodAnnotation
 , GetArgAnnotation
+, GetArgAnnotationMay
 ) where
 
 import           GHC.TypeLits
@@ -76,3 +77,10 @@ type family GetArgAnnotation (anns :: [RpcAnnotation domain s m a]) (snm :: s) (
     = TypeError ('Text "cannot find annotation for " ':<>: 'ShowType snm ':<>: 'Text "/" ':<>: 'ShowType mnm ':<>: 'Text "/" ':<>: 'ShowType anm)
   GetArgAnnotation ('AnnArg snm mnm anm d ': rs) snm mnm anm = d
   GetArgAnnotation (r ': rs) snm mnm anm = GetArgAnnotation rs snm mnm anm
+
+-- | Find the annotation over the given argument in te given method in the given service.
+--   If the annotation cannot be found, raise a 'TypeError'.
+type family GetArgAnnotationMay (anns :: [RpcAnnotation domain s m a]) (snm :: s) (mnm :: m) (anm :: a) :: Maybe domain where
+  GetArgAnnotationMay '[] snm mnm anm = 'Nothing
+  GetArgAnnotationMay ('AnnArg snm mnm anm d ': rs) snm mnm anm = 'Just d
+  GetArgAnnotationMay (r ': rs) snm mnm anm = GetArgAnnotationMay rs snm mnm anm

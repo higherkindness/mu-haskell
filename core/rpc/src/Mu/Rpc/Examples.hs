@@ -43,15 +43,15 @@ type QuickstartSchema
 
 type QuickStartService
   = 'Package ('Just "helloworld")
-      '[ 'Service "Greeter" '[]
-        '[ 'Method "SayHello" '[]
-          '[ 'ArgSingle 'Nothing '[] ('SchemaRef QuickstartSchema "HelloRequest") ]
+      '[ 'Service "Greeter"
+        '[ 'Method "SayHello"
+          '[ 'ArgSingle 'Nothing ('SchemaRef QuickstartSchema "HelloRequest") ]
             ('RetSingle ('SchemaRef QuickstartSchema "HelloResponse"))
-        , 'Method "SayHi" '[]
-          '[ 'ArgSingle 'Nothing '[] ('SchemaRef QuickstartSchema "HiRequest")]
+        , 'Method "SayHi"
+          '[ 'ArgSingle 'Nothing ('SchemaRef QuickstartSchema "HiRequest")]
             ('RetStream ('SchemaRef QuickstartSchema "HelloResponse"))
-        , 'Method "SayManyHellos" '[]
-          '[ 'ArgStream 'Nothing '[] ('SchemaRef QuickstartSchema "HelloRequest")]
+        , 'Method "SayManyHellos"
+          '[ 'ArgStream 'Nothing ('SchemaRef QuickstartSchema "HelloRequest")]
                 ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ]
 
 newtype HelloRequest = HelloRequest { name :: T.Text }
@@ -77,30 +77,31 @@ quickstartServer
                   , method @"SayManyHellos" sayManyHellos
                   , method @"SayHi" sayHi )
   where
-    sayHello :: HelloRequest -> m HelloResponse
-    sayHello (HelloRequest nm)
+    sayHello :: RpcInfo -> HelloRequest -> m HelloResponse
+    sayHello _ (HelloRequest nm)
       = pure $ HelloResponse $ "hi, " <> nm
-    sayHi :: HiRequest
+    sayHi :: RpcInfo -> HiRequest
           -> ConduitT HelloResponse Void m ()
           -> m ()
-    sayHi (HiRequest n) sink
+    sayHi _ (HiRequest n) sink
       = runConduit $ C.replicate n (HelloResponse "hi!") .| sink
-    sayManyHellos :: ConduitT () HelloRequest m ()
+    sayManyHellos :: RpcInfo
+                  -> ConduitT () HelloRequest m ()
                   -> ConduitT HelloResponse Void m ()
                   -> m ()
-    sayManyHellos source sink
-      = runConduit $ source .| C.mapM sayHello .| sink
+    sayManyHellos i source sink
+      = runConduit $ source .| C.mapM (sayHello i) .| sink
 
 -- From https://www.apollographql.com/docs/apollo-server/schema/schema/
 type ApolloService
   = 'Package ('Just "apollo")
-      '[ Object "Book" '[]
-        '[ ObjectField "title"  '[] '[] ('RetSingle ('PrimitiveRef String))
-        , ObjectField "author" '[] '[] ('RetSingle ('ObjectRef "Author"))
+      '[ Object "Book"
+        '[ ObjectField "title" '[] ('RetSingle ('PrimitiveRef String))
+        , ObjectField "author" '[] ('RetSingle ('ObjectRef "Author"))
         ]
-      , Object "Author" '[]
-        '[ ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef String))
-        , ObjectField "books" '[] '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
+      , Object "Author"
+        '[ ObjectField "name" '[] ('RetSingle ('PrimitiveRef String))
+        , ObjectField "books" '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
         ]
       ]
 
@@ -114,10 +115,10 @@ apolloServer
   = resolver
       ( object @"Author" ( field @"name"   authorName
                          , field @"books"  authorBooks )
-      , object @"Book"   ( field @"author" (pure . snd)
-                         , field @"title"  (pure . fst) ) )
+      , object @"Book"   ( field @"author" (const (pure . snd))
+                         , field @"title"  (const (pure . fst)) ) )
   where
-    authorName :: Integer -> m String
-    authorName _ = pure "alex"  -- this would run in the DB
-    authorBooks :: Integer -> m [(String, Integer)]
-    authorBooks _ = pure []
+    authorName :: RpcInfo -> Integer -> m String
+    authorName _ _ = pure "alex"  -- this would run in the DB
+    authorBooks :: RpcInfo -> Integer -> m [(String, Integer)]
+    authorBooks _ _ = pure []

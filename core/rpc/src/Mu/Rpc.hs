@@ -52,12 +52,11 @@ data Package serviceName methodName argName
 -- | A service is a set of methods.
 data Service serviceName methodName argName
   = Service serviceName
-            [ServiceAnnotation]
             [Method serviceName methodName argName]
 
 -- | A method is defined by its name, arguments, and return type.
 data Method serviceName methodName argName
-  = Method methodName [ServiceAnnotation]
+  = Method methodName
            [Argument serviceName argName]
            (Return serviceName)
 
@@ -72,14 +71,14 @@ type ObjectField = 'Method
 -- | Look up a service in a package definition using its name.
 type family LookupService (ss :: [Service snm mnm anm]) (s :: snm) :: Service snm mnm anm where
   LookupService '[] s = TypeError ('Text "could not find method " ':<>: 'ShowType s)
-  LookupService ('Service s anns ms ': ss) s = 'Service s anns ms
-  LookupService (other              ': ss) s = LookupService ss s
+  LookupService ('Service s ms ': ss) s = 'Service s ms
+  LookupService (other         ': ss) s = LookupService ss s
 
 -- | Look up a method in a service definition using its name.
 type family LookupMethod (s :: [Method snm mnm anm]) (m :: mnm) :: Method snm mnm anm where
   LookupMethod '[] m = TypeError ('Text "could not find method " ':<>: 'ShowType m)
-  LookupMethod ('Method m anns args r ': ms) m = 'Method m anns args r
-  LookupMethod (other                 ': ms) m = LookupMethod ms m
+  LookupMethod ('Method m args r ': ms) m = 'Method m args r
+  LookupMethod (other            ': ms) m = LookupMethod ms m
 
 -- | Defines a reference to a type, either primitive or coming from the schema.
 --   'TypeRef's are used to define arguments and result types.
@@ -106,11 +105,13 @@ instance Show (TypeRef s) where
 -- | Defines the way in which arguments are handled.
 data Argument serviceName argName where
   -- | Use a single value.
-  ArgSingle :: Maybe argName -> [ServiceAnnotation]
-            -> TypeRef serviceName -> Argument serviceName argName
+  ArgSingle :: Maybe argName
+            -> TypeRef serviceName
+            -> Argument serviceName argName
   -- | Consume a stream of values.
-  ArgStream :: Maybe argName -> [ServiceAnnotation]
-            -> TypeRef serviceName -> Argument serviceName argName
+  ArgStream :: Maybe argName
+            -> TypeRef serviceName
+            -> Argument serviceName argName
 
 -- | Defines the different possibilities for returning
 --   information from a method.
@@ -134,8 +135,10 @@ data RpcInfo
             }
 
 instance Show RpcInfo where
-  show (RpcInfo (Package Nothing _) (Service s _ _) (Method m _ _ _))
+  show NoRpcInfo
+    = "<no info>"
+  show (RpcInfo (Package Nothing _) (Service s _) (Method m _ _))
     = T.unpack (s <> ":" <> m)
-  show (RpcInfo (Package (Just p) _) (Service s _ _) (Method m _ _ _))
+  show (RpcInfo (Package (Just p) _) (Service s _) (Method m _ _))
     = T.unpack (p <> ":" <> s <> ":" <> m)
 

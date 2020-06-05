@@ -167,7 +167,7 @@ instance IntrospectServices '[] sub where
 instance ( KnownSymbol sname
          , IntrospectFields smethods (IsSub sname sub)
          , IntrospectServices ss sub )
-         => IntrospectServices ('Service sname sanns smethods ': ss) sub where
+         => IntrospectServices ('Service sname smethods ': ss) sub where
   introspectServices _ psub = do
     let name = T.pack $ symbolVal (Proxy @sname)
     fs <- introspectFields (Proxy @smethods) (Proxy @(IsSub sname sub))
@@ -186,7 +186,7 @@ instance ( KnownSymbol mname
          , IntrospectInputs margs
          , IntrospectReturn mret isSub
          , IntrospectFields fs isSub)
-         => IntrospectFields ('Method mname manns margs mret ': fs) isSub where
+         => IntrospectFields ('Method mname margs mret ': fs) isSub where
   introspectFields _ pIsSub = do
     let name = T.pack $ symbolVal (Proxy @mname)
     inputs <- introspectInputs (Proxy @margs)
@@ -202,7 +202,7 @@ instance IntrospectInputs '[] where
 instance ( KnownMaybeSymbol nm
          , IntrospectTypeRef r
          , IntrospectInputs args )
-         => IntrospectInputs ('ArgSingle nm anns r ': args) where
+         => IntrospectInputs ('ArgSingle nm r ': args) where
   introspectInputs _ = do
     let nm = maybeSymbolVal (Proxy @nm)
     t <- introspectTypeRef (Proxy @r) False
@@ -212,7 +212,7 @@ instance ( KnownMaybeSymbol nm
 instance ( KnownMaybeSymbol nm
          , IntrospectTypeRef r
          , IntrospectInputs args )
-         => IntrospectInputs ('ArgStream nm anns r ': args) where
+         => IntrospectInputs ('ArgStream nm r ': args) where
   introspectInputs _ = do
     let nm = maybeSymbolVal (Proxy @nm)
     t <- tList <$> introspectTypeRef (Proxy @r) False

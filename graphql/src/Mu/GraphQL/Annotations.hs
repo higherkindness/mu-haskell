@@ -17,7 +17,7 @@ to provide this additional information.
 -}
 module Mu.GraphQL.Annotations (
   ValueConst(..)
-, DefaultValue
+, DefaultValue(..)
 , ReflectValueConst(..)
 , fromGQLValueConst
 ) where
@@ -31,7 +31,8 @@ import qualified Language.GraphQL.Draft.Syntax as GQL
 
 -- | Specifies the default value of an argument.
 --   To be used as an annotation.
-data DefaultValue (v :: ValueConst Nat Symbol)
+newtype DefaultValue
+  = DefaultValue (ValueConst Nat Symbol)
 
 -- | Type-level GraphQL constant values.
 --   Due to limitations in type-level literal values
