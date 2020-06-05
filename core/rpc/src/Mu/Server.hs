@@ -96,8 +96,8 @@ alwaysOk = liftIO
 
 -- | To declare that the function doesn't use
 --   its context.
-noContext :: b -> a -> b
-noContext = const
+noContext :: b -> a1 -> a2 -> b
+noContext x _ _ = x
 
 -- | Errors raised in a handler.
 data ServerError
@@ -172,14 +172,14 @@ data HandlersT (chn :: ServiceChain snm)
                (m :: Type -> Type) (hs :: [Type]) where
   H0 :: HandlersT chn inh '[] m '[]
   (:<||>:) :: Handles chn args ret m h
-           => (inh -> h) -> HandlersT chn inh ms m hs
+           => (RpcInfo -> inh -> h) -> HandlersT chn inh ms m hs
            -> HandlersT chn inh ('Method name anns args ret ': ms) m (h ': hs)
 
 infixr 4 :<|>:
 pattern (:<|>:) :: (Handles chn args ret m h)
                 => h -> HandlersT chn () ms m hs
                 -> HandlersT chn () ('Method name anns args ret ': ms) m (h ': hs)
-pattern x :<|>: xs <- (($ ()) -> x) :<||>: xs where
+pattern x :<|>: xs <- (($ ()) . ($ NoRpcInfo) -> x) :<||>: xs where
   x :<|>: xs = noContext x :<||>: xs
 
 -- | Defines a relation for handling.
@@ -335,12 +335,12 @@ instance (FindHandler name inh h nl, Handles chn args ret m h, ToHandlers chn in
   toHandlers nl = findHandler (Proxy @name) nl :<||>: toHandlers nl
 
 class FindHandler name inh h nl | name nl -> inh h where
-  findHandler :: Proxy name -> NamedList nl -> inh -> h
+  findHandler :: Proxy name -> NamedList nl -> RpcInfo -> inh -> h
 instance (inh ~ h, h ~ TypeError ('Text "cannot find handler for " ':<>: 'ShowType name))
          => FindHandler name inh h '[] where
   findHandler = error "this should never be called"
 instance {-# OVERLAPS #-} (inh ~ inh', h ~ h')
-         => FindHandler name inh h ( '(name, inh' -> h') ': rest ) where
+         => FindHandler name inh h ( '(name, RpcInfo -> inh' -> h') ': rest ) where
   findHandler _ (Named f :|: _) = f
 instance {-# OVERLAPPABLE #-} FindHandler name inh h rest
          => FindHandler name inh h (thing ': rest) where

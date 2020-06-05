@@ -23,6 +23,7 @@ source-repository head
 library
   exposed-modules:
     Mu.Rpc
+    Mu.Rpc.Annotations
     Mu.Rpc.Examples
     Mu.Server
 

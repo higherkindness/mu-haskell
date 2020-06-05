@@ -2,6 +2,7 @@
 {-# language DataKinds                 #-}
 {-# language ExistentialQuantification #-}
 {-# language GADTs                     #-}
+{-# language OverloadedStrings         #-}
 {-# language PolyKinds                 #-}
 {-# language TypeFamilies              #-}
 {-# language TypeOperators             #-}
@@ -19,9 +20,12 @@ module Mu.Rpc (
 , ServiceAnnotation, Method', Method(..), ObjectField
 , LookupService, LookupMethod
 , TypeRef(..), Argument', Argument(..), Return(..)
+, RpcInfo(..)
 ) where
 
 import           Data.Kind
+import           Data.Text           (Text)
+import qualified Data.Text           as T
 import           GHC.TypeLits
 import qualified Language.Haskell.TH as TH
 
@@ -96,6 +100,9 @@ data TypeRef serviceName where
   -- | Represents a possibly-missing value.
   OptionalRef  :: TypeRef serviceName -> TypeRef serviceName
 
+instance Show (TypeRef s) where
+  show _ = "ty"
+
 -- | Defines the way in which arguments are handled.
 data Argument serviceName argName where
   -- | Use a single value.
@@ -116,3 +123,19 @@ data Return serviceName where
   RetStream  :: TypeRef serviceName -> Return serviceName
   -- | Return a value or an error.
   RetThrows  :: TypeRef serviceName -> TypeRef serviceName -> Return serviceName
+
+-- | Reflection
+
+data RpcInfo
+  = NoRpcInfo
+  | RpcInfo { packageInfo :: Package Text Text Text
+            , serviceInfo :: Service Text Text Text
+            , methodInfo  :: Method  Text Text Text
+            }
+
+instance Show RpcInfo where
+  show (RpcInfo (Package Nothing _) (Service s _ _) (Method m _ _ _))
+    = T.unpack (s <> ":" <> m)
+  show (RpcInfo (Package (Just p) _) (Service s _ _) (Method m _ _ _))
+    = T.unpack (p <> ":" <> s <> ":" <> m)
+
