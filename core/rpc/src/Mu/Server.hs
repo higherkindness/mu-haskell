@@ -49,6 +49,7 @@ We recommend you to catch exceptions and return custom
 module Mu.Server (
   -- * Servers and handlers
   MonadServer, ServiceChain, noContext
+, wrapServer
   -- ** Definitions by name
 , singleService
 , method, methodWithInfo
@@ -389,3 +390,23 @@ instance {-# OVERLAPS #-} (h ~ h')
 instance {-# OVERLAPPABLE #-} FindService name h rest
          => FindService name h (thing ': rest) where
   findService p (_ :|: rest) = findService p rest
+
+-- WRAPPING MECHANISM
+
+wrapServer
+  :: forall chn p m topHs.
+     (forall inh h. (RpcInfo -> inh -> h) -> (RpcInfo -> inh -> h))
+  -> ServerT chn p m topHs -> ServerT chn p m topHs
+wrapServer f (Services ss) = Services (wrapServices ss)
+  where
+    wrapServices :: forall ss hs.
+                    ServicesT chn ss m hs -> ServicesT chn ss m hs
+    wrapServices S0 = S0
+    wrapServices (h :<&>: rest)
+      = wrapHandlers h :<&>: wrapServices rest
+
+    wrapHandlers :: forall inh ms innerHs.
+                    HandlersT chn inh ms m innerHs -> HandlersT chn inh ms m innerHs
+    wrapHandlers H0 = H0
+    wrapHandlers (h :<||>: rest)
+      = f h :<||>: wrapHandlers rest
