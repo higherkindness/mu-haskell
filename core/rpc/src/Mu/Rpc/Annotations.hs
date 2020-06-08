@@ -43,7 +43,7 @@ data RpcAnnotation domain serviceName methodName argName where
 
 -- | This type family links each schema to
 --   its corresponding annotations from one domain.
-type family AnnotatedPackage domain (sch :: Package serviceName methodName argName)
+type family AnnotatedPackage domain (sch :: Package serviceName methodName argName tyRef)
   :: [RpcAnnotation domain serviceName methodName argName]
 
 -- | Find the annotation over the package in the given set.

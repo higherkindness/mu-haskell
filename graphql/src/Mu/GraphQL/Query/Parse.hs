@@ -23,7 +23,7 @@ import           Data.Int                      (Int32)
 import           Data.List                     (find)
 import           Data.Maybe
 import           Data.Proxy
-import           Data.Scientific               (floatingOrInteger)
+import           Data.Scientific               (Scientific, floatingOrInteger, toRealFloat)
 import           Data.SOP.NS
 import qualified Data.Text                     as T
 import           GHC.TypeLits
@@ -32,7 +32,6 @@ import qualified Language.GraphQL.Draft.Syntax as GQL
 import           Mu.GraphQL.Annotations
 import           Mu.GraphQL.Query.Definition
 import           Mu.Rpc
-import           Mu.Rpc.Annotations
 import           Mu.Schema
 
 type VariableMapC = HM.HashMap T.Text GQL.ValueConst
@@ -43,7 +42,10 @@ instance A.FromJSON GQL.ValueConst where
   parseJSON A.Null       = pure GQL.VCNull
   parseJSON (A.Bool b)   = pure $ GQL.VCBoolean b
   parseJSON (A.String s) = pure $ GQL.VCString $ coerce s
-  parseJSON (A.Number n) = pure $ either GQL.VCFloat GQL.VCInt $ floatingOrInteger n
+  parseJSON (A.Number n)
+    | (Right i :: Either Double Integer) <- floatingOrInteger n
+                = pure $ GQL.VCInt i
+    | otherwise = pure $ GQL.VCFloat n
   parseJSON (A.Array xs) = GQL.VCList . GQL.ListValueG . F.toList <$> traverse A.parseJSON xs
   parseJSON (A.Object o) = GQL.VCObject . GQL.ObjectValueG . fmap toObjFld . HM.toList <$> traverse A.parseJSON o
     where
@@ -450,22 +452,27 @@ instance (ParseArg p r) => ParseArg p ('ListRef r) where
     = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef Bool) where
   parseArg _ _ (GQL.VBoolean b)
-    = pure (ArgPrimitive b)
+    = pure $ ArgPrimitive b
   parseArg _ aname _
     = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef Int32) where
   parseArg _ _ (GQL.VInt b)
-    = pure (ArgPrimitive b)
+    = pure $ ArgPrimitive $ fromIntegral b
   parseArg _ aname _
     = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef Integer) where
   parseArg _ _ (GQL.VInt b)
-    = pure $ ArgPrimitive $ fromIntegral b
+    = pure $ ArgPrimitive b
+  parseArg _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
+instance ParseArg p ('PrimitiveRef Scientific) where
+  parseArg _ _ (GQL.VFloat b)
+    = pure $ ArgPrimitive b
   parseArg _ aname _
     = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef Double) where
   parseArg _ _ (GQL.VFloat b)
-    = pure (ArgPrimitive b)
+    = pure $ ArgPrimitive $ toRealFloat b
   parseArg _ aname _
     = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef T.Text) where
@@ -578,19 +585,23 @@ instance ValueParser sch 'TNull where
   valueParser _ fname _
     = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Bool) where
-  valueParser _ _ (GQL.VBoolean b) = pure (FPrimitive b)
+  valueParser _ _ (GQL.VBoolean b) = pure $ FPrimitive b
   valueParser _ fname _
     = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Int32) where
-  valueParser _ _ (GQL.VInt b) = pure (FPrimitive b)
-  valueParser _ fname _
-    = throwError $ "field '" <> fname <> "' was not of right type"
-instance ValueParser sch ('TPrimitive Integer) where
   valueParser _ _ (GQL.VInt b) = pure $ FPrimitive $ fromIntegral b
   valueParser _ fname _
     = throwError $ "field '" <> fname <> "' was not of right type"
+instance ValueParser sch ('TPrimitive Integer) where
+  valueParser _ _ (GQL.VInt b) = pure $ FPrimitive b
+  valueParser _ fname _
+    = throwError $ "field '" <> fname <> "' was not of right type"
+instance ValueParser sch ('TPrimitive Scientific) where
+  valueParser _ _ (GQL.VFloat b) = pure $ FPrimitive b
+  valueParser _ fname _
+    = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Double) where
-  valueParser _ _ (GQL.VFloat b) = pure (FPrimitive b)
+  valueParser _ _ (GQL.VFloat b) = pure $ FPrimitive $ toRealFloat b
   valueParser _ fname _
     = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive T.Text) where
@@ -618,7 +629,7 @@ instance (ObjectOrEnumParser sch (sch :/: sty), KnownName sty)
   valueParser vmap _ v
     = FSchematic <$> parseObjectOrEnum' vmap (T.pack $ nameVal (Proxy @sty)) v
 
-class ParseDifferentReturn (p :: Package') (r :: Return Symbol) where
+class ParseDifferentReturn (p :: Package') (r :: Return Symbol (TypeRef Symbol)) where
   parseDiffReturn :: MonadError T.Text f
                   => VariableMap
                   -> FragmentMap

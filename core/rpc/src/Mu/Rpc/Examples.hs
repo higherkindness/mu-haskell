@@ -77,20 +77,19 @@ quickstartServer
                   , method @"SayManyHellos" sayManyHellos
                   , method @"SayHi" sayHi )
   where
-    sayHello :: RpcInfo -> HelloRequest -> m HelloResponse
-    sayHello _ (HelloRequest nm)
+    sayHello :: HelloRequest -> m HelloResponse
+    sayHello (HelloRequest nm)
       = pure $ HelloResponse $ "hi, " <> nm
-    sayHi :: RpcInfo -> HiRequest
+    sayHi :: HiRequest
           -> ConduitT HelloResponse Void m ()
           -> m ()
-    sayHi _ (HiRequest n) sink
+    sayHi (HiRequest n) sink
       = runConduit $ C.replicate n (HelloResponse "hi!") .| sink
-    sayManyHellos :: RpcInfo
-                  -> ConduitT () HelloRequest m ()
+    sayManyHellos :: ConduitT () HelloRequest m ()
                   -> ConduitT HelloResponse Void m ()
                   -> m ()
-    sayManyHellos i source sink
-      = runConduit $ source .| C.mapM (sayHello i) .| sink
+    sayManyHellos source sink
+      = runConduit $ source .| C.mapM sayHello .| sink
 
 -- From https://www.apollographql.com/docs/apollo-server/schema/schema/
 type ApolloService
@@ -115,10 +114,10 @@ apolloServer
   = resolver
       ( object @"Author" ( field @"name"   authorName
                          , field @"books"  authorBooks )
-      , object @"Book"   ( field @"author" (const (pure . snd))
-                         , field @"title"  (const (pure . fst)) ) )
+      , object @"Book"   ( field @"author" (pure . snd)
+                         , field @"title"  (pure . fst) ) )
   where
-    authorName :: RpcInfo -> Integer -> m String
-    authorName _ _ = pure "alex"  -- this would run in the DB
-    authorBooks :: RpcInfo -> Integer -> m [(String, Integer)]
-    authorBooks _ _ = pure []
+    authorName :: Integer -> m String
+    authorName _ = pure "alex"  -- this would run in the DB
+    authorBooks :: Integer -> m [(String, Integer)]
+    authorBooks _ = pure []

@@ -220,7 +220,7 @@ instance ( KnownMaybeSymbol nm
     let this = Input (fromMaybe "arg" nm) Nothing t
     (this :) <$> introspectInputs (Proxy @args)
 
-class IntrospectReturn (r :: Return Symbol) (isSub :: Bool) where
+class IntrospectReturn (r :: Return Symbol (TypeRef Symbol)) (isSub :: Bool) where
   introspectReturn
     :: Proxy r -> Proxy isSub -> Writer TypeMap Type
 

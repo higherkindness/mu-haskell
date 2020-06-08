@@ -12,7 +12,7 @@ import qualified Language.GraphQL.Draft.Syntax as GQL
 import           Mu.Rpc
 import           Mu.Schema
 
-data Document (p :: Package snm mnm anm)
+data Document (p :: Package snm mnm anm (TypeRef snm))
               (qr :: Maybe snm) (mut :: Maybe snm) (sub :: Maybe snm) where
   QueryDoc
     :: LookupService ss qr ~ 'Service qr qms
@@ -27,10 +27,12 @@ data Document (p :: Package snm mnm anm)
     => OneMethodQuery ('Package pname ss) (LookupService ss sub)
     -> Document ('Package pname ss) qr mut ('Just sub)
 
-type ServiceQuery (p :: Package snm mnm anm) (s :: Service snm mnm anm)
+type ServiceQuery (p :: Package snm mnm anm (TypeRef snm))
+                  (s :: Service snm mnm anm (TypeRef snm))
   = [OneMethodQuery p s]
 
-data OneMethodQuery (p :: Package snm mnm anm) (s :: Service snm mnm anm) where
+data OneMethodQuery (p :: Package snm mnm anm (TypeRef snm))
+                    (s :: Service snm mnm anm (TypeRef snm)) where
   OneMethodQuery
     :: Maybe Text
     -> NS (ChosenMethodQuery p) ms
@@ -50,19 +52,22 @@ data OneMethodQuery (p :: Package snm mnm anm) (s :: Service snm mnm anm) where
     -> GQL.SelectionSet
     -> OneMethodQuery p ('Service nm ms)
 
-data ChosenMethodQuery (p :: Package snm mnm anm) (m :: Method snm mnm anm) where
+data ChosenMethodQuery (p :: Package snm mnm anm (TypeRef snm))
+                       (m :: Method snm mnm anm (TypeRef snm)) where
   ChosenMethodQuery
     :: NP (ArgumentValue p) args
     -> ReturnQuery p r
     -> ChosenMethodQuery p ('Method mname args r)
 
-data ArgumentValue (p :: Package snm mnm anm) (a :: Argument snm anm) where
+data ArgumentValue (p :: Package snm mnm anm (TypeRef snm))
+                   (a :: Argument snm anm (TypeRef snm)) where
   ArgumentValue  :: ArgumentValue' p r
                  -> ArgumentValue p ('ArgSingle aname r)
   ArgumentStream :: ArgumentValue' p ('ListRef r)
                  -> ArgumentValue p ('ArgStream aname r)
 
-data ArgumentValue' (p :: Package snm mnm anm) (r :: TypeRef snm) where
+data ArgumentValue' (p :: Package snm mnm anm (TypeRef snm))
+                    (r :: TypeRef snm) where
   ArgPrimitive :: t -> ArgumentValue' p ('PrimitiveRef t)
   ArgSchema    :: Term sch (sch :/: sty)
                -> ArgumentValue' p ('SchemaRef sch sty)
@@ -71,12 +76,14 @@ data ArgumentValue' (p :: Package snm mnm anm) (r :: TypeRef snm) where
   ArgOptional  :: Maybe (ArgumentValue' p r)
                -> ArgumentValue' p ('OptionalRef r)
 
-data ReturnQuery (p :: Package snm mnm anm) (r :: Return snm) where
+data ReturnQuery (p :: Package snm mnm anm (TypeRef snm))
+                 (r :: Return snm (TypeRef snm)) where
   RNothing :: ReturnQuery p 'RetNothing
   RSingle  :: ReturnQuery' p r -> ReturnQuery p ('RetSingle r)
   RStream  :: ReturnQuery' p r -> ReturnQuery p ('RetStream r)
 
-data ReturnQuery' (p :: Package snm mnm anm) (r :: TypeRef snm) where
+data ReturnQuery' (p :: Package snm mnm anm (TypeRef snm))
+                  (r :: TypeRef snm) where
   RetPrimitive :: ReturnQuery' p ('PrimitiveRef t)
   RetSchema    :: SchemaQuery sch (sch :/: sty)
                -> ReturnQuery' p ('SchemaRef sch sty)

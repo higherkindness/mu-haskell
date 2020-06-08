@@ -1,4 +1,4 @@
-resolver: lts-15.5
+resolver: lts-15.16
 allow-newer: true
 
 packages:
@@ -30,6 +30,6 @@ extra-deps:
 - hw-kafka-client-3.0.0
 - hw-kafka-conduit-2.6.0
 - git: https://github.com/hasura/graphql-parser-hs.git
-  commit: 1380495a7b3269b70a7ab3081d745a5f54171a9c
+  commit: ba2379640248ce67cdfe700cbb79acd91c644bdb
 - avro-0.5.1.0
 - language-avro-0.1.3.1

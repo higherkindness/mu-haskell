@@ -20,6 +20,7 @@ module Mu.GraphQL.Annotations (
 , DefaultValue(..)
 , ReflectValueConst(..)
 , fromGQLValueConst
+, module Mu.Rpc.Annotations
 ) where
 
 import           Control.Applicative           (Alternative (..))
@@ -28,6 +29,8 @@ import           Data.Proxy
 import qualified Data.Text                     as T
 import           GHC.TypeLits
 import qualified Language.GraphQL.Draft.Syntax as GQL
+
+import           Mu.Rpc.Annotations
 
 -- | Specifies the default value of an argument.
 --   To be used as an annotation.

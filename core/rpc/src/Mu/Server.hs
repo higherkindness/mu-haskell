@@ -50,7 +50,11 @@ module Mu.Server (
   -- * Servers and handlers
   MonadServer, ServiceChain, noContext
   -- ** Definitions by name
-, singleService, method, resolver, object, field, NamedList(..)
+, singleService
+, method, methodWithInfo
+, resolver, object
+, field, fieldWithInfo
+, NamedList(..)
   -- ** Definitions by position
 , SingleServerT, pattern Server
 , ServerT(..), ServicesT(..), HandlersT(.., (:<|>:))
@@ -128,7 +132,7 @@ type SingleServerT = ServerT '[]
 -- | Definition of a complete server
 --   for a set of services, with possible
 --   references between them.
-data ServerT (chn :: ServiceChain snm) (s :: Package snm mnm anm)
+data ServerT (chn :: ServiceChain snm) (s :: Package snm mnm anm (TypeRef snm))
              (m :: Type -> Type) (hs :: [[Type]]) where
   Services :: ServicesT chn s m hs
            -> ServerT chn ('Package pname s) m hs
@@ -140,7 +144,7 @@ pattern Server svr = Services (svr :<&>: S0)
 
 infixr 3 :<&>:
 -- | Definition of a complete server for a service.
-data ServicesT (chn :: ServiceChain snm) (s :: [Service snm mnm anm])
+data ServicesT (chn :: ServiceChain snm) (s :: [Service snm mnm anm (TypeRef snm)])
                (m :: Type -> Type) (hs :: [[Type]]) where
   S0 :: ServicesT chn '[] m '[]
   (:<&>:) :: HandlersT chn (MappingRight chn sname) methods m hs
@@ -168,7 +172,7 @@ infixr 4 :<||>:
 --     of type @Conduit t Void m ()@. This stream should
 --     be connected to a source to get the elements.
 data HandlersT (chn :: ServiceChain snm)
-               (inh :: *) (methods :: [Method snm mnm anm])
+               (inh :: *) (methods :: [Method snm mnm anm (TypeRef snm)])
                (m :: Type -> Type) (hs :: [Type]) where
   H0 :: HandlersT chn inh '[] m '[]
   (:<||>:) :: Handles chn args ret m h
@@ -184,7 +188,8 @@ pattern x :<|>: xs <- (($ ()) . ($ NoRpcInfo) -> x) :<||>: xs where
 
 -- | Defines a relation for handling.
 class Handles (chn :: ServiceChain snm)
-              (args :: [Argument snm anm]) (ret :: Return snm)
+              (args :: [Argument snm anm (TypeRef snm)])
+              (ret :: Return snm (TypeRef snm))
               (m :: Type -> Type) (h :: Type)
 -- | Defines whether a given type @t@
 --   can be turned into the 'TypeRef' @ref@.
@@ -233,15 +238,31 @@ instance (MonadError ServerError m, ToRef chn ref v, handler ~ (ConduitT v Void 
 --   Intended to be used with @TypeApplications@:
 --
 --   > method @"myMethod" myHandler
-method :: forall n a p. (a -> p) -> Named n (a -> () -> p)
-method f = Named (\x () -> f x)
+method :: forall n a p. p -> Named n (a -> () -> p)
+method f = Named (\_ _ -> f)
+
+-- | Declares the handler for a method in the service,
+--   which is passed additional information about the call.
+--   Intended to be used with @TypeApplications@:
+--
+--   > methodWithInfo @"myMethod" myHandler
+methodWithInfo :: forall n p. (RpcInfo -> p) -> Named n (RpcInfo -> () -> p)
+methodWithInfo f = Named (\x () -> f x)
 
 -- | Declares the handler for a field in an object.
 --   Intended to be used with @TypeApplications@:
 --
 --   > field @"myField" myHandler
-field :: forall n h. (RpcInfo -> h) -> Named n (RpcInfo -> h)
-field  = Named
+field :: forall n h. h -> Named n (RpcInfo -> h)
+field f = Named (const f)
+
+-- | Declares the handler for a field in an object,
+--   which is passed additional information about the call.
+--   Intended to be used with @TypeApplications@:
+--
+--   > fieldWithInfo @"myField" myHandler
+fieldWithInfo :: forall n h. (RpcInfo -> h) -> Named n (RpcInfo -> h)
+fieldWithInfo  = Named
 
 -- | Defines a server for a package with a single service.
 --   Intended to be used with a tuple of 'method's:
@@ -339,8 +360,8 @@ class FindHandler name inh h nl | name nl -> inh h where
 instance (inh ~ h, h ~ TypeError ('Text "cannot find handler for " ':<>: 'ShowType name))
          => FindHandler name inh h '[] where
   findHandler = error "this should never be called"
-instance {-# OVERLAPS #-} (inh ~ inh', h ~ h')
-         => FindHandler name inh h ( '(name, RpcInfo -> inh' -> h') ': rest ) where
+instance {-# OVERLAPS #-} (RpcInfo ~ rpc', inh ~ inh', h ~ h')
+         => FindHandler name inh h ( '(name, rpc' -> inh' -> h') ': rest ) where
   findHandler _ (Named f :|: _) = f
 instance {-# OVERLAPPABLE #-} FindHandler name inh h rest
          => FindHandler name inh h (thing ': rest) where
