@@ -47,9 +47,10 @@ import           Mu.GRpc.Client.Internal
 --   * A single input or output turns into a single value.
 --   * A streaming input or output turns into a Conduit.
 gRpcCall :: forall (pro :: GRpcMessageProtocol) (pkg :: Package')
-                   (srvName :: Symbol) (methodName :: Symbol) h pkgName services anns methods.
+                   (srvName :: Symbol) (methodName :: Symbol) h
+                   pkgName services methods.
             ( pkg ~  'Package ('Just pkgName) services
-            , LookupService services srvName ~ 'Service srvName anns methods
+            , LookupService services srvName ~ 'Service srvName methods
             , GRpcServiceMethodCall pro pkgName srvName (LookupMethod methods methodName) h)
          => GrpcClient -> h
 gRpcCall

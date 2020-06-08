@@ -1,4 +1,5 @@
 {-# language DataKinds         #-}
+{-# language KindSignatures    #-}
 {-# language OverloadedStrings #-}
 {-# language TemplateHaskell   #-}
 {-|
@@ -16,6 +17,7 @@ module Mu.Quasi.GRpc (
 
 import           Control.Monad.IO.Class
 import qualified Data.Text                       as T
+import           GHC.TypeLits
 import           Language.Haskell.TH
 import           Language.ProtocolBuffers.Parser
 import qualified Language.ProtocolBuffers.Types  as P
@@ -84,9 +86,9 @@ pbMethodToType s (P.Method nm vr v rr r _)
     argToType P.Single (P.TOther ["google","protobuf","Empty"])
       = [t| '[ ] |]
     argToType P.Single (P.TOther a)
-      = [t| '[ 'ArgSingle 'Nothing ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) ] |]
+      = [t| '[ 'ArgSingle ('Nothing :: Maybe Symbol) ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) ] |]
     argToType P.Stream (P.TOther a)
-      = [t| '[ 'ArgStream 'Nothing ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) ] |]
+      = [t| '[ 'ArgStream ('Nothing :: Maybe Symbol) ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) ] |]
     argToType _ _
       = fail "only message types may be used as arguments"
 

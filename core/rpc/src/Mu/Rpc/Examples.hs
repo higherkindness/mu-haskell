@@ -24,6 +24,7 @@ import           Data.Conduit
 import           Data.Conduit.Combinators as C
 import qualified Data.Text                as T
 import           GHC.Generics
+import           GHC.TypeLits
 
 import           Mu.Rpc
 import           Mu.Schema
@@ -45,13 +46,13 @@ type QuickStartService
   = 'Package ('Just "helloworld")
       '[ 'Service "Greeter"
         '[ 'Method "SayHello"
-          '[ 'ArgSingle 'Nothing ('SchemaRef QuickstartSchema "HelloRequest") ]
+          '[ 'ArgSingle ('Nothing @Symbol) ('SchemaRef QuickstartSchema "HelloRequest") ]
             ('RetSingle ('SchemaRef QuickstartSchema "HelloResponse"))
         , 'Method "SayHi"
-          '[ 'ArgSingle 'Nothing ('SchemaRef QuickstartSchema "HiRequest")]
+          '[ 'ArgSingle ('Nothing @Symbol) ('SchemaRef QuickstartSchema "HiRequest")]
             ('RetStream ('SchemaRef QuickstartSchema "HelloResponse"))
         , 'Method "SayManyHellos"
-          '[ 'ArgStream 'Nothing ('SchemaRef QuickstartSchema "HelloRequest")]
+          '[ 'ArgStream ('Nothing @Symbol) ('SchemaRef QuickstartSchema "HelloRequest")]
                 ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ]
 
 newtype HelloRequest = HelloRequest { name :: T.Text }
