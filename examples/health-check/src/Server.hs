@@ -8,6 +8,7 @@ module Main where
 
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM
+import           Control.Monad.IO.Class
 import           Data.Conduit
 import qualified Data.Conduit.Combinators as C
 import           Data.Conduit.TMChan
@@ -42,7 +43,8 @@ type StatusUpdates = TBMChan HealthStatusMsg
 
 server :: StatusMap -> StatusUpdates -> ServerIO HealthCheckService _
 server m upd
-  = singleService ( method @"setStatus"   $ setStatus_ m upd
+  = wrapServer (\info run -> liftIO (print info) >> run) $
+    singleService ( method @"setStatus"   $ setStatus_ m upd
                   , method @"check"       $ checkH_ m
                   , method @"clearStatus" $ clearStatus_ m
                   , method @"checkAll"    $ checkAll_ m

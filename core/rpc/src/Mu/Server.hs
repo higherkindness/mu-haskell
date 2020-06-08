@@ -58,7 +58,7 @@ module Mu.Server (
 , NamedList(..)
   -- ** Definitions by position
 , SingleServerT, pattern Server
-, ServerT(..), ServicesT(..), HandlersT(.., (:<|>:))
+, ServerT(..), ServicesT(..), HandlersT(.., (:<||>:), (:<|>:))
   -- ** Simple servers using only IO
 , ServerErrorIO, ServerIO
   -- * Errors which might be raised
@@ -152,7 +152,6 @@ data ServicesT (chn :: ServiceChain snm) (s :: [Service snm mnm anm (TypeRef snm
           -> ServicesT chn rest m hss
           -> ServicesT chn ('Service sname methods ': rest) m (hs ': hss)
 
-infixr 4 :<||>:
 -- | 'HandlersT' is a sequence of handlers.
 --   Note that the handlers for your service
 --   must appear __in the same order__ as they
@@ -176,9 +175,17 @@ data HandlersT (chn :: ServiceChain snm)
                (inh :: *) (methods :: [Method snm mnm anm (TypeRef snm)])
                (m :: Type -> Type) (hs :: [Type]) where
   H0 :: HandlersT chn inh '[] m '[]
-  (:<||>:) :: Handles chn args ret m h
-           => (RpcInfo -> inh -> h) -> HandlersT chn inh ms m hs
-           -> HandlersT chn inh ('Method name args ret ': ms) m (h ': hs)
+  Hmore :: Handles chn args ret m h
+        => Proxy args -> Proxy ret
+        -> (RpcInfo -> inh -> h) -> HandlersT chn inh ms m hs
+        -> HandlersT chn inh ('Method name args ret ': ms) m (h ': hs)
+
+infixr 4 :<||>:
+pattern (:<||>:) :: Handles chn args ret m h
+                 => (RpcInfo -> inh -> h) -> HandlersT chn inh ms m hs
+                 -> HandlersT chn inh ('Method name args ret ': ms) m (h ': hs)
+pattern x :<||>: xs <- Hmore _ _ x xs where
+  x :<||>: xs = Hmore Proxy Proxy x xs
 
 infixr 4 :<|>:
 pattern (:<|>:) :: (Handles chn args ret m h)
@@ -191,7 +198,9 @@ pattern x :<|>: xs <- (($ ()) . ($ NoRpcInfo) -> x) :<||>: xs where
 class Handles (chn :: ServiceChain snm)
               (args :: [Argument snm anm (TypeRef snm)])
               (ret :: Return snm (TypeRef snm))
-              (m :: Type -> Type) (h :: Type)
+              (m :: Type -> Type) (h :: Type) where
+  wrapHandler :: Proxy '(chn, m) -> Proxy args -> Proxy ret
+              -> (forall a. m a -> m a) -> h -> h
 -- | Defines whether a given type @t@
 --   can be turned into the 'TypeRef' @ref@.
 class ToRef   (chn :: ServiceChain snm)
@@ -217,21 +226,30 @@ instance (FromRef chn ref t, [t] ~ s) => FromRef chn ('ListRef ref) s
 instance (FromRef chn ref t, Maybe t ~ s) => FromRef chn ('OptionalRef ref) s
 
 -- Arguments
-instance (FromRef chn ref t, Handles chn args ret m h,
-          handler ~ (t -> h))
-         => Handles chn ('ArgSingle aname ref ': args) ret m handler
+instance forall chn ref args ret m handler h t aname.
+         ( FromRef chn ref t, Handles chn args ret m h
+         , handler ~ (t -> h) )
+         => Handles chn ('ArgSingle aname ref ': args) ret m handler where
+  wrapHandler pchn _ pr f h = wrapHandler pchn (Proxy @args) pr f . h
 instance (MonadError ServerError m, FromRef chn ref t, Handles chn args ret m h,
           handler ~ (ConduitT () t m () -> h))
-         => Handles chn ('ArgStream aname ref ': args) ret m handler
+         => Handles chn ('ArgStream aname ref ': args) ret m handler where
+  wrapHandler pchn _ pr f h = wrapHandler pchn (Proxy @args) pr f . h
 -- Result with exception
 instance (MonadError ServerError m, handler ~ m ())
-         => Handles chn '[] 'RetNothing m handler
-instance (MonadError ServerError m, ToRef chn eref e, ToRef chn vref v, handler ~ m (Either e v))
-         => Handles chn '[] ('RetThrows eref vref) m handler
+         => Handles chn '[] 'RetNothing m handler where
+  wrapHandler _ _ _ f h = f h
+instance ( MonadError ServerError m, ToRef chn eref e, ToRef chn vref v
+         , handler ~ m (Either e v) )
+         => Handles chn '[] ('RetThrows eref vref) m handler where
+  wrapHandler _ _ _ f h = f h
 instance (MonadError ServerError m, ToRef chn ref v, handler ~ m v)
-         => Handles chn '[] ('RetSingle ref) m handler
-instance (MonadError ServerError m, ToRef chn ref v, handler ~ (ConduitT v Void m () -> m ()))
-         => Handles chn '[] ('RetStream ref) m handler
+         => Handles chn '[] ('RetSingle ref) m handler where
+  wrapHandler _ _ _ f h = f h
+instance ( MonadError ServerError m, ToRef chn ref v
+         , handler ~ (ConduitT v Void m () -> m ()) )
+         => Handles chn '[] ('RetStream ref) m handler where
+  wrapHandler _ _ _ f h = f . h
 
 -- SIMPLER WAY TO DECLARE SERVICES
 
@@ -395,7 +413,7 @@ instance {-# OVERLAPPABLE #-} FindService name h rest
 
 wrapServer
   :: forall chn p m topHs.
-     (forall inh h. (RpcInfo -> inh -> h) -> (RpcInfo -> inh -> h))
+     (forall a. RpcInfo -> m a -> m a)
   -> ServerT chn p m topHs -> ServerT chn p m topHs
 wrapServer f (Services ss) = Services (wrapServices ss)
   where
@@ -406,7 +424,10 @@ wrapServer f (Services ss) = Services (wrapServices ss)
       = wrapHandlers h :<&>: wrapServices rest
 
     wrapHandlers :: forall inh ms innerHs.
-                    HandlersT chn inh ms m innerHs -> HandlersT chn inh ms m innerHs
+                    HandlersT chn inh ms m innerHs
+                 -> HandlersT chn inh ms m innerHs
     wrapHandlers H0 = H0
-    wrapHandlers (h :<||>: rest)
-      = f h :<||>: wrapHandlers rest
+    wrapHandlers (Hmore pargs pret h rest)
+      = Hmore pargs pret
+              (\rpc inh -> wrapHandler (Proxy @'(chn, m)) pargs pret (f rpc) (h rpc inh))
+              (wrapHandlers rest)

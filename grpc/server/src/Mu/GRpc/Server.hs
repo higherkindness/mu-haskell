@@ -198,7 +198,7 @@ instance ( KnownName name, MkRPC p
          , GRpcMethodHandlers fullP fullS p m chn () rest hs)
          => GRpcMethodHandlers fullP fullS p m chn ()
                                ('Method name args r ': rest) (h ': hs) where
-  gRpcMethodHandlers f pfullP pfullS pr p s (h :<||>: rest)
+  gRpcMethodHandlers f pfullP pfullS pr p s (Hmore _ _ h rest)
     = gRpcMethodHandler f pr (Proxy @args) (Proxy @r) (mkRPC pr p s methodName)
                         (h reflectInfo ())
       : gRpcMethodHandlers f pfullP pfullS pr p s rest
