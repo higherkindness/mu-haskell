@@ -1,5 +1,5 @@
 name:          mu-protobuf
-version:       0.3.0.0
+version:       0.4.0.0
 synopsis:
   Protocol Buffers serialization and gRPC schema import for Mu microservices
 
@@ -37,7 +37,7 @@ library
     , http-client
     , http2-grpc-proto3-wire
     , language-protobuf
-    , mu-rpc                  >=0.3.0
+    , mu-rpc                  >=0.4.0
     , mu-schema               >=0.3.0
     , proto3-wire
     , servant-client-core

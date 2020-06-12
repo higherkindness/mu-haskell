@@ -24,6 +24,7 @@ import           Data.Conduit
 import           Data.Conduit.Combinators as C
 import qualified Data.Text                as T
 import           GHC.Generics
+import           GHC.TypeLits
 
 import           Mu.Rpc
 import           Mu.Schema
@@ -43,15 +44,15 @@ type QuickstartSchema
 
 type QuickStartService
   = 'Package ('Just "helloworld")
-      '[ 'Service "Greeter" '[]
-        '[ 'Method "SayHello" '[]
-          '[ 'ArgSingle 'Nothing '[] ('SchemaRef QuickstartSchema "HelloRequest") ]
+      '[ 'Service "Greeter"
+        '[ 'Method "SayHello"
+          '[ 'ArgSingle ('Nothing @Symbol) ('SchemaRef QuickstartSchema "HelloRequest") ]
             ('RetSingle ('SchemaRef QuickstartSchema "HelloResponse"))
-        , 'Method "SayHi" '[]
-          '[ 'ArgSingle 'Nothing '[] ('SchemaRef QuickstartSchema "HiRequest")]
+        , 'Method "SayHi"
+          '[ 'ArgSingle ('Nothing @Symbol) ('SchemaRef QuickstartSchema "HiRequest")]
             ('RetStream ('SchemaRef QuickstartSchema "HelloResponse"))
-        , 'Method "SayManyHellos" '[]
-          '[ 'ArgStream 'Nothing '[] ('SchemaRef QuickstartSchema "HelloRequest")]
+        , 'Method "SayManyHellos"
+          '[ 'ArgStream ('Nothing @Symbol) ('SchemaRef QuickstartSchema "HelloRequest")]
                 ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ]
 
 newtype HelloRequest = HelloRequest { name :: T.Text }
@@ -94,13 +95,13 @@ quickstartServer
 -- From https://www.apollographql.com/docs/apollo-server/schema/schema/
 type ApolloService
   = 'Package ('Just "apollo")
-      '[ Object "Book" '[]
-        '[ ObjectField "title"  '[] '[] ('RetSingle ('PrimitiveRef String))
-        , ObjectField "author" '[] '[] ('RetSingle ('ObjectRef "Author"))
+      '[ Object "Book"
+        '[ ObjectField "title" '[] ('RetSingle ('PrimitiveRef String))
+        , ObjectField "author" '[] ('RetSingle ('ObjectRef "Author"))
         ]
-      , Object "Author" '[]
-        '[ ObjectField "name"  '[] '[] ('RetSingle ('PrimitiveRef String))
-        , ObjectField "books" '[] '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
+      , Object "Author"
+        '[ ObjectField "name" '[] ('RetSingle ('PrimitiveRef String))
+        , ObjectField "books" '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
         ]
       ]
 

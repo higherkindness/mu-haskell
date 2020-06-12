@@ -1,1 +1,6 @@
-cradle: { stack: { component: "mu-grpc-server:lib" } }
+cradle:
+  stack:
+    - path: "./src"
+      component: "mu-grpc-server:lib"
+    - path: "./exe"
+      component: "mu-grpc-server:exe:grpc-example-server"

@@ -27,6 +27,7 @@ executable health-server
     , deferred-folds
     , mu-graphql
     , mu-grpc-server  >=0.3.0
+    , mu-prometheus
     , mu-protobuf     >=0.3.0
     , mu-rpc          >=0.3.0
     , mu-schema       >=0.3.0
@@ -35,6 +36,7 @@ executable health-server
     , stm-containers
     , text
     , wai
+    , warp
 
   hs-source-dirs:   src
   default-language: Haskell2010

@@ -68,11 +68,11 @@ initGRpc config _ = do
     Right c -> Right $ GRpcConnection c
 
 instance forall (pkg :: Package') (pkgName :: Symbol)
-                (service :: Service') (serviceName :: Symbol) (anns :: [ServiceAnnotation])
+                (service :: Service') (serviceName :: Symbol)
                 (methods :: [Method'])
                 (p :: GRpcMessageProtocol) (m :: Symbol) t.
          ( pkg ~ 'Package ('Just pkgName) '[service]
-         , service ~ 'Service serviceName anns methods
+         , service ~ 'Service serviceName methods
          , SearchMethodOptic p methods m t
          , KnownName serviceName
          , KnownName pkgName
@@ -96,11 +96,11 @@ class SearchMethodOptic (p :: GRpcMessageProtocol) (methods :: [Method']) (m :: 
 instance TypeError ('Text "could not find method " ':<>: ShowType m)
          => SearchMethodOptic '[] m t where
 -}
-instance {-# OVERLAPS #-} MethodOptic p ('Method name anns ins outs) t
-         => SearchMethodOptic p ('Method name anns ins outs ': rest) name t where
-  searchMethodOptic _ _ rpc = methodOptic @p rpc (Proxy @('Method name anns ins outs))
+instance {-# OVERLAPS #-} MethodOptic p ('Method name ins outs) t
+         => SearchMethodOptic p ('Method name ins outs ': rest) name t where
+  searchMethodOptic _ _ rpc = methodOptic @p rpc (Proxy @('Method name ins outs))
 instance {-# OVERLAPPABLE #-} SearchMethodOptic p rest name t
-         => SearchMethodOptic p ('Method other anns ins outs ': rest) name t where
+         => SearchMethodOptic p ('Method other ins outs ': rest) name t where
   searchMethodOptic _ = searchMethodOptic @p (Proxy @rest)
 
 class GRpcMethodCall p method t
@@ -110,44 +110,44 @@ class GRpcMethodCall p method t
   methodOptic = gRpcMethodCall @p
 
 -- No arguments
-instance forall (name :: Symbol) anns t p.
-         ( GRpcMethodCall p ('Method name anns '[ ] 'RetNothing) t
+instance forall (name :: Symbol) t p.
+         ( GRpcMethodCall p ('Method name '[ ] 'RetNothing) t
          , t ~ IO (GRpcReply ()) )
-         => MethodOptic p ('Method name anns '[ ] 'RetNothing) t
-instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (r :: Symbol) anns t p.
-         ( GRpcMethodCall p ('Method name anns '[ ] ('RetSingle ('SchemaRef sch r))) t
+         => MethodOptic p ('Method name '[ ] 'RetNothing) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (r :: Symbol) t p.
+         ( GRpcMethodCall p ('Method name '[ ] ('RetSingle ('SchemaRef sch r))) t
          , t ~ IO (GRpcReply (Term sch (sch :/: r))) )
-         => MethodOptic p ('Method name anns '[ ] ('RetSingle ('SchemaRef sch r))) t
-instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (r :: Symbol) anns t p.
-         ( GRpcMethodCall p ('Method name anns '[ ] ('RetStream ('SchemaRef sch r))) t
+         => MethodOptic p ('Method name '[ ] ('RetSingle ('SchemaRef sch r))) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (r :: Symbol) t p.
+         ( GRpcMethodCall p ('Method name '[ ] ('RetStream ('SchemaRef sch r))) t
          , t ~ IO (ConduitT () (GRpcReply (Term sch (sch :/: r))) IO ()) )
-         => MethodOptic p ('Method name anns '[ ] ('RetStream ('SchemaRef sch r))) t
+         => MethodOptic p ('Method name '[ ] ('RetStream ('SchemaRef sch r))) t
 -- Simple arguments
-instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) aname anns aanns t p.
-         ( GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname aanns ('SchemaRef sch v) ] 'RetNothing) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) aname t p.
+         ( GRpcMethodCall p ('Method name '[ 'ArgSingle aname ('SchemaRef sch v) ] 'RetNothing) t
          , t ~ (Term sch (sch :/: v) -> IO (GRpcReply ())) )
-         => MethodOptic p ('Method name anns '[ 'ArgSingle aname aanns ('SchemaRef sch v) ] 'RetNothing) t
-instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) aname anns aanns t p.
-         ( GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname aanns ('SchemaRef sch v) ] ('RetSingle ('SchemaRef sch r))) t
+         => MethodOptic p ('Method name '[ 'ArgSingle aname ('SchemaRef sch v) ] 'RetNothing) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) aname t p.
+         ( GRpcMethodCall p ('Method name '[ 'ArgSingle aname ('SchemaRef sch v) ] ('RetSingle ('SchemaRef sch r))) t
          , t ~ (Term sch (sch :/: v)
                -> IO (GRpcReply (Term sch (sch :/: r))) ) )
-         => MethodOptic p ('Method name anns '[ 'ArgSingle aname aanns ('SchemaRef sch v)  ] ('RetSingle ('SchemaRef sch r))) t
-instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) aname anns aanns t p.
-         ( GRpcMethodCall p ('Method name anns '[ 'ArgSingle aname aanns ('SchemaRef sch v)  ] ('RetStream ('SchemaRef sch r))) t
+         => MethodOptic p ('Method name '[ 'ArgSingle aname ('SchemaRef sch v)  ] ('RetSingle ('SchemaRef sch r))) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) aname t p.
+         ( GRpcMethodCall p ('Method name '[ 'ArgSingle aname ('SchemaRef sch v)  ] ('RetStream ('SchemaRef sch r))) t
          , t ~ (Term sch (sch :/: v)
                 ->  IO (ConduitT () (GRpcReply (Term sch (sch :/: r))) IO ()) ) )
-         => MethodOptic p ('Method name anns '[ 'ArgSingle aname aanns ('SchemaRef sch v)  ] ('RetStream ('SchemaRef sch r))) t
+         => MethodOptic p ('Method name '[ 'ArgSingle aname ('SchemaRef sch v)  ] ('RetStream ('SchemaRef sch r))) t
 -- Stream arguments
-instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) aname anns aanns t p.
-         ( GRpcMethodCall p ('Method name anns '[ 'ArgStream aname aanns ('SchemaRef sch v) ] ('RetSingle ('SchemaRef sch r))) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) aname t p.
+         ( GRpcMethodCall p ('Method name '[ 'ArgStream aname ('SchemaRef sch v) ] ('RetSingle ('SchemaRef sch r))) t
          , t ~ (CompressMode
                 -> IO (ConduitT (Term sch (sch :/: v))
                                 Void IO
                                 (GRpcReply (Term sch (sch :/: r))))) )
-         => MethodOptic p ('Method name anns '[ 'ArgStream aname aanns ('SchemaRef sch v)  ] ('RetSingle ('SchemaRef sch r))) t
-instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) aname anns aanns t p.
-         ( GRpcMethodCall p ('Method name anns '[ 'ArgStream aname aanns ('SchemaRef sch v)  ] ('RetStream ('SchemaRef sch r))) t
+         => MethodOptic p ('Method name '[ 'ArgStream aname ('SchemaRef sch v)  ] ('RetSingle ('SchemaRef sch r))) t
+instance forall (name :: Symbol) (sch :: Schema Symbol Symbol) (v :: Symbol) (r :: Symbol) aname t p.
+         ( GRpcMethodCall p ('Method name '[ 'ArgStream aname ('SchemaRef sch v)  ] ('RetStream ('SchemaRef sch r))) t
          , t ~ (CompressMode
                -> IO (ConduitT (Term sch (sch :/: v))
                                (GRpcReply (Term sch (sch :/: r))) IO ())) )
-         => MethodOptic p ('Method name anns '[ 'ArgStream aname aanns ('SchemaRef sch v)  ] ('RetStream ('SchemaRef sch r))) t
+         => MethodOptic p ('Method name '[ 'ArgStream aname ('SchemaRef sch v)  ] ('RetStream ('SchemaRef sch r))) t

@@ -8,17 +8,20 @@ module Main where
 
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM
+import           Control.Monad.IO.Class
 import           Data.Conduit
-import qualified Data.Conduit.Combinators as C
+import qualified Data.Conduit.Combinators      as C
 import           Data.Conduit.TMChan
-import           Data.Maybe               (fromMaybe)
+import           Data.Maybe                    (fromMaybe)
 import           Data.Proxy
-import qualified Data.Text                as T
+import qualified Data.Text                     as T
 import           DeferredFolds.UnfoldlM
-import qualified StmContainers.Map        as M
+import           Network.Wai.Handler.Warp
+import qualified StmContainers.Map             as M
 
 import           Mu.GraphQL.Server
 import           Mu.GRpc.Server
+import           Mu.Instrumentation.Prometheus
 import           Mu.Server
 
 import           Definition
@@ -27,12 +30,14 @@ main :: IO ()
 main = do
   m <- M.newIO
   upd <- newTBMChanIO 100
+  met <- initPrometheus "health"
   putStrLn "running health check application"
-  let s = server m upd
+  let s = prometheus met (server m upd)
   runConcurrently $ (\_ _ _ -> ())
-    <$> Concurrently (runGRpcApp msgProtoBuf 50051 s)
-    <*> Concurrently (runGRpcApp msgAvro     50052 s)
-    <*> Concurrently (runGraphQLAppQuery     50053 s (Proxy @"HealthCheckServiceFS2"))
+    <$> Concurrently (runner 50051 (gRpcApp msgProtoBuf s))
+    <*> Concurrently (runner 50052 (gRpcApp msgAvro s))
+    <*> Concurrently (runner 50053 (graphQLAppQuery s (Proxy @"HealthCheckServiceFS2")))
+  where runner p app = run p (prometheusWai ["metrics"] app)
 
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/health-check-unary/src/main/scala/higherkindness/mu/rpc/healthcheck/unary/handler/HealthServiceImpl.scala
@@ -42,7 +47,8 @@ type StatusUpdates = TBMChan HealthStatusMsg
 
 server :: StatusMap -> StatusUpdates -> ServerIO HealthCheckService _
 server m upd
-  = singleService ( method @"setStatus"   $ setStatus_ m upd
+  = wrapServer (\info h -> liftIO (print info) >> h) $
+    singleService ( method @"setStatus"   $ setStatus_ m upd
                   , method @"check"       $ checkH_ m
                   , method @"clearStatus" $ clearStatus_ m
                   , method @"checkAll"    $ checkAll_ m
