@@ -1,5 +1,5 @@
 name:          mu-graphql
-version:       0.3.0.0
+version:       0.4.0.0
 synopsis:      GraphQL support for Mu
 description:   GraphQL servers and clients for Mu-Haskell
 cabal-version: >=1.10
@@ -40,8 +40,8 @@ library
     , http-types
     , list-t
     , mtl
-    , mu-rpc
-    , mu-schema
+    , mu-rpc                >=0.4
+    , mu-schema             >=0.3
     , parsers
     , scientific
     , sop-core

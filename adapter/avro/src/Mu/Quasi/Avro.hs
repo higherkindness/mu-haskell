@@ -195,7 +195,7 @@ avroMethodToType schemaName m
       = fail "only named types may be used as results"
 
 typesToList :: [Type] -> Type
-typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
+typesToList = foldr (AppT . AppT PromotedConsT) PromotedNilT
 
 textToStrLit :: T.Text -> Q Type
 textToStrLit s = litT $ strTyLit $ T.unpack s

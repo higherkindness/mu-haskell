@@ -1,4 +1,5 @@
 {-# language DataKinds         #-}
+{-# language KindSignatures    #-}
 {-# language OverloadedStrings #-}
 {-# language TemplateHaskell   #-}
 {-|
@@ -16,6 +17,7 @@ module Mu.Quasi.GRpc (
 
 import           Control.Monad.IO.Class
 import qualified Data.Text                       as T
+import           GHC.TypeLits
 import           Language.Haskell.TH
 import           Language.ProtocolBuffers.Parser
 import qualified Language.ProtocolBuffers.Types  as P
@@ -70,7 +72,7 @@ pbServiceDeclToDec servicePrefix pkg schema srv@(P.Service nm _ _)
 pbServiceDeclToType :: Maybe [T.Text] -> Name -> P.ServiceDeclaration -> Q Type
 pbServiceDeclToType pkg schema (P.Service nm _ methods)
   = [t| 'Package $(pkgType pkg)
-          '[ 'Service $(textToStrLit nm) '[]
+          '[ 'Service $(textToStrLit nm)
                       $(typesToList <$> mapM (pbMethodToType schema) methods) ] |]
   where
     pkgType Nothing  = [t| 'Nothing |]
@@ -78,15 +80,15 @@ pbServiceDeclToType pkg schema (P.Service nm _ methods)
 
 pbMethodToType :: Name -> P.Method -> Q Type
 pbMethodToType s (P.Method nm vr v rr r _)
-  = [t| 'Method $(textToStrLit nm) '[]
+  = [t| 'Method $(textToStrLit nm)
                 $(argToType vr v) $(retToType rr r) |]
   where
     argToType P.Single (P.TOther ["google","protobuf","Empty"])
       = [t| '[ ] |]
     argToType P.Single (P.TOther a)
-      = [t| '[ 'ArgSingle 'Nothing '[] ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) ] |]
+      = [t| '[ 'ArgSingle ('Nothing :: Maybe Symbol) ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) ] |]
     argToType P.Stream (P.TOther a)
-      = [t| '[ 'ArgStream 'Nothing '[] ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) ] |]
+      = [t| '[ 'ArgStream ('Nothing :: Maybe Symbol) ('SchemaRef $(schemaTy s) $(textToStrLit (last a))) ] |]
     argToType _ _
       = fail "only message types may be used as arguments"
 
@@ -104,7 +106,7 @@ schemaTy schema = pure $ ConT schema
 
 typesToList :: [Type] -> Type
 typesToList
-  = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
+  = foldr (AppT . AppT PromotedConsT) PromotedNilT
 textToStrLit :: T.Text -> Q Type
 textToStrLit s
   = pure $ LitT $ StrTyLit $ T.unpack s

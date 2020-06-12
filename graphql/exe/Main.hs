@@ -8,6 +8,7 @@
 {-# language TemplateHaskell       #-}
 {-# language TupleSections         #-}
 {-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 

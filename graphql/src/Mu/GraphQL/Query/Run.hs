@@ -229,10 +229,10 @@ yieldDocument f svr doc sink = do
   runConduit $ yieldMany ([val] :: [Aeson.Value]) .| sink
 
 runQuery
-  :: forall m p s pname ss hs sname sanns ms chn inh.
+  :: forall m p s pname ss hs sname ms chn inh.
      ( RunQueryFindHandler m p hs chn ss s hs
      , p ~ 'Package pname ss
-     , s ~ 'Service sname sanns ms
+     , s ~ 'Service sname ms
      , inh ~ MappingRight chn sname )
   => (forall a. m a -> ServerErrorIO a)
   -> Intro.Schema -> ServerT chn p m hs
@@ -243,10 +243,10 @@ runQuery
 runQuery f sch whole@(Services ss) path = runQueryFindHandler f sch whole path ss
 
 runSubscription
-  :: forall m p s pname ss hs sname sanns ms chn inh.
+  :: forall m p s pname ss hs sname ms chn inh.
      ( RunQueryFindHandler m p hs chn ss s hs
      , p ~ 'Package pname ss
-     , s ~ 'Service sname sanns ms
+     , s ~ 'Service sname ms
      , inh ~ MappingRight chn sname )
   => (forall a. m a -> ServerErrorIO a)
   -> ServerT chn p m hs
@@ -260,8 +260,8 @@ runSubscription f whole@(Services ss) path
 
 class RunQueryFindHandler m p whole chn ss s hs where
   runQueryFindHandler
-    :: ( p ~  'Package pname wholess
-       , s ~ 'Service sname sanns ms
+    :: ( p ~ 'Package pname wholess
+       , s ~ 'Service sname ms
        , inh ~ MappingRight chn sname )
     => (forall a. m a -> ServerErrorIO a)
     -> Intro.Schema -> ServerT chn p m whole
@@ -271,8 +271,8 @@ class RunQueryFindHandler m p whole chn ss s hs where
     -> ServiceQuery p s
     -> WriterT [GraphQLError] IO Aeson.Value
   runSubscriptionFindHandler
-    :: ( p ~  'Package pname wholess
-       , s ~ 'Service sname sanns ms
+    :: ( p ~ 'Package pname wholess
+       , s ~ 'Service sname ms
        , inh ~ MappingRight chn sname )
     => (forall a. m a -> ServerErrorIO a)
     -> ServerT chn p m whole
@@ -294,7 +294,9 @@ instance {-# OVERLAPPABLE #-}
     = runQueryFindHandler f sch whole path that
   runSubscriptionFindHandler f whole path (_ :<&>: that)
     = runSubscriptionFindHandler f whole path that
-instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, KnownName sname, RunMethod m p whole chn sname ms h)
+instance {-# OVERLAPS #-}
+         ( s ~ 'Service sname ms, KnownName sname
+         , RunMethod m p whole chn s ms h )
          => RunQueryFindHandler m p whole chn (s ': ss) s (h ': hs) where
   runQueryFindHandler f sch whole path (this :<&>: _) inh queries
     = Aeson.object . catMaybes <$> mapM runOneQuery queries
@@ -302,7 +304,7 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, KnownName sname, RunMet
       -- if we include the signature we have to write
       -- an explicit type signature for 'runQueryFindHandler'
       runOneQuery (OneMethodQuery nm args)
-        = runMethod f whole (Proxy @sname) path nm inh this args
+        = runMethod f whole (Proxy @s) path nm inh this args
       -- handle __typename
       runOneQuery (TypeNameQuery nm)
         = let realName = fromMaybe "__typename" nm
@@ -324,7 +326,7 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, KnownName sname, RunMet
                               pure $ Just (realName, Aeson.Null)
   -- subscriptions should only have one element
   runSubscriptionFindHandler f whole path (this :<&>: _) inh (OneMethodQuery nm args) sink
-    = runMethodSubscription f whole (Proxy @sname) path nm inh this args sink
+    = runMethodSubscription f whole (Proxy @s) path nm inh this args sink
   runSubscriptionFindHandler _ _ _ _ _ (TypeNameQuery nm) sink
     = let realName = fromMaybe "__typename" nm
           o = Aeson.object [(realName, Aeson.String $ T.pack $ nameVal (Proxy @sname))]
@@ -335,22 +337,24 @@ instance {-# OVERLAPS #-} (s ~ 'Service sname sanns ms, KnownName sname, RunMet
                       :: [Aeson.Value])
                    .| sink
 
-class RunMethod m p whole chn sname ms hs where
+class RunMethod m p whole chn s ms hs where
   runMethod
     :: ( p ~ 'Package pname wholess
+       , s ~ 'Service sname allMs
        , inh ~ MappingRight chn sname )
     => (forall a. m a -> ServerErrorIO a)
     -> ServerT chn p m whole
-    -> Proxy sname -> [T.Text] -> Maybe T.Text -> inh
+    -> Proxy s -> [T.Text] -> Maybe T.Text -> inh
     -> HandlersT chn inh ms m hs
     -> NS (ChosenMethodQuery p) ms
     -> WriterT [GraphQLError] IO (Maybe (T.Text, Aeson.Value))
   runMethodSubscription
     :: ( p ~ 'Package pname wholess
+       , s ~ 'Service sname allMs
        , inh ~ MappingRight chn sname )
     => (forall a. m a -> ServerErrorIO a)
     -> ServerT chn p m whole
-    -> Proxy sname -> [T.Text] -> Maybe T.Text -> inh
+    -> Proxy s -> [T.Text] -> Maybe T.Text -> inh
     -> HandlersT chn inh ms m hs
     -> NS (ChosenMethodQuery p) ms
     -> ConduitT Aeson.Value Void IO ()
@@ -359,18 +363,23 @@ class RunMethod m p whole chn sname ms hs where
 instance RunMethod m p whole chn s '[] '[] where
   runMethod _ = error "this should never be called"
   runMethodSubscription _ = error "this should never be called"
-instance (RunMethod m p whole chn s ms hs, KnownName mname, RunHandler m p whole chn args r h)
-         => RunMethod m p whole chn s ('Method mname anns args r ': ms) (h ': hs) where
+instance ( RunMethod m p whole chn s ms hs
+         , KnownName mname
+         , RunHandler m p whole chn args r h
+         , ReflectRpcInfo p s ('Method mname args r) )
+         => RunMethod m p whole chn s ('Method mname args r ': ms) (h ': hs) where
   -- handle normal methods
   runMethod f whole _ path nm inh (h :<||>: _) (Z (ChosenMethodQuery args ret))
-    = ((realName ,) <$>) <$> runHandler f whole (path ++ [realName]) (h inh) args ret
+    = ((realName ,) <$>) <$> runHandler f whole (path ++ [realName]) (h rpcInfo inh) args ret
     where realName = fromMaybe (T.pack $ nameVal (Proxy @mname)) nm
+          rpcInfo = reflectRpcInfo (Proxy @p) (Proxy @s) (Proxy @('Method mname args r))
   runMethod f whole p path nm inh (_ :<||>: r) (S cont)
     = runMethod f whole p path nm inh r cont
   -- handle subscriptions
   runMethodSubscription f whole _ path nm inh (h :<||>: _) (Z (ChosenMethodQuery args ret)) sink
-    = runHandlerSubscription f whole (path ++ [realName]) (h inh) args ret sink
+    = runHandlerSubscription f whole (path ++ [realName]) (h rpcInfo inh) args ret sink
     where realName = fromMaybe (T.pack $ nameVal (Proxy @mname)) nm
+          rpcInfo = reflectRpcInfo (Proxy @p) (Proxy @s) (Proxy @('Method mname args r))
   runMethodSubscription f whole p path nm inh (_ :<||>: r) (S cont) sink
     = runMethodSubscription f whole p path nm inh r cont sink
 
@@ -395,7 +404,7 @@ class Handles chn args r m h
     -> IO ()
 
 instance (ArgumentConversion chn ref t, RunHandler m p whole chn rest r h)
-         => RunHandler m p whole chn ('ArgSingle aname aanns ref ': rest) r (t -> h) where
+         => RunHandler m p whole chn ('ArgSingle aname ref ': rest) r (t -> h) where
   runHandler f whole path h (ArgumentValue one :* rest)
     = runHandler f whole path (h (convertArg (Proxy @chn) one)) rest
   runHandlerSubscription f whole path h (ArgumentValue one :* rest)
@@ -404,7 +413,7 @@ instance ( MonadError ServerError m
          , FromRef chn ref t
          , ArgumentConversion chn ('ListRef ref) [t]
          , RunHandler m p whole chn rest r h )
-         => RunHandler m p whole chn ('ArgStream aname aanns ref ': rest) r (ConduitT () t m () -> h) where
+         => RunHandler m p whole chn ('ArgStream aname ref ': rest) r (ConduitT () t m () -> h) where
   runHandler f whole path h (ArgumentStream lst :* rest)
     = let converted :: [t] = convertArg (Proxy @chn) lst
       in runHandler f whole path (h (yieldMany converted)) rest
@@ -497,8 +506,8 @@ instance ( ToSchema sch l r
     = pure $ Just $ runSchemaQuery (toSchema' @_ @_ @sch @r t) r
 instance ( MappingRight chn ref ~ t
          , MappingRight chn sname ~ t
-         , LookupService ss ref ~ 'Service sname sanns ms
-         , RunQueryFindHandler m ('Package pname ss) whole chn ss ('Service sname sanns ms) whole)
+         , LookupService ss ref ~ 'Service sname ms
+         , RunQueryFindHandler m ('Package pname ss) whole chn ss ('Service sname ms) whole)
          => ResultConversion m ('Package pname ss) whole chn ('ObjectRef ref) t where
   convertResult f whole path (RetObject q) h
     = Just <$> runQuery @m @('Package pname ss) @(LookupService ss ref) f

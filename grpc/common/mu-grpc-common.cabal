@@ -1,5 +1,5 @@
 name:          mu-grpc-common
-version:       0.3.0.0
+version:       0.4.0.0
 synopsis:      gRPC for Mu, common modules for client and server
 description:
   Use @mu-grpc-server@ or @mu-grpc-client@ (the common parts).
@@ -31,9 +31,9 @@ library
     , bytestring
     , http2-grpc-proto3-wire
     , http2-grpc-types
-    , mu-avro                 >=0.3.0
-    , mu-protobuf             >=0.3.0
-    , mu-rpc                  >=0.3.0
+    , mu-avro                 >=0.4.0
+    , mu-protobuf             >=0.4.0
+    , mu-rpc                  >=0.4.0
     , mu-schema               >=0.3.0
 
   hs-source-dirs:   src

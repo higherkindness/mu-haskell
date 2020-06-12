@@ -1,5 +1,5 @@
 name:               mu-grpc-client
-version:            0.3.0.0
+version:            0.4.0.0
 synopsis:           gRPC clients from Mu definitions
 description:
   With @mu-grpc-client@ you can easily build gRPC clients for mu-haskell!
@@ -38,10 +38,10 @@ library
     , http2-client
     , http2-client-grpc
     , http2-grpc-types
-    , mu-grpc-common     >=0.3.0
+    , mu-grpc-common     >=0.4.0
     , mu-optics          >=0.3.0
-    , mu-protobuf        >=0.3.0
-    , mu-rpc             >=0.3.0
+    , mu-protobuf        >=0.4.0
+    , mu-rpc             >=0.4.0
     , mu-schema          >=0.3.0
     , optics-core
     , sop-core
