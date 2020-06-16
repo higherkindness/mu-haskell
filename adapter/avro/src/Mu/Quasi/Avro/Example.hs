@@ -1,6 +1,8 @@
-{-# language CPP         #-}
-{-# language DataKinds   #-}
-{-# language QuasiQuotes #-}
+{-# language CPP             #-}
+{-# language DataKinds       #-}
+{-# language QuasiQuotes     #-}
+{-# language TemplateHaskell #-}
+
 {-|
 Description : Examples for Avro quasi-quoters
 
@@ -8,7 +10,7 @@ Look at the source code of this module.
 -}
 module Mu.Quasi.Avro.Example where
 
-import           Mu.Quasi.Avro (avro, avroFile)
+import           Mu.Quasi.Avro (avdl, avro, avroFile)
 
 type Example = [avro|
 {
@@ -44,4 +46,10 @@ type Example = [avro|
 type ExampleFromFile = [avroFile|adapter/avro/test/avro/example.avsc|]
 #else
 type ExampleFromFile = [avroFile|test/avro/example.avsc|]
+#endif
+
+#if __GHCIDE__
+avdl "ExampleProtocol" "ExampleService" "." "adapter/avro/test/avro/example.avdl"
+#else
+avdl "ExampleProtocol" "ExampleService" "." "test/avro/example.avdl"
 #endif

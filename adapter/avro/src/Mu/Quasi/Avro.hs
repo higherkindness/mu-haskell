@@ -88,7 +88,7 @@ avdlToDecls schemaName serviceName protocol
        schemaDec <- tySynD schemaName' [] (schemaFromAvro $ S.toList (A.types protocol))
        serviceDec <- tySynD serviceName' []
          [t| 'Package $(pkgType (A.ns protocol))
-                '[ 'Service $(textToStrLit (A.pname protocol)) '[]
+                '[ 'Service $(textToStrLit (A.pname protocol))
                             $(typesToList <$> mapM (avroMethodToType schemaName')
                             (S.toList $ A.messages protocol)) ] |]
        pure [schemaDec, serviceDec]
@@ -176,13 +176,13 @@ flattenAvroDecls = concatMap (uncurry (:) . flattenDecl)
 
 avroMethodToType :: Name -> A.Method -> Q Type
 avroMethodToType schemaName m
-  = [t| 'Method $(textToStrLit (A.mname m)) '[]
+  = [t| 'Method $(textToStrLit (A.mname m))
                 $(typesToList <$> mapM argToType (A.args m))
                 $(retToType (A.result m)) |]
   where
     argToType :: A.Argument -> Q Type
     argToType (A.Argument (A.NamedType a) _)
-      = [t| 'ArgSingle 'Nothing '[] ('SchemaRef $(conT schemaName) $(textToStrLit (A.baseName a))) |]
+      = [t| 'ArgSingle 'Nothing ('SchemaRef $(conT schemaName) $(textToStrLit (A.baseName a))) |]
     argToType (A.Argument _ _)
       = fail "only named types may be used as arguments"
 
