@@ -1,11 +1,16 @@
-{ nixpkgs ? (fetchTarball https://github.com/NixOS/nixpkgs/archive/63d375f.tar.gz)
-, pkgs ? import nixpkgs (import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/6cf92c4.tar.gz))
+let
+  haskellNix = import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/6cf92c4.tar.gz) {};
+  nixpkgsSrc = haskellNix.sources.nixpkgs-2003;
+  nixpkgsArgs = haskellNix.nixpkgsArgs;
+in
+{ pkgs ? import nixpkgsSrc nixpkgsArgs
 }:
-
 let
   hnPkgs = pkgs.haskell-nix.stackProject {
-    src = ./.;
-    modules = [];
+    src = pkgs.haskell-nix.haskellLib.cleanGit {
+      name = "mu-haskell";
+      src = ./.;
+    };
   };
 in {
   compendium-client = hnPkgs.compendium-client.components.library;
