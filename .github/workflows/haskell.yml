@@ -1,26 +1,13 @@
 name: Haskell CI
-on: [pull_request]
+on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - uses: mstksg/setup-stack@v1
-    - uses: actions/cache@v1
-      name: Cache ~/.stack
+    - uses: cachix/install-nix-action@v10
+    - uses: cachix/cachix-action@v6
       with:
-        path: ~/.stack
-        key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-stack-
-    - uses: actions/cache@v1
-      name: Cache .stack-work
-      with:
-        path: .stack-work
-        key: ${{ runner.os }}-stack-work-${{ hashFiles('stack.yaml') }}-${{ hashFiles('**/*.hs') }}
-        restore-keys: |
-          ${{ runner.os }}-stack-work-
-    - name: Get rdkafka
-      run: sudo apt-get install librdkafka-dev
-    - name: Compile with Stack
-      run: stack build
+        name: 47deg
+        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+    - run: nix-build
