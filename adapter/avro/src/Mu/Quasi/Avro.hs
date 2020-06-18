@@ -1,4 +1,5 @@
 {-# language DataKinds         #-}
+{-# language KindSignatures    #-}
 {-# language LambdaCase        #-}
 {-# language NamedFieldPuns    #-}
 {-# language OverloadedStrings #-}
@@ -39,6 +40,7 @@ import           Data.Time
 import           Data.Time.Millis
 import           Data.UUID
 import qualified Data.Vector                as V
+import           GHC.TypeLits
 import           Language.Avro.Parser
 import qualified Language.Avro.Types        as A
 import           Language.Haskell.TH
@@ -93,7 +95,7 @@ avdlToDecls schemaName serviceName protocol
                             (S.toList $ A.messages protocol)) ] |]
        pure [schemaDec, serviceDec]
   where
-    pkgType Nothing = [t| 'Nothing |]
+    pkgType Nothing = [t| ('Nothing :: Maybe Symbol) |]
     pkgType (Just (A.Namespace p))
                     = [t| 'Just $(textToStrLit (T.intercalate "." p)) |]
 
@@ -182,7 +184,7 @@ avroMethodToType schemaName m
   where
     argToType :: A.Argument -> Q Type
     argToType (A.Argument (A.NamedType a) _)
-      = [t| 'ArgSingle 'Nothing ('SchemaRef $(conT schemaName) $(textToStrLit (A.baseName a))) |]
+      = [t| 'ArgSingle ('Nothing :: Maybe Symbol) ('SchemaRef $(conT schemaName) $(textToStrLit (A.baseName a))) |]
     argToType (A.Argument _ _)
       = fail "only named types may be used as arguments"
 
