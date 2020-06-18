@@ -12,4 +12,4 @@ jobs:
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
     - run: nix-build
     - name: Run Python Protocol Tests
-      run: nix-build --show-trace -E 'import ./python-test.nix' && ./test-schema.sh
+      run: nix-env -f python-test.nix -i -A buildInputs && ./test-schema.sh
