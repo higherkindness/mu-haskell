@@ -1,5 +1,6 @@
 {-# language CPP             #-}
 {-# language DataKinds       #-}
+{-# language KindSignatures  #-}
 {-# language QuasiQuotes     #-}
 {-# language TemplateHaskell #-}
 
