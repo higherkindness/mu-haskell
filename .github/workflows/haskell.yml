@@ -11,3 +11,5 @@ jobs:
         name: 47deg
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
     - run: nix-build
+    - name: Run Python Protocol Tests
+      run: nix-build --show-trace -E 'import ./python-test.nix' && ./test-schema.sh
