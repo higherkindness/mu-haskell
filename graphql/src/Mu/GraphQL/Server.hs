@@ -43,6 +43,7 @@ import qualified Data.Text                        as T
 import           Data.Text.Encoding               (decodeUtf8)
 import qualified Data.Text.Lazy.Encoding          as T
 import           Language.GraphQL.Draft.Parser    (parseExecutableDoc)
+import           Mu.Adapter.Json                  ()
 import           Network.HTTP.Types.Header        (hContentType)
 import           Network.HTTP.Types.Method        (StdMethod (..), parseMethod)
 import           Network.HTTP.Types.Status        (ok200)

@@ -1,0 +1,31 @@
+schema {
+  query: PeopleService
+}
+
+type PeopleService {
+  getPerson(arg: PeopleRequest): PeopleResponse
+  getWeather(arg: WeatherRequest): WeatherResponse
+}
+
+type Person {
+  name: String!
+  age: Int!
+}
+input PeopleRequest {
+  name: String!
+}
+type PeopleResponse {
+  person: Person
+}
+
+enum Weather {
+  sunny
+  cloudy
+  rainy
+}
+input WeatherRequest {
+  currentWeather: Weather
+}
+type WeatherResponse {
+  message: String!
+}
