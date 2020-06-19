@@ -23,10 +23,12 @@ import           Mu.Server
 
 import           Schema
 
-type Person         = Term SeedSchema (SeedSchema :/: "Person")
-type PeopleRequest  = Term SeedSchema (SeedSchema :/: "PeopleRequest")
-type PeopleResponse = Term SeedSchema (SeedSchema :/: "PeopleResponse")
-type Weather        = Term SeedSchema (SeedSchema :/: "Weather")
+type Person          = Term SeedSchema (SeedSchema :/: "Person")
+type PeopleRequest   = Term SeedSchema (SeedSchema :/: "PeopleRequest")
+type PeopleResponse  = Term SeedSchema (SeedSchema :/: "PeopleResponse")
+type Weather         = Term SeedSchema (SeedSchema :/: "Weather")
+type WeatherRequest  = Term SeedSchema (SeedSchema :/: "WeatherRequest")
+type WeatherResponse = Term SeedSchema (SeedSchema :/: "WeatherResponse")
 
 main :: IO ()
 main = do
@@ -39,16 +41,11 @@ main = do
 server :: (MonadServer m, MonadLogger m) => SingleServerT PeopleService m _
 server = singleService
   ( method @"getPerson" getPerson
-  , method @"getPersonStream" getPersonStream)
+  , method @"getPersonStream" getPersonStream
+  , method @"getWeather" getWeather )
 
 evolvePerson :: PeopleRequest -> PeopleResponse
 evolvePerson req = record1 (Just $ record (req ^. #name, 18))
-
-getWeather :: Weather -> IO ()
-getWeather e
-  | e `is` #sunny  = putStrLn "is sunny! 😄"
-  | e `is` #cloudy = putStrLn "is cloudy 😟"
-  | e `is` #rainy  = putStrLn "is rainy... 😭"
 
 getPerson :: Monad m => PeopleRequest -> m PeopleResponse
 getPerson = pure . evolvePerson
@@ -64,3 +61,16 @@ getPersonStream source sink = runConduit $ source .| C.mapM reStream .| sink
       liftIO $ threadDelay (2 * 1000 * 1000) -- 2 sec
       logDebugN $ T.pack $ "stream request: " ++ show req
       pure $ evolvePerson req
+
+getWeather :: (MonadServer m)
+           => WeatherRequest
+           -> m WeatherResponse
+getWeather msg
+ | Just w <- msg ^. #currentWeather
+ = pure $ record1 $ go w
+ | otherwise
+ = pure $ record1 "who knows?"
+ where go e | e `is` #sunny  = "is sunny! 😄"
+            | e `is` #cloudy = "is cloudy 😟"
+            | e `is` #rainy  = "is rainy... 😭"
+            | otherwise      = error "this should never happen"

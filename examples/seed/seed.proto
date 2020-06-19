@@ -1,5 +1,4 @@
 syntax = "proto3";
-
 package seed;
 
 message Person { string name = 1; int32 age = 2; }
@@ -7,12 +6,19 @@ message PeopleRequest { string name = 1; }
 message PeopleResponse { Person person = 1; }
 
 enum Weather {
-  sunny = 0;
+  sunny  = 0;
   cloudy = 1;
-  rainy = 2;
+  rainy  = 2;
+}
+message WeatherRequest {
+  Weather currentWeather = 1;
+}
+message WeatherResponse {
+  string message = 1;
 }
 
 service PeopleService {
   rpc getPerson (PeopleRequest) returns (PeopleResponse);
   rpc getPersonStream (stream PeopleRequest) returns (stream PeopleResponse);
+  rpc getWeather (WeatherRequest) returns (WeatherResponse);
 }
