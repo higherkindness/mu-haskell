@@ -75,7 +75,7 @@ pbServiceDeclToType pkg schema (P.Service nm _ methods)
           '[ 'Service $(textToStrLit nm)
                       $(typesToList <$> mapM (pbMethodToType schema) methods) ] |]
   where
-    pkgType Nothing  = [t| 'Nothing |]
+    pkgType Nothing  = [t| ('Nothing :: Maybe Symbol) |]
     pkgType (Just p) = [t| 'Just $(textToStrLit (T.intercalate "." p)) |]
 
 pbMethodToType :: Name -> P.Method -> Q Type
