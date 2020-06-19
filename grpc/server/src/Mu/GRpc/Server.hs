@@ -70,7 +70,7 @@ runGRpcApp
                            protocol ServerErrorIO chn services handlers )
   => Proxy protocol
   -> Port
-  -> ServerT chn ('Package ('Just name) services) ServerErrorIO handlers
+  -> ServerT chn () ('Package ('Just name) services) ServerErrorIO handlers
   -> IO ()
 runGRpcApp protocol port = runGRpcAppTrans protocol port id
 
@@ -82,7 +82,7 @@ runGRpcAppTrans
   => Proxy protocol
   -> Port
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT chn ('Package ('Just name) services) m handlers
+  -> ServerT chn () ('Package ('Just name) services) m handlers
   -> IO ()
 runGRpcAppTrans protocol port f svr = run port (gRpcAppTrans protocol f svr)
 
@@ -96,7 +96,7 @@ runGRpcAppSettings
   => Proxy protocol
   -> Settings
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT chn ('Package ('Just name) services) m handlers
+  -> ServerT chn () ('Package ('Just name) services) m handlers
   -> IO ()
 runGRpcAppSettings protocol st f svr = runSettings st (gRpcAppTrans protocol f svr)
 
@@ -111,7 +111,7 @@ runGRpcAppTLS
   => Proxy protocol
   -> TLSSettings -> Settings
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT chn ('Package ('Just name) services) m handlers
+  -> ServerT chn () ('Package ('Just name) services) m handlers
   -> IO ()
 runGRpcAppTLS protocol tls st f svr = runTLS tls st (gRpcAppTrans protocol f svr)
 
@@ -125,7 +125,7 @@ gRpcApp
      , GRpcServiceHandlers ('Package ('Just name) services)
                            protocol ServerErrorIO chn services handlers )
   => Proxy protocol
-  -> ServerT chn ('Package ('Just name) services) ServerErrorIO handlers
+  -> ServerT chn () ('Package ('Just name) services) ServerErrorIO handlers
   -> Application
 gRpcApp protocol = gRpcAppTrans protocol id
 
@@ -140,7 +140,7 @@ gRpcAppTrans
                            protocol m chn services handlers )
   => Proxy protocol
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT chn ('Package ('Just name) services) m handlers
+  -> ServerT chn () ('Package ('Just name) services) m handlers
   -> Application
 gRpcAppTrans protocol f svr
   = Wai.grpcApp [uncompressed, gzip]
@@ -153,7 +153,7 @@ gRpcServerHandlers
                            protocol m chn services handlers )
   => Proxy protocol
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT chn ('Package ('Just name) services) m handlers
+  -> ServerT chn () ('Package ('Just name) services) m handlers
   -> [ServiceHandler]
 gRpcServerHandlers pr f (Services svr)
   = gRpcServiceHandlers f (Proxy @('Package ('Just name) services)) pr packageName svr
@@ -165,7 +165,7 @@ class GRpcServiceHandlers (fullP :: Package snm mnm anm (TypeRef snm))
                           (ss :: [Service snm mnm anm (TypeRef snm)]) (hs :: [[Type]]) where
   gRpcServiceHandlers :: (forall a. m a -> ServerErrorIO a)
                       -> Proxy fullP -> Proxy p -> ByteString
-                      -> ServicesT chn ss m hs -> [ServiceHandler]
+                      -> ServicesT chn () ss m hs -> [ServiceHandler]
 
 instance GRpcServiceHandlers fullP p m chn '[] '[] where
   gRpcServiceHandlers _ _ _ _ S0 = []
@@ -188,7 +188,7 @@ class GRpcMethodHandlers (fullP :: Package snm mnm anm (TypeRef snm))
                          (ms :: [Method snm mnm anm (TypeRef snm)]) (hs :: [Type]) where
   gRpcMethodHandlers :: (forall a. m a -> ServerErrorIO a)
                      -> Proxy fullP -> Proxy fullS -> Proxy p -> ByteString -> ByteString
-                     -> HandlersT chn inh ms m hs -> [ServiceHandler]
+                     -> HandlersT chn () inh ms m hs -> [ServiceHandler]
 
 instance GRpcMethodHandlers fullP fullS p m chn inh '[] '[] where
   gRpcMethodHandlers _ _ _ _ _ _ H0 = []
@@ -203,7 +203,7 @@ instance ( KnownName name, MkRPC p
                         (h reflectInfo ())
       : gRpcMethodHandlers f pfullP pfullS pr p s rest
     where methodName = BS.pack (nameVal (Proxy @name))
-          reflectInfo = reflectRpcInfo pfullP pfullS (Proxy @('Method name args r))
+          reflectInfo = reflectRpcInfo pfullP pfullS (Proxy @('Method name args r)) ()
 
 class GRpcMethodHandler p m (args :: [Argument snm anm (TypeRef snm)]) r h where
   gRpcMethodHandler :: (forall a. m a -> ServerErrorIO a)

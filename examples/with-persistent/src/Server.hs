@@ -27,7 +27,7 @@ main = do
       runDb conn $ runMigration migrateAll
       liftIO $ runGRpcApp msgProtoBuf 1234 (server conn)
 
-server :: SqlBackend -> SingleServerT PersistentService ServerErrorIO _
+server :: SqlBackend -> SingleServerT info PersistentService ServerErrorIO _
 server p
   = singleService ( method @"getPerson" $ getPerson p
                   , method @"newPerson" $ newPerson p

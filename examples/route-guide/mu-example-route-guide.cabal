@@ -1,5 +1,5 @@
 name:          mu-example-route-guide
-version:       0.3.0.0
+version:       0.4.0.0
 synopsis:
   Example route-guide project from mu-scala ported to mu-haskell
 
@@ -26,9 +26,9 @@ executable route-guide-server
     , base            >=4.12  && <5
     , conduit
     , hashable
-    , mu-grpc-server  >=0.3.0
-    , mu-protobuf     >=0.3.0
-    , mu-rpc          >=0.3.0
+    , mu-grpc-server  >=0.4.0
+    , mu-protobuf     >=0.4.0
+    , mu-rpc          >=0.4.0
     , mu-schema       >=0.3.0
     , stm
     , stm-chans
