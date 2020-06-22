@@ -1,11 +1,13 @@
 {-# language DataKinds             #-}
 {-# language DeriveAnyClass        #-}
 {-# language DeriveGeneric         #-}
+{-# language DerivingVia           #-}
 {-# language DuplicateRecordFields #-}
 {-# language FlexibleContexts      #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
 {-# language TypeApplications      #-}
+{-# language TypeOperators         #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 
 module Main where
@@ -24,6 +26,7 @@ import           Mu.GRpc.Server
 import           Mu.Schema
 import           Mu.Server
 import           Network.Wai
+import           System.Random
 
 import           Schema
 
@@ -46,6 +49,29 @@ newtype PeopleResponse = PeopleResponse
              , ToSchema   SeedSchema "PeopleResponse"
              , FromSchema SeedSchema "PeopleResponse" )
 
+type WeatherMapping
+  = '[ "SUNNY"  ':-> "sunny"
+     , "CLOUDY" ':-> "cloudy"
+     , "RAINY"  ':-> "rainy" ]
+
+data Weather = SUNNY | CLOUDY | RAINY
+  deriving ( Eq, Show, Ord, Generic )
+  deriving ( ToSchema   SeedSchema "Weather"
+           , FromSchema SeedSchema "Weather" )
+    via ( CustomFieldMapping "Weather" WeatherMapping Weather )
+
+newtype WeatherRequest = WeatherRequest
+  { currentWeather :: Maybe Weather
+  } deriving ( Eq, Show, Ord, Generic
+             , ToSchema   SeedSchema "WeatherRequest"
+             , FromSchema SeedSchema "WeatherRequest" )
+
+newtype WeatherResponse = WeatherResponse
+  { message :: T.Text
+  } deriving ( Eq, Show, Ord, Generic
+             , ToSchema   SeedSchema "WeatherResponse"
+             , FromSchema SeedSchema "WeatherResponse" )
+
 main :: IO ()
 main = do
   putStrLn "running seed application"
@@ -59,10 +85,11 @@ main = do
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/seed/server/modules/process/src/main/scala/example/seed/server/process/ProtoPeopleServiceHandler.scala
 
-server :: (MonadServer m, MonadLogger m) => SingleServerT PeopleService m _
+server :: (MonadServer m, MonadLogger m) => SingleServerT info PeopleService m _
 server  = singleService
   ( method @"getPerson" getPerson
   , method @"getPersonStream" getPersonStream
+  , method @"getWeather" getWeather
   )
 
 evolvePerson :: PeopleRequest -> PeopleResponse
@@ -81,3 +108,14 @@ getPersonStream source sink = runConduit $ source .| C.mapM reStream .| sink
       liftIO $ threadDelay (2 * 1000 * 1000) -- 2 sec
       logDebugN $ T.pack $ "stream request: " ++ show req
       pure $ evolvePerson req
+
+getWeather :: (MonadServer m)
+           => WeatherRequest
+           -> m WeatherResponse
+getWeather (WeatherRequest Nothing)
+  = pure $ WeatherResponse "who knows?"
+getWeather (WeatherRequest (Just w))
+  = pure $ WeatherResponse $ go w
+  where go SUNNY  = "is sunny! 😄"
+        go CLOUDY = "is cloudy 😟"
+        go RAINY  = "is rainy... 😭"

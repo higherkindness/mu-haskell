@@ -1,5 +1,5 @@
 name:          mu-example-health-check
-version:       0.3.0.0
+version:       0.4.0.0
 synopsis:
   Example health-check project from mu-scala (with protobuf) ported to mu-haskell
 
@@ -26,10 +26,10 @@ executable health-server
     , conduit
     , deferred-folds
     , mu-graphql
-    , mu-grpc-server  >=0.3.0
+    , mu-grpc-server  >=0.4.0
     , mu-prometheus
-    , mu-protobuf     >=0.3.0
-    , mu-rpc          >=0.3.0
+    , mu-protobuf     >=0.4.0
+    , mu-rpc          >=0.4.0
     , mu-schema       >=0.3.0
     , stm
     , stm-conduit
@@ -49,8 +49,8 @@ executable health-client-tyapps
       base            >=4.12  && <5
     , conduit
     , mu-grpc-client  >=0.3.0
-    , mu-protobuf     >=0.3.0
-    , mu-rpc          >=0.3.0
+    , mu-protobuf     >=0.4.0
+    , mu-rpc          >=0.4.0
     , mu-schema       >=0.3.0
     , text
 

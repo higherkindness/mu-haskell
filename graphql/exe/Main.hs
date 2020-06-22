@@ -63,7 +63,8 @@ library
     , (3, "Michael Ende", [(4, "The Neverending Story"), (5, "Momo")])
     ]
 
-libraryServer :: forall m. (MonadServer m) => ServerT ServiceMapping ServiceDefinition m _
+libraryServer :: forall m i. (MonadServer m)
+              => ServerT ServiceMapping i ServiceDefinition m _
 libraryServer
   = resolver ( object @"Book"   ( field  @"id"      bookId
                                 , field  @"title"   bookTitle

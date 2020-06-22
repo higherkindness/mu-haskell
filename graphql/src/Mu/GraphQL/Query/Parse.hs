@@ -267,7 +267,7 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
          <*> parseQuery pp ps vmap frmap ss
   where
     fieldToMethod :: GQL.Field -> f (Maybe (OneMethodQuery p ('Service sname methods)))
-    fieldToMethod (GQL.Field alias name args dirs sels)
+    fieldToMethod f@(GQL.Field alias name args dirs sels)
       | any (shouldSkip vmap) dirs
       = pure Nothing
       | GQL.unName name == "__typename"
@@ -291,7 +291,9 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
           _ -> throwError "__type requires one single argument"
       | otherwise
       = Just . OneMethodQuery (GQL.unName . GQL.unAlias <$> alias)
-         <$> selectMethod (Proxy @('Service s methods)) (T.pack $ nameVal (Proxy @s)) vmap frmap name args sels
+         <$> selectMethod (Proxy @('Service s methods))
+                          (T.pack $ nameVal (Proxy @s))
+                          vmap frmap f
 parseQuery pp ps vmap frmap (GQL.SelectionFragmentSpread (GQL.FragmentSpread nm dirs) : ss)
   | Just fr <- HM.lookup (GQL.unName nm) frmap
   = if not (any (shouldSkip vmap) dirs) && not (any (shouldSkip vmap) $ GQL._fdDirectives fr)
@@ -337,13 +339,14 @@ class ParseMethod (p :: Package') (s :: Service') (ms :: [Method']) where
     T.Text ->
     VariableMap ->
     FragmentMap ->
-    GQL.Name ->
+    GQL.Field ->
+    {- GQL.Name ->
     [GQL.Argument] ->
-    GQL.SelectionSet ->
+    GQL.SelectionSet -> -}
     f (NS (ChosenMethodQuery p) ms)
 
 instance ParseMethod p s '[] where
-  selectMethod _ tyName _ _ (GQL.unName -> wanted) _ _
+  selectMethod _ tyName _ _ (GQL.unName . GQL._fName -> wanted)
     = throwError $ "field '" <> wanted <> "' was not found on type '" <> tyName <> "'"
 instance
   ( KnownSymbol mname, ParseMethod p s ms
@@ -351,13 +354,13 @@ instance
   , ParseDifferentReturn p r) =>
   ParseMethod p s ('Method mname args r ': ms)
   where
-  selectMethod s tyName vmap frmap w@(GQL.unName -> wanted) args sels
+  selectMethod s tyName vmap frmap f@(GQL.Field _ (GQL.unName -> wanted) args _ sels)
     | wanted == mname
-    = Z <$> (ChosenMethodQuery <$> parseArgs (Proxy @s) (Proxy @('Method mname args r))
-                                             vmap args
-                               <*> parseDiffReturn vmap frmap wanted sels)
+    = Z <$> (ChosenMethodQuery f
+               <$> parseArgs (Proxy @s) (Proxy @('Method mname args r)) vmap args
+               <*> parseDiffReturn vmap frmap wanted sels)
     | otherwise
-    = S <$> selectMethod s tyName vmap frmap w args sels
+    = S <$> selectMethod s tyName vmap frmap f
     where
       mname = T.pack $ nameVal (Proxy @mname)
 
@@ -384,7 +387,7 @@ instance ParseArg p a
   parseArgs _ _ _ _
     = throwError "this field receives one single argument"
 -- more than one argument
-instance ( KnownName aname, ParseArg p a, ParseArgs p s m as
+instance ( KnownName aname, ParseMaybeArg p a, ParseArgs p s m as
          , s ~ 'Service snm sms, m ~ 'Method mnm margs mr
          , ann ~ GetArgAnnotationMay (AnnotatedPackage DefaultValue p) snm mnm aname
          , FindDefaultArgValue ann )
@@ -393,11 +396,12 @@ instance ( KnownName aname, ParseArg p a, ParseArgs p s m as
     = let aname = T.pack $ nameVal (Proxy @aname)
       in case find ((== nameVal (Proxy @aname)) . T.unpack . GQL.unName . GQL._aName) args of
         Just (GQL.Argument _ x)
-          -> (:*) <$> (ArgumentValue <$> parseArg' vmap aname x)
+          -> (:*) <$> (ArgumentValue <$> parseMaybeArg vmap aname (Just x))
                   <*> parseArgs ps pm vmap args
         Nothing
-          -> do x <- findDefaultArgValue (Proxy @ann) aname
-                (:*) <$> (ArgumentValue <$> parseArg' vmap aname (constToValue x))
+          -> do let x = findDefaultArgValue (Proxy @ann)
+                (:*) <$> (ArgumentValue <$> parseMaybeArg vmap aname
+                                            (constToValue <$> x))
                      <*> parseArgs ps pm vmap args
 instance ( KnownName aname, ParseArg p a, ParseArgs p s m as
          , s ~ 'Service snm sms, m ~ 'Method mnm margs mr
@@ -408,24 +412,50 @@ instance ( KnownName aname, ParseArg p a, ParseArgs p s m as
     = let aname = T.pack $ nameVal (Proxy @aname)
       in case find ((== nameVal (Proxy @aname)) . T.unpack . GQL.unName . GQL._aName) args of
         Just (GQL.Argument _ x)
-          -> (:*) <$> (ArgumentStream <$> parseArg' vmap aname x)
+          -> (:*) <$> (ArgumentStream <$> parseMaybeArg vmap aname (Just x))
                   <*> parseArgs ps pm vmap args
         Nothing
-          -> do x <- findDefaultArgValue (Proxy @ann) aname
-                (:*) <$> (ArgumentStream <$> parseArg' vmap aname (constToValue x))
+          -> do let x = findDefaultArgValue (Proxy @ann)
+                (:*) <$> (ArgumentStream <$> parseMaybeArg vmap aname
+                                             (constToValue <$> x))
                      <*> parseArgs ps pm vmap args
 
 class FindDefaultArgValue (vs :: Maybe DefaultValue) where
-  findDefaultArgValue :: MonadError T.Text f
-                      => Proxy vs
-                      -> T.Text
-                      -> f GQL.ValueConst
+  findDefaultArgValue :: Proxy vs
+                      -> Maybe GQL.ValueConst
 instance FindDefaultArgValue 'Nothing where
-  findDefaultArgValue _ aname
-    = throwError $ "argument '" <> aname <> "' was not given a value, and has no default one"
+  findDefaultArgValue _ = Nothing
 instance ReflectValueConst v
          => FindDefaultArgValue ('Just ('DefaultValue v)) where
-  findDefaultArgValue _ _ = pure $ reflectValueConst (Proxy @v)
+  findDefaultArgValue _ = Just $ reflectValueConst (Proxy @v)
+
+class ParseMaybeArg (p :: Package') (a :: TypeRef Symbol) where
+  parseMaybeArg :: MonadError T.Text f
+                => VariableMap
+                -> T.Text
+                -> Maybe GQL.Value
+                -> f (ArgumentValue' p a)
+
+instance {-# OVERLAPS #-} (ParseArg p a)
+         => ParseMaybeArg p ('OptionalRef a) where
+  parseMaybeArg vmap aname (Just x)
+    = ArgOptional . Just <$> parseArg' vmap aname x
+  parseMaybeArg _ _ Nothing
+    = pure $ ArgOptional Nothing
+instance {-# OVERLAPS #-} (ParseArg p a)
+         => ParseMaybeArg p ('ListRef a) where
+  parseMaybeArg vmap aname (Just x)
+    = parseArg' vmap aname x
+  parseMaybeArg _ _ Nothing
+    = pure $ ArgList []
+instance {-# OVERLAPPABLE #-} (ParseArg p a)
+         => ParseMaybeArg p a where
+  parseMaybeArg vmap aname (Just x)
+    = parseArg' vmap aname x
+  parseMaybeArg _ aname Nothing
+    = throwError $ "argument '" <> aname <>
+                   "' was not given a value, and has no default one"
+
 
 parseArg' :: (ParseArg p a, MonadError T.Text f)
           => VariableMap

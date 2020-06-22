@@ -55,7 +55,8 @@ data OneMethodQuery (p :: Package snm mnm anm (TypeRef snm))
 data ChosenMethodQuery (p :: Package snm mnm anm (TypeRef snm))
                        (m :: Method snm mnm anm (TypeRef snm)) where
   ChosenMethodQuery
-    :: NP (ArgumentValue p) args
+    :: GQL.Field
+    -> NP (ArgumentValue p) args
     -> ReturnQuery p r
     -> ChosenMethodQuery p ('Method mname args r)
 

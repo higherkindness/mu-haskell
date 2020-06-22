@@ -131,11 +131,12 @@ data Return serviceName tyRef where
 
 -- | Reflection
 
-data RpcInfo
+data RpcInfo i
   = NoRpcInfo
   | RpcInfo { packageInfo :: Package Text Text Text TyInfo
             , serviceInfo :: Service Text Text Text TyInfo
             , methodInfo  :: Method  Text Text Text TyInfo
+            , extraInfo   :: i
             }
 
 data TyInfo
@@ -144,16 +145,16 @@ data TyInfo
   | TyTy     Text
   deriving (Show, Eq)
 
-instance Show RpcInfo where
+instance Show (RpcInfo i) where
   show NoRpcInfo
     = "<no info>"
-  show (RpcInfo (Package Nothing _) (Service s _) (Method m _ _))
+  show (RpcInfo (Package Nothing _) (Service s _) (Method m _ _) _)
     = T.unpack (s <> ":" <> m)
-  show (RpcInfo (Package (Just p) _) (Service s _) (Method m _ _))
+  show (RpcInfo (Package (Just p) _) (Service s _) (Method m _ _) _)
     = T.unpack (p <> ":" <> s <> ":" <> m)
 
 class ReflectRpcInfo (p :: Package') (s :: Service') (m :: Method') where
-  reflectRpcInfo :: Proxy p -> Proxy s -> Proxy m -> RpcInfo
+  reflectRpcInfo :: Proxy p -> Proxy s -> Proxy m -> i -> RpcInfo i
 class ReflectService (s :: Service') where
   reflectService :: Proxy s -> Service Text Text Text TyInfo
 class ReflectMethod (m :: Method') where
