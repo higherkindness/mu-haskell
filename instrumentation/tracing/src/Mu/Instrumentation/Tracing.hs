@@ -57,14 +57,14 @@ newZipkin = new
 -- | Wraps a server to do distributed tracing
 --   using 'Zipkin' as backend.
 zipkin :: (MonadIO m, MonadTrace m)
-       => MuTracing -> ServerT chn p m topHs -> ServerT chn p m topHs
+       => MuTracing -> ServerT chn i p m topHs -> ServerT chn i p m topHs
 zipkin m = wrapServer (zipkinTracing m)
 
 zipkinTracing :: (MonadIO m, MonadTrace m)
-              => MuTracing -> RpcInfo -> m a -> m a
+              => MuTracing -> RpcInfo i -> m a -> m a
 zipkinTracing zpk NoRpcInfo h =
   rootSpan (samplingPolicy zpk) (rootName zpk) h
-zipkinTracing zpk (RpcInfo _ _ _ (M.fromList -> hdrs)) h =
+zipkinTracing zpk (RpcInfo _ _ _ (M.fromList -> hdrs) _) h =
   case getB3 of
     Nothing  -> rootSpan (samplingPolicy zpk) (rootName zpk) h
     Just spn -> serverSpan spn h

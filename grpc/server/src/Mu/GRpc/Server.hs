@@ -203,7 +203,8 @@ instance ( KnownName name, MkRPC p
                         (\req -> h (reflectInfo (requestHeaders req)) ())
       : gRpcMethodHandlers f pfullP pfullS pr p s rest
     where methodName = BS.pack (nameVal (Proxy @name))
-          reflectInfo = reflectRpcInfo pfullP pfullS (Proxy @('Method name args r)) ()
+          reflectInfo hdrs
+            = reflectRpcInfo pfullP pfullS (Proxy @('Method name args r)) hdrs ()
 
 class GRpcMethodHandler p m (args :: [Argument snm anm (TypeRef snm)]) r h where
   gRpcMethodHandler :: (forall a. m a -> ServerErrorIO a)
