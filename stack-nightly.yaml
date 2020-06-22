@@ -14,6 +14,7 @@ packages:
 - grpc/server
 - graphql
 - instrumentation/prometheus
+- instrumentation/tracing
 - examples/health-check
 - examples/route-guide
 - examples/seed
