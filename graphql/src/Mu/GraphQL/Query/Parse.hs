@@ -267,7 +267,7 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
          <*> parseQuery pp ps vmap frmap ss
   where
     fieldToMethod :: GQL.Field -> f (Maybe (OneMethodQuery p ('Service sname methods)))
-    fieldToMethod (GQL.Field alias name args dirs sels)
+    fieldToMethod f@(GQL.Field alias name args dirs sels)
       | any (shouldSkip vmap) dirs
       = pure Nothing
       | GQL.unName name == "__typename"
@@ -291,7 +291,9 @@ parseQuery pp ps vmap frmap (GQL.SelectionField fld : ss)
           _ -> throwError "__type requires one single argument"
       | otherwise
       = Just . OneMethodQuery (GQL.unName . GQL.unAlias <$> alias)
-         <$> selectMethod (Proxy @('Service s methods)) (T.pack $ nameVal (Proxy @s)) vmap frmap name args sels
+         <$> selectMethod (Proxy @('Service s methods))
+                          (T.pack $ nameVal (Proxy @s))
+                          vmap frmap f
 parseQuery pp ps vmap frmap (GQL.SelectionFragmentSpread (GQL.FragmentSpread nm dirs) : ss)
   | Just fr <- HM.lookup (GQL.unName nm) frmap
   = if not (any (shouldSkip vmap) dirs) && not (any (shouldSkip vmap) $ GQL._fdDirectives fr)
@@ -337,13 +339,14 @@ class ParseMethod (p :: Package') (s :: Service') (ms :: [Method']) where
     T.Text ->
     VariableMap ->
     FragmentMap ->
-    GQL.Name ->
+    GQL.Field ->
+    {- GQL.Name ->
     [GQL.Argument] ->
-    GQL.SelectionSet ->
+    GQL.SelectionSet -> -}
     f (NS (ChosenMethodQuery p) ms)
 
 instance ParseMethod p s '[] where
-  selectMethod _ tyName _ _ (GQL.unName -> wanted) _ _
+  selectMethod _ tyName _ _ (GQL.unName . GQL._fName -> wanted)
     = throwError $ "field '" <> wanted <> "' was not found on type '" <> tyName <> "'"
 instance
   ( KnownSymbol mname, ParseMethod p s ms
@@ -351,13 +354,13 @@ instance
   , ParseDifferentReturn p r) =>
   ParseMethod p s ('Method mname args r ': ms)
   where
-  selectMethod s tyName vmap frmap w@(GQL.unName -> wanted) args sels
+  selectMethod s tyName vmap frmap f@(GQL.Field _ (GQL.unName -> wanted) args _ sels)
     | wanted == mname
-    = Z <$> (ChosenMethodQuery <$> parseArgs (Proxy @s) (Proxy @('Method mname args r))
-                                             vmap args
-                               <*> parseDiffReturn vmap frmap wanted sels)
+    = Z <$> (ChosenMethodQuery f
+               <$> parseArgs (Proxy @s) (Proxy @('Method mname args r)) vmap args
+               <*> parseDiffReturn vmap frmap wanted sels)
     | otherwise
-    = S <$> selectMethod s tyName vmap frmap w args sels
+    = S <$> selectMethod s tyName vmap frmap f
     where
       mname = T.pack $ nameVal (Proxy @mname)
 

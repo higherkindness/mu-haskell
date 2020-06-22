@@ -31,7 +31,7 @@ main = do
 type Id = TVar Int32
 type TodoList = TVar [TodoListMessage]
 
-server :: Id -> TodoList -> ServerIO TodoListService _
+server :: Id -> TodoList -> ServerIO info TodoListService _
 server i t
   = singleService ( method @"reset"    $ reset i t
                   , method @"insert"   $ insert i t

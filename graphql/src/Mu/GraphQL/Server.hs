@@ -43,6 +43,7 @@ import qualified Data.Text                        as T
 import           Data.Text.Encoding               (decodeUtf8)
 import qualified Data.Text.Lazy.Encoding          as T
 import           Language.GraphQL.Draft.Parser    (parseExecutableDoc)
+import qualified Language.GraphQL.Draft.Syntax    as GQL
 import           Mu.Adapter.Json                  ()
 import           Network.HTTP.Types.Header        (hContentType)
 import           Network.HTTP.Types.Method        (StdMethod (..), parseMethod)
@@ -71,7 +72,7 @@ instance A.FromJSON GraphQLInput where
 --   queries, but also mutations or subscriptions.
 graphQLApp ::
     ( GraphQLApp p qr mut sub ServerErrorIO chn hs )
-    => ServerT chn p ServerErrorIO hs
+    => ServerT chn GQL.Field p ServerErrorIO hs
     -> Proxy qr
     -> Proxy mut
     -> Proxy sub
@@ -83,7 +84,7 @@ graphQLApp = graphQLAppTrans id
 graphQLAppQuery ::
     forall qr p chn hs.
     ( GraphQLApp p ('Just qr) 'Nothing 'Nothing ServerErrorIO chn hs )
-    => ServerT chn p ServerErrorIO hs
+    => ServerT chn GQL.Field p ServerErrorIO hs
     -> Proxy qr
     -> Application
 graphQLAppQuery svr _
@@ -96,7 +97,7 @@ graphQLAppTransQuery ::
     forall qr m p chn hs.
     ( GraphQLApp p ('Just qr) 'Nothing 'Nothing m chn hs )
     => (forall a. m a -> ServerErrorIO a)
-    -> ServerT chn p m hs
+    -> ServerT chn GQL.Field p m hs
     -> Proxy qr
     -> Application
 graphQLAppTransQuery f svr _
@@ -108,7 +109,7 @@ graphQLAppTransQuery f svr _
 graphQLAppTrans ::
     ( GraphQLApp p qr mut sub m chn hs )
     => (forall a. m a -> ServerErrorIO a)
-    -> ServerT chn p m hs
+    -> ServerT chn GQL.Field p m hs
     -> Proxy qr
     -> Proxy mut
     -> Proxy sub
@@ -121,7 +122,7 @@ graphQLAppTrans f server q m s
 httpGraphQLAppTrans ::
     ( GraphQLApp p qr mut sub m chn hs )
     => (forall a. m a -> ServerErrorIO a)
-    -> ServerT chn p m hs
+    -> ServerT chn GQL.Field p m hs
     -> Proxy qr
     -> Proxy mut
     -> Proxy sub
@@ -164,7 +165,7 @@ httpGraphQLAppTrans f server q m s req res =
 wsGraphQLAppTrans
     :: ( GraphQLApp p qr mut sub m chn hs )
     => (forall a. m a -> ServerErrorIO a)
-    -> ServerT chn p m hs
+    -> ServerT chn GQL.Field p m hs
     -> Proxy qr
     -> Proxy mut
     -> Proxy sub
@@ -179,7 +180,7 @@ wsGraphQLAppTrans f server q m s conn
 runGraphQLAppSettings ::
   ( GraphQLApp p qr mut sub ServerErrorIO chn hs )
   => Settings
-  -> ServerT chn p ServerErrorIO hs
+  -> ServerT chn GQL.Field p ServerErrorIO hs
   -> Proxy qr
   -> Proxy mut
   -> Proxy sub
@@ -190,7 +191,7 @@ runGraphQLAppSettings st svr q m s = runSettings st (graphQLApp svr q m s)
 runGraphQLApp ::
   ( GraphQLApp p qr mut sub ServerErrorIO chn hs )
   => Port
-  -> ServerT chn p ServerErrorIO hs
+  -> ServerT chn GQL.Field p ServerErrorIO hs
   -> Proxy qr
   -> Proxy mut
   -> Proxy sub
@@ -202,7 +203,7 @@ runGraphQLAppTrans ::
   ( GraphQLApp p qr mut sub m chn hs )
   => Port
   -> (forall a. m a -> ServerErrorIO a)
-  -> ServerT chn p m hs
+  -> ServerT chn GQL.Field p m hs
   -> Proxy qr
   -> Proxy mut
   -> Proxy sub
@@ -213,7 +214,7 @@ runGraphQLAppTrans port f svr q m s = run port (graphQLAppTrans f svr q m s)
 runGraphQLAppQuery ::
   ( GraphQLApp p ('Just qr) 'Nothing 'Nothing ServerErrorIO chn hs )
   => Port
-  -> ServerT chn p ServerErrorIO hs
+  -> ServerT chn GQL.Field p ServerErrorIO hs
   -> Proxy qr
   -> IO ()
 runGraphQLAppQuery port svr q = run port (graphQLAppQuery svr q)

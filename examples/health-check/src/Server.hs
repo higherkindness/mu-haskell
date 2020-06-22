@@ -45,7 +45,7 @@ main = do
 type StatusMap = M.Map T.Text T.Text
 type StatusUpdates = TBMChan HealthStatusMsg
 
-server :: StatusMap -> StatusUpdates -> ServerIO HealthCheckService _
+server :: StatusMap -> StatusUpdates -> ServerIO info HealthCheckService _
 server m upd
   = wrapServer (\info h -> liftIO (print info) >> h) $
     singleService ( method @"setStatus"   $ setStatus_ m upd

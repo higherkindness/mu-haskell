@@ -69,7 +69,7 @@ calcDistance (Point lat1 lon1) (Point lat2 lon2)
 -- Server implementation
 -- https://github.com/higherkindness/mu/blob/master/modules/examples/routeguide/server/src/main/scala/handlers/RouteGuideServiceHandler.scala
 
-server :: Features -> TBMChan RouteNote -> ServerIO RouteGuideService _
+server :: Features -> TBMChan RouteNote -> ServerIO info RouteGuideService _
 server f m
   = singleService ( method @"GetFeature"   $ getFeature f
                   , method @"ListFeatures" $ listFeatures f

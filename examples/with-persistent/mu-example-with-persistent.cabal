@@ -24,10 +24,10 @@ executable persistent-server
       base                 >=4.12  && <5
     , conduit
     , monad-logger
-    , mu-grpc-server       >=0.3.0
+    , mu-grpc-server       >=0.4.0
     , mu-persistent        >=0.3.0
-    , mu-protobuf          >=0.3.0
-    , mu-rpc               >=0.3.0
+    , mu-protobuf          >=0.4.0
+    , mu-rpc               >=0.4.0
     , mu-schema            >=0.3.0
     , persistent
     , persistent-sqlite
@@ -42,8 +42,8 @@ executable persistent-client
     , conduit
     , mu-grpc-client       >=0.3.0
     , mu-persistent        >=0.3.0
-    , mu-protobuf          >=0.3.0
-    , mu-rpc               >=0.3.0
+    , mu-protobuf          >=0.4.0
+    , mu-rpc               >=0.4.0
     , mu-schema            >=0.3.0
     , persistent
     , persistent-sqlite
@@ -62,8 +62,8 @@ executable persistent-client-record
     , conduit
     , mu-grpc-client       >=0.3.0
     , mu-persistent        >=0.3.0
-    , mu-protobuf          >=0.3.0
-    , mu-rpc               >=0.3.0
+    , mu-protobuf          >=0.4.0
+    , mu-rpc               >=0.4.0
     , mu-schema            >=0.3.0
     , persistent
     , persistent-sqlite
@@ -83,8 +83,8 @@ executable persistent-client-optics
     , mu-grpc-client       >=0.3.0.0
     , mu-optics            >=0.3.0.0
     , mu-persistent        >=0.3.0
-    , mu-protobuf          >=0.3.0
-    , mu-rpc               >=0.3.0
+    , mu-protobuf          >=0.4.0
+    , mu-rpc               >=0.4.0
     , mu-schema            >=0.3.0
     , persistent
     , persistent-sqlite
