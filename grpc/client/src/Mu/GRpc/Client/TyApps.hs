@@ -19,6 +19,7 @@ module Mu.GRpc.Client.TyApps (
 , GrpcClientConfig
 , grpcClientConfigSimple
 , setupGrpcClient'
+, setupGrpcClientZipkin
   -- * Call methods from the gRPC service
 , gRpcCall
 , GRpcMessageProtocol(..)

@@ -22,6 +22,7 @@ module Mu.GRpc.Client.Record (
 , GrpcClientConfig
 , grpcClientConfigSimple
 , setupGrpcClient'
+, setupGrpcClientZipkin
   -- * Fill and generate the Haskell record of functions
 , buildService
 , GRpcMessageProtocol(..)
