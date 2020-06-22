@@ -28,10 +28,11 @@ module Mu.Rpc (
 ) where
 
 import           Data.Kind
-import           Data.Text           (Text)
-import qualified Data.Text           as T
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
 import           GHC.TypeLits
-import qualified Language.Haskell.TH as TH
+import qualified Language.Haskell.TH       as TH
+import           Network.HTTP.Types.Header
 import           Type.Reflection
 
 import           Mu.Schema
@@ -136,6 +137,7 @@ data RpcInfo i
   | RpcInfo { packageInfo :: Package Text Text Text TyInfo
             , serviceInfo :: Service Text Text Text TyInfo
             , methodInfo  :: Method  Text Text Text TyInfo
+            , headers     :: RequestHeaders
             , extraInfo   :: i
             }
 
@@ -148,13 +150,13 @@ data TyInfo
 instance Show (RpcInfo i) where
   show NoRpcInfo
     = "<no info>"
-  show (RpcInfo (Package Nothing _) (Service s _) (Method m _ _) _)
+  show (RpcInfo (Package Nothing _) (Service s _) (Method m _ _) _ _)
     = T.unpack (s <> ":" <> m)
-  show (RpcInfo (Package (Just p) _) (Service s _) (Method m _ _) _)
+  show (RpcInfo (Package (Just p) _) (Service s _) (Method m _ _) _ _)
     = T.unpack (p <> ":" <> s <> ":" <> m)
 
 class ReflectRpcInfo (p :: Package') (s :: Service') (m :: Method') where
-  reflectRpcInfo :: Proxy p -> Proxy s -> Proxy m -> i -> RpcInfo i
+  reflectRpcInfo :: Proxy p -> Proxy s -> Proxy m -> RequestHeaders -> i -> RpcInfo i
 class ReflectService (s :: Service') where
   reflectService :: Proxy s -> Service Text Text Text TyInfo
 class ReflectMethod (m :: Method') where
@@ -199,10 +201,10 @@ instance (ReflectArg m, ReflectArgs ms)
 
 instance (KnownMaySymbol pname, ReflectServices ss, ReflectService s, ReflectMethod m)
          => ReflectRpcInfo ('Package pname ss) s m where
-  reflectRpcInfo _ ps pm
+  reflectRpcInfo _ ps pm req extra
     = RpcInfo (Package (maySymbolVal (Proxy @pname))
                        (reflectServices (Proxy @ss)))
-              (reflectService ps) (reflectMethod pm)
+              (reflectService ps) (reflectMethod pm) req extra
 
 instance (KnownSymbol sname, ReflectMethods ms)
          => ReflectService ('Service sname ms) where
