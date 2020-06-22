@@ -1,5 +1,9 @@
-{-# language OverloadedStrings #-}
-{-# language ViewPatterns      #-}
+{-# language FlexibleInstances     #-}
+{-# language MultiParamTypeClasses #-}
+{-# language OverloadedStrings     #-}
+{-# language PolyKinds             #-}
+{-# language UndecidableInstances  #-}
+{-# language ViewPatterns          #-}
 {-|
 Description : Distributed tracing for Mu
 
@@ -23,6 +27,7 @@ module Mu.Instrumentation.Tracing (
 , runZipkin
   -- ** Establish connection
 , newZipkin
+, defaultZipkinSettings
 , Settings(..)
   -- * Useful re-exports
 , module Monitor.Tracing
@@ -53,6 +58,9 @@ runZipkin = flip run
 -- | Create a new connection to 'Zipkin'.
 newZipkin :: Settings -> IO Zipkin
 newZipkin = new
+
+defaultZipkinSettings :: Settings
+defaultZipkinSettings = defaultSettings
 
 -- | Wraps a server to do distributed tracing
 --   using 'Zipkin' as backend.

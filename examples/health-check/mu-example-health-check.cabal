@@ -31,10 +31,13 @@ executable health-server
     , mu-protobuf     >=0.4.0
     , mu-rpc          >=0.4.0
     , mu-schema       >=0.3.0
+    , mu-tracing      >=0.4.0
+    , prometheus-client >= 1  && <2
     , stm             >=2.5   && <3
     , stm-conduit     >=4     && <5
     , stm-containers  >=1.1   && <2
     , text            >=1.2   && <2
+    , tracing         >=0.0.5
     , wai             >=3.2   && <4
     , warp            >=3.3   && <4
 

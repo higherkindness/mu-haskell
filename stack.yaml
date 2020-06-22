@@ -23,6 +23,8 @@ packages:
 - compendium-client
 
 extra-deps:
+- git: https://github.com/serras/tracing.git
+  commit: affcb9459db84692b7cfb4759aebb655279e61bc
 - http2-client-0.9.0.0
 - http2-client-grpc-0.8.0.0
 - http2-grpc-proto3-wire-0.1.0.0
@@ -39,3 +41,4 @@ extra-deps:
 - primitive-unlifted-0.1.3.0
 - stm-hamt-1.2.0.4
 - stm-containers-1.1.0.4
+- stm-lifted-2.5.0.0
