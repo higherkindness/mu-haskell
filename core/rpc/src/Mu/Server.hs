@@ -84,7 +84,7 @@ type ServerErrorIO = ExceptT ServerError IO
 
 -- | Simple 'ServerT' which uses only 'IO' and errors,
 --   and whose service has no back-references.
-type ServerIO srv = ServerT '[] srv ServerErrorIO
+type ServerIO info srv = ServerT '[] info srv ServerErrorIO
 
 -- | Stop the current handler,
 --   returning an error to the client.
@@ -133,24 +133,26 @@ type SingleServerT = ServerT '[]
 -- | Definition of a complete server
 --   for a set of services, with possible
 --   references between them.
-data ServerT (chn :: ServiceChain snm) (s :: Package snm mnm anm (TypeRef snm))
+data ServerT (chn :: ServiceChain snm) (info :: Type)
+             (s :: Package snm mnm anm (TypeRef snm))
              (m :: Type -> Type) (hs :: [[Type]]) where
-  Services :: ServicesT chn s m hs
-           -> ServerT chn ('Package pname s) m hs
+  Services :: ServicesT chn info s m hs
+           -> ServerT chn info ('Package pname s) m hs
 
 pattern Server :: (MappingRight chn sname ~ ())
-               => HandlersT chn () methods m hs
-               -> ServerT chn ('Package pname '[ 'Service sname methods ]) m '[hs]
+               => HandlersT chn info () methods m hs
+               -> ServerT chn info ('Package pname '[ 'Service sname methods ]) m '[hs]
 pattern Server svr = Services (svr :<&>: S0)
 
 infixr 3 :<&>:
 -- | Definition of a complete server for a service.
-data ServicesT (chn :: ServiceChain snm) (s :: [Service snm mnm anm (TypeRef snm)])
+data ServicesT (chn :: ServiceChain snm) (info :: Type)
+               (s :: [Service snm mnm anm (TypeRef snm)])
                (m :: Type -> Type) (hs :: [[Type]]) where
-  S0 :: ServicesT chn '[] m '[]
-  (:<&>:) :: HandlersT chn (MappingRight chn sname) methods m hs
-          -> ServicesT chn rest m hss
-          -> ServicesT chn ('Service sname methods ': rest) m (hs ': hss)
+  S0 :: ServicesT chn info '[] m '[]
+  (:<&>:) :: HandlersT chn info (MappingRight chn sname) methods m hs
+          -> ServicesT chn info rest m hss
+          -> ServicesT chn info ('Service sname methods ': rest) m (hs ': hss)
 
 -- | 'HandlersT' is a sequence of handlers.
 --   Note that the handlers for your service
@@ -171,26 +173,27 @@ data ServicesT (chn :: ServiceChain snm) (s :: [Service snm mnm anm (TypeRef snm
 --   * Output streams turn into an __additional argument__
 --     of type @Conduit t Void m ()@. This stream should
 --     be connected to a source to get the elements.
-data HandlersT (chn :: ServiceChain snm)
+data HandlersT (chn :: ServiceChain snm) (info :: Type)
                (inh :: *) (methods :: [Method snm mnm anm (TypeRef snm)])
                (m :: Type -> Type) (hs :: [Type]) where
-  H0 :: HandlersT chn inh '[] m '[]
+  H0 :: HandlersT chn info inh '[] m '[]
   Hmore :: Handles chn args ret m h
         => Proxy args -> Proxy ret
-        -> (RpcInfo -> inh -> h) -> HandlersT chn inh ms m hs
-        -> HandlersT chn inh ('Method name args ret ': ms) m (h ': hs)
+        -> (RpcInfo info -> inh -> h)
+        -> HandlersT chn info inh ms m hs
+        -> HandlersT chn info inh ('Method name args ret ': ms) m (h ': hs)
 
 infixr 4 :<||>:
 pattern (:<||>:) :: Handles chn args ret m h
-                 => (RpcInfo -> inh -> h) -> HandlersT chn inh ms m hs
-                 -> HandlersT chn inh ('Method name args ret ': ms) m (h ': hs)
+                 => (RpcInfo info -> inh -> h) -> HandlersT chn info inh ms m hs
+                 -> HandlersT chn info inh ('Method name args ret ': ms) m (h ': hs)
 pattern x :<||>: xs <- Hmore _ _ x xs where
   x :<||>: xs = Hmore Proxy Proxy x xs
 
 infixr 4 :<|>:
 pattern (:<|>:) :: (Handles chn args ret m h)
-                => h -> HandlersT chn () ms m hs
-                -> HandlersT chn () ('Method name args ret ': ms) m (h ': hs)
+                => h -> HandlersT chn info () ms m hs
+                -> HandlersT chn info () ('Method name args ret ': ms) m (h ': hs)
 pattern x :<|>: xs <- (($ ()) . ($ NoRpcInfo) -> x) :<||>: xs where
   x :<|>: xs = noContext x :<||>: xs
 
@@ -265,14 +268,14 @@ method f = Named (\_ _ -> f)
 --   Intended to be used with @TypeApplications@:
 --
 --   > methodWithInfo @"myMethod" myHandler
-methodWithInfo :: forall n p. (RpcInfo -> p) -> Named n (RpcInfo -> () -> p)
+methodWithInfo :: forall n p info. (RpcInfo info -> p) -> Named n (RpcInfo info -> () -> p)
 methodWithInfo f = Named (\x () -> f x)
 
 -- | Declares the handler for a field in an object.
 --   Intended to be used with @TypeApplications@:
 --
 --   > field @"myField" myHandler
-field :: forall n h. h -> Named n (RpcInfo -> h)
+field :: forall n h info. h -> Named n (RpcInfo info -> h)
 field f = Named (const f)
 
 -- | Declares the handler for a field in an object,
@@ -280,7 +283,7 @@ field f = Named (const f)
 --   Intended to be used with @TypeApplications@:
 --
 --   > fieldWithInfo @"myField" myHandler
-fieldWithInfo :: forall n h. (RpcInfo -> h) -> Named n (RpcInfo -> h)
+fieldWithInfo :: forall n h info. (RpcInfo info -> h) -> Named n (RpcInfo info -> h)
 fieldWithInfo  = Named
 
 -- | Defines a server for a package with a single service.
@@ -288,8 +291,10 @@ fieldWithInfo  = Named
 --
 --   > singleService (method @"m1" h1, method @"m2" h2)
 singleService
-  :: (ToNamedList p nl, ToHandlers chn () methods m hs nl, MappingRight chn sname ~ ())
-  => p -> ServerT chn ('Package pname '[ 'Service sname methods ]) m '[hs]
+  :: ( ToNamedList p nl
+     , ToHandlers chn info () methods m hs nl
+     , MappingRight chn sname ~ () )
+  => p -> ServerT chn info ('Package pname '[ 'Service sname methods ]) m '[hs]
 singleService nl = Server $ toHandlers $ toNamedList nl
 
 -- | Defines the implementation of a single GraphQL object,
@@ -302,9 +307,10 @@ singleService nl = Server $ toHandlers $ toNamedList nl
 --   Note: for the root objects in GraphQL (query, mutation, subscription)
 --   use 'method' instead of 'object'.
 object
-  :: forall sname p nl chn ms m hs.
-     (ToNamedList p nl, ToHandlers chn (MappingRight chn sname) ms m hs nl)
-  => p -> Named sname (HandlersT chn (MappingRight chn sname) ms m hs)
+  :: forall sname p nl chn info ms m hs.
+     ( ToNamedList p nl
+     , ToHandlers chn info (MappingRight chn sname) ms m hs nl )
+  => p -> Named sname (HandlersT chn info (MappingRight chn sname) ms m hs)
 object nl = Named $ toHandlers $ toNamedList nl
 
 -- | Combines the implementation of several GraphQL objects,
@@ -313,8 +319,8 @@ object nl = Named $ toHandlers $ toNamedList nl
 --
 --   > resolver (object @"o1" ..., object @"o2" ...)
 resolver
-  :: (ToNamedList p nl, ToServices chn ss m hs nl)
-  => p -> ServerT chn ('Package pname ss) m hs
+  :: (ToNamedList p nl, ToServices chn info ss m hs nl)
+  => p -> ServerT chn info ('Package pname ss) m hs
 resolver nl = Services $ toServices $ toNamedList nl
 
 -- | A value tagged with a type-level name.
@@ -364,37 +370,39 @@ instance ToNamedList (Named n1 h1, Named n2 h2, Named n3 h3, Named n4 h4, Named 
                      '[ '(n1, h1), '(n2, h2), '(n3, h3), '(n4, h4), '(n5, h5), '(n6, h6), '(n7, h7), '(n8, h8), '(n9, h9) ] where
   toNamedList (n1, n2, n3, n4, n5, n6, n7, n8, n9) = n1 :|: n2 :|: n3 :|: n4 :|: n5 :|: n6 :|: n7 :|: n8 :|: n9 :|: N0
 
-class ToHandlers chn inh ms m hs nl | chn inh ms m nl -> hs where
+class ToHandlers chn info inh ms m hs nl | chn inh ms m nl -> hs where
   toHandlers :: NamedList nl
-             -> HandlersT chn inh ms m hs
+             -> HandlersT chn info inh ms m hs
 
-instance ToHandlers chn inh '[] m '[] nl where
+instance ToHandlers chn info inh '[] m '[] nl where
   toHandlers _ = H0
-instance (FindHandler name inh h nl, Handles chn args ret m h, ToHandlers chn inh ms m hs nl)
-         => ToHandlers chn inh ('Method name args ret ': ms) m (h ': hs) nl where
+instance ( FindHandler name info inh h nl
+         , Handles chn args ret m h
+         , ToHandlers chn info inh ms m hs nl )
+         => ToHandlers chn info inh ('Method name args ret ': ms) m (h ': hs) nl where
   toHandlers nl = findHandler (Proxy @name) nl :<||>: toHandlers nl
 
-class FindHandler name inh h nl | name nl -> inh h where
-  findHandler :: Proxy name -> NamedList nl -> RpcInfo -> inh -> h
+class FindHandler name info inh h nl | name nl -> inh h where
+  findHandler :: Proxy name -> NamedList nl -> RpcInfo info -> inh -> h
 instance (inh ~ h, h ~ TypeError ('Text "cannot find handler for " ':<>: 'ShowType name))
-         => FindHandler name inh h '[] where
+         => FindHandler name info inh h '[] where
   findHandler = error "this should never be called"
-instance {-# OVERLAPS #-} (RpcInfo ~ rpc', inh ~ inh', h ~ h')
-         => FindHandler name inh h ( '(name, rpc' -> inh' -> h') ': rest ) where
+instance {-# OVERLAPS #-} (RpcInfo info ~ rpc', inh ~ inh', h ~ h')
+         => FindHandler name info inh h ( '(name, rpc' -> inh' -> h') ': rest ) where
   findHandler _ (Named f :|: _) = f
-instance {-# OVERLAPPABLE #-} FindHandler name inh h rest
-         => FindHandler name inh h (thing ': rest) where
+instance {-# OVERLAPPABLE #-} FindHandler name info inh h rest
+         => FindHandler name info inh h (thing ': rest) where
   findHandler p (_ :|: rest) = findHandler p rest
 
-class ToServices chn ss m hs nl | chn ss m nl -> hs where
+class ToServices chn info ss m hs nl | chn ss m nl -> hs where
   toServices :: NamedList nl
-             -> ServicesT chn ss m hs
+             -> ServicesT chn info ss m hs
 
-instance ToServices chn '[] m '[] nl where
+instance ToServices chn info '[] m '[] nl where
   toServices _ = S0
-instance ( FindService name (HandlersT chn (MappingRight chn name) methods m h) nl
-         , ToServices chn ss m hs nl)
-         => ToServices chn ('Service name methods ': ss) m (h ': hs) nl where
+instance ( FindService name (HandlersT chn info (MappingRight chn name) methods m h) nl
+         , ToServices chn info ss m hs nl)
+         => ToServices chn info ('Service name methods ': ss) m (h ': hs) nl where
   toServices nl = findService (Proxy @name) nl :<&>: toServices nl
 
 class FindService name h nl | name nl -> h where
@@ -412,20 +420,21 @@ instance {-# OVERLAPPABLE #-} FindService name h rest
 -- WRAPPING MECHANISM
 
 wrapServer
-  :: forall chn p m topHs.
-     (forall a. RpcInfo -> m a -> m a)
-  -> ServerT chn p m topHs -> ServerT chn p m topHs
+  :: forall chn info p m topHs.
+     (forall a. RpcInfo info -> m a -> m a)
+  -> ServerT chn info p m topHs -> ServerT chn info p m topHs
 wrapServer f (Services ss) = Services (wrapServices ss)
   where
     wrapServices :: forall ss hs.
-                    ServicesT chn ss m hs -> ServicesT chn ss m hs
+                    ServicesT chn info ss m hs
+                 -> ServicesT chn info ss m hs
     wrapServices S0 = S0
     wrapServices (h :<&>: rest)
       = wrapHandlers h :<&>: wrapServices rest
 
     wrapHandlers :: forall inh ms innerHs.
-                    HandlersT chn inh ms m innerHs
-                 -> HandlersT chn inh ms m innerHs
+                    HandlersT chn info inh ms m innerHs
+                 -> HandlersT chn info inh ms m innerHs
     wrapHandlers H0 = H0
     wrapHandlers (Hmore pargs pret h rest)
       = Hmore pargs pret

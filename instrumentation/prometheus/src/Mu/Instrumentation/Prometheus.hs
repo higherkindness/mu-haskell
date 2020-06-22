@@ -41,15 +41,15 @@ initPrometheus prefix =
                                      defaultBuckets)
 
 prometheus :: (MonadBaseControl IO m, MonadMonitor m)
-           => MuMetrics -> ServerT chn p m topHs -> ServerT chn p m topHs
+           => MuMetrics -> ServerT chn info p m topHs -> ServerT chn info p m topHs
 prometheus m = wrapServer (prometheusMetrics m)
 
-prometheusMetrics :: forall m a. (MonadBaseControl IO m, MonadMonitor m)
-                  => MuMetrics -> RpcInfo -> m a -> m a
+prometheusMetrics :: forall m a info. (MonadBaseControl IO m, MonadMonitor m)
+                  => MuMetrics -> RpcInfo info -> m a -> m a
 prometheusMetrics metrics NoRpcInfo run = do
   incGauge (activeCalls metrics)
   run `finally` decGauge (activeCalls metrics)
-prometheusMetrics metrics (RpcInfo _pkg (Service sname _) (Method mname _ _)) run = do
+prometheusMetrics metrics (RpcInfo _pkg (Service sname _) (Method mname _ _) _) run = do
   incGauge (activeCalls metrics)
   withLabel (messagesReceived metrics) (sname, mname) incCounter
   ( do -- We are forced to use a MVar because 'withLabel' only allows IO ()
