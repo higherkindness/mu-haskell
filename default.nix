@@ -1,11 +1,16 @@
-{ nixpkgs ? (fetchTarball https://github.com/NixOS/nixpkgs/archive/3578bb5.tar.gz)
-, pkgs ? import nixpkgs (import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/350b594.tar.gz))
+let
+  haskellNix = import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/6cf92c4.tar.gz) {};
+  nixpkgsSrc = haskellNix.sources.nixpkgs-2003;
+  nixpkgsArgs = haskellNix.nixpkgsArgs;
+in
+{ pkgs ? import nixpkgsSrc nixpkgsArgs
 }:
-
 let
   hnPkgs = pkgs.haskell-nix.stackProject {
-    src = ./.;
-    modules = [];
+    src = pkgs.haskell-nix.haskellLib.cleanGit {
+      name = "mu-haskell";
+      src = ./.;
+    };
   };
 in {
   compendium-client = hnPkgs.compendium-client.components.library;
@@ -22,6 +27,7 @@ in {
   mu-kafka = hnPkgs.mu-kafka.components.library;
   mu-optics = hnPkgs.mu-optics.components.library;
   mu-persistent = hnPkgs.mu-persistent.components.library;
+  mu-prometheus = hnPkgs.mu-prometheus.components.library;
   mu-protobuf = hnPkgs.mu-protobuf.components.all;
   mu-rpc = hnPkgs.mu-rpc.components.library;
   mu-schema = hnPkgs.mu-schema.components.library;
