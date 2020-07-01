@@ -39,10 +39,10 @@ library
     , http2-client-grpc
     , http2-grpc-types
     , mu-grpc-common     >=0.4.0
-    , mu-optics          >=0.3.0
+    , mu-optics          >=0.4.0
     , mu-protobuf        >=0.4.0
     , mu-rpc             >=0.4.0
-    , mu-schema          >=0.3.0
+    , mu-schema          >=0.4.0
     , optics-core
     , sop-core
     , stm

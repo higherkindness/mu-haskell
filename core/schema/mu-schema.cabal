@@ -1,5 +1,5 @@
 name:               mu-schema
-version:            0.3.0.0
+version:            0.4.0.0
 synopsis:           Format-independent schemas for serialization
 description:
   With @mu-schema@ you can describe schemas using type-level constructs, and derive serializers from those. See @mu-avro@, @mu-protobuf@ for the actual adapters.
@@ -38,16 +38,16 @@ library
   -- other-modules:
   -- other-extensions:
   build-depends:
-      aeson
-    , base                  >=4.12 && <5
-    , bytestring
-    , containers
-    , sop-core
-    , template-haskell      >=2.12
-    , text
-    , th-abstraction
-    , unordered-containers
-    , vector
+      aeson                 >=1.5.2   && <1.6
+    , base                  >=4.12    && <5
+    , bytestring            >=0.10.10 && <0.11
+    , containers            >=0.6.2   && <0.7
+    , sop-core              >=0.5.0   && <0.6
+    , template-haskell      >=2.15.0  && <2.16
+    , text                  >=1.2.4   && <1.3
+    , th-abstraction        >=0.3.2   && <0.4
+    , unordered-containers  >=0.2.11  && <0.3
+    , vector                >=0.12.1  && <0.13
 
   hs-source-dirs:   src
   default-language: Haskell2010

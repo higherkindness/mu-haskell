@@ -34,7 +34,7 @@ library
     , mu-avro                 >=0.4.0
     , mu-protobuf             >=0.4.0
     , mu-rpc                  >=0.4.0
-    , mu-schema               >=0.3.0
+    , mu-schema               >=0.4.0
 
   hs-source-dirs:   src
   default-language: Haskell2010

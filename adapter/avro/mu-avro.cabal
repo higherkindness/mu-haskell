@@ -28,24 +28,24 @@ library
     Mu.Quasi.Avro.Example
 
   build-depends:
-      aeson
-    , avro                  >=0.5.1
+      aeson                 >=1.5.2   && <1.6
+    , avro                  >=0.5.2   && <0.6
     , base                  >=4.12    && <5
-    , bytestring
-    , containers
-    , deepseq
-    , language-avro         >=0.1.3.1
+    , bytestring            >=0.10.10 && <0.11
+    , containers            >=0.6.2   && <0.7
+    , deepseq               >=1.4.4   && <1.5
+    , language-avro         >=0.1.3   && <0.2
     , mu-rpc                >=0.4.0
-    , mu-schema             >=0.3.0
-    , sop-core
-    , tagged
-    , template-haskell      >=2.12
-    , text
-    , time
-    , transformers
-    , unordered-containers
-    , uuid
-    , vector
+    , mu-schema             >=0.4.0
+    , sop-core              >=0.5.0   && <0.6
+    , tagged                >=0.8.6   && <0.9
+    , template-haskell      >=2.15.0  && <2.16
+    , text                  >=1.2.4   && <1.3
+    , time                  >=1.9.3   && <1.10
+    , transformers          >=0.5.6   && <0.6
+    , unordered-containers  >=0.2.11  && <0.3
+    , uuid                  >=1.3.13  && <1.4
+    , vector                >=0.12.1  && <0.13
 
   hs-source-dirs:   src
   default-language: Haskell2010
@@ -55,10 +55,10 @@ executable test-avro
   main-is:          Avro.hs
   build-depends:
       avro        >=0.5
-    , base        >=4.12  && <5
-    , bytestring
-    , mu-avro     >=0.3.0
-    , mu-schema   >=0.3.0
+    , base        >=4.12    && <5
+    , bytestring  >=0.10.10 && <0.11
+    , mu-avro     >=0.4.0
+    , mu-schema   >=0.4.0
 
   hs-source-dirs:   test
   default-language: Haskell2010

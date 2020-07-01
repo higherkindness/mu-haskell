@@ -34,7 +34,7 @@ library
     , mu-grpc-common    >=0.4.0
     , mu-protobuf       >=0.4.0
     , mu-rpc            >=0.4.0
-    , mu-schema         >=0.3.0
+    , mu-schema         >=0.4.0
     , sop-core
     , stm
     , stm-conduit
@@ -62,7 +62,7 @@ executable grpc-example-server
     , mu-grpc-server
     , mu-protobuf       >=0.4.0
     , mu-rpc            >=0.4.0
-    , mu-schema         >=0.3.0
+    , mu-schema         >=0.4.0
     , sop-core
     , stm
     , stm-conduit
