@@ -21,22 +21,22 @@ executable health-server
   main-is:          Server.hs
   other-modules:    Definition
   build-depends:
-      async
+      async           >=2.2   && <3
     , base            >=4.12  && <5
-    , conduit
-    , deferred-folds
-    , mu-graphql
+    , conduit         >=1.3.2 && <2
+    , deferred-folds  >=0.9   && <0.10
+    , mu-graphql      >=0.4.0
     , mu-grpc-server  >=0.4.0
-    , mu-prometheus
+    , mu-prometheus   >=0.4.0
     , mu-protobuf     >=0.4.0
     , mu-rpc          >=0.4.0
     , mu-schema       >=0.3.0
-    , stm
-    , stm-conduit
-    , stm-containers
-    , text
-    , wai
-    , warp
+    , stm             >=2.5   && <3
+    , stm-conduit     >=4     && <5
+    , stm-containers  >=1.1   && <2
+    , text            >=1.2   && <2
+    , wai             >=3.2   && <4
+    , warp            >=3.3   && <4
 
   hs-source-dirs:   src
   default-language: Haskell2010
@@ -47,12 +47,12 @@ executable health-client-tyapps
   other-modules:    Definition
   build-depends:
       base            >=4.12  && <5
-    , conduit
-    , mu-grpc-client  >=0.3.0
+    , conduit         >=1.3.2 && <2
+    , mu-grpc-client  >=0.4.0
     , mu-protobuf     >=0.4.0
     , mu-rpc          >=0.4.0
     , mu-schema       >=0.3.0
-    , text
+    , text            >=1.2   && <2
 
   hs-source-dirs:   src
   default-language: Haskell2010
@@ -63,12 +63,12 @@ executable health-client-record
   other-modules:    Definition
   build-depends:
       base            >=4.12  && <5
-    , conduit
-    , mu-grpc-client  >=0.3.0
-    , mu-protobuf     >=0.3.0
-    , mu-rpc          >=0.3.0
+    , conduit         >=1.3.2 && <2
+    , mu-grpc-client  >=0.4.0
+    , mu-protobuf     >=0.4.0
+    , mu-rpc          >=0.4.0
     , mu-schema       >=0.3.0
-    , text
+    , text            >=1.2   && <2
 
   hs-source-dirs:   src
   default-language: Haskell2010

@@ -22,14 +22,14 @@ source-repository head
 library
   exposed-modules:  Compendium.Client
   build-depends:
-      aeson
-    , base               >=4.12 && <5
-    , http-client
-    , language-protobuf
-    , megaparsec
-    , servant
-    , servant-client
-    , text
+      aeson              >=1.4   && <2
+    , base               >=4.12  && <5
+    , http-client        >=0.6.4 && <0.7
+    , language-protobuf  >=1.0.1 && <1.1
+    , megaparsec         >=8     && <9
+    , servant            >=0.16  && <0.17
+    , servant-client     >=0.16  && <0.17
+    , text               >=1.2   && <2
 
   hs-source-dirs:   src
   default-language: Haskell2010
