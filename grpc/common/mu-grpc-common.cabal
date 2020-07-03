@@ -25,16 +25,16 @@ library
     Mu.GRpc.Bridge
 
   build-depends:
-      avro                    >=0.5
+      avro                    >=0.5.1 && <0.6
     , base                    >=4.12  && <5
-    , binary
-    , bytestring
-    , http2-grpc-proto3-wire
-    , http2-grpc-types
-    , mu-avro                 >=0.4.0
-    , mu-protobuf             >=0.4.0
-    , mu-rpc                  >=0.4.0
-    , mu-schema               >=0.3.0
+    , binary                  >=0.8   && <0.9
+    , bytestring              >=0.10  && <0.11
+    , http2-grpc-proto3-wire  >=0.1   && <0.2
+    , http2-grpc-types        >=0.5   && <0.6
+    , mu-avro                 ==0.4.*
+    , mu-protobuf             ==0.4.*
+    , mu-rpc                  ==0.4.*
+    , mu-schema               ==0.3.*
 
   hs-source-dirs:   src
   default-language: Haskell2010

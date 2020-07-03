@@ -25,13 +25,13 @@ library
 
   build-depends:
       base                  >=4.12 && <5
-    , lifted-base
-    , monad-control
-    , mu-rpc                >=0.4.0
-    , prometheus-client
-    , text
-    , wai
-    , wai-middleware-prometheus
+    , lifted-base           >=0.2  && <0.3
+    , monad-control         >1     && <2
+    , mu-rpc                ==0.4.*
+    , prometheus-client     >1     && <2
+    , text                  >=1.2  && <2
+    , wai                   >=3.2  && <4
+    , wai-middleware-prometheus >1 && <2
 
   hs-source-dirs:   src
   default-language: Haskell2010
