@@ -1,5 +1,5 @@
 name:               mu-persistent
-version:            0.4.0.0
+version:            0.3.0.0
 synopsis:           Utilities for interoperation between Mu and Persistent
 description:
   Please see the <https://github.com/higherkindness/mu-haskell/persistent#readme readme file>.
@@ -27,11 +27,11 @@ library
   hs-source-dirs:   src
   default-language: Haskell2010
   build-depends:
-      base          >=4.7    && <5
-    , monad-logger  >=0.3.32 && <0.4
-    , mu-schema     >=0.4
-    , persistent    >=2.10.5 && <2.11
-    , resourcet     >=1.2.4  && <1.3
-    , transformers  >=0.5.6  && <0.6
+      base          >=4.12 && <5
+    , monad-logger  >=0.3  && <0.4
+    , mu-schema     ==0.3.*
+    , persistent    >=2.10 && <3
+    , resourcet     >=1.2  && <2
+    , transformers  >=0.5  && <0.6
 
   ghc-options:      -Wall

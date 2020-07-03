@@ -1,5 +1,5 @@
 name:               mu-kafka
-version:            0.4.0.0
+version:            0.3.0.0
 synopsis:           Utilities for interoperation between Mu and Kafka
 description:
   This package provides simple interoperation between Mu and Kafka using @hw-kafka-client@
@@ -29,14 +29,14 @@ library
   hs-source-dirs:   src
   default-language: Haskell2010
   build-depends:
-      avro              >=0.5.2   && <0.6
-    , base              >=4.7     && <5
-    , bytestring        >=0.10.10 && <0.11
-    , conduit           >=1.3.2   && <1.4
-    , hw-kafka-client   >=3.1.1   && <3.2
-    , hw-kafka-conduit  >=2.7.0   && <2.8
-    , mu-avro           >=0.4.0
-    , mu-schema         >=0.4.0
-    , resourcet         >=1.2.4   && <1.3
+      avro              >=0.5.1 && <0.6
+    , base              >=4.12  && <5
+    , bytestring        >=0.10  && <0.11
+    , conduit           >=1.3.2 && <2
+    , hw-kafka-client   >=3     && <4
+    , hw-kafka-conduit  >=2.7   && <3
+    , mu-avro           ==0.4.*
+    , mu-schema         ==0.3.*
+    , resourcet         >=1.2    && <2
 
   ghc-options:      -Wall
