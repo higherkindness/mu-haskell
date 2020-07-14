@@ -25,9 +25,9 @@ library
 
   build-depends:
       base                  >=4.12 && <5
-    , containers
+    , containers            >=0.6  && <0.7
     , mu-rpc                >=0.4.0
-    , text
+    , text                  >=1.2  && <2
     , tracing-control       >=0.0.6
 
   hs-source-dirs:   src

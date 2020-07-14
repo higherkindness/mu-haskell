@@ -37,7 +37,7 @@ executable health-server
     , stm-conduit     >=4     && <5
     , stm-containers  >=1.1   && <2
     , text            >=1.2   && <2
-    , tracing         >=0.0.5
+    , tracing-control >=0.0.6
     , wai             >=3.2   && <4
     , warp            >=3.3   && <4
 
