@@ -1,5 +1,5 @@
 let
-  haskellNix = import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/9d491b5.tar.gz) {};
+  haskellNix = import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/d3edb6e.tar.gz) {};
   nixpkgsSrc = haskellNix.sources.nixpkgs-2003;
   nixpkgsArgs = haskellNix.nixpkgsArgs;
 in
@@ -31,4 +31,5 @@ in {
   mu-protobuf = hnPkgs.mu-protobuf.components.all;
   mu-rpc = hnPkgs.mu-rpc.components.library;
   mu-schema = hnPkgs.mu-schema.components.library;
+  mu-tracing = hnPkgs.mu-tracing.components.library;
 }
