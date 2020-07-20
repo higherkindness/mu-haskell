@@ -18,6 +18,7 @@ module Mu.Quasi.ProtoBuf (
   , protobufToDecls
   ) where
 
+import           Control.Monad                   (when)
 import           Control.Monad.IO.Class
 import qualified Data.ByteString                 as B
 import           Data.Int
@@ -89,25 +90,34 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) = do
     -- it's possible to distinguish whether it's missing on wire
     -- or should be set to the default, so use Option
     -- +info -> https://github.com/higherkindness/mu-haskell/pull/130#issuecomment-596433307
-    pbMsgFieldToType (P.NormalField P.Single ty@(P.TOther _) nm n opts)
-      = (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TOption $(pbFieldTypeToType ty)) |]
+    pbMsgFieldToType (P.NormalField P.Single ty@(P.TOther _) nm n opts) = do
+        reportDefaultWarning opts
+        (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TOption $(pbFieldTypeToType ty)) |]
             <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n) $(pbOptionsToPacked opts)) |]
-    pbMsgFieldToType (P.NormalField P.Single ty nm n opts)
-      = (,) <$> [t| 'FieldDef $(textToStrLit nm) $(pbFieldTypeToType ty) |]
+    pbMsgFieldToType (P.NormalField P.Single ty nm n opts) = do
+        reportDefaultWarning opts
+        (,) <$> [t| 'FieldDef $(textToStrLit nm) $(pbFieldTypeToType ty) |]
             <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n) $(pbOptionsToPacked opts)) |]
-    pbMsgFieldToType (P.NormalField P.Repeated ty nm n opts)
-      = (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TList $(pbFieldTypeToType ty)) |]
+    pbMsgFieldToType (P.NormalField P.Repeated ty nm n opts) = do
+        reportDefaultWarning opts
+        (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TList $(pbFieldTypeToType ty)) |]
             <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n) $(pbOptionsToPacked opts)) |]
-    pbMsgFieldToType (P.MapField k v nm n opts)
-      = (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TMap $(pbFieldTypeToType k) $(pbFieldTypeToType v)) |]
+    pbMsgFieldToType (P.MapField k v nm n opts) = do
+        reportDefaultWarning opts
+        (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TMap $(pbFieldTypeToType k) $(pbFieldTypeToType v)) |]
             <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n) $(pbOptionsToPacked opts)) |]
     pbMsgFieldToType (P.OneOfField nm vs)
-      | any (not . hasFieldNumber) vs
+      | not (all hasFieldNumber vs)
       = fail "nested oneof fields are not supported"
       | otherwise
       = (,) <$> [t| 'FieldDef $(textToStrLit nm) $(typesToList <$> mapM pbOneOfFieldToType vs ) |]
             <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm)
                        ('ProtoBufOneOfIds $(typesToList <$> mapM (intToLit . getFieldNumber) vs )) |]
+
+    reportDefaultWarning :: [P.Option] -> Q ()
+    reportDefaultWarning opts = do
+      when (any (\(P.Option ident _) -> ident == ["default"]) opts)
+           (reportError "mu-protobuf does not (yet) support default values")
 
     pbFieldTypeToType :: P.FieldType -> Q Type
     pbFieldTypeToType P.TInt32     = [t|'TPrimitive Int32|]
@@ -152,7 +162,7 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) = do
       = pbOptionsToPacked rest
 
 typesToList :: [Type] -> Type
-typesToList = foldr (\y ys -> AppT (AppT PromotedConsT y) ys) PromotedNilT
+typesToList = foldr (AppT . AppT PromotedConsT) PromotedNilT
 
 textToStrLit :: T.Text -> Q Type
 textToStrLit s = pure $ LitT $ StrTyLit $ T.unpack s
