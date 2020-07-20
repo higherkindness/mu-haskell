@@ -75,6 +75,14 @@ If you use the `grpc` function to import a gRPC `.proto` file in the type-level,
 * Write the schemas by hand,
 * Split the definition file into several ones, and import each of them in its own `protobuf` block.
 
+### Limitations on primitive optionals
+
+You should be aware of a limitation regarding optional values stated in the [Protocol Buffers documentation](https://developers.google.com/protocol-buffers/docs/proto3#default):
+
+> Note that for scalar message fields, once a message is parsed there's no way of telling whether a field was explicitly set to the default value (for example whether a boolean was set to `false`) or just not set at all: you should bear this in mind when defining your message types. For example, don't have a boolean that switches on some behaviour when set to `false` if you don't want that behaviour to also happen by default. Also note that if a scalar message field **is** set to its default, the value will not be serialized on the wire.
+
+That means that in a Protocol Buffers message it is not possible to have `'TOption ('TPrimitive p)`, since a lack of such a field means that the default value is to be used. In fact, Protocol Buffers implementations are expected to drop such values in order to save bandwidth. `mu-protobuf` will try to help here, raising a warning in some cases in which `default` is used.
+
 ## Mapping Haskell types
 
 These schemas become more useful once you can map your Haskell types to them. `mu-schema` uses the generics mechanism built in GHC to automatically derive these mappings, asuming that you declare your data types using field names.
