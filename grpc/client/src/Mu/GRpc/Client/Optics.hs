@@ -19,6 +19,7 @@ module Mu.GRpc.Client.Optics (
   -- * Initialization of the gRPC client
   GRpcConnection
 , initGRpc
+, initGRpcZipkin
 , GRpcMessageProtocol(..)
 , msgProtoBuf
 , msgAvro
@@ -32,10 +33,13 @@ module Mu.GRpc.Client.Optics (
 , module Mu.Schema.Optics
 ) where
 
+import           Control.Monad.IO.Class
 import qualified Data.ByteString.Char8       as BS
 import           Data.Conduit
 import           Data.Proxy
+import           Data.Text                   as T
 import           GHC.TypeLits
+import           Monitor.Tracing
 import           Network.GRPC.Client         (CompressMode)
 import qualified Network.GRPC.Client.Helpers as G
 import           Network.HTTP2.Client        (ClientError)
@@ -58,11 +62,31 @@ newtype GRpcConnection (s :: Package') (p :: GRpcMessageProtocol)
 --
 --   > initGRpc config msgProtoBuf @Service
 --
-initGRpc :: G.GrpcClientConfig  -- ^ gRPC configuration
+initGRpc :: MonadIO m
+         => G.GrpcClientConfig  -- ^ gRPC configuration
          -> Proxy p
-         -> forall s. IO (Either ClientError (GRpcConnection s p))
+         -> forall s. m (Either ClientError (GRpcConnection s p))
 initGRpc config _ = do
   setup <- setupGrpcClient' config
+  pure $ case setup of
+    Left e  -> Left e
+    Right c -> Right $ GRpcConnection c
+
+-- | Initializes a connection to a gRPC server,
+--   creating a new span for distributed tracing.
+--   Usually the service you are connecting to is
+--   inferred from the usage later on.
+--   However, it can also be made explicit by using
+--
+--   > initGRpcZipkin config msgProtoBuf "person" @Service
+--
+initGRpcZipkin :: (MonadIO m, MonadTrace m)
+               => G.GrpcClientConfig  -- ^ gRPC configuration
+               -> Proxy p
+               -> T.Text
+               -> forall s. m (Either ClientError (GRpcConnection s p))
+initGRpcZipkin config _ spanName = do
+  setup <- setupGrpcClientZipkin config spanName
   pure $ case setup of
     Left e  -> Left e
     Right c -> Right $ GRpcConnection c

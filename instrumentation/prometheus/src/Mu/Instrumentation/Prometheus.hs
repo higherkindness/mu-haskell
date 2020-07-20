@@ -49,7 +49,7 @@ prometheusMetrics :: forall m a info. (MonadBaseControl IO m, MonadMonitor m)
 prometheusMetrics metrics NoRpcInfo run = do
   incGauge (activeCalls metrics)
   run `finally` decGauge (activeCalls metrics)
-prometheusMetrics metrics (RpcInfo _pkg (Service sname _) (Method mname _ _) _) run = do
+prometheusMetrics metrics (RpcInfo _pkg (Service sname _) (Method mname _ _) _ _) run = do
   incGauge (activeCalls metrics)
   withLabel (messagesReceived metrics) (sname, mname) incCounter
   ( do -- We are forced to use a MVar because 'withLabel' only allows IO ()

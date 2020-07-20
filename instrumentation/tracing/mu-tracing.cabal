@@ -1,0 +1,35 @@
+name:          mu-tracing
+version:       0.4.0.0
+synopsis:      Tracing support for Mu
+description:
+  Generate distributed traces for Mu services
+
+license:       Apache-2.0
+license-file:  LICENSE
+author:        Alejandro Serrano
+maintainer:    alejandro.serrano@47deg.com
+copyright:     Copyright © 2020 <http://47deg.com 47 Degrees>
+category:      Network
+build-type:    Simple
+cabal-version: >=1.10
+homepage:      https://higherkindness.io/mu-haskell/
+bug-reports:   https://github.com/higherkindness/mu-haskell/issues
+
+source-repository head
+  type:     git
+  location: https://github.com/higherkindness/mu-haskell
+
+library
+  exposed-modules:
+    Mu.Instrumentation.Tracing
+
+  build-depends:
+      base                  >=4.12 && <5
+    , containers            >=0.6  && <0.7
+    , mu-rpc                >=0.4.0
+    , text                  >=1.2  && <2
+    , tracing-control       >=0.0.6
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall -fprint-potential-instances

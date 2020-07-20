@@ -4,7 +4,9 @@
 {-# language FlexibleContexts      #-}
 {-# language FlexibleInstances     #-}
 {-# language GADTs                 #-}
+{-# language LambdaCase            #-}
 {-# language MultiParamTypeClasses #-}
+{-# language OverloadedStrings     #-}
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
 {-# language TypeApplications      #-}
@@ -26,7 +28,10 @@ import           Data.Conduit
 import qualified Data.Conduit.Combinators      as C
 import           Data.Conduit.TMChan
 import           Data.Kind
+import           Data.Text                     as T
 import           GHC.TypeLits
+import           Monitor.Tracing
+import           Monitor.Tracing.Zipkin
 import           Network.GRPC.Client           (CompressMode (..), IncomingEvent (..),
                                                 OutgoingEvent (..), RawReply, StreamDone (..))
 import           Network.GRPC.Client.Helpers
@@ -42,8 +47,22 @@ import           Mu.Rpc
 import           Mu.Schema
 
 -- | Initialize a connection to a gRPC server.
-setupGrpcClient' :: GrpcClientConfig -> IO (Either ClientError GrpcClient)
-setupGrpcClient' = runExceptT . setupGrpcClient
+setupGrpcClient' :: MonadIO m
+                 => GrpcClientConfig -> m (Either ClientError GrpcClient)
+setupGrpcClient' = liftIO . runExceptT . setupGrpcClient
+
+-- | Initialize a connection to a gRPC server
+--   and pass information about distributed tracing.
+setupGrpcClientZipkin
+  :: (MonadIO m, MonadTrace m)
+  => GrpcClientConfig -> T.Text -> m (Either ClientError GrpcClient)
+setupGrpcClientZipkin cfg spanName
+  = clientSpan spanName $ \case
+      Nothing   -> setupGrpcClient' cfg
+      (Just b3) -> setupGrpcClient' cfg {
+                      _grpcClientConfigHeaders = ("b3", b3ToHeaderValue b3)
+                                                 : _grpcClientConfigHeaders cfg
+                   }
 
 class GRpcServiceMethodCall (p :: GRpcMessageProtocol)
                             (pkg :: snm) (s :: snm)
