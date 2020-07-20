@@ -17,7 +17,8 @@ packages: compendium-client/
           grpc/client/
           grpc/server/
           graphql/
-          instrumentation/prometheus
+          instrumentation/prometheus/
+          instrumentation/tracing/
 
 source-repository-package
     type: git

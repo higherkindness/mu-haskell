@@ -14,6 +14,7 @@ packages:
 - grpc/server
 - graphql
 - instrumentation/prometheus
+- instrumentation/tracing
 - examples/health-check
 - examples/route-guide
 - examples/seed
@@ -30,6 +31,7 @@ extra-deps:
 - warp-grpc-0.4.0.1
 - hw-kafka-client-3.1.1
 - hw-kafka-conduit-2.7.0
+- tracing-control-0.0.6
 - wai-middleware-prometheus-1.0.0
 - git: https://github.com/hasura/graphql-parser-hs.git
   commit: f4a093981ca5626982a17c2bfaad047cc0834a81

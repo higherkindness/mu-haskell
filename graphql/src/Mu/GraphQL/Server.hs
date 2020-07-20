@@ -156,7 +156,8 @@ httpGraphQLAppTrans f server q m s req res =
     execQuery opn vals qry =
       case parseExecutableDoc qry of
         Left err  -> toError err
-        Right doc -> runPipeline f server q m s opn vals doc >>= toResponse
+        Right doc -> runPipeline f (requestHeaders req) server q m s opn vals doc
+                       >>= toResponse
     toError :: T.Text -> IO ResponseReceived
     toError err = toResponse $ A.object [ ("errors", A.Array [ A.object [ ("message", A.String err) ] ])]
     toResponse :: A.Value -> IO ResponseReceived
@@ -171,8 +172,9 @@ wsGraphQLAppTrans
     -> Proxy sub
     -> WS.ServerApp
 wsGraphQLAppTrans f server q m s conn
-  = do conn' <- WS.acceptRequest conn
-       flip protocol conn' $ runSubscriptionPipeline f server q m s
+  = do let headers = WS.requestHeaders $ WS.pendingRequest conn
+       conn' <- WS.acceptRequest conn
+       flip protocol conn' $ runSubscriptionPipeline f headers server q m s
 
 -- | Run a Mu 'graphQLApp' using the given 'Settings'.
 --
