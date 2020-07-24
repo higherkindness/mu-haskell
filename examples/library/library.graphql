@@ -1,0 +1,34 @@
+type Book {
+  id: Int!
+  title: String!
+  author: Author!
+}
+
+type Author {
+  id: Int!
+  name: String!
+  books: [Book!]!
+}
+
+input NewAuthor {
+  name: String!
+}
+
+type Query {
+  authors(name: String! = "%"): [Author!]!
+  books(title: String! = "%"): [Book!]!
+}
+
+type Mutation {
+  newAuthor(author: NewAuthor!): Author
+}
+
+type Subscription {
+  allBooks: Book!
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}

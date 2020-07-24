@@ -69,6 +69,7 @@ module Mu.Server (
 , Handles, FromRef, ToRef
 ) where
 
+import           Control.Exception    (Exception)
 import           Control.Monad.Except
 import           Data.Conduit
 import           Data.Kind
@@ -107,6 +108,9 @@ noContext x _ _ = x
 -- | Errors raised in a handler.
 data ServerError
   = ServerError ServerErrorCode String
+  deriving Show
+
+instance Exception ServerError
 
 -- | Possible types of errors.
 --   Some of these are handled in a special way
