@@ -9,6 +9,7 @@ packages: compendium-client/
           adapter/persistent/
           adapter/kafka/
           examples/health-check/
+          examples/library/
           examples/route-guide/
           examples/seed/
           examples/todolist/
