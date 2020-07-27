@@ -16,6 +16,7 @@ in {
   compendium-client = hnPkgs.compendium-client.components.library;
   mu-avro = hnPkgs.mu-avro.components.all;
   mu-example-health-check = hnPkgs.mu-example-health-check.components.all;
+  mu-example-library = hnPkgs.mu-example-library.components.all;
   mu-example-route-guide = hnPkgs.mu-example-route-guide.components.all;
   mu-example-seed = hnPkgs.mu-example-seed.components.all;
   mu-example-todolist = hnPkgs.mu-example-todolist.components.all;

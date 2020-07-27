@@ -30,13 +30,17 @@ module Mu.GraphQL.Server (
   , graphQLAppQuery
   , graphQLAppTrans
   , graphQLAppTransQuery
+  -- * Lifting of 'Conduit's
+  , liftServerConduit
 ) where
 
 import           Control.Applicative              ((<|>))
-import           Control.Monad                    (join)
+import           Control.Exception                (throw)
+import           Control.Monad.Except
 import qualified Data.Aeson                       as A
 import           Data.Aeson.Text                  (encodeToLazyText)
 import           Data.ByteString.Lazy             (fromStrict, toStrict)
+import           Data.Conduit
 import qualified Data.HashMap.Strict              as HM
 import           Data.Proxy
 import qualified Data.Text                        as T
@@ -220,3 +224,22 @@ runGraphQLAppQuery ::
   -> Proxy qr
   -> IO ()
 runGraphQLAppQuery port svr q = run port (graphQLAppQuery svr q)
+
+-- | Turns a 'Conduit' working on 'ServerErrorIO'
+--   into any other base monad which supports 'IO',
+--   by raising any error as an exception.
+--
+--   This function is useful to interoperate with
+--   libraries which generate 'Conduit's with other
+--   base monads, such as @persistent@.
+liftServerConduit
+  :: MonadIO m
+  => ConduitT i o ServerErrorIO r -> ConduitT i o m r
+liftServerConduit = transPipe raiseErrors
+  where raiseErrors :: forall m a. MonadIO m => ServerErrorIO a -> m a
+        raiseErrors h
+          = liftIO $ do
+              h' <- runExceptT h
+              case h' of
+                Right r -> pure r
+                Left  e -> throw e
