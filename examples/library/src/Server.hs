@@ -10,9 +10,7 @@
 
 module Main where
 
-import           Control.Exception
-import           Control.Monad.Except
-import           Control.Monad.IO.Class            (MonadIO (..))
+import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Logger
 import           Data.Conduit
 import           Data.Maybe                        (fromJust)
@@ -91,14 +89,8 @@ libraryServer conn
                                 [Asc BookTitle]
     allBooksConduit :: ConduitT (Entity Book) Void ServerErrorIO () -> ServerErrorIO ()
     allBooksConduit sink
-      = runDb conn $ runConduit $ selectSource [] [Asc BookTitle] .| transPipe raiseErrors sink
-      where raiseErrors :: forall m a. MonadIO m => ServerErrorIO a -> m a
-            raiseErrors h
-              = liftIO $ do
-                  h' <- runExceptT h
-                  case h' of
-                    Right r -> pure r
-                    Left  e -> throw e
+      = runDb conn $ runConduit $
+          selectSource [] [Asc BookTitle] .| liftServerConduit sink
 
     newAuthor :: NewAuthor -> ServerErrorIO (Maybe (Entity Author))
     newAuthor (NewAuthor name) = runDb conn $ do

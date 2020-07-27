@@ -27,7 +27,6 @@ import qualified Data.Text               as T
 import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           GHC.Generics
-import           Mu.Adapter.Persistent   (WithEntityNestedId (..))
 import           Mu.GraphQL.Quasi
 import           Mu.Schema
 
