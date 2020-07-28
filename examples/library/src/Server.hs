@@ -20,6 +20,7 @@ import           Database.Persist.Sqlite
 import           Mu.Adapter.Persistent             (runDb)
 import           Mu.GraphQL.Quasi
 import           Mu.GraphQL.Server
+import           Mu.Instrumentation.Prometheus
 import           Mu.Schema
 import           Mu.Server
 import           Network.Wai.Handler.Warp          (run)
@@ -30,18 +31,23 @@ import           Schema
 main :: IO ()
 main = do
   putStrLn "starting GraphQL server on port 8000"
+  -- Setup CORS
   let hm = addHeaders [
              ("Access-Control-Allow-Origin", "*")
            , ("Access-Control-Allow-Headers", "Content-Type")
            ]
+  -- Set up Prometheus
+  p <- initPrometheus "library"
+  -- Run the whole thing
   runStderrLoggingT $
     withSqliteConn @(LoggingT IO) ":memory:" $ \conn -> do
       runDb conn $ runMigration migrateAll
       liftIO $ run 8000 $ hm $
-        graphQLApp (libraryServer conn)
+        graphQLApp (prometheus p $ libraryServer conn)
                    (Proxy @('Just "Query"))
                    (Proxy @('Just "Mutation"))
                    (Proxy @('Just "Subscription"))
+
 
 type ObjectMapping = '[
     "Book"   ':-> Entity Book
