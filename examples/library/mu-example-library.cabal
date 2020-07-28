@@ -25,6 +25,7 @@ executable library
     , monad-logger         >=0.3   && <0.4
     , mtl
     , mu-persistent        >=0.3
+    , mu-prometheus        >=0.4
     , mu-graphql           >=0.4
     , mu-rpc               >=0.4
     , mu-schema            >=0.3
