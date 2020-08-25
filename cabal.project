@@ -19,6 +19,7 @@ packages: compendium-client/
           grpc/client/
           grpc/server/
           graphql/
+          servant/server/
           instrumentation/prometheus/
           instrumentation/tracing/
 

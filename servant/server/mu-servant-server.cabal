@@ -1,0 +1,54 @@
+name:               mu-servant-server
+version:            0.4.0.0
+synopsis:           Servant servers for Mu definitions
+description:
+  With @mu-servant-server@ you can easily build Servant servers for mu-haskell!
+
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Temp Name
+maintainer:         alejandro.serrano@47deg.com
+copyright:          Copyright © 2019-2020 <http://47deg.com 47 Degrees>
+cabal-version:      >=1.10
+category:           Network
+build-type:         Simple
+extra-source-files: CHANGELOG.md
+homepage:           https://higherkindness.io/mu-haskell/
+bug-reports:        https://github.com/higherkindness/mu-haskell/issues
+
+source-repository head
+  type:     git
+  location: https://github.com/higherkindness/mu-haskell
+
+library
+  exposed-modules:  Mu.Servant.Server
+  build-depends:
+      async
+    , base
+    , conduit
+    , mtl
+    , mu-rpc
+    , mu-schema
+    , servant
+    , servant-server
+    , stm
+    , utf8-string
+
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  ghc-options:      -Wall -fprint-potential-instances
+
+executable servant-example-server
+  main-is:          ExampleServer.hs
+  build-depends:
+      aeson
+    , base
+    , conduit
+    , mu-rpc
+    , mu-servant-server
+    , servant-server
+    , warp
+
+  hs-source-dirs:   exe
+  default-language: Haskell2010
+  ghc-options:      -Wall -fprint-explicit-kinds -fprint-explicit-foralls

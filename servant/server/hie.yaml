@@ -1,0 +1,6 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "mu-servant-server:lib"
+    - path: "./exe"
+      component: "mu-servant-server:exe:servant-example-server"
