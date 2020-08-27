@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -14,12 +15,15 @@
 module Mu.Servant.Server where
 
 import Conduit
+import Control.Concurrent
 import Control.Concurrent.Async
-import Control.Concurrent.STM
 import Control.Monad.Except
-import Data.ByteString.Lazy.UTF8
+import Data.Aeson
+import qualified Data.ByteString.Lazy.UTF8 as LB8
+import Data.Conduit.Internal (ConduitT (..), Pipe (..))
 import Data.Kind
-import GHC.TypeLits
+import GHC.Generics
+import Generics.Generic.Aeson
 import Mu.Rpc
 import Mu.Schema
 import Mu.Server
@@ -31,20 +35,13 @@ toHandler = Handler . withExceptT convertServerError
 
 convertServerError :: Mu.Server.ServerError -> Servant.ServerError
 convertServerError (Mu.Server.ServerError code msg) = case code of
-  Unknown -> err502 {errBody = fromString msg}
-  Unavailable -> err503 {errBody = fromString msg}
-  Unimplemented -> err501 {errBody = fromString msg}
-  Unauthenticated -> err401 {errBody = fromString msg}
-  Internal -> err500 {errBody = fromString msg}
-  Invalid -> err400 {errBody = fromString msg}
-  NotFound -> err404 {errBody = fromString msg}
-
-type CannotConvertToServantAPI mname args ret =
-  'Text "cannot convert" ':<>: 'ShowType mname ':<>: 'Text "to a Servant API"
-    ':$$: 'Text "args:" ':<>: 'ShowType args
-    ':$$: 'Text "ret:" ':<>: 'ShowType ret
-
-type CannotConstructServiceAPI srv = 'Text "cannot construct service API from" ':$$: 'ShowType srv
+  Unknown -> err502 {errBody = LB8.fromString msg}
+  Unavailable -> err503 {errBody = LB8.fromString msg}
+  Unimplemented -> err501 {errBody = LB8.fromString msg}
+  Unauthenticated -> err401 {errBody = LB8.fromString msg}
+  Internal -> err500 {errBody = LB8.fromString msg}
+  Invalid -> err400 {errBody = LB8.fromString msg}
+  NotFound -> err404 {errBody = LB8.fromString msg}
 
 servantServerHandlers ::
   forall name services m chn handlers.
@@ -156,59 +153,86 @@ class
     Servant.Server (MethodAPI args r h)
 
 instance ServantMethodHandler m '[] 'RetNothing (m ()) where
-  type MethodAPI '[] 'RetNothing (m ()) = Post '[JSON] ()
+  type MethodAPI '[] 'RetNothing (m ()) = "post" :> Post '[JSON] ()
   servantMethodHandler f _ _ = f
 
 instance ServantMethodHandler m '[] ('RetSingle rref) (m r) where
-  type MethodAPI '[] ('RetSingle rref) (m r) = Post '[JSON] r
+  type MethodAPI '[] ('RetSingle rref) (m r) = "postr" :> Post '[JSON] r
   servantMethodHandler f _ _ = f
 
-instance MonadIO m => ServantMethodHandler m '[] ('RetStream rref) (ConduitT r Void m () -> m ()) where
+instance (MonadServer m, Show r) => ServantMethodHandler m '[] ('RetStream rref) (ConduitT r Void m () -> m ()) where
   type
     MethodAPI '[] ('RetStream rref) (ConduitT r Void m () -> m ()) =
-      StreamPost NewlineFraming JSON (SourceIO r)
-  servantMethodHandler f _ _ = sinkToSource f
+      "streampost" :> StreamPost NewlineFraming JSON (SourceIO (StreamResult r))
+  servantMethodHandler f _ _ = liftIO . sinkToSource f
+
+data StreamResult a = Error String | Result a
+  deriving (Generic, Show)
+
+instance ToJSON a => ToJSON (StreamResult a) where
+  toJSON = gtoJson
 
 sinkToSource ::
   forall r m.
-  MonadIO m =>
+  (MonadServer m, Show r) =>
   (forall a. m a -> Handler a) ->
   (ConduitT r Void m () -> m ()) ->
-  Handler (SourceIO r)
+  IO (SourceIO (StreamResult r))
 sinkToSource f sink = do
-  var <- liftIO newEmptyTMVarIO :: Handler (TMVar (Maybe r))
-  forwarder <- liftIO $ async (runHandler . f . sink . toTMVarConduit $ var)
-  let step :: forall b. (StepT IO r -> IO b) -> IO b
-      step k = do
-        nextOutput <- liftIO $ atomically $ takeTMVar var
+  var <- newEmptyMVar :: IO (MVar (Maybe r))
+  forwarder <- liftIO $ async $ do
+    e <- runHandler . f . sink $ toMVarConduit var 0
+    -- signal that the conduit finished
+    putMVar var Nothing
+    pure e
+  let step :: StepT IO (StreamResult r)
+      step = Effect $ do
+        nextOutput <- takeMVar var
         case nextOutput of
-          Just r -> step (k . Yield r)
+          Just r -> pure $ Yield (Result r) step
           Nothing -> do
-            _ <- liftIO $ cancel forwarder
-            k Stop
-  pure $ SourceT step
+            -- waiting on this thread should get us sync and async exceptions
+            res <- wait forwarder
+            case res of
+              Left err -> do
+                let streamErr = LB8.toString $ errBody err
+                pure $ Yield (Mu.Servant.Server.Error streamErr) Stop
+              Right () -> pure Stop
+  pure $ fromStepT step
 
-toTMVarConduit :: MonadIO m => TMVar (Maybe r) -> ConduitT r Void m ()
-toTMVarConduit var = do
+toMVarConduit :: MonadServer m => MVar (Maybe r) -> Int -> ConduitT r Void m ()
+toMVarConduit var n = do
   x <- await
-  liftIO $ atomically $ putTMVar var x
-  toTMVarConduit var
+  case x of
+    Nothing -> pure ()
+    Just _ -> do
+      liftIO $ putMVar var x
+      toMVarConduit var (n + 1)
 
 instance
   (ServantMethodHandler m rest r mr) =>
   ServantMethodHandler m ('ArgSingle anm aref ': rest) r (t -> mr)
   where
-  type MethodAPI ('ArgSingle anm aref ': rest) r (t -> mr) = ReqBody '[JSON] t :> MethodAPI rest r mr
+  type MethodAPI ('ArgSingle anm aref ': rest) r (t -> mr) = "reqbody" :> ReqBody '[JSON] t :> MethodAPI rest r mr
   servantMethodHandler pm _ pr h t = servantMethodHandler pm (Proxy @rest) pr (h t)
 
 instance
-  (ServantMethodHandler m rest r mr) =>
+  (Show t, MonadServer m, ServantMethodHandler m rest r mr) =>
   ServantMethodHandler m ('ArgStream anm aref ': rest) r (ConduitT () t m () -> mr)
   where
   type
     MethodAPI ('ArgStream anm aref ': rest) r (ConduitT () t m () -> mr) =
-      StreamBody NewlineFraming JSON (SourceIO t) :> MethodAPI rest r mr
-  servantMethodHandler pm _ pr h = servantMethodHandler pm (Proxy @rest) pr . h . sourceToSource
+      "streambody" :> StreamBody NewlineFraming JSON (SourceIO t) :> MethodAPI rest r mr
+  servantMethodHandler pm _ pr h =
+    servantMethodHandler pm (Proxy @rest) pr . h . sourceToSource
 
-sourceToSource :: SourceIO t -> ConduitT () t m ()
-sourceToSource = undefined
+sourceToSource :: (MonadServer m, Show t) => SourceIO t -> ConduitT () t m ()
+sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)
+  where
+    go :: (MonadServer m, Show t) => StepT IO t -> Pipe i i t u m ()
+    go Stop = Done ()
+    go (Skip s) = go s
+    go (Yield t s) = HaveOutput (go s) t
+    go (Effect m) = PipeM (liftIO $ go <$> m)
+    go (Servant.Types.SourceT.Error msg) =
+      PipeM (throwError $ Mu.Server.ServerError Invalid ("error reading stream: " ++ msg))

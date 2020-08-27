@@ -8,6 +8,7 @@ module Main where
 
 import Data.Aeson
 import Data.Conduit
+import qualified Data.Text.IO as Text
 import Mu.Rpc.Examples
 import Mu.Servant.Server
 import Mu.Server
@@ -17,6 +18,7 @@ import Servant
 main :: IO ()
 main = do
   putStrLn "running quickstart application"
+  Text.putStrLn $ layout (Proxy @API)
   run 8081 (serve (Proxy @API) servantServer)
 
 servantServer :: Server (PackageAPI QuickStartService (Handlers ServerErrorIO))
@@ -27,9 +29,7 @@ type API = PackageAPI QuickStartService (Handlers ServerErrorIO)
 type Handlers m =
   '[  '[ HelloRequest -> m HelloResponse,
          HiRequest -> ConduitT HelloResponse Void m () -> m (),
-         ConduitT () HelloRequest m () ->
-         ConduitT HelloResponse Void m () ->
-         m ()
+         ConduitT () HelloRequest m () -> ConduitT HelloResponse Void m () -> m ()
        ]
    ]
 
@@ -38,19 +38,3 @@ instance FromJSON HelloRequest
 instance FromJSON HiRequest
 
 instance ToJSON HelloResponse
---deriving instance Generic HelloResponse
-{-
-    sayHello :: HelloRequest -> m HelloResponse
-    sayHello (HelloRequest nm)
-      = pure $ HelloResponse $ "hi, " <> nm
-    sayHi :: HiRequest
-          -> ConduitT HelloResponse Void m ()
-          -> m ()
-    sayHi (HiRequest n) sink
-      = runConduit $ C.replicate n (HelloResponse "hi!") .| sink
-    sayManyHellos :: ConduitT () HelloRequest m ()
-                  -> ConduitT HelloResponse Void m ()
-                  -> m ()
-    sayManyHellos source sink
-      = runConduit $ source .| C.mapM sayHello .| sink
--}

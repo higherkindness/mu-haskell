@@ -23,9 +23,11 @@ source-repository head
 library
   exposed-modules:  Mu.Servant.Server
   build-depends:
-      async
+      aeson
+    , async
     , base
     , conduit
+    , generic-aeson
     , mtl
     , mu-rpc
     , mu-schema
@@ -47,6 +49,7 @@ executable servant-example-server
     , mu-rpc
     , mu-servant-server
     , servant-server
+    , text
     , warp
 
   hs-source-dirs:   exe
