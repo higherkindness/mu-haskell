@@ -160,7 +160,7 @@ instance ServantMethodHandler m '[] ('RetSingle rref) (m r) where
   type MethodAPI '[] ('RetSingle rref) (m r) = "postr" :> Post '[JSON] r
   servantMethodHandler f _ _ = f
 
-instance (MonadServer m, Show r) => ServantMethodHandler m '[] ('RetStream rref) (ConduitT r Void m () -> m ()) where
+instance (MonadServer m) => ServantMethodHandler m '[] ('RetStream rref) (ConduitT r Void m () -> m ()) where
   type
     MethodAPI '[] ('RetStream rref) (ConduitT r Void m () -> m ()) =
       "streampost" :> StreamPost NewlineFraming JSON (SourceIO (StreamResult r))
@@ -174,14 +174,14 @@ instance ToJSON a => ToJSON (StreamResult a) where
 
 sinkToSource ::
   forall r m.
-  (MonadServer m, Show r) =>
+  (MonadServer m) =>
   (forall a. m a -> Handler a) ->
   (ConduitT r Void m () -> m ()) ->
   IO (SourceIO (StreamResult r))
 sinkToSource f sink = do
   var <- newEmptyMVar :: IO (MVar (Maybe r))
   forwarder <- liftIO $ async $ do
-    e <- runHandler . f . sink $ toMVarConduit var 0
+    e <- runHandler . f . sink $ toMVarConduit var
     -- signal that the conduit finished
     putMVar var Nothing
     pure e
@@ -200,14 +200,14 @@ sinkToSource f sink = do
               Right () -> pure Stop
   pure $ fromStepT step
 
-toMVarConduit :: MonadServer m => MVar (Maybe r) -> Int -> ConduitT r Void m ()
-toMVarConduit var n = do
+toMVarConduit :: MonadServer m => MVar (Maybe r) -> ConduitT r Void m ()
+toMVarConduit var = do
   x <- await
   case x of
     Nothing -> pure ()
     Just _ -> do
       liftIO $ putMVar var x
-      toMVarConduit var (n + 1)
+      toMVarConduit var
 
 instance
   (ServantMethodHandler m rest r mr) =>
@@ -217,7 +217,7 @@ instance
   servantMethodHandler pm _ pr h t = servantMethodHandler pm (Proxy @rest) pr (h t)
 
 instance
-  (Show t, MonadServer m, ServantMethodHandler m rest r mr) =>
+  (MonadServer m, ServantMethodHandler m rest r mr) =>
   ServantMethodHandler m ('ArgStream anm aref ': rest) r (ConduitT () t m () -> mr)
   where
   type
@@ -226,10 +226,10 @@ instance
   servantMethodHandler pm _ pr h =
     servantMethodHandler pm (Proxy @rest) pr . h . sourceToSource
 
-sourceToSource :: (MonadServer m, Show t) => SourceIO t -> ConduitT () t m ()
+sourceToSource :: (MonadServer m) => SourceIO t -> ConduitT () t m ()
 sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)
   where
-    go :: (MonadServer m, Show t) => StepT IO t -> Pipe i i t u m ()
+    go :: (MonadServer m) => StepT IO t -> Pipe i i t u m ()
     go Stop = Done ()
     go (Skip s) = go s
     go (Yield t s) = HaveOutput (go s) t
