@@ -53,7 +53,7 @@ type QuickStartService
             ('RetStream ('SchemaRef QuickstartSchema "HelloResponse"))
         , 'Method "SayManyHellos"
           '[ 'ArgStream ('Nothing @Symbol) ('SchemaRef QuickstartSchema "HelloRequest")]
-                ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ]
+                ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ] :: Package'
 
 newtype HelloRequest = HelloRequest { name :: T.Text }
   deriving ( Show, Eq, Generic

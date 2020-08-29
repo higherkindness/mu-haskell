@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -23,8 +24,10 @@ import qualified Data.ByteString.Lazy.UTF8 as LB8
 import Data.Conduit.Internal (ConduitT (..), Pipe (..))
 import Data.Kind
 import GHC.Generics
+import GHC.TypeLits
 import Generics.Generic.Aeson
 import Mu.Rpc
+import Mu.Rpc.Annotations
 import Mu.Schema
 import Mu.Server
 import Servant
@@ -44,127 +47,142 @@ convertServerError (Mu.Server.ServerError code msg) = case code of
   NotFound -> err404 {errBody = LB8.fromString msg}
 
 servantServerHandlers ::
-  forall name services m chn handlers.
+  forall pnm m chn ss handlers.
   ( ServantServiceHandlers
-      ('Package ('Just name) services)
+      ('Package pnm ss)
       m
       chn
-      services
+      ss
       handlers
   ) =>
   (forall a. m a -> Handler a) ->
-  Mu.Server.ServerT chn () ('Package ('Just name) services) m handlers ->
-  Servant.Server (ServicesAPI services handlers)
+  Mu.Server.ServerT chn () ('Package pnm ss) m handlers ->
+  Servant.Server (ServicesAPI ('Package pnm ss) ss handlers)
 servantServerHandlers f (Services svcs) =
-  servantServiceHandlers f (Proxy @('Package ('Just name) services)) svcs
+  servantServiceHandlers f (Proxy @('Package pnm ss)) svcs
 
 type family PackageAPI (pkg :: Package snm mnm anm (TypeRef snm)) handlers where
-  PackageAPI ('Package sname services) handlers = ServicesAPI services handlers
+  PackageAPI ('Package pnm ss) handlers = ServicesAPI ('Package pnm ss) ss handlers
 
 class
   ServantServiceHandlers
-    (fullP :: Package snm mnm anm (TypeRef snm))
+    (pkg :: Package snm mnm anm (TypeRef snm))
     (m :: Type -> Type)
     (chn :: ServiceChain snm)
     (ss :: [Service snm mnm anm (TypeRef snm)])
     (hss :: [[Type]]) where
-  type ServicesAPI ss hss
+  type ServicesAPI pkg ss hss
 
   servantServiceHandlers ::
     (forall a. m a -> Handler a) ->
-    Proxy fullP ->
+    Proxy pkg ->
     ServicesT chn info ss m hss ->
-    Servant.Server (ServicesAPI ss hss)
+    Servant.Server (ServicesAPI pkg ss hss)
 
-instance ServantServiceHandlers fullP m chn '[] '[] where
-  type ServicesAPI '[] '[] = EmptyAPI
+instance ServantServiceHandlers pkg m chn '[] '[] where
+  type ServicesAPI pkg '[] '[] = EmptyAPI
   servantServiceHandlers _ _ S0 = emptyServer
 
 instance
   ( ServantMethodHandlers
-      fullP
-      ('Service name methods)
+      pkg
+      sname
       m
       chn
-      (MappingRight chn name)
+      (MappingRight chn sname)
       methods
       hs,
-    ServantServiceHandlers fullP m chn rest hss
+    ServantServiceHandlers pkg m chn rest hss
   ) =>
-  ServantServiceHandlers fullP m chn ('Service name methods ': rest) (hs ': hss)
+  ServantServiceHandlers pkg m chn ('Service sname methods ': rest) (hs ': hss)
   where
-  type ServicesAPI ('Service name methods ': rest) (hs ': hss) = MethodsAPI methods hs :<|> ServicesAPI rest hss
-  servantServiceHandlers f pfullP (svr :<&>: rest) =
-    servantMethodHandlers
-      f
-      pfullP
-      (Proxy @('Service name methods))
-      svr
-      :<|> servantServiceHandlers f pfullP rest
+  type
+    ServicesAPI pkg ('Service sname methods ': rest) (hs ': hss) =
+      MethodsAPI pkg sname methods hs :<|> ServicesAPI pkg rest hss
+  servantServiceHandlers f pkgP (svr :<&>: rest) =
+    servantMethodHandlers f pkgP (Proxy @sname) svr
+      :<|> servantServiceHandlers f pkgP rest
 
 class
   ServantMethodHandlers
-    (fullP :: Package snm mnm anm (TypeRef snm))
-    (fullS :: Service snm mnm anm (TypeRef snm))
+    (pkg :: Package snm mnm anm (TypeRef snm))
+    (sname :: snm)
     (m :: Type -> Type)
     (chn :: ServiceChain snm)
     (inh :: Type)
     (ms :: [Method snm mnm anm (TypeRef snm)])
     (hs :: [Type]) where
-  type MethodsAPI ms hs
+  type MethodsAPI pkg sname ms hs
   servantMethodHandlers ::
     (forall a. m a -> Handler a) ->
-    Proxy fullP ->
-    Proxy fullS ->
+    Proxy pkg ->
+    Proxy sname ->
     HandlersT chn info inh ms m hs ->
-    Servant.Server (MethodsAPI ms hs)
+    Servant.Server (MethodsAPI pkg sname ms hs)
 
-instance ServantMethodHandlers fullP fullS m chn inh '[] '[] where
-  type MethodsAPI '[] '[] = EmptyAPI
+instance ServantMethodHandlers pkg svc m chn inh '[] '[] where
+  type MethodsAPI _ _ '[] '[] = EmptyAPI
   servantMethodHandlers _ _ _ H0 = emptyServer
 
 instance
-  ( ServantMethodHandler m args r h,
-    ServantMethodHandlers fullP fullS m chn () rest hs
+  ( ServantMethodHandler pkg sname m ('Method mname args r) h,
+    ServantMethodHandlers pkg sname m chn () rest hs
   ) =>
-  ServantMethodHandlers fullP fullS m chn () ('Method name args r ': rest) (h ': hs)
+  ServantMethodHandlers pkg sname m chn () ('Method mname args r ': rest) (h ': hs)
   where
-  type MethodsAPI ('Method name args r ': rest) (h ': hs) = MethodAPI args r h :<|> MethodsAPI rest hs
-  servantMethodHandlers f pfullP pfullS (Hmore _ _ h rest) =
-    servantMethodHandler
-      f
-      (Proxy @args)
-      (Proxy @r)
-      (h NoRpcInfo ())
-      :<|> servantMethodHandlers f pfullP pfullS rest
+  type
+    MethodsAPI pkg sname ('Method mname args r ': rest) (h ': hs) =
+      MethodAPI pkg sname ('Method mname args r) h :<|> MethodsAPI pkg sname rest hs
+  servantMethodHandlers f pkgP snameP (Hmore _ _ h rest) =
+    servantMethodHandler f pkgP snameP (Proxy @('Method mname args r)) (h NoRpcInfo ())
+      :<|> servantMethodHandlers f pkgP snameP rest
 
 class
   ServantMethodHandler
+    (pkg :: Package snm mnm anm (TypeRef snm))
+    (sname :: snm)
     (m :: Type -> Type)
-    (args :: [Argument snm anm tyref])
-    (r :: Return snm tyref)
+    (method :: Method snm mnm anm tyref)
     (h :: Type) where
-  type MethodAPI args r h
+  type MethodAPI pkg sname method h
   servantMethodHandler ::
     (forall a. m a -> Handler a) ->
-    Proxy args ->
-    Proxy r ->
+    Proxy pkg ->
+    Proxy sname ->
+    Proxy method ->
     h ->
-    Servant.Server (MethodAPI args r h)
+    Servant.Server (MethodAPI pkg sname method h)
 
-instance ServantMethodHandler m '[] 'RetNothing (m ()) where
-  type MethodAPI '[] 'RetNothing (m ()) = "post" :> Post '[JSON] ()
-  servantMethodHandler f _ _ = f
-
-instance ServantMethodHandler m '[] ('RetSingle rref) (m r) where
-  type MethodAPI '[] ('RetSingle rref) (m r) = "postr" :> Post '[JSON] r
-  servantMethodHandler f _ _ = f
-
-instance (MonadServer m) => ServantMethodHandler m '[] ('RetStream rref) (ConduitT r Void m () -> m ()) where
+instance
+  (Server (PrefixRoute (RouteFor pkg sname mname) (Post '[JSON] ())) ~ Handler ()) =>
+  ServantMethodHandler pkg (sname :: Symbol) m ('Method (mname :: Symbol) '[] 'RetNothing) (m ())
+  where
   type
-    MethodAPI '[] ('RetStream rref) (ConduitT r Void m () -> m ()) =
-      "streampost" :> StreamPost NewlineFraming JSON (SourceIO (StreamResult r))
-  servantMethodHandler f _ _ = liftIO . sinkToSource f
+    MethodAPI pkg sname ('Method mname '[] 'RetNothing) (m ()) =
+      PrefixRoute (RouteFor pkg sname mname) (Post '[JSON] ())
+  servantMethodHandler f _ _ _ = f
+
+instance
+  (Server (PrefixRoute (RouteFor pkg sname mname) (Post '[JSON] r)) ~ Handler r) =>
+  ServantMethodHandler pkg sname m ('Method mname '[] ('RetSingle rref)) (m r)
+  where
+  type
+    MethodAPI pkg sname ('Method mname '[] ('RetSingle rref)) (m r) =
+      PrefixRoute (RouteFor pkg sname mname) (Post '[JSON] r)
+  servantMethodHandler f _ _ _ = f
+
+instance
+  ( MonadServer m,
+    Server
+      (PrefixRoute (RouteFor pkg sname mname) (StreamPost NewlineFraming JSON (SourceIO (StreamResult r))))
+      ~ Handler (SourceIO (StreamResult r))
+  ) =>
+  ServantMethodHandler pkg sname m ('Method mname '[] ('RetStream rref)) (ConduitT r Void m () -> m ())
+  where
+  type
+    MethodAPI pkg sname ('Method mname '[] ('RetStream rref)) (ConduitT r Void m () -> m ()) =
+      PrefixRoute (RouteFor pkg sname mname) (StreamPost NewlineFraming JSON (SourceIO (StreamResult r)))
+  servantMethodHandler f _ _ _ = liftIO . sinkToSource f
 
 data StreamResult a = Error String | Result a
   deriving (Generic, Show)
@@ -210,21 +228,24 @@ toMVarConduit var = do
       toMVarConduit var
 
 instance
-  (ServantMethodHandler m rest r mr) =>
-  ServantMethodHandler m ('ArgSingle anm aref ': rest) r (t -> mr)
-  where
-  type MethodAPI ('ArgSingle anm aref ': rest) r (t -> mr) = "reqbody" :> ReqBody '[JSON] t :> MethodAPI rest r mr
-  servantMethodHandler pm _ pr h t = servantMethodHandler pm (Proxy @rest) pr (h t)
-
-instance
-  (MonadServer m, ServantMethodHandler m rest r mr) =>
-  ServantMethodHandler m ('ArgStream anm aref ': rest) r (ConduitT () t m () -> mr)
+  (ServantMethodHandler pkg sname m ('Method mname rest r) mr) =>
+  ServantMethodHandler pkg sname m ('Method mname ('ArgSingle anm aref ': rest) r) (t -> mr)
   where
   type
-    MethodAPI ('ArgStream anm aref ': rest) r (ConduitT () t m () -> mr) =
-      "streambody" :> StreamBody NewlineFraming JSON (SourceIO t) :> MethodAPI rest r mr
-  servantMethodHandler pm _ pr h =
-    servantMethodHandler pm (Proxy @rest) pr . h . sourceToSource
+    MethodAPI pkg sname ('Method mname ('ArgSingle anm aref ': rest) r) (t -> mr) =
+      ReqBody '[JSON] t :> MethodAPI pkg sname ('Method mname rest r) mr
+  servantMethodHandler f pkgP snameP _ h t =
+    servantMethodHandler f pkgP snameP (Proxy @('Method mname rest r)) (h t)
+
+instance
+  (MonadServer m, ServantMethodHandler pkg sname m ('Method mname rest r) mr) =>
+  ServantMethodHandler pkg sname m ('Method mname ('ArgStream anm aref ': rest) r) (ConduitT () t m () -> mr)
+  where
+  type
+    MethodAPI pkg sname ('Method mname ('ArgStream anm aref ': rest) r) (ConduitT () t m () -> mr) =
+      StreamBody NewlineFraming JSON (SourceIO t) :> MethodAPI pkg sname ('Method mname rest r) mr
+  servantMethodHandler f pkgP snameP _ h =
+    servantMethodHandler f pkgP snameP (Proxy @('Method mname rest r)) . h . sourceToSource
 
 sourceToSource :: (MonadServer m) => SourceIO t -> ConduitT () t m ()
 sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)
@@ -236,3 +257,31 @@ sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)
     go (Effect m) = PipeM (liftIO $ go <$> m)
     go (Servant.Types.SourceT.Error msg) =
       PipeM (throwError $ Mu.Server.ServerError Invalid ("error reading stream: " ++ msg))
+
+type ServantRoute = [Symbol]
+
+type family RouteForService (pkg :: Package snm mnm anm tyref) (s :: snm) :: ServantRoute where
+  RouteForService pkg s =
+    FromMaybe '[s] (GetServiceAnnotationMay (AnnotatedPackage ServantRoute pkg) s)
+
+type family RouteForMethod (pkg :: Package snm mnm anm tyref) (s :: snm) (m :: mnm) :: ServantRoute where
+  RouteForMethod pkg s m =
+    FromMaybe '[m] (GetMethodAnnotationMay (AnnotatedPackage ServantRoute pkg) s m)
+
+type family RouteFor (pkg :: Package snm mnm anm tyref) (s :: Symbol) (m :: Symbol) :: ServantRoute where
+  RouteFor pkg s m =
+    Concat
+      (FromMaybe '[s] (GetServiceAnnotationMay (AnnotatedPackage ServantRoute pkg) s))
+      (FromMaybe '[m] (GetMethodAnnotationMay (AnnotatedPackage ServantRoute pkg) s m))
+
+type family FromMaybe (a :: k) (ma :: Maybe k) :: k where
+  FromMaybe a 'Nothing = a
+  FromMaybe _ ('Just a) = a
+
+type family Concat (as :: [k]) (bs :: [k]) :: [k] where
+  Concat '[] bs = bs
+  Concat (a ': as) bs = a ': Concat as bs
+
+type family PrefixRoute (prefix :: ServantRoute) route where
+  PrefixRoute '[] route = route
+  PrefixRoute (p ': rest) route = p :> PrefixRoute rest route

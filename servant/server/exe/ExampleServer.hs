@@ -9,6 +9,7 @@ module Main where
 import Data.Aeson
 import Data.Conduit
 import qualified Data.Text.IO as Text
+import Mu.Rpc.Annotations
 import Mu.Rpc.Examples
 import Mu.Servant.Server
 import Mu.Server
@@ -38,3 +39,11 @@ instance FromJSON HelloRequest
 instance FromJSON HiRequest
 
 instance ToJSON HelloResponse
+
+type instance
+  AnnotatedPackage ServantRoute QuickStartService =
+    '[ 'AnnService "Greeter" '["greet"],
+       'AnnMethod "Greeter" "SayHello" '["say", "hello"],
+       'AnnMethod "Greeter" "SayHi" '["say", "hi"],
+       'AnnMethod "Greeter" "SayManyHellos" '["say", "many", "hellos"]
+     ]
