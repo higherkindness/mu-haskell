@@ -47,19 +47,22 @@ convertServerError (Mu.Server.ServerError code msg) = case code of
   NotFound -> err404 {errBody = LB8.fromString msg}
 
 servantServerHandlers ::
-  forall pnm m chn ss handlers.
+  forall pname m chn ss handlers.
   ( ServantServiceHandlers
-      ('Package pnm ss)
+      ('Package pname ss)
       m
       chn
       ss
       handlers
   ) =>
   (forall a. m a -> Handler a) ->
-  Mu.Server.ServerT chn () ('Package pnm ss) m handlers ->
-  Servant.Server (ServicesAPI ('Package pnm ss) ss handlers)
+  Mu.Server.ServerT chn () ('Package pname ss) m handlers ->
+  Servant.Server (PackageAPI ('Package pname ss) handlers)
 servantServerHandlers f (Services svcs) =
-  servantServiceHandlers f (Proxy @('Package pnm ss)) svcs
+  servantServiceHandlers f (Proxy @('Package pname ss)) svcs
+
+packageAPI :: Mu.Server.ServerT chn () pkg ServerErrorIO handlers -> Proxy (PackageAPI pkg handlers)
+packageAPI _ = Proxy
 
 type family PackageAPI (pkg :: Package snm mnm anm (TypeRef snm)) handlers where
   PackageAPI ('Package pnm ss) handlers = ServicesAPI ('Package pnm ss) ss handlers
@@ -259,14 +262,6 @@ sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)
       PipeM (throwError $ Mu.Server.ServerError Invalid ("error reading stream: " ++ msg))
 
 type ServantRoute = [Symbol]
-
-type family RouteForService (pkg :: Package snm mnm anm tyref) (s :: snm) :: ServantRoute where
-  RouteForService pkg s =
-    FromMaybe '[s] (GetServiceAnnotationMay (AnnotatedPackage ServantRoute pkg) s)
-
-type family RouteForMethod (pkg :: Package snm mnm anm tyref) (s :: snm) (m :: mnm) :: ServantRoute where
-  RouteForMethod pkg s m =
-    FromMaybe '[m] (GetMethodAnnotationMay (AnnotatedPackage ServantRoute pkg) s m)
 
 type family RouteFor (pkg :: Package snm mnm anm tyref) (s :: Symbol) (m :: Symbol) :: ServantRoute where
   RouteFor pkg s m =

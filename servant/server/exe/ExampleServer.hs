@@ -1,38 +1,29 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Main where
 
 import Data.Aeson
-import Data.Conduit
 import qualified Data.Text.IO as Text
 import Mu.Rpc.Annotations
 import Mu.Rpc.Examples
 import Mu.Servant.Server
-import Mu.Server
 import Network.Wai.Handler.Warp
 import Servant
 
 main :: IO ()
 main = do
   putStrLn "running quickstart application"
-  Text.putStrLn $ layout (Proxy @API)
-  run 8081 (serve (Proxy @API) servantServer)
+  Text.putStrLn $ layout quickstartAPI
+  run 8081 (serve quickstartAPI servantServer)
 
-servantServer :: Server (PackageAPI QuickStartService (Handlers ServerErrorIO))
+servantServer :: _
 servantServer = servantServerHandlers toHandler quickstartServer
 
-type API = PackageAPI QuickStartService (Handlers ServerErrorIO)
-
-type Handlers m =
-  '[  '[ HelloRequest -> m HelloResponse,
-         HiRequest -> ConduitT HelloResponse Void m () -> m (),
-         ConduitT () HelloRequest m () -> ConduitT HelloResponse Void m () -> m ()
-       ]
-   ]
+quickstartAPI :: Proxy _
+quickstartAPI = packageAPI quickstartServer
 
 instance FromJSON HelloRequest
 
@@ -47,3 +38,4 @@ type instance
        'AnnMethod "Greeter" "SayHi" '["say", "hi"],
        'AnnMethod "Greeter" "SayManyHellos" '["say", "many", "hellos"]
      ]
+
