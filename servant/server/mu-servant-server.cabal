@@ -6,7 +6,7 @@ description:
 
 license:            Apache-2.0
 license-file:       LICENSE
-author:             Temp Name
+author:             Andre Marianiello
 maintainer:         alejandro.serrano@47deg.com
 copyright:          Copyright © 2019-2020 <http://47deg.com 47 Degrees>
 cabal-version:      >=1.10
