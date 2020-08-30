@@ -1,6 +1,7 @@
 {-# language DataKinds             #-}
 {-# language DeriveAnyClass        #-}
 {-# language DeriveGeneric         #-}
+{-# language DerivingVia           #-}
 {-# language FlexibleContexts      #-}
 {-# language FlexibleInstances     #-}
 {-# language GADTs                 #-}
@@ -20,12 +21,14 @@ Look at the source code of this module.
 -}
 module Mu.Rpc.Examples where
 
+import qualified Data.Aeson as J
 import           Data.Conduit
 import           Data.Conduit.Combinators as C
 import qualified Data.Text                as T
 import           GHC.Generics
 import           GHC.TypeLits
 
+import           Mu.Adapter.Json ()
 import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
@@ -59,16 +62,22 @@ newtype HelloRequest = HelloRequest { name :: T.Text }
   deriving ( Show, Eq, Generic
            , ToSchema   QuickstartSchema "HelloRequest"
            , FromSchema QuickstartSchema "HelloRequest" )
+  deriving (J.ToJSON, J.FromJSON)
+    via (WithSchema QuickstartSchema "HelloRequest" HelloRequest)
 
 newtype HelloResponse = HelloResponse { message :: T.Text }
   deriving ( Show, Eq, Generic
            , ToSchema   QuickstartSchema "HelloResponse"
            , FromSchema QuickstartSchema "HelloResponse" )
+  deriving (J.ToJSON, J.FromJSON)
+    via (WithSchema QuickstartSchema "HelloResponse" HelloResponse)
 
 newtype HiRequest = HiRequest { number :: Int }
   deriving ( Show, Eq, Generic
            , ToSchema   QuickstartSchema "HiRequest"
            , FromSchema QuickstartSchema "HiRequest" )
+  deriving (J.ToJSON, J.FromJSON)
+    via (WithSchema QuickstartSchema "HiRequest" HiRequest)
 
 quickstartServer :: forall m i. (MonadServer m)
                  => ServerT '[] i QuickStartService m _

@@ -5,7 +5,6 @@
 
 module Main where
 
-import Data.Aeson
 import qualified Data.Text.IO as Text
 import Mu.Rpc.Annotations
 import Mu.Rpc.Examples
@@ -24,12 +23,6 @@ servantServer = servantServerHandlers toHandler quickstartServer
 
 quickstartAPI :: Proxy _
 quickstartAPI = packageAPI quickstartServer
-
-instance FromJSON HelloRequest
-
-instance FromJSON HiRequest
-
-instance ToJSON HelloResponse
 
 type instance
   AnnotatedPackage ServantRoute QuickStartService =
