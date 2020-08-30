@@ -108,12 +108,12 @@ instance
 
 class
   ServantMethodHandlers
-    (pkg :: Package snm mnm anm (TypeRef snm))
-    (sname :: snm)
+    (pkg :: Package Symbol Symbol anm (TypeRef Symbol))
+    (sname :: Symbol)
     (m :: Type -> Type)
     (chn :: ServiceChain snm)
     (inh :: Type)
-    (ms :: [Method snm mnm anm (TypeRef snm)])
+    (ms :: [Method snm Symbol anm (TypeRef snm)])
     (hs :: [Type]) where
   type MethodsAPI pkg sname ms hs
   servantMethodHandlers ::
@@ -128,64 +128,83 @@ instance ServantMethodHandlers pkg svc m chn inh '[] '[] where
   servantMethodHandlers _ _ _ H0 = emptyServer
 
 instance
-  ( ServantMethodHandler pkg sname m ('Method mname args r) h,
-    ServantMethodHandlers pkg sname m chn () rest hs
+  ( ServantMethodHandler httpMethod httpStatus m args ret h,
+    ServantMethodHandlers pkg sname m chn () rest hs,
+    HttpMethodFor pkg sname mname ~ httpMethod,
+    HttpStatusFor pkg sname mname ~ httpStatus,
+    Server (MethodAPI pkg sname ('Method mname args ret) h) ~ Server (HandlerAPI httpMethod httpStatus args ret h)
   ) =>
-  ServantMethodHandlers pkg sname m chn () ('Method mname args r ': rest) (h ': hs)
+  ServantMethodHandlers pkg sname m chn () ('Method mname args ret ': rest) (h ': hs)
   where
   type
-    MethodsAPI pkg sname ('Method mname args r ': rest) (h ': hs) =
-      MethodAPI pkg sname ('Method mname args r) h :<|> MethodsAPI pkg sname rest hs
+    MethodsAPI pkg sname ('Method mname args ret ': rest) (h ': hs) =
+      MethodAPI pkg sname ('Method mname args ret) h
+        :<|> MethodsAPI pkg sname rest hs
   servantMethodHandlers f pkgP snameP (Hmore _ _ h rest) =
-    servantMethodHandler f pkgP snameP (Proxy @('Method mname args r)) (h NoRpcInfo ())
+    servantMethodHandler
+      f
+      (Proxy @httpMethod)
+      (Proxy @httpStatus)
+      (Proxy @args)
+      (Proxy @ret)
+      (h NoRpcInfo ())
       :<|> servantMethodHandlers f pkgP snameP rest
+
+type family MethodAPI pkg sname method h where
+  MethodAPI pkg sname ('Method mname args ret) h =
+    PrefixRoute (RouteFor pkg sname mname)
+      (HandlerAPI (HttpMethodFor pkg sname mname) (HttpStatusFor pkg sname mname) args ret h)
+
+type family HttpMethodFor pkg sname mname :: ServantMethod where
+  HttpMethodFor pkg sname mname =
+    FromMaybe 'POST (GetMethodAnnotationMay (AnnotatedPackage ServantMethod pkg) sname mname)
+
+type family HttpStatusFor pkg sname mname :: ServantStatus where
+  HttpStatusFor pkg sname mname =
+    FromMaybe 200 (GetMethodAnnotationMay (AnnotatedPackage ServantStatus pkg) sname mname)
+
+type ServantMethod = StdMethod
+
+type ServantStatus = Nat
 
 class
   ServantMethodHandler
-    (pkg :: Package snm mnm anm (TypeRef snm))
-    (sname :: snm)
+    (httpMethod :: ServantMethod)
+    (httpStatus :: ServantStatus)
     (m :: Type -> Type)
-    (method :: Method snm mnm anm tyref)
+    (args :: [Argument snm anm tyref])
+    (ret :: Return snm tyref)
     (h :: Type) where
-  type MethodAPI pkg sname method h
+  type HandlerAPI (httpMethod :: ServantMethod) (httpStatus :: ServantStatus) args ret h
   servantMethodHandler ::
     (forall a. m a -> Handler a) ->
-    Proxy pkg ->
-    Proxy sname ->
-    Proxy method ->
+    Proxy httpMethod ->
+    Proxy httpStatus ->
+    Proxy args ->
+    Proxy ret ->
     h ->
-    Servant.Server (MethodAPI pkg sname method h)
+    Servant.Server (HandlerAPI httpMethod httpStatus args ret h)
+
+instance ServantMethodHandler httpMethod httpStatus m '[] 'RetNothing (m ()) where
+  type
+    HandlerAPI httpMethod httpStatus '[] 'RetNothing (m ()) =
+      Verb httpMethod httpStatus '[JSON] ()
+  servantMethodHandler f _ _ _ _ = f
+
+instance ServantMethodHandler httpMethod httpStatus m '[] ('RetSingle rref) (m r) where
+  type
+    HandlerAPI httpMethod httpStatus '[] ('RetSingle rref) (m r) =
+      Verb httpMethod httpStatus '[JSON] r
+  servantMethodHandler f _ _ _ _ = f
 
 instance
-  (Server (PrefixRoute (RouteFor pkg sname mname) (Post '[JSON] ())) ~ Handler ()) =>
-  ServantMethodHandler pkg (sname :: Symbol) m ('Method (mname :: Symbol) '[] 'RetNothing) (m ())
+  (MonadServer m) =>
+  ServantMethodHandler httpMethod httpStatus m '[] ('RetStream rref) (ConduitT r Void m () -> m ())
   where
   type
-    MethodAPI pkg sname ('Method mname '[] 'RetNothing) (m ()) =
-      PrefixRoute (RouteFor pkg sname mname) (Post '[JSON] ())
-  servantMethodHandler f _ _ _ = f
-
-instance
-  (Server (PrefixRoute (RouteFor pkg sname mname) (Post '[JSON] r)) ~ Handler r) =>
-  ServantMethodHandler pkg sname m ('Method mname '[] ('RetSingle rref)) (m r)
-  where
-  type
-    MethodAPI pkg sname ('Method mname '[] ('RetSingle rref)) (m r) =
-      PrefixRoute (RouteFor pkg sname mname) (Post '[JSON] r)
-  servantMethodHandler f _ _ _ = f
-
-instance
-  ( MonadServer m,
-    Server
-      (PrefixRoute (RouteFor pkg sname mname) (StreamPost NewlineFraming JSON (SourceIO (StreamResult r))))
-      ~ Handler (SourceIO (StreamResult r))
-  ) =>
-  ServantMethodHandler pkg sname m ('Method mname '[] ('RetStream rref)) (ConduitT r Void m () -> m ())
-  where
-  type
-    MethodAPI pkg sname ('Method mname '[] ('RetStream rref)) (ConduitT r Void m () -> m ()) =
-      PrefixRoute (RouteFor pkg sname mname) (StreamPost NewlineFraming JSON (SourceIO (StreamResult r)))
-  servantMethodHandler f _ _ _ = liftIO . sinkToSource f
+    HandlerAPI httpMethod httpStatus '[] ('RetStream rref) (ConduitT r Void m () -> m ()) =
+      Stream httpMethod httpStatus NewlineFraming JSON (SourceIO (StreamResult r))
+  servantMethodHandler f _ _ _ _ = liftIO . sinkToSource f
 
 data StreamResult a = Error String | Result a
   deriving (Generic, Show)
@@ -231,24 +250,25 @@ toMVarConduit var = do
       toMVarConduit var
 
 instance
-  (ServantMethodHandler pkg sname m ('Method mname rest r) mr) =>
-  ServantMethodHandler pkg sname m ('Method mname ('ArgSingle anm aref ': rest) r) (t -> mr)
+  (ServantMethodHandler httpMethod httpStatus m rest ret h) =>
+  ServantMethodHandler httpMethod httpStatus m ('ArgSingle anm aref ': rest) ret (t -> h)
   where
   type
-    MethodAPI pkg sname ('Method mname ('ArgSingle anm aref ': rest) r) (t -> mr) =
-      ReqBody '[JSON] t :> MethodAPI pkg sname ('Method mname rest r) mr
-  servantMethodHandler f pkgP snameP _ h t =
-    servantMethodHandler f pkgP snameP (Proxy @('Method mname rest r)) (h t)
+    HandlerAPI httpMethod httpStatus ('ArgSingle anm aref ': rest) ret (t -> h) =
+      ReqBody '[JSON] t :> HandlerAPI httpMethod httpStatus rest ret h
+  servantMethodHandler f mP sP _ retP h t =
+    servantMethodHandler f mP sP (Proxy @rest) retP (h t)
 
 instance
-  (MonadServer m, ServantMethodHandler pkg sname m ('Method mname rest r) mr) =>
-  ServantMethodHandler pkg sname m ('Method mname ('ArgStream anm aref ': rest) r) (ConduitT () t m () -> mr)
+  (MonadServer m, ServantMethodHandler httpMethod httpStatus m rest ret h) =>
+  ServantMethodHandler httpMethod httpStatus m ('ArgStream anm aref ': rest) ret (ConduitT () t m () -> h)
   where
   type
-    MethodAPI pkg sname ('Method mname ('ArgStream anm aref ': rest) r) (ConduitT () t m () -> mr) =
-      StreamBody NewlineFraming JSON (SourceIO t) :> MethodAPI pkg sname ('Method mname rest r) mr
-  servantMethodHandler f pkgP snameP _ h =
-    servantMethodHandler f pkgP snameP (Proxy @('Method mname rest r)) . h . sourceToSource
+    HandlerAPI httpMethod httpStatus ('ArgStream anm aref ': rest) ret (ConduitT () t m () -> h) =
+      StreamBody NewlineFraming JSON (SourceIO t)
+        :> HandlerAPI httpMethod httpStatus rest ret h
+  servantMethodHandler f mP sP _ retP h =
+    servantMethodHandler f mP sP (Proxy @rest) retP . h . sourceToSource
 
 sourceToSource :: (MonadServer m) => SourceIO t -> ConduitT () t m ()
 sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)

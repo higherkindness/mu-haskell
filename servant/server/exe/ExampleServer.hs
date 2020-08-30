@@ -32,3 +32,10 @@ type instance
        'AnnMethod "Greeter" "SayManyHellos" '["say", "many", "hellos"]
      ]
 
+type instance
+  AnnotatedPackage ServantMethod QuickStartService =
+    '[]
+
+type instance
+  AnnotatedPackage ServantStatus QuickStartService =
+    '[]
