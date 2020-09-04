@@ -311,6 +311,10 @@ instance {-# OVERLAPS #-} GToSchemaFieldTypeUnion sch '[] U1 where
   toSchemaFieldTypeUnion U1 = error "this should never happen"
 instance {-# OVERLAPS #-} GFromSchemaFieldTypeUnion sch '[] U1 where
   fromSchemaFieldTypeUnion _ = U1
+instance {-# OVERLAPS #-} GToSchemaFieldTypeUnion sch '[] (M1 i t U1) where
+  toSchemaFieldTypeUnion (M1 U1) = error "this should never happen"
+instance {-# OVERLAPS #-} GFromSchemaFieldTypeUnion sch '[] (M1 i t U1) where
+  fromSchemaFieldTypeUnion _ = M1 U1
 instance {-# OVERLAPPABLE #-}
          TypeError ('Text "the type does not match the union")
          => GToSchemaFieldTypeUnion sch '[] f where
@@ -327,6 +331,15 @@ instance (GFromSchemaFieldTypeWrap sch t v)
          => GFromSchemaFieldTypeUnion sch '[t] v where
   fromSchemaFieldTypeUnion (Z x) = fromSchemaFieldTypeW x
   fromSchemaFieldTypeUnion (S _) = error "this should never happen"
+
+-- remove M1 from thing with more than one element
+instance {-# OVERLAPS #-} (GToSchemaFieldTypeUnion sch (a ': b ': rest) v)
+         => GToSchemaFieldTypeUnion sch (a ': b ': rest) (M1 i t v) where
+  toSchemaFieldTypeUnion (M1 x) = toSchemaFieldTypeUnion x
+instance {-# OVERLAPS #-} (GFromSchemaFieldTypeUnion sch (a ': b ': rest) v)
+         => GFromSchemaFieldTypeUnion sch (a ': b ': rest) (M1 i t v) where
+  fromSchemaFieldTypeUnion x = M1 (fromSchemaFieldTypeUnion x)
+
 instance (GToSchemaFieldTypeWrap sch t v, GToSchemaFieldTypeUnion sch ts vs)
          => GToSchemaFieldTypeUnion sch (t ': ts) (v :+: vs) where
   toSchemaFieldTypeUnion (L1 x) = Z (toSchemaFieldTypeW x)
