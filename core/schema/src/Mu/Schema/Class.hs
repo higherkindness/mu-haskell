@@ -37,13 +37,19 @@ module Mu.Schema.Class (
 , ToSchema(..), toSchema'
 , CustomFieldMapping(..)
 , Mapping(..), Mappings, MappingRight, MappingLeft
+, Underlying(..), UnderlyingConversion(..)
   -- * Internal use only
 , GToSchemaRecord(..)
 ) where
 
+import qualified Data.ByteString          as BS
+import qualified Data.ByteString.Lazy     as BL
 import           Data.Kind
 import           Data.Map                 as M
+import           Data.Maybe               (fromJust)
 import           Data.SOP
+import qualified Data.Text                as T
+import qualified Data.UUID                as U
 import           GHC.Generics
 import           GHC.TypeLits
 
@@ -139,6 +145,33 @@ instance (Generic t, GToSchemaTypeDef sch fmap (sch :/: sty) (Rep t))
 instance (Generic t, GFromSchemaTypeDef sch fmap (sch :/: sty) (Rep t))
          => FromSchema sch sty (CustomFieldMapping sty fmap t) where
   fromSchema x = CustomFieldMapping $ to (fromSchemaTypeDef (Proxy @fmap) x)
+
+-- | This 'newtype' is used to wrap types for which
+--   we want a "logical" representation as a Haskell
+--   type, but the underlying representation is
+--   lower level, like 'UUID's as 'ByteString's.
+newtype Underlying basic logical
+  = Underlying { unUnderlying :: logical }
+  deriving (Show, Eq)
+
+-- | This class defines the actual conversion between
+--   a "logical" type and its low-level representation.
+class UnderlyingConversion basic logical where
+  toUnderlying   :: logical -> basic
+  fromUnderlying :: basic -> logical
+
+instance UnderlyingConversion String U.UUID where
+  toUnderlying   = U.toString
+  fromUnderlying = fromJust . U.fromString
+instance UnderlyingConversion T.Text U.UUID where
+  toUnderlying   = U.toText
+  fromUnderlying = fromJust . U.fromText
+instance UnderlyingConversion BL.ByteString U.UUID where
+  toUnderlying   = U.toByteString
+  fromUnderlying = fromJust . U.fromByteString
+instance UnderlyingConversion BS.ByteString U.UUID where
+  toUnderlying   = BL.toStrict . U.toByteString
+  fromUnderlying = fromJust . U.fromByteString . BL.fromStrict
 
 -- ======================
 -- CRAZY GENERICS SECTION
@@ -245,6 +278,12 @@ instance GToSchemaFieldType sch 'TNull () where
   toSchemaFieldType _   = FNull
 instance GFromSchemaFieldType sch 'TNull () where
   fromSchemaFieldType _ = ()
+instance (UnderlyingConversion t l)
+         => GToSchemaFieldType sch ('TPrimitive t) (Underlying t l) where
+  toSchemaFieldType = FPrimitive . toUnderlying . unUnderlying
+instance (UnderlyingConversion t l)
+         => GFromSchemaFieldType sch ('TPrimitive t) (Underlying t l) where
+  fromSchemaFieldType (FPrimitive x) = Underlying (fromUnderlying x)
 instance GToSchemaFieldType sch ('TPrimitive t) t where
   toSchemaFieldType = FPrimitive
 instance GFromSchemaFieldType sch ('TPrimitive t) t where

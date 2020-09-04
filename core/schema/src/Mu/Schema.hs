@@ -29,6 +29,7 @@ module Mu.Schema (
 , FromSchema(..), fromSchema'
 , ToSchema(..), toSchema'
 , CustomFieldMapping(..)
+, Underlying(..), UnderlyingConversion(..)
   -- ** Mappings between fields
 , Mapping(..), Mappings, MappingRight, MappingLeft
   -- ** Field annotations
