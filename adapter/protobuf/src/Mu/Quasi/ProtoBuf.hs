@@ -110,12 +110,12 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) = do
       | not (all hasFieldNumber vs)
       = fail "nested oneof fields are not supported"
       | otherwise
-      = (,) <$> [t| 'FieldDef $(textToStrLit nm) $(typesToList <$> mapM pbOneOfFieldToType vs ) |]
+      = (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TUnion $(typesToList <$> mapM pbOneOfFieldToType vs )) |]
             <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm)
                        ('ProtoBufOneOfIds $(typesToList <$> mapM (intToLit . getFieldNumber) vs )) |]
 
     reportDefaultWarning :: [P.Option] -> Q ()
-    reportDefaultWarning opts = do
+    reportDefaultWarning opts =
       when (any (\(P.Option ident _) -> ident == ["default"]) opts)
            (reportError "mu-protobuf does not (yet) support default values")
 
