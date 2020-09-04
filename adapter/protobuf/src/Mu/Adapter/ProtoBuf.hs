@@ -26,6 +26,7 @@ need to annotate your schema using 'ProtoBufAnnotation'.
 module Mu.Adapter.ProtoBuf (
   -- * Custom annotations
   ProtoBufAnnotation(..)
+, ProtoBufOptionConstant(..)
   -- * Conversion using schemas
 , IsProtoSchema
 , toProtoViaSchema
@@ -62,16 +63,23 @@ instance ProtoEnum Bool
 data ProtoBufAnnotation
   = -- | Numeric field identifier for normal fields
     --   and whether it should be packed (only used for lists of number-like values)
-    ProtoBufId Nat Bool
+    ProtoBufId Nat [(Symbol, ProtoBufOptionConstant)]
     -- | List of identifiers for fields which contain a union
   | ProtoBufOneOfIds [Nat]
+
+-- Values for constants
+data ProtoBufOptionConstant
+  = ProtoBufOptionConstantInt    Nat
+  | ProtoBufOptionConstantBool   Bool
+  | ProtoBufOptionConstantObject [(Symbol, ProtoBufOptionConstant)]
+  | ProtoBufOptionConstantOther  Symbol
 
 type family FindProtoBufId (sch :: Schema tn fn) (t :: tn) (f :: fn) where
   FindProtoBufId sch t f
     = FindProtoBufId' t f (GetFieldAnnotation (AnnotatedSchema ProtoBufAnnotation sch) t f)
 
 type family FindProtoBufId' (t :: tn) (f :: fn) (p :: ProtoBufAnnotation) :: Nat where
-  FindProtoBufId' t f ('ProtoBufId n b) = n
+  FindProtoBufId' t f ('ProtoBufId n opts) = n
   FindProtoBufId' t f other
     = TypeError ('Text "protocol buffers id not available for field "
                  ':<>: 'ShowType t ':<>: 'Text "/" ':<>: 'ShowType f)
@@ -81,10 +89,21 @@ type family FindProtoBufPacked (sch :: Schema tn fn) (t :: tn) (f :: fn) where
     = FindProtoBufPacked' t f (GetFieldAnnotation (AnnotatedSchema ProtoBufAnnotation sch) t f)
 
 type family FindProtoBufPacked' (t :: tn) (f :: fn) (p :: ProtoBufAnnotation) :: Bool where
-  FindProtoBufPacked' t f ('ProtoBufId n b) = b
+  FindProtoBufPacked' t f ('ProtoBufId n opts)
+    = FindProtoBufPacked'' t f opts
   FindProtoBufPacked' t f other
     = TypeError ('Text "protocol buffers id not available for field "
                  ':<>: 'ShowType t ':<>: 'Text "/" ':<>: 'ShowType f)
+
+type family FindProtoBufPacked'' (t :: tn) (f :: fn) (opts :: [(Symbol, ProtoBufOptionConstant)]) :: Bool where
+  FindProtoBufPacked'' t f '[] = 'True  -- by default we are packed
+  FindProtoBufPacked'' t f ( '("packed", 'ProtoBufOptionConstantBool b) ': rest )
+    = b  -- found!
+  FindProtoBufPacked'' t f ( '("packed", other) ': rest )
+    = TypeError ('Text "non-boolean value for 'packed' for field "
+                 ':<>: 'ShowType t ':<>: 'Text "/" ':<>: 'ShowType f)
+  FindProtoBufPacked'' t f ( other ': rest)
+    = FindProtoBufPacked'' t f rest
 
 type family FindProtoBufOneOfIds (sch :: Schema tn fn) (t :: tn) (f :: fn) where
   FindProtoBufOneOfIds sch t f

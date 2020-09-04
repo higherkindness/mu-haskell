@@ -20,9 +20,9 @@ import           Mu.Rpc.Examples
 import           Mu.Schema
 
 type instance AnnotatedSchema ProtoBufAnnotation QuickstartSchema
-  = '[ 'AnnField "HelloRequest" "name" ('ProtoBufId 1 'True)
-     , 'AnnField "HelloResponse" "message" ('ProtoBufId 1 'True)
-     , 'AnnField "HiRequest" "number" ('ProtoBufId 1 'True) ]
+  = '[ 'AnnField "HelloRequest" "name" ('ProtoBufId 1 '[])
+     , 'AnnField "HelloResponse" "message" ('ProtoBufId 1 '[])
+     , 'AnnField "HiRequest" "number" ('ProtoBufId 1 '[]) ]
 
 sayHello' :: HostName -> PortNumber -> T.Text -> IO (GRpcReply T.Text)
 sayHello' host port req

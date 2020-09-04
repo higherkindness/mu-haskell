@@ -39,17 +39,17 @@ data MAddress
   deriving (FromSchema ExampleSchema "address")
 
 type instance AnnotatedSchema ProtoBufAnnotation ExampleSchema
-  = '[ 'AnnField "gender" "male"   ('ProtoBufId 1 'True)
-     , 'AnnField "gender" "female" ('ProtoBufId 2 'True)
-     , 'AnnField "gender" "nb"     ('ProtoBufId 3 'True)
-     , 'AnnField "address" "postcode" ('ProtoBufId 1 'True)
-     , 'AnnField "address" "country"  ('ProtoBufId 2 'True)
-     , 'AnnField "person" "firstName" ('ProtoBufId 1 'True)
-     , 'AnnField "person" "lastName"  ('ProtoBufId 2 'True)
-     , 'AnnField "person" "age"       ('ProtoBufId 3 'True)
-     , 'AnnField "person" "gender"    ('ProtoBufId 4 'True)
-     , 'AnnField "person" "address"   ('ProtoBufId 5 'True)
-     , 'AnnField "person" "lucky_numbers" ('ProtoBufId 6 'True) ]
+  = '[ 'AnnField "gender" "male"   ('ProtoBufId 1 '[])
+     , 'AnnField "gender" "female" ('ProtoBufId 2 '[])
+     , 'AnnField "gender" "nb"     ('ProtoBufId 3 '[])
+     , 'AnnField "address" "postcode" ('ProtoBufId 1 '[])
+     , 'AnnField "address" "country"  ('ProtoBufId 2 '[])
+     , 'AnnField "person" "firstName" ('ProtoBufId 1 '[])
+     , 'AnnField "person" "lastName"  ('ProtoBufId 2 '[])
+     , 'AnnField "person" "age"       ('ProtoBufId 3 '[])
+     , 'AnnField "person" "gender"    ('ProtoBufId 4 '[])
+     , 'AnnField "person" "address"   ('ProtoBufId 5 '[])
+     , 'AnnField "person" "lucky_numbers" ('ProtoBufId 6 '[ '("packed", 'ProtoBufOptionConstantBool 'True) ]) ]
 
 exampleAddress :: MAddress
 exampleAddress = MAddress "1111BB" "Spain"
