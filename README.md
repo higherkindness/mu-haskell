@@ -15,9 +15,9 @@ This set of libraries are thought to be built using [Stack](https://docs.haskell
 
 [![haskell-love](https://img.youtube.com/vi/JbeqwfZ2dRc/0.jpg)](https://www.youtube.com/watch?v=JbeqwfZ2dRc)
 
-[Alejandro](https://twitter.com/trupill) and [Flavio](https://twitter.com/FlavioCorpa)'s mu-haskell paper presentation on Haskell Symposium.
+<!-- TODO: [Alejandro](https://twitter.com/trupill) and [Flavio](https://twitter.com/FlavioCorpa)'s mu-haskell paper presentation on Haskell Symposium.
 
-TODO: [![haskell-symposium](https://img.youtube.com/vi/YOUTUBE_VIDEO_ID_HERE/0.jpg)](https://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID_HERE)
+[![haskell-symposium](https://img.youtube.com/vi/YOUTUBE_VIDEO_ID_HERE/0.jpg)](https://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID_HERE) -->
 
 [Alejandro](https://twitter.com/trupill)'s talk about at [Haskell Amsterdam](https://www.haskell.amsterdam/).
 
