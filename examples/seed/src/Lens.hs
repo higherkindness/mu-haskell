@@ -71,7 +71,7 @@ getWeather msg
  = pure $ record (go w)
  | otherwise
  = pure $ record "who knows?"
- where go e | not $ e `isn't` #sunny  = "is sunny! 😄"
-            | not $ e `isn't` #cloudy = "is cloudy 😟"
-            | not $ e `isn't` #rainy  = "is rainy... 😭"
+ where go e | e `is` #sunny  = "is sunny! 😄"
+            | e `is` #cloudy = "is cloudy 😟"
+            | e `is` #rainy  = "is rainy... 😭"
             | otherwise               = error "this should never happen"

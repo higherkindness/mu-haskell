@@ -25,21 +25,30 @@ import Data.Kind
 import Data.Map
 import Data.SOP
 import qualified Data.Text as T
+-- we need Nats with a constructor to represent non-zero
+
+import GHC.Int
 import GHC.OverloadedLabels
-import GHC.TypeLits hiding (Nat) -- we need Nats with a constructor to represent non-zero
+import GHC.TypeLits hiding (Nat)
 import Mu.Schema
+
+is :: s -> APrism' s () -> Bool
+is s l = not $ isn't l s
 
 data Nat = Zero | Succ Nat
 
 record :: BuildRecord sch args r => r -> Term sch ('DRecord name args)
 record = TRecord . buildR
 
-class BuildRecord (sch :: Schema Symbol Symbol) (args :: [FieldDef Symbol Symbol]) (r :: Type) where
+class BuildRecord (sch :: Schema Symbol Symbol) (args :: [FieldDef Symbol Symbol]) (r :: Type) | sch args -> r where
   buildR :: r -> NP (Field sch) args
 
 instance
   {-# OVERLAPPABLE #-}
-  (Uninterpret r ~ fieldType, UninterpretField sch r) =>
+  ( Interpret sch fieldType ~ r,
+    Uninterpret r ~ fieldType,
+    UninterpretField sch r
+  ) =>
   BuildRecord
     sch
     '[ 'FieldDef fieldName fieldType
@@ -49,10 +58,11 @@ instance
   buildR val = Field (toFieldValue val) :* Nil
 
 instance
-  ( Uninterpret v1 ~ fieldType1,
+  ( Interpret sch fieldType1 ~ v1,
+    Interpret sch fieldType2 ~ v2,
+    Uninterpret v1 ~ fieldType1,
     Uninterpret v2 ~ fieldType2,
-    UninterpretField sch v1,
-    UninterpretField sch v2
+    All (UninterpretField sch) '[v1, v2]
   ) =>
   BuildRecord
     sch
@@ -64,12 +74,13 @@ instance
   buildR (v1, v2) = Field (toFieldValue v1) :* Field (toFieldValue v2) :* Nil
 
 instance
-  ( Uninterpret v1 ~ fieldType1,
+  ( Interpret sch fieldType1 ~ v1,
+    Interpret sch fieldType2 ~ v2,
+    Interpret sch fieldType3 ~ v3,
+    Uninterpret v1 ~ fieldType1,
     Uninterpret v2 ~ fieldType2,
     Uninterpret v3 ~ fieldType3,
-    UninterpretField sch v1,
-    UninterpretField sch v2,
-    UninterpretField sch v3
+    All (UninterpretField sch) '[v1, v2, v3]
   ) =>
   BuildRecord
     sch
@@ -314,6 +325,14 @@ instance UninterpretField sch () where
   type Uninterpret () = 'TNull
   toFieldValue () = FNull
 
+instance UninterpretField sch Integer where
+  type Uninterpret Integer = 'TPrimitive Integer
+  toFieldValue = FPrimitive
+
+instance UninterpretField sch Int32 where
+  type Uninterpret Int32 = 'TPrimitive Int32
+  toFieldValue = FPrimitive
+
 instance UninterpretField sch Int where
   type Uninterpret Int = 'TPrimitive Int
   toFieldValue = FPrimitive
@@ -323,10 +342,17 @@ instance UninterpretField sch T.Text where
   toFieldValue = FPrimitive
 
 instance
-  ((sch :/: recordName) ~ 'DRecord recordName fieldDefs) =>
-  UninterpretField sch (Term sch ('DRecord recordName fieldDefs))
+  ((sch :/: recordName) ~ 'DRecord recordName fieldDefs, sch ~ sch') =>
+  UninterpretField sch (Term sch' ('DRecord recordName fieldDefs))
   where
-  type Uninterpret (Term sch ('DRecord recordName fieldDefs)) = 'TSchematic recordName
+  type Uninterpret (Term sch' ('DRecord recordName fieldDefs)) = 'TSchematic recordName
+  toFieldValue = FSchematic
+
+instance
+  ((sch :/: enumName) ~ 'DEnum enumName choiceDefs) =>
+  UninterpretField sch (Term sch ('DEnum enumName choiceDefs))
+  where
+  type Uninterpret (Term sch ('DEnum enumName choiceDefs)) = 'TSchematic enumName
   toFieldValue = FSchematic
 
 instance (UninterpretField sch a) => UninterpretField sch (Maybe a) where
@@ -351,13 +377,14 @@ instance
   type Uninterpret (NS Identity choiceTypes) = 'TUnion (UninterpretList choiceTypes)
   toFieldValue = FUnion . nsToFieldValues
 
-nsToFieldValues :: (All (UninterpretField sch) choiceTypes) => NS Identity choiceTypes -> NS (FieldValue sch) (UninterpretList choiceTypes)
+nsToFieldValues ::
+  forall sch choiceTypes.
+  (All (UninterpretField sch) choiceTypes) =>
+  NS Identity choiceTypes ->
+  NS (FieldValue sch) (UninterpretList choiceTypes)
 nsToFieldValues = \case
   (Z val) -> Z . toFieldValue . runIdentity $ val
   (S val) -> S (nsToFieldValues val)
-
-type family Tail (l :: [k]) where
-  Tail (t ': ts) = ts
 
 type family UninterpretList (as :: [Type]) :: [FieldType typeName] where
   UninterpretList '[] = '[]
