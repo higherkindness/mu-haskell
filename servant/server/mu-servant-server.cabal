@@ -47,6 +47,7 @@ executable servant-example-server
     , base
     , conduit
     , mu-rpc
+    , mu-schema
     , mu-servant-server
     , servant-server
     , text

@@ -29,6 +29,7 @@ import Generics.Generic.Aeson
 import Mu.Rpc
 import Mu.Rpc.Annotations
 import Mu.Schema
+import Mu.Schema.Annotations
 import Mu.Server
 import Servant
 import Servant.Types.SourceT
@@ -128,12 +129,11 @@ instance ServantMethodHandlers pkg svc m chn inh '[] '[] where
   servantMethodHandlers _ _ _ H0 = emptyServer
 
 instance
-  ( ServantMethodHandler httpMethod httpStatus ctype m args ret h,
+  ( ServantMethodHandler httpMethod httpStatus m args ret h,
     ServantMethodHandlers pkg sname m chn () rest hs,
     HttpMethodFor pkg sname mname ~ httpMethod,
     HttpStatusFor pkg sname mname ~ httpStatus,
-    ContentTypeFor pkg sname mname ~ ctype,
-    Server (MethodAPI pkg sname ('Method mname args ret) h) ~ Server (HandlerAPI httpMethod httpStatus ctype args ret h)
+    Server (MethodAPI pkg sname ('Method mname args ret) h) ~ Server (HandlerAPI httpMethod httpStatus args ret h)
   ) =>
   ServantMethodHandlers pkg sname m chn () ('Method mname args ret ': rest) (h ': hs)
   where
@@ -146,7 +146,6 @@ instance
       f
       (Proxy @httpMethod)
       (Proxy @httpStatus)
-      (Proxy @ctype)
       (Proxy @args)
       (Proxy @ret)
       (h NoRpcInfo ())
@@ -158,11 +157,25 @@ type family MethodAPI pkg sname method h where
       ( HandlerAPI
           (HttpMethodFor pkg sname mname)
           (HttpStatusFor pkg sname mname)
-          (ContentTypeFor pkg sname mname)
           args
           ret
           h
       )
+
+data ServantAPIAnnotations
+  = ServantAPIAnnotations
+      { method :: ServantMethod,
+        status :: ServantStatus,
+        contentType :: Type
+      }
+
+newtype ServantUnaryContentTypes = ServantUnaryContentTypes [Type]
+
+data ServantStreamContentType
+  = ServantStreamContentType
+      { framing :: Type,
+        streamContentType :: Type
+      }
 
 type family HttpMethodFor pkg sname mname :: ServantMethod where
   HttpMethodFor pkg sname mname =
@@ -172,18 +185,26 @@ type family HttpStatusFor pkg sname mname :: ServantStatus where
   HttpStatusFor pkg sname mname =
     FromMaybe 200 (GetMethodAnnotationMay (AnnotatedPackage ServantStatus pkg) sname mname)
 
-type family ContentTypeFor pkg sname mname :: Type where
-  ContentTypeFor pkg sname mname =
-    UnwrapServantContentType
-      ( FromMaybe
-          ('ServantContentType JSON)
-          (GetMethodAnnotationMay (AnnotatedPackage ServantContentType pkg) sname mname)
-      )
+type family UnaryContentTypesFor (tyRef :: TypeRef sname) :: [Type] where
+  UnaryContentTypesFor ('SchemaRef schema typeName) =
+    UnwrapServantUnaryContentType (GetTypeAnnotation (AnnotatedSchema ServantUnaryContentTypes schema) typeName)
 
-newtype ServantContentType = ServantContentType Type
+type family UnwrapServantUnaryContentType (sctype :: ServantUnaryContentTypes) :: [Type] where
+  UnwrapServantUnaryContentType ('ServantUnaryContentTypes ctype) = ctype
 
-type family UnwrapServantContentType (sctype :: ServantContentType) :: Type where
-  UnwrapServantContentType ('ServantContentType ctype) = ctype
+type family StreamContentTypeFor (tyRef :: TypeRef sname) :: Type where
+  StreamContentTypeFor ('SchemaRef schema typeName) =
+    StreamContentType (GetTypeAnnotation (AnnotatedSchema ServantStreamContentType schema) typeName)
+
+type family StreamContentType (sct :: ServantStreamContentType) where
+  StreamContentType ('ServantStreamContentType _ ctype) = ctype
+
+type family StreamFramingFor (tyRef :: TypeRef sname) :: Type where
+  StreamFramingFor ('SchemaRef schema typeName) =
+    StreamFraming (GetTypeAnnotation (AnnotatedSchema ServantStreamContentType schema) typeName)
+
+type family StreamFraming (sct :: ServantStreamContentType) where
+  StreamFraming ('ServantStreamContentType framing _) = framing
 
 type ServantMethod = StdMethod
 
@@ -193,16 +214,14 @@ class
   ServantMethodHandler
     (httpMethod :: ServantMethod)
     (httpStatus :: ServantStatus)
-    (ctype :: Type)
     (m :: Type -> Type)
-    (args :: [Argument snm anm tyref])
-    (ret :: Return snm tyref)
+    (args :: [Argument snm anm (TypeRef snm)])
+    (ret :: Return snm (TypeRef snm))
     (h :: Type) where
   type
     HandlerAPI
-      (httpMethod :: ServantMethod)
-      (httpStatus :: ServantStatus)
-      (ctype :: Type)
+      httpMethod
+      httpStatus
       args
       ret
       h
@@ -210,32 +229,31 @@ class
     (forall a. m a -> Handler a) ->
     Proxy httpMethod ->
     Proxy httpStatus ->
-    Proxy ctype ->
     Proxy args ->
     Proxy ret ->
     h ->
-    Servant.Server (HandlerAPI httpMethod httpStatus ctype args ret h)
+    Servant.Server (HandlerAPI httpMethod httpStatus args ret h)
 
-instance ServantMethodHandler httpMethod httpStatus ctype m '[] 'RetNothing (m ()) where
+instance ServantMethodHandler httpMethod httpStatus m '[] 'RetNothing (m ()) where
   type
-    HandlerAPI httpMethod httpStatus ctype '[] 'RetNothing (m ()) =
-      Verb httpMethod httpStatus '[ctype] ()
-  servantMethodHandler f _ _ _ _ _ = f
+    HandlerAPI httpMethod httpStatus '[] 'RetNothing (m ()) =
+      Verb httpMethod httpStatus '[] NoContent
+  servantMethodHandler f _ _ _ _ = fmap (const NoContent) . f
 
-instance ServantMethodHandler httpMethod httpStatus ctype m '[] ('RetSingle rref) (m r) where
+instance ServantMethodHandler httpMethod httpStatus m '[] ('RetSingle rref) (m r) where
   type
-    HandlerAPI httpMethod httpStatus ctype '[] ('RetSingle rref) (m r) =
-      Verb httpMethod httpStatus '[JSON] r
-  servantMethodHandler f _ _ _ _ _ = f
+    HandlerAPI httpMethod httpStatus '[] ('RetSingle rref) (m r) =
+      Verb httpMethod httpStatus (UnaryContentTypesFor rref) r
+  servantMethodHandler f _ _ _ _ = f
 
 instance
   (MonadServer m) =>
-  ServantMethodHandler httpMethod httpStatus ctype m '[] ('RetStream rref) (ConduitT r Void m () -> m ())
+  ServantMethodHandler httpMethod httpStatus m '[] ('RetStream rref) (ConduitT r Void m () -> m ())
   where
   type
-    HandlerAPI httpMethod httpStatus ctype '[] ('RetStream rref) (ConduitT r Void m () -> m ()) =
-      Stream httpMethod httpStatus NewlineFraming JSON (SourceIO (StreamResult r))
-  servantMethodHandler f _ _ _ _ _ = liftIO . sinkToSource f
+    HandlerAPI httpMethod httpStatus '[] ('RetStream rref) (ConduitT r Void m () -> m ()) =
+      Stream httpMethod httpStatus (StreamFramingFor rref) (StreamContentTypeFor rref) (SourceIO (StreamResult r))
+  servantMethodHandler f _ _ _ _ = liftIO . sinkToSource f
 
 data StreamResult a = Error String | Result a
   deriving (Generic, Show)
@@ -281,25 +299,25 @@ toMVarConduit var = do
       toMVarConduit var
 
 instance
-  (ServantMethodHandler httpMethod httpStatus ctype m rest ret h) =>
-  ServantMethodHandler httpMethod httpStatus ctype m ('ArgSingle anm aref ': rest) ret (t -> h)
+  (ServantMethodHandler httpMethod httpStatus m rest ret h) =>
+  ServantMethodHandler httpMethod httpStatus m ('ArgSingle anm aref ': rest) ret (t -> h)
   where
   type
-    HandlerAPI httpMethod httpStatus ctype ('ArgSingle anm aref ': rest) ret (t -> h) =
-      ReqBody '[JSON] t :> HandlerAPI httpMethod httpStatus ctype rest ret h
-  servantMethodHandler f mP sP mCt _ retP h t =
-    servantMethodHandler f mP sP mCt (Proxy @rest) retP (h t)
+    HandlerAPI httpMethod httpStatus ('ArgSingle anm aref ': rest) ret (t -> h) =
+      ReqBody (UnaryContentTypesFor aref) t :> HandlerAPI httpMethod httpStatus rest ret h
+  servantMethodHandler f mP sP _ retP h t =
+    servantMethodHandler f mP sP (Proxy @rest) retP (h t)
 
 instance
-  (MonadServer m, ServantMethodHandler httpMethod httpStatus ctype m rest ret h) =>
-  ServantMethodHandler httpMethod httpStatus ctype m ('ArgStream anm aref ': rest) ret (ConduitT () t m () -> h)
+  (MonadServer m, ServantMethodHandler httpMethod httpStatus m rest ret h) =>
+  ServantMethodHandler httpMethod httpStatus m ('ArgStream anm aref ': rest) ret (ConduitT () t m () -> h)
   where
   type
-    HandlerAPI httpMethod httpStatus ctype ('ArgStream anm aref ': rest) ret (ConduitT () t m () -> h) =
-      StreamBody NewlineFraming JSON (SourceIO t)
-        :> HandlerAPI httpMethod httpStatus ctype rest ret h
-  servantMethodHandler f mP sP mCt _ retP h =
-    servantMethodHandler f mP sP mCt (Proxy @rest) retP . h . sourceToSource
+    HandlerAPI httpMethod httpStatus ('ArgStream anm aref ': rest) ret (ConduitT () t m () -> h) =
+      StreamBody (StreamFramingFor aref) (StreamContentTypeFor aref) (SourceIO t)
+        :> HandlerAPI httpMethod httpStatus rest ret h
+  servantMethodHandler f mP sP _ retP h =
+    servantMethodHandler f mP sP (Proxy @rest) retP . h . sourceToSource
 
 sourceToSource :: (MonadServer m) => SourceIO t -> ConduitT () t m ()
 sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)

@@ -8,6 +8,7 @@ module Main where
 import qualified Data.Text.IO as Text
 import Mu.Rpc.Annotations
 import Mu.Rpc.Examples
+import Mu.Schema.Annotations
 import Mu.Servant.Server
 import Network.Wai.Handler.Warp
 import Servant
@@ -39,3 +40,17 @@ type instance
 type instance
   AnnotatedPackage ServantStatus QuickStartService =
     '[]
+
+type instance
+  AnnotatedSchema ServantUnaryContentTypes QuickstartSchema =
+    '[ 'AnnType "HelloRequest" ('ServantUnaryContentTypes '[JSON]),
+       'AnnType "HelloResponse" ('ServantUnaryContentTypes '[JSON]),
+       'AnnType "HiRequest" ('ServantUnaryContentTypes '[JSON])
+     ]
+
+type instance
+  AnnotatedSchema ServantStreamContentType QuickstartSchema =
+    '[ 'AnnType "HelloRequest" ('ServantStreamContentType NewlineFraming JSON),
+       'AnnType "HelloResponse" ('ServantStreamContentType NewlineFraming JSON),
+       'AnnType "HiRequest" ('ServantStreamContentType NewlineFraming JSON)
+     ]
