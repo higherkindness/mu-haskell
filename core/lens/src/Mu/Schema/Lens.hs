@@ -1,40 +1,41 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# language AllowAmbiguousTypes    #-}
+{-# language DataKinds              #-}
+{-# language FlexibleContexts       #-}
+{-# language FlexibleInstances      #-}
+{-# language FunctionalDependencies #-}
+{-# language GADTs                  #-}
+{-# language InstanceSigs           #-}
+{-# language LambdaCase             #-}
+{-# language OverloadedLabels       #-}
+{-# language PartialTypeSignatures  #-}
+{-# language PolyKinds              #-}
+{-# language QuantifiedConstraints  #-}
+{-# language RankNTypes             #-}
+{-# language ScopedTypeVariables    #-}
+{-# language TypeApplications       #-}
+{-# language TypeFamilies           #-}
+{-# language TypeOperators          #-}
+{-# language UndecidableInstances   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Mu.Schema.Lens where
 
-import Control.Lens
-import Data.Kind
-import Data.Map
-import Data.SOP
-import qualified Data.Text as T
--- we need Nats with a constructor to represent non-zero
+import           Control.Lens
+import           Data.Kind
+import           Data.Map
+import           Data.SOP
+import qualified Data.Text            as T
 
-import GHC.Int
-import GHC.OverloadedLabels
-import GHC.TypeLits hiding (Nat)
-import Mu.Schema
+
+import           GHC.Int
+import           GHC.OverloadedLabels
+import           GHC.TypeLits         hiding (Nat)
+import           Mu.Schema
 
 is :: s -> APrism' s () -> Bool
 is s l = not $ isn't l s
 
+-- we need structurally inductive Nats
 data Nat = Zero | Succ Nat
 
 record :: BuildRecord sch args r => r -> Term sch ('DRecord name args)
@@ -172,7 +173,7 @@ instance
         Either (Term sch ('DEnum name' ('ChoiceDef choiceName' ': choiceDefs))) ()
       project term = case term of
         TEnum (Z Proxy) -> Right ()
-        _ -> Left (TEnum (Z Proxy))
+        _               -> Left (TEnum (Z Proxy))
 
 instance
   (HasChoiceIx choiceIndex choiceDefs choiceDefs' choiceType choiceType') =>
@@ -198,7 +199,7 @@ instance
         Applicative f =>
         Either () (f (Term sch ('DEnum name choiceDefs'))) ->
         f (Term sch ('DEnum name (choiceDef ': choiceDefs')))
-      inject (Left ()) = pure (TEnum (Z Proxy))
+      inject (Left ())     = pure (TEnum (Z Proxy))
       inject (Right inner) = fmap wrap inner
       wrap :: Term sch ('DEnum name choiceDefs') -> Term sch ('DEnum name (choiceDef ': choiceDefs'))
       wrap (TEnum choices) = TEnum (S choices)
