@@ -1,51 +1,51 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# language DataKinds             #-}
+{-# language DeriveGeneric         #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language PolyKinds             #-}
+{-# language RankNTypes            #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -Wall #-}
 
 module Mu.Servant.Server where
 
-import Conduit
-import Control.Concurrent
-import Control.Concurrent.Async
-import Control.Monad.Except
-import Data.Aeson
+import           Conduit
+import           Control.Concurrent
+import           Control.Concurrent.Async
+import           Control.Monad.Except
+import           Data.Aeson
 import qualified Data.ByteString.Lazy.UTF8 as LB8
-import Data.Conduit.Internal (ConduitT (..), Pipe (..))
-import Data.Kind
-import GHC.Generics
-import GHC.TypeLits
-import Generics.Generic.Aeson
-import Mu.Rpc
-import Mu.Rpc.Annotations
-import Mu.Schema
-import Mu.Schema.Annotations
-import Mu.Server
-import Servant
-import Servant.Types.SourceT
+import           Data.Conduit.Internal     (ConduitT (..), Pipe (..))
+import           Data.Kind
+import           Generics.Generic.Aeson
+import           GHC.Generics
+import           GHC.TypeLits
+import           Mu.Rpc
+import           Mu.Rpc.Annotations
+import           Mu.Schema
+import           Mu.Schema.Annotations
+import           Mu.Server
+import           Servant
+import           Servant.Types.SourceT
 
 toHandler :: ServerErrorIO a -> Handler a
 toHandler = Handler . withExceptT convertServerError
 
 convertServerError :: Mu.Server.ServerError -> Servant.ServerError
 convertServerError (Mu.Server.ServerError code msg) = case code of
-  Unknown -> err502 {errBody = LB8.fromString msg}
-  Unavailable -> err503 {errBody = LB8.fromString msg}
-  Unimplemented -> err501 {errBody = LB8.fromString msg}
+  Unknown         -> err502 {errBody = LB8.fromString msg}
+  Unavailable     -> err503 {errBody = LB8.fromString msg}
+  Unimplemented   -> err501 {errBody = LB8.fromString msg}
   Unauthenticated -> err401 {errBody = LB8.fromString msg}
-  Internal -> err500 {errBody = LB8.fromString msg}
-  Invalid -> err400 {errBody = LB8.fromString msg}
-  NotFound -> err404 {errBody = LB8.fromString msg}
+  Internal        -> err500 {errBody = LB8.fromString msg}
+  Invalid         -> err400 {errBody = LB8.fromString msg}
+  NotFound        -> err404 {errBody = LB8.fromString msg}
 
 servantServerHandlers ::
   forall pname m chn ss handlers.
@@ -164,8 +164,8 @@ type family MethodAPI pkg sname method h where
 
 data ServantAPIAnnotations
   = ServantAPIAnnotations
-      { method :: ServantMethod,
-        status :: ServantStatus,
+      { method      :: ServantMethod,
+        status      :: ServantStatus,
         contentType :: Type
       }
 
@@ -173,7 +173,7 @@ newtype ServantUnaryContentTypes = ServantUnaryContentTypes [Type]
 
 data ServantStreamContentType
   = ServantStreamContentType
-      { framing :: Type,
+      { framing           :: Type,
         streamContentType :: Type
       }
 

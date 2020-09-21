@@ -1,17 +1,17 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# language DataKinds             #-}
+{-# language OverloadedStrings     #-}
+{-# language PartialTypeSignatures #-}
+{-# language TypeFamilies          #-}
 
 module Main where
 
-import qualified Data.Text.IO as Text
-import Mu.Rpc.Annotations
-import Mu.Rpc.Examples
-import Mu.Schema.Annotations
-import Mu.Servant.Server
-import Network.Wai.Handler.Warp
-import Servant
+import qualified Data.Text.IO             as Text
+import           Mu.Rpc.Annotations
+import           Mu.Rpc.Examples
+import           Mu.Schema.Annotations
+import           Mu.Servant.Server
+import           Network.Wai.Handler.Warp
+import           Servant
 
 main :: IO ()
 main = do
