@@ -1,4 +1,4 @@
-resolver: lts-16.3
+resolver: lts-16.15
 allow-newer: true
 
 packages:
