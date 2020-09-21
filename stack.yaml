@@ -5,6 +5,7 @@ packages:
 - core/schema
 - core/rpc
 - core/optics
+- core/lens
 - adapter/avro
 - adapter/protobuf
 - adapter/persistent
