@@ -1,5 +1,5 @@
 let
-  haskellNix = import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/d3edb6e.tar.gz) {};
+  haskellNix = import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/2a15520.tar.gz) {};
   nixpkgsSrc = haskellNix.sources.nixpkgs-2003;
   nixpkgsArgs = haskellNix.nixpkgsArgs;
 in
@@ -26,6 +26,7 @@ in {
   mu-grpc-common = hnPkgs.mu-grpc-common.components.library;
   mu-grpc-server = hnPkgs.mu-grpc-server.components.all;
   mu-kafka = hnPkgs.mu-kafka.components.library;
+  mu-lens = hnPkgs.mu-lens.components.library;
   mu-optics = hnPkgs.mu-optics.components.library;
   mu-persistent = hnPkgs.mu-persistent.components.library;
   mu-prometheus = hnPkgs.mu-prometheus.components.library;
