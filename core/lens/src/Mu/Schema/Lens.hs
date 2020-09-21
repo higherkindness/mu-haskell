@@ -18,7 +18,10 @@
 {-# language UndecidableInstances   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Mu.Schema.Lens where
+module Mu.Schema.Lens (
+  record,
+  is
+) where
 
 import           Control.Lens
 import           Data.Kind
