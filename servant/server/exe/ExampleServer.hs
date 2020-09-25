@@ -27,10 +27,10 @@ quickstartAPI = packageAPI quickstartServer
 
 type instance
   AnnotatedPackage ServantRoute QuickStartService =
-    '[ 'AnnService "Greeter" '["greet"],
-       'AnnMethod "Greeter" "SayHello" '["say", "hello"],
-       'AnnMethod "Greeter" "SayHi" '["say", "hi"],
-       'AnnMethod "Greeter" "SayManyHellos" '["say", "many", "hellos"]
+    '[ 'AnnService "Greeter" ('ServantRoute '["greet"]),
+       'AnnMethod "Greeter" "SayHello" ('ServantRoute '["say", "hello"]),
+       'AnnMethod "Greeter" "SayHi" ('ServantRoute '["say", "hi"]),
+       'AnnMethod "Greeter" "SayManyHellos" ('ServantRoute '["say", "many", "hellos"])
      ]
 
 type instance
