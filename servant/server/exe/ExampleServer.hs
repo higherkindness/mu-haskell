@@ -1,6 +1,7 @@
 {-# language DataKinds             #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
+{-# language TypeApplications      #-}
 {-# language TypeFamilies          #-}
 
 module Main where
@@ -10,6 +11,7 @@ import           Mu.Rpc.Annotations
 import           Mu.Rpc.Examples
 import           Mu.Schema.Annotations
 import           Mu.Servant.Server
+import           Mu.Server
 import           Network.Wai.Handler.Warp
 import           Servant
 
@@ -23,7 +25,7 @@ servantServer :: _
 servantServer = servantServerHandlers toHandler quickstartServer
 
 quickstartAPI :: Proxy _
-quickstartAPI = packageAPI quickstartServer
+quickstartAPI = packageAPI (quickstartServer @ServerErrorIO)
 
 type instance
   AnnotatedPackage ServantRoute QuickStartService =

@@ -4,7 +4,11 @@
 {-# language PartialTypeSignatures #-}
 {-# language PolyKinds             #-}
 {-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+
+-- this line must appear *after* TypeFamilies
+{-# language NoMonoLocalBinds      #-}
 
 module Main where
 
@@ -22,12 +26,16 @@ import           DeferredFolds.UnfoldlM
 import           Monitor.Tracing.Zipkin        (Endpoint (..))
 import           Network.Wai.Handler.Warp
 import           Prometheus
+import           Servant.Server                (serve)
 import qualified StmContainers.Map             as M
 
 import           Mu.GraphQL.Server
 import           Mu.GRpc.Server
 import           Mu.Instrumentation.Prometheus
 import           Mu.Instrumentation.Tracing
+import           Mu.Rpc.Annotations
+import           Mu.Schema.Annotations
+import           Mu.Servant.Server
 import           Mu.Server
 
 import           Definition
@@ -48,8 +56,10 @@ main = do
   let s = zipkin rootInfo $ prometheus met $ server m upd
   -- Run the app
   putStrLn "running health check application"
-  runConcurrently $ (\_ _ _ -> ())
-    <$> Concurrently (runner 50051 (gRpcAppTrans msgProtoBuf (runZipkin zpk) s))
+  runConcurrently $ (\_ _ _ _ -> ())
+    <$> Concurrently (runner 8080
+         (serve (packageAPI s) (servantServerHandlers (toHandler . runZipkin zpk) s)))
+    <*> Concurrently (runner 50051 (gRpcAppTrans msgProtoBuf (runZipkin zpk) s))
     <*> Concurrently (runner 50052 (gRpcAppTrans msgAvro     (runZipkin zpk) s))
     <*> Concurrently (runner 50053 (graphQLAppTransQuery (runZipkin zpk) s
                                       (Proxy @"HealthCheckServiceFS2")))
@@ -137,3 +147,36 @@ watch_ upd hcm@(HealthCheckMsg nm) sink = do
                       Nothing       -> pure ()
 
 instance MonadMonitor m => MonadMonitor (TraceT m)
+
+-- Information for servant
+
+type instance AnnotatedPackage ServantRoute HealthCheckServiceFS2
+  = '[ 'AnnService "HealthCheckServiceFS2" ('ServantRoute '["health"])
+     , 'AnnMethod "HealthCheckServiceFS2" "setStatus"   ('ServantRoute '["status"])
+     , 'AnnMethod "HealthCheckServiceFS2" "check"       ('ServantRoute '["status"])
+     , 'AnnMethod "HealthCheckServiceFS2" "clearStatus" ('ServantRoute '["status"])
+     , 'AnnMethod "HealthCheckServiceFS2" "checkAll"    ('ServantRoute '["all", "status"])
+     , 'AnnMethod "HealthCheckServiceFS2" "cleanAll"    ('ServantRoute '["all", "status"])
+     , 'AnnMethod "HealthCheckServiceFS2" "watch"       ('ServantRoute '["watch"])
+     ]
+
+type instance AnnotatedPackage ServantMethod HealthCheckService
+  = '[ 'AnnMethod "HealthCheckServiceFS2" "setStatus"   ('ServantMethod 'POST)
+     , 'AnnMethod "HealthCheckServiceFS2" "check"       ('ServantMethod 'GET)
+     , 'AnnMethod "HealthCheckServiceFS2" "clearStatus" ('ServantMethod 'DELETE)
+     , 'AnnMethod "HealthCheckServiceFS2" "checkAll"    ('ServantMethod 'GET)
+     , 'AnnMethod "HealthCheckServiceFS2" "cleanAll"    ('ServantMethod 'DELETE)
+     , 'AnnMethod "HealthCheckServiceFS2" "watch"       ('ServantMethod 'GET)
+     ]
+
+type instance AnnotatedPackage ServantStatus HealthCheckService = '[]
+
+type instance AnnotatedSchema ServantUnaryContentTypes HealthCheckSchema
+  = '[ 'AnnType "HealthCheck"  ('ServantUnaryContentTypes '[JSON])
+     , 'AnnType "ServerStatus" ('ServantUnaryContentTypes '[JSON])
+     , 'AnnType "HealthStatus" ('ServantUnaryContentTypes '[JSON])
+     , 'AnnType "AllStatus"    ('ServantUnaryContentTypes '[JSON])
+     ]
+
+type instance AnnotatedSchema ServantStreamContentType HealthCheckSchema
+  = '[ 'AnnType "ServerStatus" ('ServantStreamContentType NewlineFraming JSON) ]
