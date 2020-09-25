@@ -12,7 +12,6 @@
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
-{-# OPTIONS_GHC -Wall #-}
 
 -- |
 -- = Transforming a Mu server into a Servant server

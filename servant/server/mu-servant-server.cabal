@@ -23,7 +23,7 @@ source-repository head
 library
   exposed-modules:  Mu.Servant.Server
   build-depends:
-      aeson
+      aeson                 >=1.4   && <2
     , async
     , base
     , conduit
