@@ -3,6 +3,7 @@ stack*.yaml.lock
 *~
 dist*
 *.pyc
+.*sw?
 
 ## User files
 .DS_Store

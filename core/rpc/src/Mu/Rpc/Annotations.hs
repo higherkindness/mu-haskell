@@ -12,15 +12,19 @@ indicate additional information not found
 in the 'Package' itself. For example, GraphQL
 has optional default values for arguments.
 -}
-module Mu.Rpc.Annotations (
-  RpcAnnotation(..)
+module Mu.Rpc.Annotations
+( RpcAnnotation (..)
 , AnnotatedPackage
 , GetPackageAnnotation
+, GetPackageAnnotationMay
 , GetServiceAnnotation
+, GetServiceAnnotationMay
 , GetMethodAnnotation
+, GetMethodAnnotationMay
 , GetArgAnnotation
 , GetArgAnnotationMay
-) where
+)
+where
 
 import           GHC.TypeLits
 
@@ -41,45 +45,66 @@ data RpcAnnotation domain serviceName methodName argName where
   AnnArg     :: serviceName -> methodName -> argName -> domain
              -> RpcAnnotation domain serviceName methodName argName
 
--- | This type family links each schema to
---   its corresponding annotations from one domain.
-type family AnnotatedPackage domain (sch :: Package serviceName methodName argName tyRef)
-  :: [RpcAnnotation domain serviceName methodName argName]
+-- |  This type family links each schema to
+--    its corresponding annotations from one domain.
+type family AnnotatedPackage domain (sch :: Package serviceName methodName argName tyRef) ::
+    [RpcAnnotation domain serviceName methodName argName]
 
 -- | Find the annotation over the package in the given set.
 --   If the annotation cannot be found, raise a 'TypeError'.
 type family GetPackageAnnotation (anns :: [RpcAnnotation domain s m a]) :: domain where
   GetPackageAnnotation '[]
-    = TypeError ('Text "cannot find schema annotation")
+    = TypeError ('Text "cannot find package annotation")
   GetPackageAnnotation ('AnnPackage d ': rs) = d
-  GetPackageAnnotation (r             ': rs) = GetPackageAnnotation rs
+  GetPackageAnnotation (r ': rs) = GetPackageAnnotation rs
+
+-- | Find the annotation over the package in the given set.
+--   If the annotation cannot be found, return Nothing
+type family GetPackageAnnotationMay (anns :: [RpcAnnotation domain s m a]) :: Maybe domain where
+  GetPackageAnnotationMay '[] = 'Nothing
+  GetPackageAnnotationMay ('AnnPackage d ': rs) = 'Just d
+  GetPackageAnnotationMay (r ': rs) = GetPackageAnnotationMay rs
 
 -- | Find the annotation over the given service in the given set.
 --   If the annotation cannot be found, raise a 'TypeError'.
 type family GetServiceAnnotation (anns :: [RpcAnnotation domain s m a]) (snm :: s) :: domain where
   GetServiceAnnotation '[] snm
-    = TypeError ('Text "cannot find annotation for " ':<>: 'ShowType snm)
+    = TypeError ('Text "cannot find service annotation for " ':<>: 'ShowType snm)
   GetServiceAnnotation ('AnnService snm d ': rs) snm = d
   GetServiceAnnotation (r ': rs) snm = GetServiceAnnotation rs snm
+
+-- | Find the annotation over the given service in the given set.
+--   If the annotation cannot be found, return Nothing
+type family GetServiceAnnotationMay (anns :: [RpcAnnotation domain s m a]) (snm :: s) :: Maybe domain where
+  GetServiceAnnotationMay '[] snm = 'Nothing
+  GetServiceAnnotationMay ('AnnService snm d ': rs) snm = 'Just d
+  GetServiceAnnotationMay (r ': rs) snm = GetServiceAnnotationMay rs snm
 
 -- | Find the annotation over the given method in the given service.
 --   If the annotation cannot be found, raise a 'TypeError'.
 type family GetMethodAnnotation (anns :: [RpcAnnotation domain s m a]) (snm :: s) (mnm :: m) :: domain where
   GetMethodAnnotation '[] snm mnm
-    = TypeError ('Text "cannot find annotation for " ':<>: 'ShowType snm ':<>: 'Text "/" ':<>: 'ShowType mnm)
+    = TypeError ('Text "cannot find method annotation for " ':<>: 'ShowType snm ':<>: 'Text "/" ':<>: 'ShowType mnm)
   GetMethodAnnotation ('AnnMethod snm mnm d ': rs) snm mnm = d
   GetMethodAnnotation (r ': rs) snm mnm = GetMethodAnnotation rs snm mnm
 
--- | Find the annotation over the given argument in te given method in the given service.
+-- | Find the annotation over the given method in the given service.
+--   If the annotation cannot be found, return Nothing
+type family GetMethodAnnotationMay (anns :: [RpcAnnotation domain s m a]) (snm :: s) (mnm :: m) :: Maybe domain where
+  GetMethodAnnotationMay '[] snm mnm = 'Nothing
+  GetMethodAnnotationMay ('AnnMethod snm mnm d ': rs) snm mnm = 'Just d
+  GetMethodAnnotationMay (r ': rs) snm mnm = GetMethodAnnotationMay rs snm mnm
+
+-- | Find the annotation over the given argument in the given method in the given service.
 --   If the annotation cannot be found, raise a 'TypeError'.
 type family GetArgAnnotation (anns :: [RpcAnnotation domain s m a]) (snm :: s) (mnm :: m) (anm :: a) :: domain where
   GetArgAnnotation '[] snm mnm anm
-    = TypeError ('Text "cannot find annotation for " ':<>: 'ShowType snm ':<>: 'Text "/" ':<>: 'ShowType mnm ':<>: 'Text "/" ':<>: 'ShowType anm)
+    = TypeError ('Text "cannot find argument annotation for " ':<>: 'ShowType snm ':<>: 'Text "/" ':<>: 'ShowType mnm ':<>: 'Text "/" ':<>: 'ShowType anm)
   GetArgAnnotation ('AnnArg snm mnm anm d ': rs) snm mnm anm = d
   GetArgAnnotation (r ': rs) snm mnm anm = GetArgAnnotation rs snm mnm anm
 
--- | Find the annotation over the given argument in te given method in the given service.
---   If the annotation cannot be found, raise a 'TypeError'.
+-- | Find the annotation over the given argument in the given method in the given service.
+--   If the annotation cannot be found, return Nothing
 type family GetArgAnnotationMay (anns :: [RpcAnnotation domain s m a]) (snm :: s) (mnm :: m) (anm :: a) :: Maybe domain where
   GetArgAnnotationMay '[] snm mnm anm = 'Nothing
   GetArgAnnotationMay ('AnnArg snm mnm anm d ': rs) snm mnm anm = 'Just d
