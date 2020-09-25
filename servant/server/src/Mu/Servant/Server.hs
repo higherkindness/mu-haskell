@@ -156,7 +156,10 @@ module Mu.Servant.Server (
   ServantStreamContentType(..),
   StreamResult(..),
   toHandler,
-  convertServerError
+  convertServerError,
+  -- Reexports
+  StdMethod(..),
+  module Servant.API
 ) where
 
 import           Conduit
@@ -176,6 +179,7 @@ import           Mu.Schema
 import           Mu.Schema.Annotations
 import           Mu.Server
 import           Servant
+import           Servant.API
 import           Servant.Types.SourceT
 
 -- | reinterprets a Mu server action as a "Servant" server action by converting Mu `Mu.Server.ServerError`s into Servant `Servant.ServerError`s via `convertServerError``
@@ -210,7 +214,7 @@ servantServerHandlers f (Services svcs) =
   servantServiceHandlers f (Proxy @('Package pname ss)) svcs
 
 -- | used to obtain a "Servant" API proxy value for use with functions like `layout` that expect such values as arguments
-packageAPI :: Mu.Server.ServerT chn () pkg ServerErrorIO handlers -> Proxy (PackageAPI pkg handlers)
+packageAPI :: Mu.Server.ServerT chn t pkg s handlers -> Proxy (PackageAPI pkg handlers)
 packageAPI _ = Proxy
 
 type family PackageAPI (pkg :: Package snm mnm anm (TypeRef snm)) handlers where
@@ -338,7 +342,9 @@ class
 instance ServantMethodHandler httpMethod httpStatus m '[] 'RetNothing (m ()) where
   type
     HandlerAPI httpMethod httpStatus '[] 'RetNothing (m ()) =
-      Verb httpMethod httpStatus '[] NoContent
+      -- according to https://github.com/haskell-servant/servant/issues/683
+      -- we always need a content type for NoContent
+      Verb httpMethod httpStatus '[JSON] NoContent
   servantMethodHandler f _ _ _ _ = fmap (const NoContent) . f
 
 instance ServantMethodHandler httpMethod httpStatus m '[] ('RetSingle rref) (m r) where
