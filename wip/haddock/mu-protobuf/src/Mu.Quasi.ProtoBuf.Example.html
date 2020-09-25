@@ -1,0 +1,21 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# language CPP             #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# language DataKinds       #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# language TemplateHaskell #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# language TypeFamilies    #-}</span><span>
+</span><span id="line-5"></span><span class="hs-comment">{-|
+Description : Examples for Protocol Buffers quasi-quoters
+
+Look at the source code of this module.
+-}</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Mu.Quasi.ProtoBuf.Example</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Mu.Quasi.ProtoBuf.html"><span class="hs-identifier">Mu.Quasi.ProtoBuf</span></a></span><span class="hs-cpp">
+
+#if __GHCIDE__
+</span><span class="hs-identifier">protobuf</span><span> </span><span class="hs-string">&quot;ExampleProtoBufSchema&quot;</span><span>  </span><span class="hs-string">&quot;adapter/protobuf/test/protobuf/example.proto&quot;</span><span>
+</span><span id="line-16"></span><span class="hs-identifier">protobuf</span><span> </span><span class="hs-string">&quot;Example2ProtoBufSchema&quot;</span><span> </span><span class="hs-string">&quot;adapter/protobuf/test/protobuf/example2.proto&quot;</span><span class="hs-cpp">
+#else
+</span><span id="ExampleProtoBufSchema"><span id="AnnotatedSchema"><span class="hs-identifier">protobuf</span><span> </span><span class="hs-string">&quot;ExampleProtoBufSchema&quot;</span><span>  </span><span class="hs-string">&quot;test/protobuf/example.proto&quot;</span></span></span><span>
+</span><span id="line-19"></span><span id="Example2ProtoBufSchema"><span id="AnnotatedSchema"><span class="hs-identifier">protobuf</span><span> </span><span class="hs-string">&quot;Example2ProtoBufSchema&quot;</span><span> </span><span class="hs-string">&quot;test/protobuf/example2.proto&quot;</span></span></span><span class="hs-cpp">
+#endif
+</span></pre></body></html>

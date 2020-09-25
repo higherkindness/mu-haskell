@@ -1,0 +1,293 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# language DataKinds              #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# language FlexibleContexts       #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# language FlexibleInstances      #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# language FunctionalDependencies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# language GADTs                  #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# language KindSignatures         #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# language ScopedTypeVariables    #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# language TypeApplications       #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# language TypeOperators          #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# language UndecidableInstances   #-}</span><span>
+</span><span id="line-11"></span><span class="hs-comment">{-|
+Description : Utilities for interoperation between Mu and Persistent
+
+The @persistent@ library, and in particular its quasi-quoters
+for entities, generate data types which do not look exactly as
+plain records. This module defines some wrappers which modify
+the 'ToSchema' and 'FromSchema' derivation to work with them.
+-}</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Mu.Adapter.Persistent</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Wrappers for use with @DerivingVia@</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Mu.Adapter.Persistent.html#WithEntityNestedId"><span class="hs-identifier">WithEntityNestedId</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Adapter.Persistent.html#WithEntityPlainId"><span class="hs-identifier">WithEntityPlainId</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Generic utilities</span></span><span>
+</span><span id="line-24"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Adapter.Persistent.html#runDb"><span class="hs-identifier">runDb</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.IO.Class</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Logger</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Reader</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Resource.Internal</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Int</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Database.Persist.Sql</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">GHC.TypeLits</span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Mu.Schema</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Mu.Schema.Class</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | Wrapper for 'Entity' to be used with @DerivingVia@.</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--   This wrappers indicates that the identifier is to be found</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--   as the sole field of another object, like in:</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--   &gt; { id: { key: 3 }, name: &quot;Somebody&quot; }</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">newtype</span><span> </span><span id="WithEntityNestedId"><span class="annot"><a href="Mu.Adapter.Persistent.html#WithEntityNestedId"><span class="hs-identifier hs-var">WithEntityNestedId</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679131170"><span class="annot"><a href="#local-6989586621679131170"><span class="hs-identifier hs-type">ty</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Symbol</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679131169"><span class="annot"><a href="#local-6989586621679131169"><span class="hs-identifier hs-type">fmap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Mappings</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Symbol</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Symbol</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679131168"><span class="annot"><a href="#local-6989586621679131168"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="WithEntityNestedId"><span class="annot"><a href="Mu.Adapter.Persistent.html#WithEntityNestedId"><span class="hs-identifier hs-var">WithEntityNestedId</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unWithEntityNestedId"><span class="annot"><span class="annottext">WithEntityNestedId ty fmap a -&gt; a
+</span><a href="Mu.Adapter.Persistent.html#unWithEntityNestedId"><span class="hs-identifier hs-var hs-var">unWithEntityNestedId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679131168"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- | Wrapper for 'Entity' to be used with @DerivingVia@.</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--   This wrappers indicates that the identifier is to be found</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--   in the schema at the same level as other fields, like in:</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--   &gt; { id: 3, name: &quot;Somebody&quot; }</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">newtype</span><span> </span><span id="WithEntityPlainId"><span class="annot"><a href="Mu.Adapter.Persistent.html#WithEntityPlainId"><span class="hs-identifier hs-var">WithEntityPlainId</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679131165"><span class="annot"><a href="#local-6989586621679131165"><span class="hs-identifier hs-type">ty</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Symbol</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679131164"><span class="annot"><a href="#local-6989586621679131164"><span class="hs-identifier hs-type">fmap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Mappings</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Symbol</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Symbol</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679131163"><span class="annot"><a href="#local-6989586621679131163"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="WithEntityPlainId"><span class="annot"><a href="Mu.Adapter.Persistent.html#WithEntityPlainId"><span class="hs-identifier hs-var">WithEntityPlainId</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unWithEntityPlainId"><span class="annot"><span class="annottext">WithEntityPlainId ty fmap a -&gt; a
+</span><a href="Mu.Adapter.Persistent.html#unWithEntityPlainId"><span class="hs-identifier hs-var hs-var">unWithEntityPlainId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679131163"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span id="local-6989586621679131150"><span id="local-6989586621679131151"><span id="local-6989586621679131152"><span id="local-6989586621679131153"><span id="local-6989586621679131154"><span id="local-6989586621679131155"><span id="local-6989586621679131156"><span id="local-6989586621679131157"><span id="local-6989586621679131158"><span id="local-6989586621679131159"><span id="local-6989586621679131160"><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Generic</span></span><span> </span><span class="annot"><a href="#local-6989586621679131160"><span class="hs-identifier hs-type">t</span></a></span><span>
+</span><span id="line-56"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679131159"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">:/:</span></span><span> </span><span class="annot"><a href="#local-6989586621679131158"><span class="hs-identifier hs-type">sty</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-glyph hs-type">~</span></span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">DRecord</span></span><span> </span><span class="annot"><a href="#local-6989586621679131157"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679131156"><span class="hs-identifier hs-type">idArg</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-glyph">:</span><span> </span><span class="annot"><a href="#local-6989586621679131155"><span class="hs-identifier hs-type">args</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679131156"><span class="hs-identifier hs-type">idArg</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">~</span></span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">Mu.Schema.FieldDef</span></span><span> </span><span class="annot"><a href="#local-6989586621679131154"><span class="hs-identifier hs-type">idArgName</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">TPrimitive</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Rep</span></span><span> </span><span class="annot"><a href="#local-6989586621679131160"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">~</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">D1</span></span><span> </span><span class="annot"><a href="#local-6989586621679131153"><span class="hs-identifier hs-type">dInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C1</span></span><span> </span><span class="annot"><a href="#local-6989586621679131152"><span class="hs-identifier hs-type">cInfo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131151"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">GToSchemaRecord</span></span><span> </span><span class="annot"><a href="#local-6989586621679131159"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131150"><span class="hs-identifier hs-type">fmap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131155"><span class="hs-identifier hs-type">args</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131151"><span class="hs-identifier hs-type">f</span></a></span><span>
+</span><span id="line-60"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToBackendKey</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PersistEntityBackend</span></span><span> </span><span class="annot"><a href="#local-6989586621679131160"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679131160"><span class="hs-identifier hs-type">t</span></a></span><span>
+</span><span id="line-61"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PersistEntityBackend</span></span><span> </span><span class="annot"><a href="#local-6989586621679131160"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">~</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">SqlBackend</span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>         </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679131159"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131158"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.Adapter.Persistent.html#WithEntityPlainId"><span class="hs-identifier hs-type">WithEntityPlainId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131158"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131150"><span class="hs-identifier hs-type">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Entity</span></span><span> </span><span class="annot"><a href="#local-6989586621679131160"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679131147"><span class="annot"><span class="annottext">toSchema :: WithEntityPlainId sty fmap (Entity t) -&gt; Term sch (sch :/: sty)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toSchema</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.Adapter.Persistent.html#WithEntityPlainId"><span class="hs-identifier hs-type">WithEntityPlainId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Entity</span></span><span> </span><span id="local-6989586621679131144"><span class="annot"><span class="annottext">key :: Key t
+</span><a href="#local-6989586621679131144"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span id="local-6989586621679131143"><span class="annot"><span class="annottext">x :: t
+</span><a href="#local-6989586621679131143"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NP (Field sch) ('FieldDef idArgName ('TPrimitive Int64) : args)
+-&gt; Term sch (sch :/: sty)
+forall typeName fieldName (sch :: Schema typeName fieldName)
+       (args :: [FieldDef typeName fieldName]) (name :: typeName).
+NP (Field sch) args -&gt; Term sch ('DRecord name args)
+</span><span class="hs-identifier hs-var">TRecord</span></span><span> </span><span class="annot"><span class="annottext">(NP (Field sch) ('FieldDef idArgName ('TPrimitive Int64) : args)
+ -&gt; Term sch (sch :/: sty))
+-&gt; NP (Field sch) ('FieldDef idArgName ('TPrimitive Int64) : args)
+-&gt; Term sch (sch :/: sty)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">FieldValue sch ('TPrimitive Int64)
+-&gt; Field sch ('FieldDef idArgName ('TPrimitive Int64))
+forall typeName fieldName (sch :: Schema typeName fieldName)
+       (t :: FieldType typeName) (name :: fieldName).
+FieldValue sch t -&gt; Field sch ('FieldDef name t)
+</span><span class="hs-identifier hs-var">Field</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; FieldValue sch ('TPrimitive Int64)
+forall typeName fieldName t1 (sch :: Schema typeName fieldName).
+t1 -&gt; FieldValue sch ('TPrimitive t1)
+</span><span class="hs-identifier hs-var">FPrimitive</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BackendKey SqlBackend -&gt; Int64
+</span><span class="hs-identifier hs-var hs-var">unSqlBackendKey</span></span><span> </span><span class="annot"><span class="annottext">(BackendKey SqlBackend -&gt; Int64) -&gt; BackendKey SqlBackend -&gt; Int64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Key t -&gt; BackendKey SqlBackend
+forall backend record.
+ToBackendKey backend record =&gt;
+Key record -&gt; BackendKey backend
+</span><span class="hs-identifier hs-var">toBackendKey</span></span><span> </span><span class="annot"><span class="annottext">Key t
+</span><a href="#local-6989586621679131144"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">Field sch ('FieldDef idArgName ('TPrimitive Int64))
+-&gt; NP (Field sch) args
+-&gt; NP (Field sch) ('FieldDef idArgName ('TPrimitive Int64) : args)
+forall k (a :: k -&gt; *) (x :: k) (xs :: [k]).
+a x -&gt; NP a xs -&gt; NP a (x : xs)
+</span><span class="hs-operator hs-var">:*</span></span><span> </span><span class="annot"><span class="annottext">Proxy fmap -&gt; f Any -&gt; NP (Field sch) args
+forall ts fs (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
+       (args :: [FieldDef ts fs]) (f :: * -&gt; *) a.
+GToSchemaRecord sch fmap args f =&gt;
+Proxy fmap -&gt; f a -&gt; NP (Field sch) args
+</span><span class="hs-identifier hs-var">toSchemaRecord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy fmap
+forall k (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679131150"><span class="hs-identifier hs-type">fmap</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">M1 C cInfo f Any -&gt; f Any
+forall i (c :: Meta) k (f :: k -&gt; *) (p :: k). M1 i c f p -&gt; f p
+</span><span class="hs-identifier hs-var hs-var">unM1</span></span><span> </span><span class="annot"><span class="annottext">(M1 C cInfo f Any -&gt; f Any) -&gt; M1 C cInfo f Any -&gt; f Any
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">M1 D dInfo (C1 cInfo f) Any -&gt; M1 C cInfo f Any
+forall i (c :: Meta) k (f :: k -&gt; *) (p :: k). M1 i c f p -&gt; f p
+</span><span class="hs-identifier hs-var hs-var">unM1</span></span><span> </span><span class="annot"><span class="annottext">(M1 D dInfo (C1 cInfo f) Any -&gt; M1 C cInfo f Any)
+-&gt; M1 D dInfo (C1 cInfo f) Any -&gt; M1 C cInfo f Any
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">t -&gt; Rep t Any
+forall a x. Generic a =&gt; a -&gt; Rep a x
+</span><span class="hs-identifier hs-var">from</span></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679131143"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span id="local-6989586621679131117"><span id="local-6989586621679131118"><span id="local-6989586621679131119"><span id="local-6989586621679131120"><span id="local-6989586621679131121"><span id="local-6989586621679131122"><span id="local-6989586621679131123"><span id="local-6989586621679131124"><span id="local-6989586621679131125"><span id="local-6989586621679131126"><span id="local-6989586621679131127"><span id="local-6989586621679131128"><span id="local-6989586621679131129"><span id="local-6989586621679131130"><span id="local-6989586621679131131"><span id="local-6989586621679131132"><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Generic</span></span><span> </span><span class="annot"><a href="#local-6989586621679131132"><span class="hs-identifier hs-type">t</span></a></span><span>
+</span><span id="line-68"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679131131"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">:/:</span></span><span> </span><span class="annot"><a href="#local-6989586621679131130"><span class="hs-identifier hs-type">sty</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-glyph hs-type">~</span></span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">DRecord</span></span><span> </span><span class="annot"><a href="#local-6989586621679131129"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679131128"><span class="hs-identifier hs-type">nestedIdArg</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-glyph">:</span><span> </span><span class="annot"><a href="#local-6989586621679131127"><span class="hs-identifier hs-type">args</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679131128"><span class="hs-identifier hs-type">nestedIdArg</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">~</span></span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">Mu.Schema.FieldDef</span></span><span> </span><span class="annot"><a href="#local-6989586621679131126"><span class="hs-identifier hs-type">fname</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131125"><span class="hs-identifier hs-type">k</span></a></span><span>
+</span><span id="line-70"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Adapter.Persistent.html#ToSchemaKey"><span class="hs-identifier hs-type">ToSchemaKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131131"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131124"><span class="hs-identifier hs-type">idTy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131125"><span class="hs-identifier hs-type">k</span></a></span><span>
+</span><span id="line-71"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679131131"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">:/:</span></span><span> </span><span class="annot"><a href="#local-6989586621679131124"><span class="hs-identifier hs-type">idTy</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-glyph hs-type">~</span></span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">DRecord</span></span><span> </span><span class="annot"><a href="#local-6989586621679131123"><span class="hs-identifier hs-type">idName</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679131122"><span class="hs-identifier hs-type">idArg</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679131122"><span class="hs-identifier hs-type">idArg</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">~</span></span><span> </span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">Mu.Schema.FieldDef</span></span><span> </span><span class="annot"><a href="#local-6989586621679131121"><span class="hs-identifier hs-type">idArgName</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">TPrimitive</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Rep</span></span><span> </span><span class="annot"><a href="#local-6989586621679131132"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">~</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">D1</span></span><span> </span><span class="annot"><a href="#local-6989586621679131120"><span class="hs-identifier hs-type">dInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">C1</span></span><span> </span><span class="annot"><a href="#local-6989586621679131119"><span class="hs-identifier hs-type">cInfo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131118"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">GToSchemaRecord</span></span><span> </span><span class="annot"><a href="#local-6989586621679131131"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131117"><span class="hs-identifier hs-type">fmap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131127"><span class="hs-identifier hs-type">args</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131118"><span class="hs-identifier hs-type">f</span></a></span><span>
+</span><span id="line-75"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToBackendKey</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">PersistEntityBackend</span></span><span> </span><span class="annot"><a href="#local-6989586621679131132"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679131132"><span class="hs-identifier hs-type">t</span></a></span><span>
+</span><span id="line-76"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PersistEntityBackend</span></span><span> </span><span class="annot"><a href="#local-6989586621679131132"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">~</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">SqlBackend</span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>         </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToSchema</span></span><span> </span><span class="annot"><a href="#local-6989586621679131131"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131130"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.Adapter.Persistent.html#WithEntityNestedId"><span class="hs-identifier hs-type">WithEntityNestedId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131130"><span class="hs-identifier hs-type">sty</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131117"><span class="hs-identifier hs-type">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Entity</span></span><span> </span><span class="annot"><a href="#local-6989586621679131132"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>  </span><span id="local-6989586621679131115"><span class="annot"><span class="annottext">toSchema :: WithEntityNestedId sty fmap (Entity t) -&gt; Term sch (sch :/: sty)
+</span><a href="#local-6989586621679131115"><span class="hs-identifier hs-var hs-var hs-var hs-var">toSchema</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.Adapter.Persistent.html#WithEntityNestedId"><span class="hs-identifier hs-type">WithEntityNestedId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Entity</span></span><span> </span><span id="local-6989586621679131114"><span class="annot"><span class="annottext">key :: Key t
+</span><a href="#local-6989586621679131114"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span id="local-6989586621679131113"><span class="annot"><span class="annottext">x :: t
+</span><a href="#local-6989586621679131113"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NP (Field sch) ('FieldDef fname k : args) -&gt; Term sch (sch :/: sty)
+forall typeName fieldName (sch :: Schema typeName fieldName)
+       (args :: [FieldDef typeName fieldName]) (name :: typeName).
+NP (Field sch) args -&gt; Term sch ('DRecord name args)
+</span><span class="hs-identifier hs-var">TRecord</span></span><span> </span><span class="annot"><span class="annottext">(NP (Field sch) ('FieldDef fname k : args)
+ -&gt; Term sch (sch :/: sty))
+-&gt; NP (Field sch) ('FieldDef fname k : args)
+-&gt; Term sch (sch :/: sty)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">FieldValue sch k -&gt; Field sch ('FieldDef fname k)
+forall typeName fieldName (sch :: Schema typeName fieldName)
+       (t :: FieldType typeName) (name :: fieldName).
+FieldValue sch t -&gt; Field sch ('FieldDef name t)
+</span><span class="hs-identifier hs-var">Field</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FieldValue sch ('TSchematic idTy) -&gt; FieldValue sch k
+forall (sch :: Schema Symbol Symbol) (idTy :: Symbol)
+       (t :: FieldTypeB * Symbol).
+ToSchemaKey sch idTy t =&gt;
+FieldValue sch ('TSchematic idTy) -&gt; FieldValue sch t
+</span><a href="Mu.Adapter.Persistent.html#toSchemaKey"><span class="hs-identifier hs-var">toSchemaKey</span></a></span><span> </span><span class="annot"><span class="annottext">(FieldValue sch ('TSchematic idTy) -&gt; FieldValue sch k)
+-&gt; FieldValue sch ('TSchematic idTy) -&gt; FieldValue sch k
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term sch (sch :/: idTy) -&gt; FieldValue sch ('TSchematic idTy)
+forall typeName fieldName (sch :: Schema typeName fieldName)
+       (t1 :: typeName).
+Term sch (sch :/: t1) -&gt; FieldValue sch ('TSchematic t1)
+</span><span class="hs-identifier hs-var">FSchematic</span></span><span> </span><span class="annot"><span class="annottext">(Term sch (sch :/: idTy) -&gt; FieldValue sch ('TSchematic idTy))
+-&gt; Term sch (sch :/: idTy) -&gt; FieldValue sch ('TSchematic idTy)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">NP (Field sch) '[ 'FieldDef idArgName ('TPrimitive Int64)]
+-&gt; Term
+     sch ('DRecord idName '[ 'FieldDef idArgName ('TPrimitive Int64)])
+forall typeName fieldName (sch :: Schema typeName fieldName)
+       (args :: [FieldDef typeName fieldName]) (name :: typeName).
+NP (Field sch) args -&gt; Term sch ('DRecord name args)
+</span><span class="hs-identifier hs-var">TRecord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FieldValue sch ('TPrimitive Int64)
+-&gt; Field sch ('FieldDef idArgName ('TPrimitive Int64))
+forall typeName fieldName (sch :: Schema typeName fieldName)
+       (t :: FieldType typeName) (name :: fieldName).
+FieldValue sch t -&gt; Field sch ('FieldDef name t)
+</span><span class="hs-identifier hs-var">Field</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; FieldValue sch ('TPrimitive Int64)
+forall typeName fieldName t1 (sch :: Schema typeName fieldName).
+t1 -&gt; FieldValue sch ('TPrimitive t1)
+</span><span class="hs-identifier hs-var">FPrimitive</span></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679131110"><span class="hs-identifier hs-var">key'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Field sch ('FieldDef idArgName ('TPrimitive Int64))
+-&gt; NP (Field sch) '[]
+-&gt; NP (Field sch) '[ 'FieldDef idArgName ('TPrimitive Int64)]
+forall k (a :: k -&gt; *) (x :: k) (xs :: [k]).
+a x -&gt; NP a xs -&gt; NP a (x : xs)
+</span><span class="hs-operator hs-var">:*</span></span><span> </span><span class="annot"><span class="annottext">NP (Field sch) '[]
+forall k (a :: k -&gt; *). NP a '[]
+</span><span class="hs-identifier hs-var">Nil</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>      </span><span class="annot"><span class="annottext">Field sch ('FieldDef fname k)
+-&gt; NP (Field sch) args -&gt; NP (Field sch) ('FieldDef fname k : args)
+forall k (a :: k -&gt; *) (x :: k) (xs :: [k]).
+a x -&gt; NP a xs -&gt; NP a (x : xs)
+</span><span class="hs-operator hs-var">:*</span></span><span> </span><span class="annot"><span class="annottext">Proxy fmap -&gt; f Any -&gt; NP (Field sch) args
+forall ts fs (sch :: Schema ts fs) (fmap :: Mappings Symbol fs)
+       (args :: [FieldDef ts fs]) (f :: * -&gt; *) a.
+GToSchemaRecord sch fmap args f =&gt;
+Proxy fmap -&gt; f a -&gt; NP (Field sch) args
+</span><span class="hs-identifier hs-var">toSchemaRecord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy fmap
+forall k (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679131117"><span class="hs-identifier hs-type">fmap</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">M1 C cInfo f Any -&gt; f Any
+forall i (c :: Meta) k (f :: k -&gt; *) (p :: k). M1 i c f p -&gt; f p
+</span><span class="hs-identifier hs-var hs-var">unM1</span></span><span> </span><span class="annot"><span class="annottext">(M1 C cInfo f Any -&gt; f Any) -&gt; M1 C cInfo f Any -&gt; f Any
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">M1 D dInfo (C1 cInfo f) Any -&gt; M1 C cInfo f Any
+forall i (c :: Meta) k (f :: k -&gt; *) (p :: k). M1 i c f p -&gt; f p
+</span><span class="hs-identifier hs-var hs-var">unM1</span></span><span> </span><span class="annot"><span class="annottext">(M1 D dInfo (C1 cInfo f) Any -&gt; M1 C cInfo f Any)
+-&gt; M1 D dInfo (C1 cInfo f) Any -&gt; M1 C cInfo f Any
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">t -&gt; Rep t Any
+forall a x. Generic a =&gt; a -&gt; Rep a x
+</span><span class="hs-identifier hs-var">from</span></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679131113"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679131110"><span class="annot"><span class="annottext">key' :: Int64
+</span><a href="#local-6989586621679131110"><span class="hs-identifier hs-var hs-var">key'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BackendKey SqlBackend -&gt; Int64
+</span><span class="hs-identifier hs-var hs-var">unSqlBackendKey</span></span><span> </span><span class="annot"><span class="annottext">(BackendKey SqlBackend -&gt; Int64) -&gt; BackendKey SqlBackend -&gt; Int64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Key t -&gt; BackendKey SqlBackend
+forall backend record.
+ToBackendKey backend record =&gt;
+Key record -&gt; BackendKey backend
+</span><span class="hs-identifier hs-var">toBackendKey</span></span><span> </span><span class="annot"><span class="annottext">Key t
+</span><a href="#local-6989586621679131114"><span class="hs-identifier hs-var">key</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">class</span><span> </span><span id="ToSchemaKey"><span class="annot"><a href="Mu.Adapter.Persistent.html#ToSchemaKey"><span class="hs-identifier hs-var">ToSchemaKey</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679131201"><span class="annot"><a href="#local-6989586621679131201"><span class="hs-identifier hs-type">sch</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Schema'</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679131200"><span class="annot"><a href="#local-6989586621679131200"><span class="hs-identifier hs-type">idTy</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Symbol</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679131199"><span class="annot"><a href="#local-6989586621679131199"><span class="hs-identifier hs-type">t</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="#local-6989586621679131201"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131199"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679131200"><span class="hs-identifier hs-type">idTy</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-84"></span><span>  </span><span id="toSchemaKey"><span class="annot"><a href="Mu.Adapter.Persistent.html#toSchemaKey"><span class="hs-identifier hs-type">toSchemaKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FieldValue</span></span><span> </span><span class="annot"><a href="#local-6989586621679131201"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">TSchematic</span></span><span> </span><span class="annot"><a href="#local-6989586621679131200"><span class="hs-identifier hs-type">idTy</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FieldValue</span></span><span> </span><span class="annot"><a href="#local-6989586621679131201"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131199"><span class="hs-identifier hs-type">t</span></a></span><span>
+</span><span id="line-85"></span><span id="local-6989586621679131106"><span id="local-6989586621679131107"><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Mu.Adapter.Persistent.html#ToSchemaKey"><span class="hs-identifier hs-type">ToSchemaKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131107"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131106"><span class="hs-identifier hs-type">idTy</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">TSchematic</span></span><span> </span><span class="annot"><a href="#local-6989586621679131106"><span class="hs-identifier hs-type">idTy</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679131103"><span class="annot"><span class="annottext">toSchemaKey :: FieldValue sch ('TSchematic idTy)
+-&gt; FieldValue sch ('TSchematic idTy)
+</span><a href="#local-6989586621679131103"><span class="hs-identifier hs-var hs-var hs-var hs-var">toSchemaKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FieldValue sch ('TSchematic idTy)
+-&gt; FieldValue sch ('TSchematic idTy)
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span></span></span><span>
+</span><span id="line-87"></span><span id="local-6989586621679131099"><span id="local-6989586621679131100"><span id="local-6989586621679131101"><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Mu.Adapter.Persistent.html#ToSchemaKey"><span class="hs-identifier hs-type">ToSchemaKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131101"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131100"><span class="hs-identifier hs-type">idTy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131099"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Mu.Adapter.Persistent.html#ToSchemaKey"><span class="hs-identifier hs-type">ToSchemaKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131101"><span class="hs-identifier hs-type">sch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131100"><span class="hs-identifier hs-type">idTy</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><span class="hs-identifier hs-type">TOption</span></span><span> </span><span class="annot"><a href="#local-6989586621679131099"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679131097"><span class="annot"><span class="annottext">toSchemaKey :: FieldValue sch ('TSchematic idTy) -&gt; FieldValue sch ('TOption t)
+</span><a href="#local-6989586621679131097"><span class="hs-identifier hs-var hs-var hs-var hs-var">toSchemaKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (FieldValue sch t) -&gt; FieldValue sch ('TOption t)
+forall typeName fieldName (sch :: Schema typeName fieldName)
+       (t1 :: FieldType typeName).
+Maybe (FieldValue sch t1) -&gt; FieldValue sch ('TOption t1)
+</span><span class="hs-identifier hs-var">FOption</span></span><span> </span><span class="annot"><span class="annottext">(Maybe (FieldValue sch t) -&gt; FieldValue sch ('TOption t))
+-&gt; (FieldValue sch ('TSchematic idTy) -&gt; Maybe (FieldValue sch t))
+-&gt; FieldValue sch ('TSchematic idTy)
+-&gt; FieldValue sch ('TOption t)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">FieldValue sch t -&gt; Maybe (FieldValue sch t)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(FieldValue sch t -&gt; Maybe (FieldValue sch t))
+-&gt; (FieldValue sch ('TSchematic idTy) -&gt; FieldValue sch t)
+-&gt; FieldValue sch ('TSchematic idTy)
+-&gt; Maybe (FieldValue sch t)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">FieldValue sch ('TSchematic idTy) -&gt; FieldValue sch t
+forall (sch :: Schema Symbol Symbol) (idTy :: Symbol)
+       (t :: FieldTypeB * Symbol).
+ToSchemaKey sch idTy t =&gt;
+FieldValue sch ('TSchematic idTy) -&gt; FieldValue sch t
+</span><a href="Mu.Adapter.Persistent.html#toSchemaKey"><span class="hs-identifier hs-var">toSchemaKey</span></a></span></span></span></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- | Simple utility to execute a database operation</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--   in any monad which supports 'IO' operations.</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--   Note that all logging messages are discarded.</span><span>
+</span><span id="line-93"></span><span id="local-6989586621679131093"><span id="local-6989586621679131094"><span class="annot"><a href="Mu.Adapter.Persistent.html#runDb"><span class="hs-identifier hs-type">runDb</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679131094"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SqlBackend</span></span><span>
+</span><span id="line-95"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReaderT</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">SqlBackend</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NoLoggingT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ResourceT</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679131093"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-96"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679131094"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679131093"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-97"></span><span id="runDb"><span class="annot"><span class="annottext">runDb :: SqlBackend
+-&gt; ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a -&gt; m a
+</span><a href="Mu.Adapter.Persistent.html#runDb"><span class="hs-identifier hs-var hs-var">runDb</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; m a)
+-&gt; (ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a -&gt; IO a)
+-&gt; ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a
+-&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a -&gt; IO a)
+ -&gt; ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a -&gt; m a)
+-&gt; (SqlBackend
+    -&gt; ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a -&gt; IO a)
+-&gt; SqlBackend
+-&gt; ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a
+-&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a
+ -&gt; SqlBackend -&gt; IO a)
+-&gt; SqlBackend
+-&gt; ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a
+-&gt; IO a
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a
+-&gt; SqlBackend -&gt; IO a
+forall backend a.
+BackendCompatible SqlBackend backend =&gt;
+ReaderT backend (NoLoggingT (ResourceT IO)) a -&gt; backend -&gt; IO a
+</span><span class="hs-identifier hs-var">runSqlPersistM</span></span><span>
+</span><span id="line-98"></span></pre></body></html>

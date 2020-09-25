@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# language DataKinds             #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# language FlexibleContexts      #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# language FlexibleInstances     #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# language MultiParamTypeClasses #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# language PolyKinds             #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# language TypeFamilies          #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# language UndecidableInstances  #-}</span><span>
+</span><span id="line-8"></span><span class="hs-comment">{-|
+Description : Supported serialization formats for gRPC
+
+Currently Protocol Buffers and Avro can be used as
+serialization format for the messages in gRPC
+requests and replies. This module provides types
+and proxies used in both @mu-grpc-client@ and
+@mu-grpc-server@ to drive this choice of serialization.
+-}</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Mu.GRpc.Bridge</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Kind</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.GRPC.HTTP2.Proto3Wire</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Mu.GRpc.Avro.html"><span class="hs-identifier">Mu.GRpc.Avro</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | Serialization formats supported with gRPC.</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">data</span><span> </span><span id="GRpcMessageProtocol"><span class="annot"><a href="Mu.GRpc.Bridge.html#GRpcMessageProtocol"><span class="hs-identifier hs-var">GRpcMessageProtocol</span></a></span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="MsgProtoBuf"><span class="annot"><a href="Mu.GRpc.Bridge.html#MsgProtoBuf"><span class="hs-identifier hs-var">MsgProtoBuf</span></a></span></span><span>  </span><span class="hs-comment">-- ^ Protocol Buffers.</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="MsgAvro"><span class="annot"><a href="Mu.GRpc.Bridge.html#MsgAvro"><span class="hs-identifier hs-var">MsgAvro</span></a></span></span><span>      </span><span class="hs-comment">-- ^ Avro.</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679119925"><span id="local-6989586621679119927"><span class="annot"><span class="annottext">GRpcMessageProtocol -&gt; GRpcMessageProtocol -&gt; Bool
+(GRpcMessageProtocol -&gt; GRpcMessageProtocol -&gt; Bool)
+-&gt; (GRpcMessageProtocol -&gt; GRpcMessageProtocol -&gt; Bool)
+-&gt; Eq GRpcMessageProtocol
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: GRpcMessageProtocol -&gt; GRpcMessageProtocol -&gt; Bool
+$c/= :: GRpcMessageProtocol -&gt; GRpcMessageProtocol -&gt; Bool
+== :: GRpcMessageProtocol -&gt; GRpcMessageProtocol -&gt; Bool
+$c== :: GRpcMessageProtocol -&gt; GRpcMessageProtocol -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679119918"><span id="local-6989586621679119920"><span id="local-6989586621679119922"><span class="annot"><span class="annottext">Int -&gt; GRpcMessageProtocol -&gt; ShowS
+[GRpcMessageProtocol] -&gt; ShowS
+GRpcMessageProtocol -&gt; String
+(Int -&gt; GRpcMessageProtocol -&gt; ShowS)
+-&gt; (GRpcMessageProtocol -&gt; String)
+-&gt; ([GRpcMessageProtocol] -&gt; ShowS)
+-&gt; Show GRpcMessageProtocol
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [GRpcMessageProtocol] -&gt; ShowS
+$cshowList :: [GRpcMessageProtocol] -&gt; ShowS
+show :: GRpcMessageProtocol -&gt; String
+$cshow :: GRpcMessageProtocol -&gt; String
+showsPrec :: Int -&gt; GRpcMessageProtocol -&gt; ShowS
+$cshowsPrec :: Int -&gt; GRpcMessageProtocol -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- | Choose Protocol Buffers as serialization format for gRPC.</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--   This value is commonly used to create a client or server.</span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Mu.GRpc.Bridge.html#msgProtoBuf"><span class="hs-identifier hs-type">msgProtoBuf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.GRpc.Bridge.html#MsgProtoBuf"><span class="hs-identifier hs-type">MsgProtoBuf</span></a></span><span>
+</span><span id="line-35"></span><span id="msgProtoBuf"><span class="annot"><span class="annottext">msgProtoBuf :: Proxy 'MsgProtoBuf
+</span><a href="Mu.GRpc.Bridge.html#msgProtoBuf"><span class="hs-identifier hs-var hs-var">msgProtoBuf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy 'MsgProtoBuf
+forall k (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | Choose Avro as serialization format for gRPC.</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--   This value is commonly used to create a client or server.</span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Mu.GRpc.Bridge.html#msgAvro"><span class="hs-identifier hs-type">msgAvro</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.GRpc.Bridge.html#MsgAvro"><span class="hs-identifier hs-type">MsgAvro</span></a></span><span>
+</span><span id="line-39"></span><span id="msgAvro"><span class="annot"><span class="annottext">msgAvro :: Proxy 'MsgAvro
+</span><a href="Mu.GRpc.Bridge.html#msgAvro"><span class="hs-identifier hs-var hs-var">msgAvro</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy 'MsgAvro
+forall k (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | Defines how to build serialization-specific</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--   RPC locators from a triple of (package, server, method).</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">class</span><span> </span><span id="MkRPC"><span class="annot"><a href="Mu.GRpc.Bridge.html#MkRPC"><span class="hs-identifier hs-var">MkRPC</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679119931"><span class="annot"><a href="#local-6989586621679119931"><span class="hs-identifier hs-type">p</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Mu.GRpc.Bridge.html#GRpcMessageProtocol"><span class="hs-identifier hs-type">GRpcMessageProtocol</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="RPCTy"><span class="annot"><a href="Mu.GRpc.Bridge.html#RPCTy"><span class="hs-identifier hs-var">RPCTy</span></a></span></span><span> </span><span id="local-6989586621679119931"><span class="annot"><a href="#local-6989586621679119931"><span class="hs-identifier hs-type">p</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span>
+</span><span id="line-45"></span><span>  </span><span id="mkRPC"><span class="annot"><a href="Mu.GRpc.Bridge.html#mkRPC"><span class="hs-identifier hs-type">mkRPC</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679119931"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Mu.GRpc.Bridge.html#RPCTy"><span class="hs-identifier hs-type">RPCTy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679119931"><span class="hs-identifier hs-type">p</span></a></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Mu.GRpc.Bridge.html#MkRPC"><span class="hs-identifier hs-type">MkRPC</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.GRpc.Bridge.html#MsgProtoBuf"><span class="hs-identifier hs-type">MsgProtoBuf</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="RPCTy"><span class="annot"><a href="Mu.GRpc.Bridge.html#RPCTy"><span class="hs-identifier hs-var">RPCTy</span></a></span></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.GRpc.Bridge.html#MsgProtoBuf"><span class="hs-identifier hs-type">MsgProtoBuf</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RPC</span></span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679119910"><span class="annot"><span class="annottext">mkRPC :: Proxy 'MsgProtoBuf
+-&gt; ByteString -&gt; ByteString -&gt; ByteString -&gt; RPCTy 'MsgProtoBuf
+</span><a href="#local-6989586621679119910"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkRPC</span></a></span></span><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString -&gt; RPC
+ByteString -&gt; ByteString -&gt; ByteString -&gt; RPCTy 'MsgProtoBuf
+</span><span class="hs-identifier hs-var">RPC</span></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Mu.GRpc.Bridge.html#MkRPC"><span class="hs-identifier hs-type">MkRPC</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.GRpc.Bridge.html#MsgAvro"><span class="hs-identifier hs-type">MsgAvro</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="RPCTy"><span class="annot"><a href="Mu.GRpc.Bridge.html#RPCTy"><span class="hs-identifier hs-var">RPCTy</span></a></span></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Mu.GRpc.Bridge.html#MsgAvro"><span class="hs-identifier hs-type">MsgAvro</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Mu.GRpc.Avro.html#AvroRPC"><span class="hs-identifier hs-type">AvroRPC</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679119907"><span class="annot"><span class="annottext">mkRPC :: Proxy 'MsgAvro
+-&gt; ByteString -&gt; ByteString -&gt; ByteString -&gt; RPCTy 'MsgAvro
+</span><a href="#local-6989586621679119907"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkRPC</span></a></span></span><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString -&gt; AvroRPC
+ByteString -&gt; ByteString -&gt; ByteString -&gt; RPCTy 'MsgAvro
+</span><a href="Mu.GRpc.Avro.html#AvroRPC"><span class="hs-identifier hs-var">AvroRPC</span></a></span><span>
+</span><span id="line-52"></span></pre></body></html>
