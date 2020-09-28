@@ -29,30 +29,18 @@ quickstartAPI = packageAPI (quickstartServer @ServerErrorIO)
 
 type instance
   AnnotatedPackage ServantRoute QuickStartService =
-    '[ 'AnnService "Greeter" ('ServantRoute '["greet"]),
-       'AnnMethod "Greeter" "SayHello" ('ServantRoute '["say", "hello"]),
-       'AnnMethod "Greeter" "SayHi" ('ServantRoute '["say", "hi"]),
-       'AnnMethod "Greeter" "SayManyHellos" ('ServantRoute '["say", "many", "hellos"])
+    '[ 'AnnService "Greeter" ('ServantTopLevelRoute '["greet"]),
+       'AnnMethod "Greeter" "SayHello"
+                  ('ServantRoute '["say", "hello"] 'POST 200),
+       'AnnMethod "Greeter" "SayHi"
+                  ('ServantRoute '["say", "hi"] 'POST 200),
+       'AnnMethod "Greeter" "SayManyHellos"
+                  ('ServantRoute '["say", "many", "hellos"] 'POST 200)
      ]
 
 type instance
-  AnnotatedPackage ServantMethod QuickStartService =
-    '[]
-
-type instance
-  AnnotatedPackage ServantStatus QuickStartService =
-    '[]
-
-type instance
-  AnnotatedSchema ServantUnaryContentTypes QuickstartSchema =
-    '[ 'AnnType "HelloRequest" ('ServantUnaryContentTypes '[JSON]),
-       'AnnType "HelloResponse" ('ServantUnaryContentTypes '[JSON]),
-       'AnnType "HiRequest" ('ServantUnaryContentTypes '[JSON])
-     ]
-
-type instance
-  AnnotatedSchema ServantStreamContentType QuickstartSchema =
-    '[ 'AnnType "HelloRequest" ('ServantStreamContentType NewlineFraming JSON),
-       'AnnType "HelloResponse" ('ServantStreamContentType NewlineFraming JSON),
-       'AnnType "HiRequest" ('ServantStreamContentType NewlineFraming JSON)
+  AnnotatedSchema ServantContentTypes QuickstartSchema =
+    '[ 'AnnType "HelloRequest" DefaultServantContentTypes,
+       'AnnType "HelloResponse" DefaultServantContentTypes,
+       'AnnType "HiRequest" DefaultServantContentTypes
      ]

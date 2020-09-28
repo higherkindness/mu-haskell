@@ -28,6 +28,7 @@ library
     , base
     , conduit
     , generic-aeson
+    , ghc-prim
     , mtl
     , mu-rpc
     , mu-schema
