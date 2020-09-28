@@ -33,5 +33,6 @@ in {
   mu-protobuf = hnPkgs.mu-protobuf.components.library;
   mu-rpc = hnPkgs.mu-rpc.components.library;
   mu-schema = hnPkgs.mu-schema.components.library;
+  mu-servant-server = hnPkgs.mu-servant-server.components.library;
   mu-tracing = hnPkgs.mu-tracing.components.library;
 }
