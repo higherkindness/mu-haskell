@@ -148,7 +148,9 @@
 
 module Mu.Servant.Server (
   servantServerHandlers,
+  servantServerHandlersExtra,
   packageAPI,
+  swagger,
   ServantRoute(..),
   DefaultServantContentTypes,
   ServantContentTypes(..),
@@ -169,6 +171,7 @@ import           Data.Aeson
 import qualified Data.ByteString.Lazy.UTF8 as LB8
 import           Data.Conduit.Internal     (ConduitT (..), Pipe (..))
 import           Data.Kind
+import           Data.Swagger              (Swagger, ToSchema (..))
 import           Generics.Generic.Aeson
 import           GHC.Generics
 import           GHC.TypeLits
@@ -180,6 +183,7 @@ import           Mu.Schema.Annotations
 import           Mu.Server
 import           Servant
 import           Servant.API
+import           Servant.Swagger
 import           Servant.Types.SourceT
 
 -- | reinterprets a Mu server action as a "Servant" server action by converting Mu `Mu.Server.ServerError`s into Servant `Servant.ServerError`s via `convertServerError``
@@ -206,6 +210,7 @@ servantServerHandlers ::
       chn
       ss
       handlers
+  , ExtraFor ('Package pname ss) ~ 'Nothing
   ) =>
   (forall a. m a -> Handler a) ->
   Mu.Server.ServerT chn () ('Package pname ss) m handlers ->
@@ -213,12 +218,39 @@ servantServerHandlers ::
 servantServerHandlers f (Services svcs) =
   servantServiceHandlers f (Proxy @('Package pname ss)) svcs
 
+servantServerHandlersExtra ::
+  forall pname m chn ss handlers extra.
+  ( ServantServiceHandlers
+      ('Package pname ss)
+      m
+      chn
+      ss
+      handlers
+  , ExtraFor ('Package pname ss) ~ 'Just extra
+  ) =>
+  (forall a. m a -> Handler a) ->
+  Server extra ->
+  Mu.Server.ServerT chn () ('Package pname ss) m handlers ->
+  Servant.Server (PackageAPI ('Package pname ss) handlers)
+servantServerHandlersExtra f extra (Services svcs) =
+  extra :<|> servantServiceHandlers f (Proxy @('Package pname ss)) svcs
+
+swagger :: forall pname ss handlers chn m.
+           HasSwagger (ServicesAPI ('Package pname ss) ss handlers)
+        => Mu.Server.ServerT chn () ('Package pname ss) m handlers
+        -> Swagger
+swagger _ = toSwagger (Proxy @(ServicesAPI ('Package pname ss) ss handlers))
+
 -- | used to obtain a "Servant" API proxy value for use with functions like `layout` that expect such values as arguments
 packageAPI :: Mu.Server.ServerT chn t pkg s handlers -> Proxy (PackageAPI pkg handlers)
 packageAPI _ = Proxy
 
 type family PackageAPI (pkg :: Package snm mnm anm (TypeRef snm)) handlers where
-  PackageAPI ('Package pnm ss) handlers = ServicesAPI ('Package pnm ss) ss handlers
+  PackageAPI ('Package pnm ss) handlers = PackageAPI' (ExtraFor ('Package pnm ss)) ('Package pnm ss) handlers
+
+type family PackageAPI' (extra :: Maybe Type) (pkg :: Package snm mnm anm (TypeRef snm)) handlers where
+  PackageAPI' ('Just extra) ('Package pnm ss) handlers = extra :<|> ServicesAPI ('Package pnm ss) ss handlers
+  PackageAPI' 'Nothing ('Package pnm ss) handlers = ServicesAPI ('Package pnm ss) ss handlers
 
 class
   ServantServiceHandlers
@@ -366,6 +398,7 @@ instance
 data StreamResult a = Error String | Result a
   deriving (Generic, Show)
 
+instance Data.Swagger.ToSchema a => Data.Swagger.ToSchema (StreamResult a)
 instance ToJSON a => ToJSON (StreamResult a) where
   toJSON = gtoJson
 
@@ -445,7 +478,8 @@ sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)
 -- 2. HTTP method which must be used,
 -- 3. HTTP status code of a successful HTTP response from a specific `Method`. Use 200 for the usual status code.
 data ServantRoute
-  = ServantTopLevelRoute [Symbol]
+  = ServantAdditional (Maybe Type)
+  | ServantTopLevelRoute [Symbol]
   | ServantRoute [Symbol] StdMethod Nat
 
 type family Assert (err :: Constraint) (break :: k1) (a :: k2) :: k2 where
@@ -497,6 +531,14 @@ type family RouteFor (pkg :: Package snm mnm anm tyref) (s :: Symbol) (m :: Symb
 type family UnwrapServantRoute s where
   UnwrapServantRoute ('ServantTopLevelRoute s) = s
   UnwrapServantRoute ('ServantRoute s _ _)     = s
+
+type family ExtraFor (pkg :: Package snm mnm anm tyref) :: Maybe Type where
+  ExtraFor pkg =
+    WithAnnotatedPackageInstance ServantRoute pkg
+      (UnwrapServantExtra (FromMaybe ('ServantAdditional 'Nothing) (GetPackageAnnotationMay (AnnotatedPackage ServantRoute pkg))))
+
+type family UnwrapServantExtra s where
+  UnwrapServantExtra ('ServantAdditional e) = e
 
 type family FromMaybe (a :: k) (ma :: Maybe k) :: k where
   FromMaybe a 'Nothing = a

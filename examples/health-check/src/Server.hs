@@ -27,6 +27,7 @@ import           Monitor.Tracing.Zipkin        (Endpoint (..))
 import           Network.Wai.Handler.Warp
 import           Prometheus
 import           Servant.Server                (serve)
+import           Servant.Swagger.UI
 import qualified StmContainers.Map             as M
 
 import           Mu.GraphQL.Server
@@ -54,11 +55,13 @@ main = do
   upd <- newTBMChanIO 100
   -- Put together the server
   let s = zipkin rootInfo $ prometheus met $ server m upd
+      servantAPI = packageAPI s
+      servant = servantServerHandlersExtra (toHandler . runZipkin zpk)
+                  (swaggerSchemaUIServer (swagger s)) s
   -- Run the app
   putStrLn "running health check application"
   runConcurrently $ (\_ _ _ _ -> ())
-    <$> Concurrently (runner 8080
-         (serve (packageAPI s) (servantServerHandlers (toHandler . runZipkin zpk) s)))
+    <$> Concurrently (runner 8080 (serve servantAPI servant))
     <*> Concurrently (runner 50051 (gRpcAppTrans msgProtoBuf (runZipkin zpk) s))
     <*> Concurrently (runner 50052 (gRpcAppTrans msgAvro     (runZipkin zpk) s))
     <*> Concurrently (runner 50053 (graphQLAppTransQuery (runZipkin zpk) s
@@ -151,7 +154,8 @@ instance MonadMonitor m => MonadMonitor (TraceT m)
 -- Information for servant
 
 type instance AnnotatedPackage ServantRoute HealthCheckServiceFS2
-  = '[ 'AnnService "HealthCheckServiceFS2"
+  = '[ 'AnnPackage ('ServantAdditional ('Just (SwaggerSchemaUI "swagger-ui" "swagger.json")))
+     , 'AnnService "HealthCheckServiceFS2"
                    ('ServantTopLevelRoute '["health"])
      , 'AnnMethod "HealthCheckServiceFS2" "setStatus"
                   ('ServantRoute '["status"] 'POST 200)
