@@ -151,32 +151,25 @@ instance MonadMonitor m => MonadMonitor (TraceT m)
 -- Information for servant
 
 type instance AnnotatedPackage ServantRoute HealthCheckServiceFS2
-  = '[ 'AnnService "HealthCheckServiceFS2" ('ServantRoute '["health"])
-     , 'AnnMethod "HealthCheckServiceFS2" "setStatus"   ('ServantRoute '["status"])
-     , 'AnnMethod "HealthCheckServiceFS2" "check"       ('ServantRoute '["status"])
-     , 'AnnMethod "HealthCheckServiceFS2" "clearStatus" ('ServantRoute '["status"])
-     , 'AnnMethod "HealthCheckServiceFS2" "checkAll"    ('ServantRoute '["all", "status"])
-     , 'AnnMethod "HealthCheckServiceFS2" "cleanAll"    ('ServantRoute '["all", "status"])
-     , 'AnnMethod "HealthCheckServiceFS2" "watch"       ('ServantRoute '["watch"])
+  = '[ 'AnnService "HealthCheckServiceFS2"
+                   ('ServantTopLevelRoute '["health"])
+     , 'AnnMethod "HealthCheckServiceFS2" "setStatus"
+                  ('ServantRoute '["status"] 'POST 200)
+     , 'AnnMethod "HealthCheckServiceFS2" "check"
+                  ('ServantRoute '["status"] 'GET 200)
+     , 'AnnMethod "HealthCheckServiceFS2" "clearStatus"
+                  ('ServantRoute '["status"] 'DELETE 200)
+     , 'AnnMethod "HealthCheckServiceFS2" "checkAll"
+                  ('ServantRoute '["all", "status"] 'GET 200)
+     , 'AnnMethod "HealthCheckServiceFS2" "cleanAll"
+                  ('ServantRoute '["all", "status"] 'DELETE 200)
+     , 'AnnMethod "HealthCheckServiceFS2" "watch"
+                  ('ServantRoute '["watch"] 'GET 200)
      ]
 
-type instance AnnotatedPackage ServantMethod HealthCheckService
-  = '[ 'AnnMethod "HealthCheckServiceFS2" "setStatus"   ('ServantMethod 'POST)
-     , 'AnnMethod "HealthCheckServiceFS2" "check"       ('ServantMethod 'GET)
-     , 'AnnMethod "HealthCheckServiceFS2" "clearStatus" ('ServantMethod 'DELETE)
-     , 'AnnMethod "HealthCheckServiceFS2" "checkAll"    ('ServantMethod 'GET)
-     , 'AnnMethod "HealthCheckServiceFS2" "cleanAll"    ('ServantMethod 'DELETE)
-     , 'AnnMethod "HealthCheckServiceFS2" "watch"       ('ServantMethod 'GET)
+type instance AnnotatedSchema ServantContentTypes HealthCheckSchema
+  = '[ 'AnnType "HealthCheck"  DefaultServantContentTypes
+     , 'AnnType "ServerStatus" DefaultServantContentTypes
+     , 'AnnType "HealthStatus" DefaultServantContentTypes
+     , 'AnnType "AllStatus"    DefaultServantContentTypes
      ]
-
-type instance AnnotatedPackage ServantStatus HealthCheckService = '[]
-
-type instance AnnotatedSchema ServantUnaryContentTypes HealthCheckSchema
-  = '[ 'AnnType "HealthCheck"  ('ServantUnaryContentTypes '[JSON])
-     , 'AnnType "ServerStatus" ('ServantUnaryContentTypes '[JSON])
-     , 'AnnType "HealthStatus" ('ServantUnaryContentTypes '[JSON])
-     , 'AnnType "AllStatus"    ('ServantUnaryContentTypes '[JSON])
-     ]
-
-type instance AnnotatedSchema ServantStreamContentType HealthCheckSchema
-  = '[ 'AnnType "ServerStatus" ('ServantStreamContentType NewlineFraming JSON) ]
