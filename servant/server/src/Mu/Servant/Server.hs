@@ -150,9 +150,8 @@ module Mu.Servant.Server (
   servantServerHandlers,
   packageAPI,
   ServantRoute(..),
-  ServantMethod(..),
-  ServantStatus(..),
-  ServantUnaryContentTypes(..),
+  DefaultServantContentTypes,
+  ServantContentTypes(..),
   ServantStreamContentType(..),
   StreamResult(..),
   toHandler,
@@ -173,6 +172,7 @@ import           Data.Kind
 import           Generics.Generic.Aeson
 import           GHC.Generics
 import           GHC.TypeLits
+import           GHC.Types                 (Any)
 import           Mu.Rpc
 import           Mu.Rpc.Annotations
 import           Mu.Schema
@@ -440,10 +440,13 @@ sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)
     go (Servant.Types.SourceT.Error msg) =
       PipeM (throwError $ Mu.Server.ServerError Invalid ("error reading stream: " ++ msg))
 
--- | ServantRoute represents the URL path components of a route. It is used as an `AnnotatedPackage` domain to override the default path for a `Method`. When used in an `AnnService`, the specified route is used as a prefix for all `Method`s in that `Service`. When used in an `AnnMethod` the specified route is only applied to that single `Method`.
-newtype ServantRoute = ServantRoute [Symbol]
-
-type family Any :: k
+-- | ServantRoute represents the URL path components of a route. It is used as an `AnnotatedPackage` domain to override the default path for a `Method`. When used in an `AnnService`, the specified `TopLevelRoute` is used as a prefix for all `Method`s in that `Service`.
+-- 1. List of components for the route,
+-- 2. HTTP method which must be used,
+-- 3. HTTP status code of a successful HTTP response from a specific `Method`. Use 200 for the usual status code.
+data ServantRoute
+  = ServantTopLevelRoute [Symbol]
+  | ServantRoute [Symbol] StdMethod Nat
 
 type family Assert (err :: Constraint) (break :: k1) (a :: k2) :: k2 where
   -- these cases exist to force evaluation of the "break" parameter when it either has kind [RpcAnnotation ...] or [Annotation ...]
@@ -487,12 +490,13 @@ type family RouteFor (pkg :: Package snm mnm anm tyref) (s :: Symbol) (m :: Symb
   RouteFor pkg s m =
     WithAnnotatedPackageInstance ServantRoute pkg (
       Concat
-        (UnwrapServantRoute (FromMaybe ('ServantRoute '[s]) (GetServiceAnnotationMay (AnnotatedPackage ServantRoute pkg) s)))
-        (UnwrapServantRoute (FromMaybe ('ServantRoute '[m]) (GetMethodAnnotationMay (AnnotatedPackage ServantRoute pkg) s m)))
+        (UnwrapServantRoute (FromMaybe ('ServantRoute '[s] Any Any) (GetServiceAnnotationMay (AnnotatedPackage ServantRoute pkg) s)))
+        (UnwrapServantRoute (FromMaybe ('ServantRoute '[m] Any Any) (GetMethodAnnotationMay (AnnotatedPackage ServantRoute pkg) s m)))
     )
 
 type family UnwrapServantRoute s where
-  UnwrapServantRoute ('ServantRoute s) = s
+  UnwrapServantRoute ('ServantTopLevelRoute s) = s
+  UnwrapServantRoute ('ServantRoute s _ _)     = s
 
 type family FromMaybe (a :: k) (ma :: Maybe k) :: k where
   FromMaybe a 'Nothing = a
@@ -506,68 +510,75 @@ type family PrefixRoute (prefix :: [Symbol]) route where
   PrefixRoute '[] route = route
   PrefixRoute (p ': rest) route = p :> PrefixRoute rest route
 
--- | ServantUnaryContentTypes represents that acceptable content types that can be used when a message in encoded in a unary (non-streaming) HTTP request\/response body. It is used as an `AnnotatedSchema` domain.
-newtype ServantUnaryContentTypes = ServantUnaryContentTypes [Type]
+-- | ServantContentTypes represents that acceptable content types that can be used when a message in encoded:
+-- 1. in a unary (non-streaming) HTTP request\/response body,
+-- 2. encoded in a streaming HTTP request\/response body.
+-- It is used as an `AnnotatedSchema` domain.
+data ServantContentTypes
+  = ServantContentTypes
+      { unary  :: [Type]
+      , stream :: Maybe ServantStreamContentType
+      }
 
--- | ServantStreamContentType represents the content type and framing that must be used when a message in encoded in a streaming HTTP request/response body. It is used as an `AnnotatedSchema` domain.
+type DefaultServantContentTypes
+  = 'ServantContentTypes '[JSON] ('Just ('ServantStreamContentType NewlineFraming JSON))
+
 data ServantStreamContentType
   = ServantStreamContentType
       { framing           :: Type,
         streamContentType :: Type
       }
 
--- | ServantMethod represents the HTTP method which must be used when sending a request to a `Method` handler. It can be used as an `AnnotatedPackage` domain to override the default method of `POST`.
-newtype ServantMethod = ServantMethod StdMethod
-
--- | ServantStatus represents the HTTP status code of a successful HTTP response from a specific `Method`. It can be used as an `AnnotatedPackage` domain to override the default status code of 200.
-newtype ServantStatus = ServantStatus Nat
-
 -- extracts a StdMethod from a ServantMethod annotation of a given method, defaulting to POST if such an annotation doesn't exist
 type family HttpMethodFor pkg sname mname :: StdMethod where
   HttpMethodFor pkg sname mname =
-    WithAnnotatedPackageInstance ServantMethod pkg (
-      UnwrapServantMethod (FromMaybe ('ServantMethod 'POST) (GetMethodAnnotationMay (AnnotatedPackage ServantMethod pkg) sname mname))
+    WithAnnotatedPackageInstance ServantRoute pkg (
+      UnwrapServantMethod (FromMaybe ('ServantRoute Any 'POST Any) (GetMethodAnnotationMay (AnnotatedPackage ServantRoute pkg) sname mname))
     )
 
 type family UnwrapServantMethod m where
-  UnwrapServantMethod ('ServantMethod m) = m
+  UnwrapServantMethod ('ServantRoute _ m _) = m
 
 -- extracts the HTTP status code from the ServantStatus annotation of a given method, or defaults to 200 if such an annotation doesn't exist
 type family HttpStatusFor pkg sname mname :: Nat where
   HttpStatusFor pkg sname mname =
-    WithAnnotatedPackageInstance ServantStatus pkg (
-      UnwrapServantStatus (FromMaybe ('ServantStatus 200) (GetMethodAnnotationMay (AnnotatedPackage ServantStatus pkg) sname mname))
+    WithAnnotatedPackageInstance ServantRoute pkg (
+      UnwrapServantStatus (FromMaybe ('ServantRoute Any Any 200) (GetMethodAnnotationMay (AnnotatedPackage ServantRoute pkg) sname mname))
     )
 
 type family UnwrapServantStatus s where
-  UnwrapServantStatus ('ServantStatus s) = s
+  UnwrapServantStatus ('ServantRoute _ _ s) = s
 
 -- extracts a list of content types from a ServantUnaryContentTypes annotation of a given method
 type family UnaryContentTypesFor (tyRef :: TypeRef sname) :: [Type] where
   UnaryContentTypesFor ('SchemaRef schema typeName) =
-    WithAnnotatedSchemaInstance ServantUnaryContentTypes schema (
-      UnwrapServantUnaryContentType (GetTypeAnnotation (AnnotatedSchema ServantUnaryContentTypes schema) typeName)
+    WithAnnotatedSchemaInstance ServantContentTypes schema (
+      UnwrapServantUnaryContentType (GetTypeAnnotation (AnnotatedSchema ServantContentTypes schema) typeName)
     )
 
-type family UnwrapServantUnaryContentType (sctype :: ServantUnaryContentTypes) :: [Type] where
-  UnwrapServantUnaryContentType ('ServantUnaryContentTypes ctype) = ctype
+type family UnwrapServantUnaryContentType (sctype :: ServantContentTypes) :: [Type] where
+  UnwrapServantUnaryContentType ('ServantContentTypes ctype stype) = ctype
 
 -- extracts a content type from a ServantStreamContentType annotation of a given method
 type family StreamContentTypeFor (tyRef :: TypeRef sname) :: Type where
   StreamContentTypeFor ('SchemaRef schema typeName) =
-    WithAnnotatedSchemaInstance ServantStreamContentType schema (
-      StreamContentType (GetTypeAnnotation (AnnotatedSchema ServantStreamContentType schema) typeName)
+    WithAnnotatedSchemaInstance ServantContentTypes schema (
+      StreamContentType (GetTypeAnnotation (AnnotatedSchema ServantContentTypes schema) typeName)
     )
 
-type family StreamContentType (sct :: ServantStreamContentType) where
-  StreamContentType ('ServantStreamContentType _ ctype) = ctype
+type family StreamContentType (sct :: ServantContentTypes) where
+  StreamContentType ('ServantContentTypes _ 'Nothing)
+    = TypeError ('Text "missing stream content type")
+  StreamContentType ('ServantContentTypes _ ('Just ('ServantStreamContentType _ ctype))) = ctype
 
 -- extracts a framing from a ServantStreamContentType annotation of a given method
 type family StreamFramingFor (tyRef :: TypeRef sname) :: Type where
   StreamFramingFor ('SchemaRef schema typeName) =
-    WithAnnotatedSchemaInstance ServantStreamContentType schema (
-      StreamFraming (GetTypeAnnotation (AnnotatedSchema ServantStreamContentType schema) typeName)
+    WithAnnotatedSchemaInstance ServantContentTypes schema (
+      StreamFraming (GetTypeAnnotation (AnnotatedSchema ServantContentTypes schema) typeName)
     )
 
-type family StreamFraming (sct :: ServantStreamContentType) where
-  StreamFraming ('ServantStreamContentType framing _) = framing
+type family StreamFraming (sct :: ServantContentTypes) where
+  StreamFraming ('ServantContentTypes _ 'Nothing)
+    = TypeError ('Text "missing stream content type")
+  StreamFraming ('ServantContentTypes _ ('Just ('ServantStreamContentType framing _))) = framing
