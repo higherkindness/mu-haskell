@@ -210,26 +210,25 @@ servantServerHandlers ::
       chn
       ss
       handlers
-  , ExtraFor ('Package pname ss) ~ 'Nothing
+  , ExtraFor ('Package pname ss) ~ EmptyAPI
   ) =>
   (forall a. m a -> Handler a) ->
   Mu.Server.ServerT chn () ('Package pname ss) m handlers ->
   Servant.Server (PackageAPI ('Package pname ss) handlers)
 servantServerHandlers f (Services svcs) =
-  servantServiceHandlers f (Proxy @('Package pname ss)) svcs
+  emptyServer :<|> servantServiceHandlers f (Proxy @('Package pname ss)) svcs
 
 servantServerHandlersExtra ::
-  forall pname m chn ss handlers extra.
+  forall pname m chn ss handlers.
   ( ServantServiceHandlers
       ('Package pname ss)
       m
       chn
       ss
       handlers
-  , ExtraFor ('Package pname ss) ~ 'Just extra
   ) =>
   (forall a. m a -> Handler a) ->
-  Server extra ->
+  Server (ExtraFor ('Package pname ss)) ->
   Mu.Server.ServerT chn () ('Package pname ss) m handlers ->
   Servant.Server (PackageAPI ('Package pname ss) handlers)
 servantServerHandlersExtra f extra (Services svcs) =
@@ -248,9 +247,8 @@ packageAPI _ = Proxy
 type family PackageAPI (pkg :: Package snm mnm anm (TypeRef snm)) handlers where
   PackageAPI ('Package pnm ss) handlers = PackageAPI' (ExtraFor ('Package pnm ss)) ('Package pnm ss) handlers
 
-type family PackageAPI' (extra :: Maybe Type) (pkg :: Package snm mnm anm (TypeRef snm)) handlers where
-  PackageAPI' ('Just extra) ('Package pnm ss) handlers = extra :<|> ServicesAPI ('Package pnm ss) ss handlers
-  PackageAPI' 'Nothing ('Package pnm ss) handlers = ServicesAPI ('Package pnm ss) ss handlers
+type family PackageAPI' (extra :: Type) (pkg :: Package snm mnm anm (TypeRef snm)) handlers where
+  PackageAPI' extra ('Package pnm ss) handlers = extra :<|> ServicesAPI ('Package pnm ss) ss handlers
 
 class
   ServantServiceHandlers
@@ -478,7 +476,7 @@ sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)
 -- 2. HTTP method which must be used,
 -- 3. HTTP status code of a successful HTTP response from a specific `Method`. Use 200 for the usual status code.
 data ServantRoute
-  = ServantAdditional (Maybe Type)
+  = ServantAdditional Type
   | ServantTopLevelRoute [Symbol]
   | ServantRoute [Symbol] StdMethod Nat
 
@@ -532,10 +530,10 @@ type family UnwrapServantRoute s where
   UnwrapServantRoute ('ServantTopLevelRoute s) = s
   UnwrapServantRoute ('ServantRoute s _ _)     = s
 
-type family ExtraFor (pkg :: Package snm mnm anm tyref) :: Maybe Type where
+type family ExtraFor (pkg :: Package snm mnm anm tyref) :: Type where
   ExtraFor pkg =
     WithAnnotatedPackageInstance ServantRoute pkg
-      (UnwrapServantExtra (FromMaybe ('ServantAdditional 'Nothing) (GetPackageAnnotationMay (AnnotatedPackage ServantRoute pkg))))
+      (UnwrapServantExtra (FromMaybe ('ServantAdditional EmptyAPI) (GetPackageAnnotationMay (AnnotatedPackage ServantRoute pkg))))
 
 type family UnwrapServantExtra s where
   UnwrapServantExtra ('ServantAdditional e) = e

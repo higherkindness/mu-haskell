@@ -154,7 +154,7 @@ instance MonadMonitor m => MonadMonitor (TraceT m)
 -- Information for servant
 
 type instance AnnotatedPackage ServantRoute HealthCheckServiceFS2
-  = '[ 'AnnPackage ('ServantAdditional ('Just (SwaggerSchemaUI "swagger-ui" "swagger.json")))
+  = '[ 'AnnPackage ('ServantAdditional (SwaggerSchemaUI "swagger-ui" "swagger.json"))
      , 'AnnService "HealthCheckServiceFS2"
                    ('ServantTopLevelRoute '["health"])
      , 'AnnMethod "HealthCheckServiceFS2" "setStatus"
