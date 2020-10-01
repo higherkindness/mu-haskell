@@ -15,9 +15,10 @@ stack exec --no-ghc-package-path standalone-haddock -- -o ${DOCSDIR} \
   --package-db=$(stack path --snapshot-pkg-db) \
   --package-db=$(stack path --local-pkg-db) \
   --hyperlink-source \
-  core/schema core/rpc core/optics \
+  core/schema core/rpc core/optics core/lens \
   adapter/avro adapter/protobuf adapter/persistent adapter/kafka \
-  grpc/common grpc/client grpc/server graphql
+  instrumentation/prometheus instrumentation/tracing \
+  grpc/common grpc/client grpc/server graphql servant/server
 
 echo "Setting Linuwial theme on Haddock generated docs"
 if [ "$1" == "ocean" ]
