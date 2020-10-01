@@ -13,149 +13,26 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 
--- |
--- = Transforming a Mu server into a Servant server
--- A Mu server is a collection of `Method` /handlers/. A "Servant" /also/ contains handlers, in a similar structure. This package contains a function `servantServerHandlers` which unpacks the Mu handlers and repackages them as "Servant" handlers, with some minor changes to support streaming, and a natural transformation allow the Mu handlers to operate in "Servant"'s natural `Handler` type. The trickier part, however, is translating the Mu server /type/ into a "Servant" server /type/. There are essentially four categories of `Method` types and each of these is translated slightly differently to a "Servant" API type.
---
--- == Translating methods
---
--- === Full Unary
---
--- Full unary methods have non-streaming arguments and a non-streaming response. Most HTTP endpoints expect unary requests and return unary responses. Unary method handlers look like this
---
--- > (MonadServer m) => requestType -> m responseType
---
--- For a handler like this, the corresponding "Servant" API type would be
---
--- @
--- type MyUnaryAPI =
---   route :>
---     `ReqBody` ctypes1 requestType :>
---       `Verb` method status ctypes2 responseType
--- @
---
--- As you can see, the request body contains a @requestType@ value, and the response body contains a @responseType@ value. @route@, @ctypes1@, @method@, @status@ and @ctypes2@ are derived from Mu annotations, which are covered in detail later on.
---
--- === Server Streaming
---
--- Server streaming methods have non-streaming arguments, but the response is streamed back to the client. Server stream handlers look like this
---
--- > (MonadServer m) => requestType -> `ConduitT` responseType `Void` m () -> m ()
---
--- For a handler like this, the corresponding "Servant" API type would be
---
--- @
--- type MyServerStreamAPI =
---   route :>
---     `ReqBody` ctypes requestType :>
---       `Stream` method status framing ctype (`SourceIO` (`StreamResult` responseType))
--- @
---
--- The request body contains a @requestType@ value. The response body is a stream of @`StreamResult` responseType@ values. @`StreamResult` responseType@ contains either a @responseType@ value or an error message describing a problem that occurred while producing @responseType@ values. @route@, @ctypes@, @method@, @status@, @framing@ and @ctype@ are derived from Mu annotations.
---
--- === Client Streaming
---
--- Client streaming methods have a streaming argument, but the response is unary. Client stream handlers look like this
---
--- > (MonadServer m) => `ConduitT` () requestType m () -> m responseType
---
--- For a handler like this, the corresponding "Servant" API type would be
---
--- @
--- type MyClientStreamAPI =
---   route :>
---     `StreamBody` framing ctype (`SourceIO` requestType) :>
---       `Verb` method status ctypes responseType
--- @
---
--- The response body contains a @responseType@ value. The request body is a stream of @requestType@ values. @route@, @ctypes@, @method@, @status@, @framing@, and @ctype@ are derived from Mu annotations.
---
--- === Bidirectional Streaming
---
--- Bidirectional streaming method have a streaming argument and a streaming response. Bidirectional stream handlers look like this
---
--- > (MonadServer m) => `ConduitT` () requestType m () -> `ConduitT` responseType Void m () -> m()
---
--- For a handler like this, the corresponding "Servant" API type would be
---
--- @
--- type MyBidirectionalStreamAPI =
---   `StreamBody` framing1 ctype1 (`SourceIO` requestType) :>
---     `Stream` method status framing2 ctype2 (`SourceIO` (`StreamResult` responseType))
--- @
---
--- This type should look familiar if you already looked at the server streaming and client streaming examples. The request body is a stream of @requestType@ values, and the response body is a stream of @`StreamResult` responseType@ values. All the other types involved are derived from Mu annotations, as described below.
---
--- == Required Type Family Instances
---
--- When Mu methods are converted to Servant APIs, you may customize certain aspects of the resulting API, including the route, HTTP method, and HTTP status.  Additionally, you must specify which content types use be used when encoding and decoding each type in your schema that appears in your methods. All of this customization is done with annotations, via the `AnnotatedSchema` and `AnnotatedPackage` type families.
---
--- The minimum `AnnotatedPackage` instances:
---
--- @
--- type instance `AnnotatedPackage` `ServantRoute` MyPackage = '[]
--- type instance `AnnotatedPackage` `ServantMethod` MyPackage = '[]
--- type instance `AnnotatedPackage` `ServantStatus` MyPackage = '[]
--- @
---
--- These instances have no annotations, so the default route, method, and status code
--- will be used for every RPC.
---
--- On the other hand, schema annotations are required for all the message types in
--- your RPCs - empty instances are not sufficient.
---
--- Let's look at an example RPC:
---
--- @
--- type MyMethod =
---   `Method` \"MyMethod\"
---     '[ '`ArgSingle` '`Nothing` ('`SchemaRef` MySchema \"InputMessage\") ]
---     ('`RetStream` ('`SchemaRef` MySchema \"OutputMessage\"))
--- @
---
--- This method takes an message of type @\"InputMessage\"@ from @MySchema@ as it's only argument. This will be translated to a `ReqBody` in the corresponding Servant API, but `ReqBody` requires a list of acceptable content types for the request. This list of content types must be specified for the @\"InputMessage\"@ type, like so
---
--- @
--- type instance `AnnotatedSchema` `ServantUnaryContentTypes` MySchema =
---   '[ '`AnnType` \"InputMessage\" ('`ServantUnaryContentTypes` '[`JSON`, `PlainText`])
---    ]
--- @
---
--- This instance says that whenever @\"InputMessage\"@ is used as a unary (non-streaming) request or repsonse body, that message can be encoded or decoded as JSON (application\/json) or plain text (text\/plain). The `MimeRender`\/`MimeUnrender` instances necessary to perform this encoding\/decoding must exist for the Haskell type you use to represent @\"InputMessage\"@ messages. For the RPC return type on the other hand, the type @\"OutputMessage\"@ from @MySchema@ is used in a stream, so another type instance must be made, like so
---
--- @
--- type instance `AnnotatedSchema` `ServantStreamContentType` MySchema =
---   '[ '`AnnType` \"OutputMessage\" ('`ServantStreamContentType` `NewlineFraming` `JSON`)
---    ]
--- @
--- This instance says that whenever the @\"OutputMessage\"@ schema type is used in a request stream or response stream it should be encoded\/decoded using newline-delimited JSON. This requires `MimeRender`\/`MimeUnrender` instances to exist, just like the unary case.
---
--- If you forget to provide one of these required instances, you will see a message like the following:
---
--- @
---     • Missing required AnnotatedPackage ServantRoute type instance
---       for \"myschema\" package
---     • When checking the inferred type
--- @
---
--- followed by a large and difficult to read type representing several stuck type families.  This message is an indication that you must provide an `AnnotatedPackage` type instance, with a domain of `ServantRoute` for the package with the name @myschema@. Thus, the following code should fix the error:
---
--- @
--- type instance `AnnotatedPackage` `ServantRoute` MySchema = '[]
--- @
---
--- Please see the executable in this package for a full working example server, including the necessary type instances.
+{-|
+Description : Execute a Mu 'Server' using Servant
 
+This module allows you to serve a Mu 'Server'
+as an OpenAPI / Swagger / REST end-point.
+In particular, it translates to the kind of
+type-level APIs used by Servant.
+-}
 module Mu.Servant.Server (
+  -- * Convert Mu to Servant
   servantServerHandlers,
+  servantServerHandlersExtra,
+  toHandler,
   packageAPI,
+  swagger,
+  -- * Required annotations
   ServantRoute(..),
   DefaultServantContentTypes,
   ServantContentTypes(..),
   ServantStreamContentType(..),
-  StreamResult(..),
-  toHandler,
-  convertServerError,
   -- Reexports
   StdMethod(..),
   module Servant.API
@@ -169,6 +46,7 @@ import           Data.Aeson
 import qualified Data.ByteString.Lazy.UTF8 as LB8
 import           Data.Conduit.Internal     (ConduitT (..), Pipe (..))
 import           Data.Kind
+import           Data.Swagger              (Swagger, ToSchema (..))
 import           Generics.Generic.Aeson
 import           GHC.Generics
 import           GHC.TypeLits
@@ -180,13 +58,14 @@ import           Mu.Schema.Annotations
 import           Mu.Server
 import           Servant
 import           Servant.API
+import           Servant.Swagger
 import           Servant.Types.SourceT
 
--- | reinterprets a Mu server action as a "Servant" server action by converting Mu `Mu.Server.ServerError`s into Servant `Servant.ServerError`s via `convertServerError``
+-- | Reinterprets a Mu server action as a Servant handler.
 toHandler :: ServerErrorIO a -> Handler a
 toHandler = Handler . withExceptT convertServerError
 
--- | translates a Mu `Mu.Server.ServerError` into a "Servant" `Servant.ServerError`
+-- | Translates a Mu `Mu.Server.ServerError` into a Servant `Servant.ServerError`.
 convertServerError :: Mu.Server.ServerError -> Servant.ServerError
 convertServerError (Mu.Server.ServerError code msg) = case code of
   Unknown         -> err502 {errBody = LB8.fromString msg}
@@ -197,7 +76,10 @@ convertServerError (Mu.Server.ServerError code msg) = case code of
   Invalid         -> err400 {errBody = LB8.fromString msg}
   NotFound        -> err404 {errBody = LB8.fromString msg}
 
--- | converts a Mu server into "Servant" server by running all Mu handler actions in the `Handler` type
+-- | Converts a Mu server into Servant server
+--   by running all Mu handler actions in the `Handler` type.
+--   This version assumes /no/ additional routes
+--   in the Servant server when compared to Mu's.
 servantServerHandlers ::
   forall pname m chn ss handlers.
   ( ServantServiceHandlers
@@ -206,19 +88,52 @@ servantServerHandlers ::
       chn
       ss
       handlers
-  ) =>
-  (forall a. m a -> Handler a) ->
-  Mu.Server.ServerT chn () ('Package pname ss) m handlers ->
-  Servant.Server (PackageAPI ('Package pname ss) handlers)
+  , ExtraFor ('Package pname ss) ~ EmptyAPI
+  )
+  => (forall a. m a -> Handler a) -- ^ how to turn the inner Mu monad into 'Handler', use 'toHandler' (or a composition with it) in most cases
+  -> Mu.Server.ServerT chn () ('Package pname ss) m handlers  -- ^ server to be converted
+  -> Servant.Server (PackageAPI ('Package pname ss) handlers)
 servantServerHandlers f (Services svcs) =
-  servantServiceHandlers f (Proxy @('Package pname ss)) svcs
+  emptyServer :<|> servantServiceHandlers f (Proxy @('Package pname ss)) svcs
 
--- | used to obtain a "Servant" API proxy value for use with functions like `layout` that expect such values as arguments
+-- | Converts a Mu server into Servant server
+--   by running all Mu handler actions in the `Handler` type.
+--   This version should be used when additional
+--   routes have been added in the Servant version.
+servantServerHandlersExtra ::
+  forall pname m chn ss handlers.
+  ( ServantServiceHandlers
+      ('Package pname ss)
+      m
+      chn
+      ss
+      handlers
+  )
+  => (forall a. m a -> Handler a) -- ^ how to turn the inner Mu monad into 'Handler', use 'toHandler' (or a composition with it) in most cases
+  -> Server (ExtraFor ('Package pname ss)) -- ^ additional handler for the extra route
+  -> Mu.Server.ServerT chn () ('Package pname ss) m handlers  -- ^ server to be converted
+  -> Servant.Server (PackageAPI ('Package pname ss) handlers)
+servantServerHandlersExtra f extra (Services svcs) =
+  extra :<|> servantServiceHandlers f (Proxy @('Package pname ss)) svcs
+
+-- | Converts the information from a Mu server
+--   into a 'Swagger' document.
+swagger :: forall pname ss handlers chn m.
+           HasSwagger (ServicesAPI ('Package pname ss) ss handlers)
+        => Mu.Server.ServerT chn () ('Package pname ss) m handlers
+        -> Swagger
+swagger _ = toSwagger (Proxy @(ServicesAPI ('Package pname ss) ss handlers))
+
+-- | Obtains a Servant API 'Proxy' value for use
+--   with functions like 'serve' and 'layout'.
 packageAPI :: Mu.Server.ServerT chn t pkg s handlers -> Proxy (PackageAPI pkg handlers)
 packageAPI _ = Proxy
 
 type family PackageAPI (pkg :: Package snm mnm anm (TypeRef snm)) handlers where
-  PackageAPI ('Package pnm ss) handlers = ServicesAPI ('Package pnm ss) ss handlers
+  PackageAPI ('Package pnm ss) handlers = PackageAPI' (ExtraFor ('Package pnm ss)) ('Package pnm ss) handlers
+
+type family PackageAPI' (extra :: Type) (pkg :: Package snm mnm anm (TypeRef snm)) handlers where
+  PackageAPI' extra ('Package pnm ss) handlers = extra :<|> ServicesAPI ('Package pnm ss) ss handlers
 
 class
   ServantServiceHandlers
@@ -366,6 +281,7 @@ instance
 data StreamResult a = Error String | Result a
   deriving (Generic, Show)
 
+instance Data.Swagger.ToSchema a => Data.Swagger.ToSchema (StreamResult a)
 instance ToJSON a => ToJSON (StreamResult a) where
   toJSON = gtoJson
 
@@ -445,7 +361,8 @@ sourceToSource (SourceT src) = ConduitT (PipeM (liftIO $ src (pure . go)) >>=)
 -- 2. HTTP method which must be used,
 -- 3. HTTP status code of a successful HTTP response from a specific `Method`. Use 200 for the usual status code.
 data ServantRoute
-  = ServantTopLevelRoute [Symbol]
+  = ServantAdditional Type
+  | ServantTopLevelRoute [Symbol]
   | ServantRoute [Symbol] StdMethod Nat
 
 type family Assert (err :: Constraint) (break :: k1) (a :: k2) :: k2 where
@@ -497,6 +414,14 @@ type family RouteFor (pkg :: Package snm mnm anm tyref) (s :: Symbol) (m :: Symb
 type family UnwrapServantRoute s where
   UnwrapServantRoute ('ServantTopLevelRoute s) = s
   UnwrapServantRoute ('ServantRoute s _ _)     = s
+
+type family ExtraFor (pkg :: Package snm mnm anm tyref) :: Type where
+  ExtraFor pkg =
+    WithAnnotatedPackageInstance ServantRoute pkg
+      (UnwrapServantExtra (FromMaybe ('ServantAdditional EmptyAPI) (GetPackageAnnotationMay (AnnotatedPackage ServantRoute pkg))))
+
+type family UnwrapServantExtra s where
+  UnwrapServantExtra ('ServantAdditional e) = e
 
 type family FromMaybe (a :: k) (ma :: Maybe k) :: k where
   FromMaybe a 'Nothing = a
