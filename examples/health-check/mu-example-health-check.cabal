@@ -36,9 +36,11 @@ executable health-server
     , mu-tracing        >=0.4.0
     , prometheus-client >= 1    && <2
     , servant-server
+    , servant-swagger-ui
     , stm               >=2.5   && <3
     , stm-conduit       >=4     && <5
     , stm-containers    >=1.1   && <2
+    , swagger2
     , text              >=1.2   && <2
     , tracing-control   >=0.0.6
     , wai               >=3.2   && <4
@@ -59,6 +61,7 @@ executable health-client-tyapps
     , mu-protobuf     >=0.4.0
     , mu-rpc          >=0.4.0
     , mu-schema       >=0.3.0
+    , swagger2
     , text            >=1.2   && <2
 
   hs-source-dirs:   src
@@ -76,6 +79,7 @@ executable health-client-record
     , mu-protobuf     >=0.4.0
     , mu-rpc          >=0.4.0
     , mu-schema       >=0.3.0
+    , swagger2
     , text            >=1.2   && <2
 
   hs-source-dirs:   src

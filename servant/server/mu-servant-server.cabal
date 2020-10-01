@@ -34,7 +34,9 @@ library
     , mu-schema
     , servant
     , servant-server
+    , servant-swagger
     , stm
+    , swagger2
     , utf8-string
 
   hs-source-dirs:   src
