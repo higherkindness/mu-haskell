@@ -15,9 +15,9 @@ This list assumes you have your Hackage username and password set in your `.caba
     ```
 
 4. Push and merge any pending changes
-5. Publish a new release in GitHub:
+5. Run `./test-templates.sh` and check that no errors are found
+    - If found, update templates in `templates` folder and open a PR
+6. Publish a new release in GitHub:
     - Tag by running `git tag -a vX.Y -m "Release X.Y"`
     - Push the tag `git push --tags`
     - Create a new release in [GitHub](https://github.com/higherkindness/mu-haskell/releases/new) for that tag, or if using [`hub`](https://hub.github.com/hub-release.1.html), run `hub release create vX.Y`
-6. Run `./test-templates.sh` and check that no errors are found
-    - If found, update templates in `templates` folder and open a PR
