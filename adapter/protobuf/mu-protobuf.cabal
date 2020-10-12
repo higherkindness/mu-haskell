@@ -40,7 +40,7 @@ library
     , mu-rpc                  ==0.4.*
     , mu-schema               ==0.3.*
     , proto3-wire             >=1.1   && < 2
-    , servant-client-core     >=0.16  && <0.17
+    , servant-client-core     >=0.16  && <0.19
     , sop-core                >=0.5   && <0.6
     , template-haskell        >=2.14  && <2.16
     , text                    >=1.2   && <2
@@ -54,7 +54,7 @@ executable test-protobuf
   build-depends:
       base         >=4.12  && <5
     , bytestring
-    , mu-protobuf  >=0.3.0
+    , mu-protobuf
     , mu-schema    >=0.3.0
     , proto3-wire
     , text

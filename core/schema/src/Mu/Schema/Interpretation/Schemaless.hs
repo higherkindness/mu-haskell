@@ -81,7 +81,7 @@ data FieldValue where
 --   Use this function to check a schemaless terms
 --   at the "borders" of your application.
 checkSchema
-  :: forall (s :: Schema tn fn) (t :: tn).
+  :: forall tn fn (s :: Schema tn fn) (t :: tn).
      (CheckSchema s (s :/: t))
   => Proxy t -> Term -> Maybe (S.Term s (s :/: t))
 checkSchema _ = checkSchema'

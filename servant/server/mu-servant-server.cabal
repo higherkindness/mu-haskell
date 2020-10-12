@@ -23,21 +23,21 @@ source-repository head
 library
   exposed-modules:  Mu.Servant.Server
   build-depends:
-      aeson                 >=1.4   && <2
-    , async
-    , base
-    , conduit
-    , generic-aeson
-    , ghc-prim
-    , mtl
-    , mu-rpc
-    , mu-schema
-    , servant
-    , servant-server
-    , servant-swagger
-    , stm
-    , swagger2
-    , utf8-string
+      aeson           >=1.4   && <2
+    , async           >=2.2   && < 3
+    , base            >=4.12  && <5
+    , conduit         >=1.3.2 && <2
+    , generic-aeson   >=0.2   && <0.3
+    , ghc-prim        >=0.5   && <0.7
+    , mtl             >=2.2   && <3
+    , mu-rpc          ==0.4.*
+    , mu-schema       ==0.3.*
+    , servant         >=0.16  && <0.19
+    , servant-server  >=0.16  && <0.19
+    , servant-swagger >=1.1.7 && <2
+    , stm             >=2.5   && <3
+    , swagger2        >=2.5   && <3
+    , utf8-string     >=1     && <2
 
   hs-source-dirs:   src
   default-language: Haskell2010
@@ -46,15 +46,15 @@ library
 executable servant-example-server
   main-is:          ExampleServer.hs
   build-depends:
-      aeson
-    , base
-    , conduit
-    , mu-rpc
-    , mu-schema
+      aeson           >=1.4   && <2
+    , base            >=4.12  && <5
+    , conduit         >=1.3.2 && <2
+    , mu-rpc          ==0.4.*
+    , mu-schema       ==0.3.*
     , mu-servant-server
-    , servant-server
-    , text
-    , warp
+    , servant-server  >=0.16  && <0.19
+    , text            >=1.2   && <2
+    , warp            >=3.3   && <4
 
   hs-source-dirs:   exe
   default-language: Haskell2010
