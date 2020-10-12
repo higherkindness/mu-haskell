@@ -20,23 +20,23 @@ executable {{name}}
   build-depends:
       base        >=4.12  && <5
     , conduit
-    , mu-graphql  >=0.3.0
-    , mu-rpc      >=0.3.0
-    , mu-schema   >=0.3.0
+    , mu-graphql  >=0.4.0
+    , mu-rpc      >=0.4.0
+    , mu-schema   >=0.3.1
     , text
     , wai-extra
     , warp
 
 
 {-# START_FILE stack.yaml #-}
-resolver: lts-15.8
+resolver: lts-16.18
 allow-newer: true
 extra-deps:
-- mu-schema-0.3.0.0
-- mu-rpc-0.3.0.0
-- mu-graphql-0.3.0.0
+- mu-schema-0.3.1.0
+- mu-rpc-0.3.4.0
+- mu-graphql-0.4.0.0
 - git: https://github.com/hasura/graphql-parser-hs.git
-  commit: 1380495a7b3269b70a7ab3081d745a5f54171a9c
+  commit: f4a093981ca5626982a17c2bfaad047cc0834a81
 
 {-# START_FILE Setup.hs #-}
 import Distribution.Simple
