@@ -22,7 +22,7 @@ source-repository head
 library
   exposed-modules:  Mu.Schema.Lens
   build-depends:
-      base
+      base         >=4.12 && <5
     , containers
     , lens
     , generic-lens
