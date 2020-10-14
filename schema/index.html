@@ -216,10 +216,10 @@
        
       <a
         href="/mu-haskell/rpc/"
-        title="RPC services"
+        title="Services"
         class="drop-nested"
       >
-        RPC services
+        Services
       </a>
       <div class="caret"></div>
       
@@ -246,33 +246,27 @@
           gRPC clients
         </a>
         
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/graphql/"
+          title="GraphQL"
+        >
+          GraphQL
+        </a>
+        
+        
+        
+        <a
+          class=""
+          href="/mu-haskell/openapi/"
+          title="OpenAPI / REST"
+        >
+          OpenAPI / REST
+        </a>
+        
       </div>
-      
-    </div>
-    
-
-      
-      
-      
-      
-
-      
-      
-      
-
-      
-
-      
-
-    <div class="sidebar-menu-item  ">
-      
-      <a
-        href="/mu-haskell/graphql/"
-        class=""
-        title="GraphQL services"
-      >
-        GraphQL services
-      </a>
       
     </div>
     
@@ -505,6 +499,16 @@
   <li>Write the schemas by hand,</li>
   <li>Split the definition file into several ones, and import each of them in its own <code class="highlighter-rouge">protobuf</code> block.</li>
 </ul>
+
+<h3 id="limitations-on-primitive-optionals">Limitations on primitive optionals</h3>
+
+<p>You should be aware of a limitation regarding optional values stated in the <a href="https://developers.google.com/protocol-buffers/docs/proto3#default">Protocol Buffers documentation</a>:</p>
+
+<blockquote>
+  <p>Note that for scalar message fields, once a message is parsed there’s no way of telling whether a field was explicitly set to the default value (for example whether a boolean was set to <code class="highlighter-rouge">false</code>) or just not set at all: you should bear this in mind when defining your message types. For example, don’t have a boolean that switches on some behaviour when set to <code class="highlighter-rouge">false</code> if you don’t want that behaviour to also happen by default. Also note that if a scalar message field <strong>is</strong> set to its default, the value will not be serialized on the wire.</p>
+</blockquote>
+
+<p>That means that in a Protocol Buffers message it is not possible to have <code class="highlighter-rouge">'TOption ('TPrimitive p)</code>, since a lack of such a field means that the default value is to be used. In fact, Protocol Buffers implementations are expected to drop such values in order to save bandwidth. <code class="highlighter-rouge">mu-protobuf</code> will try to help here, raising a warning in some cases in which <code class="highlighter-rouge">default</code> is used.</p>
 
 <h2 id="mapping-haskell-types">Mapping Haskell types</h2>
 

@@ -1,16 +1,19 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# language CPP         #-}</span><span>
-</span><span id="line-2"></span><span class="hs-pragma">{-# language DataKinds   #-}</span><span>
-</span><span id="line-3"></span><span class="hs-pragma">{-# language QuasiQuotes #-}</span><span>
-</span><span id="line-4"></span><span class="hs-comment">{-|
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# language CPP             #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# language DataKinds       #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# language KindSignatures  #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# language QuasiQuotes     #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# language TemplateHaskell #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">{-|
 Description : Examples for Avro quasi-quoters
 
 Look at the source code of this module.
 -}</span><span>
-</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Mu.Quasi.Avro.Example</span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-10"></span><span>
-</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Mu.Quasi.Avro.html"><span class="hs-identifier">Mu.Quasi.Avro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.Quasi.Avro.html#avro"><span class="hs-identifier">avro</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Quasi.Avro.html#avroFile"><span class="hs-identifier">avroFile</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-12"></span><span>
-</span><span id="line-13"></span><span class="hs-keyword">type</span><span> </span><span id="Example"><span class="annot"><a href="Mu.Quasi.Avro.Example.html#Example"><span class="hs-identifier hs-var">Example</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[avro|
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Mu.Quasi.Avro.Example</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Mu.Quasi.Avro.html"><span class="hs-identifier">Mu.Quasi.Avro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.Quasi.Avro.html#avdl"><span class="hs-identifier">avdl</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Quasi.Avro.html#avro"><span class="hs-identifier">avro</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Mu.Quasi.Avro.html#avroFile"><span class="hs-identifier">avroFile</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">type</span><span> </span><span id="Example"><span class="annot"><a href="Mu.Quasi.Avro.Example.html#Example"><span class="hs-identifier hs-var">Example</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[avro|
 {
   &quot;type&quot;: &quot;record&quot;,
   &quot;name&quot;: &quot;person&quot;,
@@ -44,5 +47,11 @@ Look at the source code of this module.
 </span><span class="hs-keyword">type</span><span> </span><span class="hs-identifier">ExampleFromFile</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="">[avroFile|adapter/avro/test/avro/example.avsc|]</span><span class="hs-cpp">
 #else
 </span><span class="hs-keyword">type</span><span> </span><span id="ExampleFromFile"><span class="annot"><a href="Mu.Quasi.Avro.Example.html#ExampleFromFile"><span class="hs-identifier hs-var">ExampleFromFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[avroFile|test/avro/example.avsc|]</span></span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">
+#if __GHCIDE__
+</span><span class="hs-identifier">avdl</span><span> </span><span class="hs-string">&quot;ExampleProtocol&quot;</span><span> </span><span class="hs-string">&quot;ExampleService&quot;</span><span> </span><span class="hs-string">&quot;.&quot;</span><span> </span><span class="hs-string">&quot;adapter/avro/test/avro/example.avdl&quot;</span><span class="hs-cpp">
+#else
+</span><span id="ExampleProtocol"><span id="ExampleService"><span class="hs-identifier">avdl</span><span> </span><span class="hs-string">&quot;ExampleProtocol&quot;</span><span> </span><span class="hs-string">&quot;ExampleService&quot;</span><span> </span><span class="hs-string">&quot;.&quot;</span><span> </span><span class="hs-string">&quot;test/avro/example.avdl&quot;</span></span></span><span class="hs-cpp">
 #endif
 </span></pre></body></html>
