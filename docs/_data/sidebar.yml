@@ -47,3 +47,6 @@ options:
 
     - title: Middleware
       url: middleware/
+
+  - title: Talks
+    url: talks/
