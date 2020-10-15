@@ -8,6 +8,8 @@ permalink: /
 
 Mu-Haskell is a set of packages that help you build both servers and clients for (micro)services. The main goal of Mu-Haskell is to allow you to focus on your domain logic, instead of worrying about format and protocol issues.
 
+If you prefer listening to reading, we have a bunch of [talks]({% link docs/talks.md %}) covering both the usage and the internals of the library.
+
 * Introduction
   * [For RPC]({% link docs/intro-rpc.md %})
   * [For GraphQL]({% link docs/intro-graphql.md %})
