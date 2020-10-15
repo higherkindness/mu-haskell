@@ -5,14 +5,14 @@
 
     
 
-    <title>Mu-Haskell: Middleware</title>
+    <title>Mu-Haskell: Talks</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Mu is a purely functional library for building microservices.">
     <meta name="keywords" content="functional-programming, monads, monad-transformers, functional-data-structure, swift, bow, fp-types, adt, free-monads, tagless-final, mtl, for-comprehension, category-theory">
 
     <meta property="og:image" content="/mu-haskell/img/poster.png" />
-    <meta property="og:title" content="Mu-Haskell: Middleware" />
-    <meta property="og:site_name" content="Mu-Haskell: Middleware" />
+    <meta property="og:title" content="Mu-Haskell: Talks" />
+    <meta property="og:site_name" content="Mu-Haskell: Talks" />
     <meta property="og:url" content="https://higherkindess.io/mu-haskell" />
     <meta property="og:type" content="website" />
     <meta property="og:description" content="Mu is a purely functional library for building microservices." />
@@ -284,7 +284,7 @@
 
       
 
-    <div class="sidebar-menu-item  open">
+    <div class="sidebar-menu-item  ">
        
       <button
         type="button"
@@ -321,7 +321,7 @@
         
         
         <a
-          class="active"
+          class=""
           href="/mu-haskell/middleware/"
           title="Middleware"
         >
@@ -346,11 +346,11 @@
 
       
 
-    <div class="sidebar-menu-item  ">
+    <div class="sidebar-menu-item active ">
       
       <a
         href="/mu-haskell/talks/"
-        class=""
+        class="active"
         title="Talks"
       >
         Talks
@@ -448,69 +448,33 @@
 
     </div>
     <div class="doc-content">
-        <h1 id="integration-with-wai-middleware">Integration with WAI middleware</h1>
+        <h1 id="talks">Talks</h1>
 
-<p>Although you usually run a <code class="highlighter-rouge">mu-rpc</code> server directly using a function like <code class="highlighter-rouge">runGRpcApp</code>, this is just a convenience function to make it simpler to run the server. Under the hood, the library generates a so-called WAI application, which is then fed to an actual server.</p>
+<p><strong>Warning</strong>: depending on the moment in which each talk has recorded, the code may not be 100% compatible with the latest release of Mu-Haskell. The underlying ideas do remain the same.</p>
 
-<p>WAI stands for <a href="https://www.yesodweb.com/book/web-application-interface"><em>Web Application Interface</em></a>. WAI defines a common set of APIs against which web application can be developed. Web servers, like <a href="http://www.aosabook.org/en/posa/warp.html">Warp</a>, take an application which uses that API and serves it against the actual network. The main benefit of this separation is that applications and servers can evolve separately, without a tight coupling between them.</p>
+<h2 id="using-mu-haskell">Using Mu-Haskell</h2>
 
-<p>One of the features that WAI provides is the definition of <em>middleware</em> components. <em>Middlewares</em> are not complete applications; instead they wrap another application to provide additional capabilities. There is a whole ecosystem of WAI middleware, as one can notice by <a href="http://hackage.haskell.org/packages/search?terms=wai+middleware">searching <code class="highlighter-rouge">wai middleware</code> in Hackage</a>.</p>
+<p><a href="https://twitter.com/trupill">Alejandro</a>’s talk about Mu + GraphQL at <a href="https://haskell.love/">Haskell Love</a>.</p>
 
-<h2 id="serving-static-files">Serving static files</h2>
+<p><a href="https://www.youtube.com/watch?v=JbeqwfZ2dRc"><img src="https://img.youtube.com/vi/JbeqwfZ2dRc/0.jpg" alt="haskell-love" /></a></p>
 
-<p>It’s a common task in web servers to send some static content for a subset of URLs (think of resources such as images or JavaScript code). <code class="highlighter-rouge">wai-middleware-static</code> automates that task, and also serves as the simplest example of WAI middleware.</p>
+<p><a href="https://twitter.com/trupill">Alejandro</a>’s talk about Mu + gRPC at <a href="https://www.haskell.amsterdam/">Haskell Amsterdam</a>.</p>
 
-<p>Remember that in our <a href="/mu-haskell/grpc/server/">gRPC server example</a> our <code class="highlighter-rouge">main</code> function looked as follows:</p>
+<p><a href="https://www.youtube.com/watch?v=gop937MGZJ0"><img src="https://img.youtube.com/vi/gop937MGZJ0/0.jpg" alt="haskell-amsterdam" /></a></p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="n">msgSerializer</span> <span class="mi">8080</span> <span class="n">server</span>
-</code></pre></div></div>
+<p><a href="https://twitter.com/FlavioCorpa">Flavio</a>’s talk on Mu + GraphQL at the <a href="https://www.meetup.com/es-ES/Berlin-Functional-Programming-Group/">Berlin Functional Programming Group</a>.</p>
 
-<p>We can split this single line into two phases: first creating the WAI application by means of <code class="highlighter-rouge">gRpcApp</code>, and then running it using Warp’s <code class="highlighter-rouge">run</code> function.</p>
+<p><a href="https://www.youtube.com/watch?v=ZnYa99QoznE"><img src="https://img.youtube.com/vi/ZnYa99QoznE/0.jpg" alt="mu-berlin" /></a></p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Network.Wai.Handler.Warp</span> <span class="p">(</span><span class="nf">run</span><span class="p">)</span>
+<h2 id="implementation">Implementation</h2>
 
-<span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">gRpcApp</span> <span class="n">msgSerializer</span> <span class="n">server</span>
-</code></pre></div></div>
+<p><a href="https://twitter.com/trupill">Alejandro</a> and <a href="https://twitter.com/FlavioCorpa">Flavio</a>’s experience report presentation on <a href="https://icfp20.sigplan.org/details/haskellsymp-2020-papers/6/Describing-Microservices-using-Modern-Haskell-Experience-Report">Haskell Symposium</a>. Here we explore the challenges we had to overcome while use type level techniques.</p>
 
-<p>Right in the middle of the two steps we can inject any middleware we want.</p>
+<p><a href="https://www.youtube.com/watch?v=GDITBmIzCDs"><img src="https://img.youtube.com/vi/GDITBmIzCDs/0.jpg" alt="haskell-symposium" /></a></p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Network.Wai.Handler.Warp</span> <span class="p">(</span><span class="nf">run</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Network.Wai.Middleware.Static</span>
+<p><a href="https://twitter.com/trupill">Alejandro</a>’s talk about the internals of Mu-Haskell, focused mostly on the schema side.</p>
 
-<span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">static</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">msgSerializer</span> <span class="n">server</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>With that simple change, our web server now first checks whether a file with the requested name exists in the directory from which the application is running. If that is the case, it’s cached and served, otherwise the underlying gRPC application is run. Needless to say, this behavior might not be the desired one, so the library provides <a href="http://hackage.haskell.org/package/wai-middleware-static/docs/Network-Wai-Middleware-Static.html#v:staticPolicy"><code class="highlighter-rouge">staticPolicy</code></a> to customize it.</p>
-
-<h2 id="metrics">Metrics</h2>
-
-<p>Another interesting use of middleware is obtaining metrics for your application. Within the Haskell world, <a href="https://github.com/tibbe/ekg">EKG</a> is a common solution for monitoring any kind of running process. EKG provides <a href="https://ocharles.org.uk/blog/posts/2012-12-11-24-day-of-hackage-ekg.html">customizable counters</a>, so you are not tied to one specific set of variables. This is the idea behind the <a href="https://github.com/Helkafen/wai-middleware-metrics"><code class="highlighter-rouge">wai-middleware-metrics</code></a> package: provide counters for the specific needs of HTTP servers.</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">System.Remote.Monitoring</span> <span class="p">(</span><span class="nf">serverMetricStore</span><span class="p">,</span> <span class="nf">forkServer</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Network.Wai.Handler.Warp</span> <span class="p">(</span><span class="nf">run</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Network.Wai.Metrics</span>
-
-<span class="n">main</span> <span class="o">=</span> <span class="kr">do</span>
-  <span class="c1">-- Taken from the official documentation</span>
-  <span class="n">store</span> <span class="o">&lt;-</span> <span class="n">serverMetricStore</span> <span class="o">&lt;$&gt;</span> <span class="n">forkServer</span> <span class="s">"localhost"</span> <span class="mi">8000</span>
-  <span class="n">waiMetrics</span> <span class="o">&lt;-</span> <span class="n">registerWaiMetrics</span> <span class="n">store</span>
-  <span class="c1">-- Wrap the application and run it</span>
-  <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">metrics</span> <span class="n">waiMetrics</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">msgSerializer</span> <span class="n">server</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>Another possibility is to expose <a href="https://prometheus.io/">Prometheus</a> metrics. In this case, a specific monitoring process scrapes your servers from time to time. The gathered data can later be analyzed and visualized. Luckily, there’s some <a href="https://github.com/fimad/prometheus-haskell">middleware</a> exposing the require endpoints automatically.</p>
-
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Network.Wai.Handler.Warp</span> <span class="p">(</span><span class="nf">run</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Network.Wai.Middleware.Prometheus</span>
-
-<span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">prometheus</span> <span class="n">def</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">msgSerializer</span> <span class="n">server</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>The usage of <code class="highlighter-rouge">def</code> indicates that we want the default options: providing the metrics under the route <code class="highlighter-rouge">/metrics</code>.</p>
-
-<h2 id="compression-header-manipulation-and-more">Compression, header manipulation, and more!</h2>
-
-<p>These docs only scrape the surface of WAI middleware. We encourage you to check the <a href="http://hackage.haskell.org/package/wai-extra"><code class="highlighter-rouge">wai-extra</code> package</a>, which includes many self-contained middlewares. For example, you may wish to have GZip compression, or to canonicalize routes before passing them to the actual application. Following the Haskell philosophy, the idea is to provide small components which can be easily composed to target your needs.</p>
+<p><a href="https://www.youtube.com/watch?v=JbHnzCtWof0"><img src="https://img.youtube.com/vi/JbHnzCtWof0/0.jpg" alt="mu-internals" /></a></p>
 
     </div>
 </main>
