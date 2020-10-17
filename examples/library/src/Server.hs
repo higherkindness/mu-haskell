@@ -69,10 +69,9 @@ Returns Nothing in case of any failure, including attempts to insert non-unique 
 -}
 insertAuthorAndBooks :: SqlBackend -> Author -> [Key Author -> Book] -> LoggingT IO (Maybe ())
 insertAuthorAndBooks conn author books =
-  (`catchError` (const $ return Nothing)) . runDb conn . fmap sequence_ $
-    do
-      Just authorId <- insertUnique author
-      mapM (insertUnique . ($ authorId)) books
+  (`catchError` (const $ return Nothing)) . runDb conn . fmap sequence_ $ do
+    Just authorId <- insertUnique author
+    mapM (insertUnique . ($ authorId)) books
 
 
 type ObjectMapping = '[
