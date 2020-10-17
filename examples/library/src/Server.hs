@@ -39,7 +39,7 @@ main = do
   -- Set up Prometheus
   p <- initPrometheus "library"
   -- Run the whole thing
-  runStdoutLoggingT $
+  runStderrLoggingT $
     withSqliteConn @(LoggingT IO) ":memory:" $ \conn -> do
       runDb conn $ runMigration migrateAll
       -- Insert demo data
