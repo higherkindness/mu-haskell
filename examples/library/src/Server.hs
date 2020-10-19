@@ -67,10 +67,9 @@ Returns Nothing in case of any failure, including attempts to insert non-unique 
 -}
 insertAuthorAndBooks :: SqlBackend -> Author -> [Key Author -> Book] -> LoggingT IO (Maybe ())
 insertAuthorAndBooks conn author books =
-  runDb conn $ do
+  runDb conn $ (>>= sequence_) <$> do
     authorResult <- insertUnique author
-    maybeBooks <- traverse (\authorId -> traverse (insertUnique . ($ authorId)) books) authorResult
-    pure $ maybeBooks >>= sequence_
+    traverse (\authorId -> traverse (insertUnique . ($ authorId)) books) authorResult
 
 type ObjectMapping = '[
     "Book"   ':-> Entity Book
