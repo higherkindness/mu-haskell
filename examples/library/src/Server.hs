@@ -10,7 +10,6 @@
 
 module Main where
 
-import           Control.Monad.Except              (catchError)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Logger
 import           Data.Conduit
@@ -69,9 +68,11 @@ Returns Nothing in case of any failure, including attempts to insert non-unique 
 -}
 insertAuthorAndBooks :: SqlBackend -> Author -> [Key Author -> Book] -> LoggingT IO (Maybe ())
 insertAuthorAndBooks conn author books =
-  (`catchError` (const $ pure Nothing)) . runDb conn . fmap sequence_ $ do
-    Just authorId <- insertUnique author
-    traverse (insertUnique . ($ authorId)) books
+  runDb conn . fmap sequence_ $ do
+    authorResult <- insertUnique author
+    case authorResult of
+      Just authorId -> traverse (insertUnique . ($ authorId)) books
+      Nothing       -> pure [Nothing]
 
 
 type ObjectMapping = '[
