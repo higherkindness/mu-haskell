@@ -25,7 +25,6 @@ import           Mu.Schema
 import           Mu.Server
 import           Network.Wai.Handler.Warp          (run)
 import           Network.Wai.Middleware.AddHeaders (addHeaders)
-
 import           Schema
 
 main :: IO ()
@@ -68,12 +67,10 @@ Returns Nothing in case of any failure, including attempts to insert non-unique 
 -}
 insertAuthorAndBooks :: SqlBackend -> Author -> [Key Author -> Book] -> LoggingT IO (Maybe ())
 insertAuthorAndBooks conn author books =
-  runDb conn . fmap sequence_ $ do
+  runDb conn $ do
     authorResult <- insertUnique author
-    case authorResult of
-      Just authorId -> traverse (insertUnique . ($ authorId)) books
-      Nothing       -> pure [Nothing]
-
+    maybeBooks <- traverse (\authorId -> traverse (insertUnique . ($ authorId)) books) authorResult
+    pure $ maybeBooks >>= sequence_
 
 type ObjectMapping = '[
     "Book"   ':-> Entity Book
