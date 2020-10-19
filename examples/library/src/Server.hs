@@ -71,7 +71,7 @@ insertAuthorAndBooks :: SqlBackend -> Author -> [Key Author -> Book] -> LoggingT
 insertAuthorAndBooks conn author books =
   (`catchError` (const $ pure Nothing)) . runDb conn . fmap sequence_ $ do
     Just authorId <- insertUnique author
-    mapM (insertUnique . ($ authorId)) books
+    traverse (insertUnique . ($ authorId)) books
 
 
 type ObjectMapping = '[
