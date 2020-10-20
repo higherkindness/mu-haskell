@@ -30,7 +30,6 @@ import           Schema
 
 main :: IO ()
 main = do
-  putStrLn "starting GraphQL server on port 8000"
   -- Setup CORS
   let hm = addHeaders [
              ("Access-Control-Allow-Origin", "*")
@@ -42,12 +41,38 @@ main = do
   runStderrLoggingT $
     withSqliteConn @(LoggingT IO) ":memory:" $ \conn -> do
       runDb conn $ runMigration migrateAll
+      -- Insert demo data
+      insertSeedData conn
+      liftIO $ putStrLn "starting GraphQL server on port 8000"
       liftIO $ run 8000 $ hm $
         graphQLApp (prometheus p $ libraryServer conn)
                    (Proxy @('Just "Query"))
                    (Proxy @('Just "Mutation"))
                    (Proxy @('Just "Subscription"))
 
+{- | Inserts demo data to make this example valueable for testing with different clients
+Returns Nothing in case of any failure, including attempts to insert non-unique values
+-}
+insertSeedData :: SqlBackend -> LoggingT IO (Maybe ())
+insertSeedData conn = sequence_ <$> sequence
+  [ insertAuthorAndBooks conn (Author "Robert Louis Stevenson")
+      [Book "Treasure Island", Book "Strange Case of Dr Jekyll and Mr Hyde"]
+  , insertAuthorAndBooks conn (Author "Immanuel Kant")
+      [Book "Critique of Pure Reason"]
+  , insertAuthorAndBooks conn (Author "Michael Ende")
+      [Book "The Neverending Story", Book "Momo"]
+  ]
+
+{- | Inserts Author and Books
+Returns Nothing in case of any failure, including attempts to insert non-unique values
+-}
+insertAuthorAndBooks :: SqlBackend -> Author -> [Key Author -> Book] -> LoggingT IO (Maybe ())
+insertAuthorAndBooks conn author books =
+  runDb conn . fmap sequence_ $ do
+    authorResult <- insertUnique author
+    case authorResult of
+      Just authorId -> traverse (\kBook -> insertUnique (kBook authorId)) books
+      Nothing       -> pure [Nothing]
 
 type ObjectMapping = '[
     "Book"   ':-> Entity Book
@@ -58,15 +83,16 @@ libraryServer :: forall i.
                  SqlBackend
               -> ServerT ObjectMapping i Library ServerErrorIO _
 libraryServer conn
-  = resolver ( object @"Book"     ( field  @"id"       bookId
-                                  , field  @"title"    bookTitle
-                                  , field  @"author"   bookAuthor )
-             , object @"Author"   ( field  @"id"       authorId
-                                  , field  @"name"     authorName
-                                  , field  @"books"    authorBooks )
-             , object @"Query"    ( method @"authors"  allAuthors
-                                  , method @"books"    allBooks )
-             , object @"Mutation" (method @"newAuthor" newAuthor)
+  = resolver ( object @"Book"     ( field  @"id"        bookId
+                                  , field  @"title"     bookTitle
+                                  , field  @"author"    bookAuthor )
+             , object @"Author"   ( field  @"id"        authorId
+                                  , field  @"name"      authorName
+                                  , field  @"books"     authorBooks )
+             , object @"Query"    ( method @"authors"   allAuthors
+                                  , method @"books"     allBooks )
+             , object @"Mutation" ( method @"newAuthor" newAuthor
+                                  , method @"newBook"   newBook )
              , object @"Subscription" ( method @"allBooks" allBooksConduit )
              )
   where
@@ -101,5 +127,11 @@ libraryServer conn
     newAuthor :: NewAuthor -> ServerErrorIO (Maybe (Entity Author))
     newAuthor (NewAuthor name) = runDb conn $ do
       let new = Author name
+      result <- insertUnique new
+      pure $ Entity <$> result <*> pure new
+
+    newBook :: NewBook -> ServerErrorIO (Maybe (Entity Book))
+    newBook (NewBook title authorId) = runDb conn $ do
+      let new = Book title (toAuthorId $ fromInteger authorId)
       result <- insertUnique new
       pure $ Entity <$> result <*> pure new

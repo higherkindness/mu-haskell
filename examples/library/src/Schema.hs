@@ -44,9 +44,19 @@ Author json
 Book json
   title T.Text
   author AuthorId
+  UniqueTitlePerAuthor title author
   deriving Show Generic
 |]
+
+toAuthorId :: Int64 -> AuthorId
+toAuthorId = toSqlKey
 
 newtype NewAuthor = NewAuthor { name :: T.Text }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromSchema LibrarySchema "NewAuthor")
+
+data NewBook
+  = NewBook { title    :: T.Text
+            , authorId :: Integer }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromSchema LibrarySchema "NewBook")
