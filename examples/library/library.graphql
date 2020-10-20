@@ -14,6 +14,11 @@ input NewAuthor {
   name: String!
 }
 
+input NewBook {
+  title: String!
+  authorId: Int!
+}
+
 type Query {
   authors(name: String! = "%"): [Author!]!
   books(title: String! = "%"): [Book!]!
@@ -21,6 +26,7 @@ type Query {
 
 type Mutation {
   newAuthor(author: NewAuthor!): Author
+  newBook(book: NewBook!): Book
 }
 
 type Subscription {
