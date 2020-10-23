@@ -1,5 +1,5 @@
 name:          mu-avro
-version:       0.4.0.0
+version:       0.4.0.1
 synopsis:      Avro serialization support for Mu microservices
 description:
   You can use @mu-avro@ to read AVRO Schema Declarations for mu-haskell
@@ -12,7 +12,7 @@ copyright:     Copyright © 2019-2020 <http://47deg.com 47 Degrees>
 category:      Network
 build-type:    Simple
 cabal-version: >=1.10
-data-files:    test/avro/*.avsc
+data-files:    test/avro/*.avsc, test/avro/*.avdl
 homepage:      https://higherkindness.io/mu-haskell/
 bug-reports:   https://github.com/higherkindness/mu-haskell/issues
 
