@@ -49,11 +49,36 @@ data Address
     via (WithSchema ExampleSchema "address" Address)
 
 type GenderFieldMapping
-  = '[ "Male"      ':-> "male"
-     , "Female"    ':-> "female"
-     , "NonBinary" ':-> "nb" ]
+  = '[ "Male"        ':-> "male"
+     , "Female"      ':-> "female"
+     , "NonBinary"   ':-> "nb"
+     , "Gender0"     ':-> "gender0"
+     , "Gender1"     ':-> "gender1"
+     , "Gender2"     ':-> "gender2"
+     , "Gender3"     ':-> "gender3"
+     , "Gender4"     ':-> "gender4"
+     , "Gender5"     ':-> "gender5"
+     , "Gender6"     ':-> "gender6"
+     , "Gender7"     ':-> "gender7"
+     , "Gender8"     ':-> "gender8"
+     , "Gender9"     ':-> "gender9"
+     , "Unspecified" ':-> "unspecified"]
 
-data Gender = Male | Female | NonBinary
+data Gender
+  = Male
+  | Female
+  | NonBinary
+  | Gender0
+  | Gender1
+  | Gender2
+  | Gender3
+  | Gender4
+  | Gender5
+  | Gender6
+  | Gender7
+  | Gender8
+  | Gender9
+  | Unspecified
   deriving (Eq, Show, Generic)
   deriving (ToSchema ExampleSchema "gender", FromSchema ExampleSchema "gender")
     via (CustomFieldMapping "gender" GenderFieldMapping Gender)
@@ -65,7 +90,18 @@ type ExampleSchema
   = '[ 'DEnum   "gender"
                '[ 'ChoiceDef "male"
                 , 'ChoiceDef "female"
-                , 'ChoiceDef "nb" ]
+                , 'ChoiceDef "nb"
+                , 'ChoiceDef "gender0"
+                , 'ChoiceDef "gender1"
+                , 'ChoiceDef "gender2"
+                , 'ChoiceDef "gender3"
+                , 'ChoiceDef "gender4"
+                , 'ChoiceDef "gender5"
+                , 'ChoiceDef "gender6"
+                , 'ChoiceDef "gender7"
+                , 'ChoiceDef "gender8"
+                , 'ChoiceDef "gender9"
+                , 'ChoiceDef "unspecified" ]
      , 'DRecord "address"
                '[ 'FieldDef "postcode" ('TPrimitive T.Text)
                 , 'FieldDef "country"  ('TPrimitive T.Text) ]

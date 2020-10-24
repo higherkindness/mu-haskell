@@ -53,6 +53,8 @@ import qualified Data.UUID                as U
 import           GHC.Generics
 import           GHC.TypeLits
 
+import           Fcf                      (Eval, Exp, Pure)
+import           Fcf.Data.List            (Snoc)
 import           Mu.Schema.Definition
 import           Mu.Schema.Interpretation
 
@@ -190,11 +192,22 @@ type family Find (xs :: [k]) (x :: k) :: Where where
   Find (y ': xs) y = 'Here
   Find (x ': xs) y = 'There (Find xs y)
 
-type family FindCon (xs :: * -> *) (x :: Symbol) :: Where where
-  FindCon (C1 ('MetaCons x p s) f) x = 'Here
-  FindCon (C1 ('MetaCons x p s) f :+: rest) x = 'Here
-  FindCon (other :+: rest) x = 'There (FindCon rest x)
-  FindCon nothing          x = TypeError ('Text "Could not find constructor " ':<>: 'ShowType x)
+type family FindCon (xs :: * -> *) (x :: Symbol) :: [Where] where
+  FindCon xs x = WhenEmpty
+                    (FindCon' '[] xs x)
+                    (TypeError ('Text "Could not find constructor " ':<>: 'ShowType x))
+
+-- TODO: Maybe 'Where' isn't the right thing to use here.
+type family FindCon' (begin :: [Where]) (xs :: * -> *) (x :: Symbol) :: [Where] where
+  FindCon' acc (C1 ('MetaCons x p s) f) x = Eval (Snoc acc 'Here)
+  FindCon' acc (left :+: right) x = WhenEmpty
+                                      (FindCon' (Eval (Snoc acc 'HereLeft)) left x)
+                                      (Pure (FindCon' (Eval (Snoc acc 'HereRight)) right x))
+  FindCon' acc other x = '[]
+
+type family WhenEmpty (left :: [a]) (right :: Exp [a]) :: [a] where
+  WhenEmpty '[] b = Eval b
+  WhenEmpty a _ = a
 
 type family FindSel (xs :: * -> *) (x :: Symbol) :: Where where
   FindSel (S1 ('MetaSel ('Just x) u ss ds) f) x = 'Here
@@ -473,15 +486,14 @@ instance (GFromSchemaEnumU1 f (FindCon f (MappingLeft fmap c)), GFromSchemaEnumD
   fromSchemaEnumDecomp _ (Z _) = fromSchemaEnumU1 (Proxy @f) (Proxy @(FindCon f (MappingLeft fmap c)))
   fromSchemaEnumDecomp p (S x) = fromSchemaEnumDecomp p x
 
-class GFromSchemaEnumU1 (f :: * -> *) (w :: Where) where
+class GFromSchemaEnumU1 (f :: * -> *) (w :: [Where]) where
   fromSchemaEnumU1 :: Proxy f -> Proxy w -> f a
-instance GFromSchemaEnumU1 (C1 m U1 :+: rest) 'Here where
-  fromSchemaEnumU1 _ _ = L1 (M1 U1)
-instance GFromSchemaEnumU1 (C1 m U1) 'Here where
-  fromSchemaEnumU1 _ _ = M1 U1
-instance forall other rest w. GFromSchemaEnumU1 rest w
-         => GFromSchemaEnumU1 (other :+: rest) ('There w) where
-  fromSchemaEnumU1 _ _ = R1 (fromSchemaEnumU1 (Proxy @rest) (Proxy @w))
+instance GFromSchemaEnumU1 (C1 m U1) '[ 'Here] where
+  fromSchemaEnumU1 _ _ = (M1 U1)
+instance GFromSchemaEnumU1 left rest => GFromSchemaEnumU1 (left :+: right) ('HereLeft ': rest) where
+  fromSchemaEnumU1 _ _ = L1 (fromSchemaEnumU1 (Proxy @left) (Proxy @rest))
+instance GFromSchemaEnumU1 right rest => GFromSchemaEnumU1 (left :+: right) ('HereRight ': rest) where
+  fromSchemaEnumU1 _ _ = R1 (fromSchemaEnumU1 (Proxy @right) (Proxy @rest))
 
 -- ----------
 -- RECORDS --
