@@ -1,6 +1,5 @@
 {-# language FlexibleContexts #-}
 {-# language TypeFamilies     #-}
-{-# language TypeOperators    #-}
 {-|
 Description : Kafka consumers as streams of Mu terms
 

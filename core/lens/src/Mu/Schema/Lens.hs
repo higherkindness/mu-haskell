@@ -6,7 +6,6 @@
 {-# language GADTs                  #-}
 {-# language InstanceSigs           #-}
 {-# language LambdaCase             #-}
-{-# language OverloadedLabels       #-}
 {-# language PartialTypeSignatures  #-}
 {-# language PolyKinds              #-}
 {-# language QuantifiedConstraints  #-}
@@ -312,14 +311,14 @@ type family InterpretList sch (fieldTypes :: [FieldType typeName]) :: [Type] whe
 
 fromFieldValue :: FieldValue sch fieldType -> Interpret sch fieldType
 fromFieldValue = \case
-  FNull -> ()
-  (FPrimitive val) -> val
-  (FSchematic term) -> term
+  FNull                     -> ()
+  (FPrimitive val)          -> val
+  (FSchematic term)         -> term
   (FOption maybeFieldValue) -> fromFieldValue <$> maybeFieldValue
-  (FList listFieldValues) -> fromFieldValue <$> listFieldValues
-  (FMap mapFieldValues) -> mapKeysMonotonic fromFieldValue (fromFieldValue <$> mapFieldValues)
-  (FUnion (Z val)) -> Z (Identity (fromFieldValue val))
-  (FUnion (S val)) -> S (fromFieldValue (FUnion val))
+  (FList listFieldValues)   -> fromFieldValue <$> listFieldValues
+  (FMap mapFieldValues)     -> mapKeysMonotonic fromFieldValue (fromFieldValue <$> mapFieldValues)
+  (FUnion (Z val))          -> Z (Identity (fromFieldValue val))
+  (FUnion (S val))          -> S (fromFieldValue (FUnion val))
 
 class UninterpretField sch a where
   type Uninterpret a :: FieldType typeName

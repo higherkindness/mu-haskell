@@ -114,10 +114,9 @@ serviceDefToDecl serviceTyName complete fieldsPrefix tNamer (Service _ methods)
                   [pure (DerivClause Nothing [ConT ''Generic])]
        let buildName = mkName ("build" ++ complete)
        s <- SigD buildName <$> [t|GrpcClient -> $(pure (ConT (mkName complete)))|]
-       c <- Clause <$> pure []
-                   <*> (NormalB <$> [e|buildService @($(pure $ ConT serviceTyName))
-                                                    @($(pure $ LitT (StrTyLit fieldsPrefix)))|])
-                   <*> pure []
+       c <- Clause [] <$> (NormalB <$> [e|buildService @ $(conT serviceTyName)
+                                                       @ $(litT (strTyLit fieldsPrefix))|])
+                      <*> pure []
        pure [d, s, FunD buildName [c]]
 
 methodToDecl :: String -> Namer
