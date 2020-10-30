@@ -185,39 +185,41 @@ instance UnderlyingConversion BS.ByteString U.UUID where
 -- Note: it turns out that GHC.Generics generates some weird
 -- instances for records in the form (x :*: y) :*: z
 -- and we cover them with the special HereLeft and HereRight
-data Where = Here | HereLeft | HereRight | HereRightThenLeft | HereTwoRights | There Where
+data Where = Here | There Where
+data WhereStep = StepNoMore | StepLeft | StepRight
 
 type family Find (xs :: [k]) (x :: k) :: Where where
   Find '[]       y = TypeError ('Text "Could not find " ':<>: 'ShowType y)
   Find (y ': xs) y = 'Here
   Find (x ': xs) y = 'There (Find xs y)
 
-type family FindCon (xs :: * -> *) (x :: Symbol) :: [Where] where
+type family FindCon (xs :: * -> *) (x :: Symbol) :: [WhereStep] where
   FindCon xs x = WhenEmpty
                     (FindCon' '[] xs x)
                     (TypeError ('Text "Could not find constructor " ':<>: 'ShowType x))
 
--- TODO: Maybe 'Where' isn't the right thing to use here.
-type family FindCon' (begin :: [Where]) (xs :: * -> *) (x :: Symbol) :: [Where] where
-  FindCon' acc (C1 ('MetaCons x p s) f) x = Eval (Snoc acc 'Here)
+type family FindCon' (begin :: [WhereStep]) (xs :: * -> *) (x :: Symbol) :: [WhereStep] where
+  FindCon' acc (C1 ('MetaCons x p s) f) x = Eval (Snoc acc 'StepNoMore)
   FindCon' acc (left :+: right) x = WhenEmpty
-                                      (FindCon' (Eval (Snoc acc 'HereLeft)) left x)
-                                      (Pure (FindCon' (Eval (Snoc acc 'HereRight)) right x))
+                                      (FindCon' (Eval (Snoc acc 'StepLeft)) left x)
+                                      (Pure (FindCon' (Eval (Snoc acc 'StepRight)) right x))
   FindCon' acc other x = '[]
 
 type family WhenEmpty (left :: [a]) (right :: Exp [a]) :: [a] where
   WhenEmpty '[] b = Eval b
   WhenEmpty a _ = a
 
-type family FindSel (xs :: * -> *) (x :: Symbol) :: Where where
-  FindSel (S1 ('MetaSel ('Just x) u ss ds) f) x = 'Here
-  FindSel (S1 ('MetaSel ('Just x) u ss ds) f :*: rest) x = 'Here
-  FindSel ((S1 ('MetaSel ('Just x) u ss ds) f :*: other) :*: rest) x = 'HereLeft
-  FindSel ((other :*: S1 ('MetaSel ('Just x) u ss ds) f) :*: rest) x = 'HereRight
-  FindSel ((other1 :*: (S1 ('MetaSel ('Just x) u ss ds) f :*: other2)) :*: rest) x = 'HereRightThenLeft
-  FindSel ((other1 :*: (other2 :*: S1 ('MetaSel ('Just x) u ss ds) f)) :*: rest) x = 'HereTwoRights
-  FindSel (other :*: rest) x = 'There (FindSel rest x)
-  FindSel nothing          x = TypeError ('Text "Could not find selector " ':<>: 'ShowType x)
+type family FindSel (xs :: * -> *) (x :: Symbol) :: [WhereStep] where
+  FindSel xs x = WhenEmpty
+                    (FindSel' '[] xs x)
+                    (TypeError ('Text "Could not find field " ':<>: 'ShowType x))
+
+type family FindSel' (begin :: [WhereStep]) (xs :: * -> *) (x :: Symbol) :: [WhereStep] where
+  FindSel' acc (S1 ('MetaSel ('Just x) u ss ds) f) x = Eval (Snoc acc 'StepNoMore)
+  FindSel' acc (left :*: right) x = WhenEmpty
+                                      (FindSel' (Eval (Snoc acc 'StepLeft)) left x)
+                                      (Pure (FindSel' (Eval (Snoc acc 'StepRight)) right x))
+  FindSel' acc other x = '[]
 
 type family FindEnumChoice (xs :: [ChoiceDef fs]) (x :: fs) :: Where where
   FindEnumChoice '[] x = TypeError ('Text "Could not find enum choice " ':<>: 'ShowType x)
@@ -486,13 +488,13 @@ instance (GFromSchemaEnumU1 f (FindCon f (MappingLeft fmap c)), GFromSchemaEnumD
   fromSchemaEnumDecomp _ (Z _) = fromSchemaEnumU1 (Proxy @f) (Proxy @(FindCon f (MappingLeft fmap c)))
   fromSchemaEnumDecomp p (S x) = fromSchemaEnumDecomp p x
 
-class GFromSchemaEnumU1 (f :: * -> *) (w :: [Where]) where
+class GFromSchemaEnumU1 (f :: * -> *) (w :: [WhereStep]) where
   fromSchemaEnumU1 :: Proxy f -> Proxy w -> f a
-instance GFromSchemaEnumU1 (C1 m U1) '[ 'Here] where
-  fromSchemaEnumU1 _ _ = (M1 U1)
-instance GFromSchemaEnumU1 left rest => GFromSchemaEnumU1 (left :+: right) ('HereLeft ': rest) where
+instance GFromSchemaEnumU1 (C1 m U1) '[ 'StepNoMore ] where
+  fromSchemaEnumU1 _ _ = M1 U1
+instance GFromSchemaEnumU1 left rest => GFromSchemaEnumU1 (left :+: right) ('StepLeft ': rest) where
   fromSchemaEnumU1 _ _ = L1 (fromSchemaEnumU1 (Proxy @left) (Proxy @rest))
-instance GFromSchemaEnumU1 right rest => GFromSchemaEnumU1 (left :+: right) ('HereRight ': rest) where
+instance GFromSchemaEnumU1 right rest => GFromSchemaEnumU1 (left :+: right) ('StepRight ': rest) where
   fromSchemaEnumU1 _ _ = R1 (fromSchemaEnumU1 (Proxy @right) (Proxy @rest))
 
 -- ----------
@@ -553,29 +555,18 @@ instance ( GToSchemaRecord sch fmap cs f
     where this = Field (toSchemaRecordSearch (Proxy @(FindSel f (MappingLeft fmap name))) x)
 
 class GToSchemaRecordSearch (sch :: Schema ts fs)
-                            (t :: FieldType ts) (f :: * -> *) (wh :: Where) where
+                            (t :: FieldType ts) (f :: * -> *) (wh :: [WhereStep]) where
   toSchemaRecordSearch :: Proxy wh -> f a -> FieldValue sch t
 instance GToSchemaFieldType sch t v
-         => GToSchemaRecordSearch sch t (S1 m (K1 i v)) 'Here where
+         => GToSchemaRecordSearch sch t (S1 m (K1 i v)) '[ 'StepNoMore ] where
   toSchemaRecordSearch _ (M1 (K1 x)) = toSchemaFieldType x
-instance GToSchemaFieldType sch t v
-         => GToSchemaRecordSearch sch t (S1 m (K1 i v) :*: rest) 'Here where
-  toSchemaRecordSearch _ (M1 (K1 x) :*: _) = toSchemaFieldType x
-instance GToSchemaFieldType sch t v
-         => GToSchemaRecordSearch sch t ((S1 m (K1 i v) :*: other) :*: rest) 'HereLeft where
-  toSchemaRecordSearch _ ((M1 (K1 x) :*: _) :*: _) = toSchemaFieldType x
-instance GToSchemaFieldType sch t v
-         => GToSchemaRecordSearch sch t ((other :*: S1 m (K1 i v)) :*: rest) 'HereRight where
-  toSchemaRecordSearch _ ((_ :*: M1 (K1 x)) :*: _) = toSchemaFieldType x
-instance GToSchemaFieldType sch t v
-         => GToSchemaRecordSearch sch t ((other1 :*: (S1 m (K1 i v) :*: other2)) :*: rest) 'HereRightThenLeft where
-  toSchemaRecordSearch _ ((_ :*: (M1 (K1 x) :*: _)) :*: _) = toSchemaFieldType x
-instance GToSchemaFieldType sch t v
-         => GToSchemaRecordSearch sch t ((other1 :*: (other2 :*: S1 m (K1 i v))) :*: rest) 'HereTwoRights where
-  toSchemaRecordSearch _ ((_ :*: (_ :*: M1 (K1 x))) :*: _) = toSchemaFieldType x
-instance forall sch t other rest n.
-         GToSchemaRecordSearch sch t rest n
-         => GToSchemaRecordSearch sch t (other :*: rest) ('There n) where
+instance forall sch t left right n.
+         GToSchemaRecordSearch sch t left n
+         => GToSchemaRecordSearch sch t (left :*: right) ('StepLeft ': n) where
+  toSchemaRecordSearch _ (xs :*: _) = toSchemaRecordSearch (Proxy @n) xs
+instance forall sch t left right n.
+         GToSchemaRecordSearch sch t right n
+         => GToSchemaRecordSearch sch t (left :*: right) ('StepRight ': n) where
   toSchemaRecordSearch _ (_ :*: xs) = toSchemaRecordSearch (Proxy @n) xs
 
 -- 'fromSchema' for records
