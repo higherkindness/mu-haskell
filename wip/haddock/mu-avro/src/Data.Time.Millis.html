@@ -22,7 +22,7 @@ offering a millisecond-based interface.
 </span><span id="line-22"></span><span class="hs-comment">-- |&#160;Wrapper for time difference expressed in milliseconds</span><span>
 </span><span id="line-23"></span><span class="hs-keyword">newtype</span><span> </span><span id="DiffTimeMs"><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-var">DiffTimeMs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DiffTimeMs"><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-var">DiffTimeMs</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unDiffTimeMs"><span class="annot"><span class="annottext">DiffTimeMs -&gt; DiffTime
 </span><a href="Data.Time.Millis.html#unDiffTimeMs"><span class="hs-identifier hs-var hs-var">unDiffTimeMs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DiffTime</span></span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-24"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679159620"><span id="local-6989586621679159622"><span id="local-6989586621679159624"><span class="annot"><span class="annottext">Int -&gt; DiffTimeMs -&gt; ShowS
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679162750"><span id="local-6989586621679162752"><span id="local-6989586621679162754"><span class="annot"><span class="annottext">Int -&gt; DiffTimeMs -&gt; ShowS
 [DiffTimeMs] -&gt; ShowS
 DiffTimeMs -&gt; String
 (Int -&gt; DiffTimeMs -&gt; ShowS)
@@ -37,7 +37,7 @@ show :: DiffTimeMs -&gt; String
 $cshow :: DiffTimeMs -&gt; String
 showsPrec :: Int -&gt; DiffTimeMs -&gt; ShowS
 $cshowsPrec :: Int -&gt; DiffTimeMs -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679159615"><span id="local-6989586621679159617"><span class="annot"><span class="annottext">DiffTimeMs -&gt; DiffTimeMs -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679162745"><span id="local-6989586621679162747"><span class="annot"><span class="annottext">DiffTimeMs -&gt; DiffTimeMs -&gt; Bool
 (DiffTimeMs -&gt; DiffTimeMs -&gt; Bool)
 -&gt; (DiffTimeMs -&gt; DiffTimeMs -&gt; Bool) -&gt; Eq DiffTimeMs
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
@@ -45,7 +45,7 @@ forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
 $c/= :: DiffTimeMs -&gt; DiffTimeMs -&gt; Bool
 == :: DiffTimeMs -&gt; DiffTimeMs -&gt; Bool
 $c== :: DiffTimeMs -&gt; DiffTimeMs -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679159599"><span id="local-6989586621679159601"><span id="local-6989586621679159603"><span id="local-6989586621679159605"><span id="local-6989586621679159607"><span id="local-6989586621679159609"><span id="local-6989586621679159611"><span class="annot"><span class="annottext">Eq DiffTimeMs
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679162729"><span id="local-6989586621679162731"><span id="local-6989586621679162733"><span id="local-6989586621679162735"><span id="local-6989586621679162737"><span id="local-6989586621679162739"><span id="local-6989586621679162741"><span class="annot"><span class="annottext">Eq DiffTimeMs
 Eq DiffTimeMs =&gt;
 (DiffTimeMs -&gt; DiffTimeMs -&gt; Ordering)
 -&gt; (DiffTimeMs -&gt; DiffTimeMs -&gt; Bool)
@@ -83,7 +83,7 @@ $c&lt; :: DiffTimeMs -&gt; DiffTimeMs -&gt; Bool
 compare :: DiffTimeMs -&gt; DiffTimeMs -&gt; Ordering
 $ccompare :: DiffTimeMs -&gt; DiffTimeMs -&gt; Ordering
 $cp1Ord :: Eq DiffTimeMs
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679159582"><span id="local-6989586621679159584"><span id="local-6989586621679159586"><span id="local-6989586621679159588"><span id="local-6989586621679159590"><span id="local-6989586621679159592"><span id="local-6989586621679159594"><span id="local-6989586621679159596"><span class="annot"><span class="annottext">Int -&gt; DiffTimeMs
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679162712"><span id="local-6989586621679162714"><span id="local-6989586621679162716"><span id="local-6989586621679162718"><span id="local-6989586621679162720"><span id="local-6989586621679162722"><span id="local-6989586621679162724"><span id="local-6989586621679162726"><span class="annot"><span class="annottext">Int -&gt; DiffTimeMs
 DiffTimeMs -&gt; Int
 DiffTimeMs -&gt; [DiffTimeMs]
 DiffTimeMs -&gt; DiffTimeMs
@@ -124,7 +124,7 @@ pred :: DiffTimeMs -&gt; DiffTimeMs
 $cpred :: DiffTimeMs -&gt; DiffTimeMs
 succ :: DiffTimeMs -&gt; DiffTimeMs
 $csucc :: DiffTimeMs -&gt; DiffTimeMs
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679159567"><span id="local-6989586621679159569"><span id="local-6989586621679159571"><span id="local-6989586621679159573"><span id="local-6989586621679159575"><span id="local-6989586621679159577"><span id="local-6989586621679159579"><span class="annot"><span class="annottext">Integer -&gt; DiffTimeMs
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679162697"><span id="local-6989586621679162699"><span id="local-6989586621679162701"><span id="local-6989586621679162703"><span id="local-6989586621679162705"><span id="local-6989586621679162707"><span id="local-6989586621679162709"><span class="annot"><span class="annottext">Integer -&gt; DiffTimeMs
 DiffTimeMs -&gt; DiffTimeMs
 DiffTimeMs -&gt; DiffTimeMs -&gt; DiffTimeMs
 (DiffTimeMs -&gt; DiffTimeMs -&gt; DiffTimeMs)
@@ -158,7 +158,7 @@ $c* :: DiffTimeMs -&gt; DiffTimeMs -&gt; DiffTimeMs
 $c- :: DiffTimeMs -&gt; DiffTimeMs -&gt; DiffTimeMs
 + :: DiffTimeMs -&gt; DiffTimeMs -&gt; DiffTimeMs
 $c+ :: DiffTimeMs -&gt; DiffTimeMs -&gt; DiffTimeMs
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679159559"><span id="local-6989586621679159561"><span id="local-6989586621679159563"><span class="annot"><span class="annottext">Num DiffTimeMs
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679162689"><span id="local-6989586621679162691"><span id="local-6989586621679162693"><span class="annot"><span class="annottext">Num DiffTimeMs
 Num DiffTimeMs =&gt;
 (DiffTimeMs -&gt; DiffTimeMs -&gt; DiffTimeMs)
 -&gt; (DiffTimeMs -&gt; DiffTimeMs)
@@ -177,7 +177,7 @@ $crecip :: DiffTimeMs -&gt; DiffTimeMs
 / :: DiffTimeMs -&gt; DiffTimeMs -&gt; DiffTimeMs
 $c/ :: DiffTimeMs -&gt; DiffTimeMs -&gt; DiffTimeMs
 $cp1Fractional :: Num DiffTimeMs
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Fractional</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679159554"><span class="annot"><span class="annottext">Num DiffTimeMs
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Fractional</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679162684"><span class="annot"><span class="annottext">Num DiffTimeMs
 Ord DiffTimeMs
 (Num DiffTimeMs, Ord DiffTimeMs) =&gt;
 (DiffTimeMs -&gt; Rational) -&gt; Real DiffTimeMs
@@ -187,7 +187,7 @@ toRational :: DiffTimeMs -&gt; Rational
 $ctoRational :: DiffTimeMs -&gt; Rational
 $cp2Real :: Ord DiffTimeMs
 $cp1Real :: Num DiffTimeMs
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679159541"><span id="local-6989586621679159543"><span id="local-6989586621679159545"><span id="local-6989586621679159547"><span id="local-6989586621679159549"><span class="annot"><span class="annottext">Fractional DiffTimeMs
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679162671"><span id="local-6989586621679162673"><span id="local-6989586621679162675"><span id="local-6989586621679162677"><span id="local-6989586621679162679"><span class="annot"><span class="annottext">Fractional DiffTimeMs
 Real DiffTimeMs
 (Real DiffTimeMs, Fractional DiffTimeMs) =&gt;
 (forall b. Integral b =&gt; DiffTimeMs -&gt; (b, DiffTimeMs))
@@ -223,7 +223,7 @@ properFraction :: DiffTimeMs -&gt; (b, DiffTimeMs)
 $cproperFraction :: forall b. Integral b =&gt; DiffTimeMs -&gt; (b, DiffTimeMs)
 $cp2RealFrac :: Fractional DiffTimeMs
 $cp1RealFrac :: Real DiffTimeMs
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">RealFrac</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679159538"><span class="annot"><span class="annottext">DiffTimeMs -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">RealFrac</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679162668"><span class="annot"><span class="annottext">DiffTimeMs -&gt; ()
 (DiffTimeMs -&gt; ()) -&gt; NFData DiffTimeMs
 forall a. (a -&gt; ()) -&gt; NFData a
 rnf :: DiffTimeMs -&gt; ()
@@ -231,7 +231,7 @@ $crnf :: DiffTimeMs -&gt; ()
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
 </span><span id="line-25"></span><span>
 </span><span id="line-26"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasAvroSchema</span></span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-27"></span><span>  </span><span id="local-6989586621679159534"><span class="annot"><span class="annottext">schema :: Tagged DiffTimeMs Schema
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679162664"><span class="annot"><span class="annottext">schema :: Tagged DiffTimeMs Schema
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var">schema</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Schema -&gt; Tagged DiffTimeMs Schema
 forall k (s :: k) b. b -&gt; Tagged s b
 </span><span class="hs-identifier hs-var">Tagged</span></span><span> </span><span class="annot"><span class="annottext">(Schema -&gt; Tagged DiffTimeMs Schema)
@@ -244,12 +244,12 @@ forall a. a -&gt; Maybe a
 </span><span class="hs-identifier hs-var">S.TimeMillis</span></span><span class="hs-special">)</span><span>
 </span><span id="line-28"></span><span>
 </span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToAvro</span></span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-30"></span><span>  </span><span id="local-6989586621679159527"><span class="annot"><span class="annottext">toAvro :: Schema -&gt; DiffTimeMs -&gt; Builder
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toAvro</span></span></span><span> </span><span id="local-6989586621679159525"><span class="annot"><span class="annottext">s :: Schema
-</span><a href="#local-6989586621679159525"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Schema -&gt; Int32 -&gt; Builder
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679162657"><span class="annot"><span class="annottext">toAvro :: Schema -&gt; DiffTimeMs -&gt; Builder
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toAvro</span></span></span><span> </span><span id="local-6989586621679162655"><span class="annot"><span class="annottext">s :: Schema
+</span><a href="#local-6989586621679162655"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Schema -&gt; Int32 -&gt; Builder
 forall a. ToAvro a =&gt; Schema -&gt; a -&gt; Builder
 </span><span class="hs-identifier hs-var">toAvro</span></span><span> </span><span class="annot"><span class="annottext">Schema
-</span><a href="#local-6989586621679159525"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">(Int32 -&gt; Builder)
+</span><a href="#local-6989586621679162655"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">(Int32 -&gt; Builder)
 -&gt; (DiffTimeMs -&gt; Int32) -&gt; DiffTimeMs -&gt; Builder
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Int32
@@ -261,9 +261,9 @@ forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><a href="Data.Time.Millis.html#diffTimeToMillis"><span class="hs-identifier hs-var">diffTimeToMillis</span></a></span><span>
 </span><span id="line-31"></span><span>
 </span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromAvro</span></span><span> </span><span class="annot"><a href="Data.Time.Millis.html#DiffTimeMs"><span class="hs-identifier hs-type">DiffTimeMs</span></a></span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-33"></span><span>  </span><span id="local-6989586621679159520"><span class="annot"><span class="annottext">fromAvro :: Value -&gt; Either String DiffTimeMs
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var">fromAvro</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-identifier">_</span><span> </span><span id="local-6989586621679159517"><span class="annot"><span class="annottext">v :: Int32
-</span><a href="#local-6989586621679159517"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTimeMs -&gt; Either String DiffTimeMs
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679162650"><span class="annot"><span class="annottext">fromAvro :: Value -&gt; Either String DiffTimeMs
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">fromAvro</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-identifier">_</span><span> </span><span id="local-6989586621679162647"><span class="annot"><span class="annottext">v :: Int32
+</span><a href="#local-6989586621679162647"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTimeMs -&gt; Either String DiffTimeMs
 forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
 </span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(DiffTimeMs -&gt; Either String DiffTimeMs)
 -&gt; DiffTimeMs -&gt; Either String DiffTimeMs
@@ -272,7 +272,7 @@ forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><a href="Data.Time.Millis.html#millisToDiffTime"><span class="hs-identifier hs-var">millisToDiffTime</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int32 -&gt; Integer
 forall a. Integral a =&gt; a -&gt; Integer
 </span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="annot"><span class="annottext">Int32
-</span><a href="#local-6989586621679159517"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679162647"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-34"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">fromAvro</span></span><span> </span><span class="hs-identifier">_</span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String DiffTimeMs
 forall a b. a -&gt; Either a b
 </span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="annot"><span class="hs-string">&quot;expecting time_ms&quot;</span></span><span>
