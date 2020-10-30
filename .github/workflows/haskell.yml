@@ -11,3 +11,10 @@ jobs:
         name: 47deg
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
     - run: nix-build
+    - name: 'Set up HLint'
+      uses: rwe/actions-hlint-setup@v1.0.2
+    - name: 'Run HLint'
+      uses: rwe/actions-hlint-run@v2.0.1
+      with:
+        path: '["core/schema/src/", "core/rpc/src/", "core/optics/src/", "core/lens/src/", "adapter/avro/src/", "adapter/protobuf/src/", "adapter/persistent/src/", "adapter/kafka/src/", "grpc/common/src/", "grpc/client/src/", "grpc/server/src/", "graphql/src/", "servant/server/src/", "instrumentation/prometheus/src/", "instrumentation/tracing/src/" ]'
+        fail-on: warning
