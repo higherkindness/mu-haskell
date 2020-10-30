@@ -3,17 +3,20 @@
 mkdir template-check
 cd template-check
 
-stack new muavro https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/grpc-server-avro.hsfiles -p "author-email:haskell.curry@47deg.com" -p "author-name:Haskell Curry"
+# copy files (cannot use .. in Stack)
+cp ../templates/*.hsfiles .
+
+stack new muavro grpc-server-avro.hsfiles -p "author-email:haskell.curry@47deg.com" -p "author-name:Haskell Curry"
 cd muavro
 stack build
 cd ..
 
-stack new muprotobuf https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/grpc-server-protobuf.hsfiles -p "author-email:haskell.curry@47deg.com" -p "author-name:Haskell Curry"
+stack new muprotobuf grpc-server-protobuf.hsfiles -p "author-email:haskell.curry@47deg.com" -p "author-name:Haskell Curry"
 cd muprotobuf
 stack build
 cd ..
 
-stack new mugraphql https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/graphql-server.hsfiles -p "author-email:haskell.curry@47deg.com" -p "author-name:Haskell Curry"
+stack new mugraphql graphql-server.hsfiles -p "author-email:haskell.curry@47deg.com" -p "author-name:Haskell Curry"
 cd mugraphql
 stack build
 cd ..
