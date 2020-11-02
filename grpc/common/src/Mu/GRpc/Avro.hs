@@ -7,7 +7,6 @@
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
 {-# language TypeApplications      #-}
-{-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# options_ghc -fno-warn-orphans -fno-warn-simplifiable-class-constraints  #-}
 {-|

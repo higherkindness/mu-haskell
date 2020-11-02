@@ -13,8 +13,8 @@ import           Text.Parser.Token             (braces, symbol, whiteSpace)
 schemaDefinition :: Parser GQL.SchemaDefinition
 schemaDefinition = symbol "schema" *> braces (
     GQL.SchemaDefinition
-      <$> pure Nothing -- ignore [Directive]
-      <*> many1 rootOperationParser
+          Nothing -- ignore [Directive]
+      <$> many1 rootOperationParser
   )
 
 rootOperationParser :: Parser GQL.RootOperationTypeDefinition

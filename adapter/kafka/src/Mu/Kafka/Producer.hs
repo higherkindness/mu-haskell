@@ -1,7 +1,6 @@
 {-# language DeriveGeneric    #-}
 {-# language FlexibleContexts #-}
 {-# language TypeFamilies     #-}
-{-# language TypeOperators    #-}
 {-|
 Description : streams of Mu terms as Kafka producers
 

@@ -2,7 +2,6 @@
 {-# language ScopedTypeVariables #-}
 {-# language TypeApplications    #-}
 {-# language TypeFamilies        #-}
-{-# language TypeOperators       #-}
 module Mu.Kafka.Internal where
 
 import qualified Data.Avro            as A
