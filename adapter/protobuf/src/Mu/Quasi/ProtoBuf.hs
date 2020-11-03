@@ -22,6 +22,7 @@ import           Control.Monad                   (when)
 import           Control.Monad.IO.Class
 import qualified Data.ByteString                 as B
 import           Data.Int
+import           Data.Word
 import qualified Data.Text                       as T
 import           Language.Haskell.TH
 import           Language.ProtocolBuffers.Parser
@@ -112,10 +113,10 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) = do
 
     pbFieldTypeToType :: P.FieldType -> Q Type
     pbFieldTypeToType P.TInt32     = [t|'TPrimitive Int32|]
-    pbFieldTypeToType P.TUInt32    = fail "unsigned integers are not currently supported"
+    pbFieldTypeToType P.TUInt32    = [t|'TPrimitive Word32|]
     pbFieldTypeToType P.TSInt32    = [t|'TPrimitive Int32|]
     pbFieldTypeToType P.TInt64     = [t|'TPrimitive Int64|]
-    pbFieldTypeToType P.TUInt64    = fail "unsigned integers are not currently supported"
+    pbFieldTypeToType P.TUInt64    = [t|'TPrimitive Word64|]
     pbFieldTypeToType P.TSInt64    = [t|'TPrimitive Int64|]
     pbFieldTypeToType P.TFixed32   = fail "fixed integers are not currently supported"
     pbFieldTypeToType P.TFixed64   = fail "fixed integers are not currently supported"
