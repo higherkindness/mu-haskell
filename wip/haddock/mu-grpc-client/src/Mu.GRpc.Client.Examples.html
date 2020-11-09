@@ -26,33 +26,33 @@ Look at the source code of this module.
 </span><span id="line-26"></span><span>
 </span><span id="line-27"></span><span class="annot"><a href="Mu.GRpc.Client.Examples.html#sayHello%27"><span class="hs-identifier hs-type">sayHello'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HostName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PortNumber</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GRpc.Client.Internal.html#GRpcReply"><span class="hs-identifier hs-type">GRpcReply</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">)</span><span>
 </span><span id="line-28"></span><span id="sayHello%27"><span class="annot"><span class="annottext">sayHello' :: HostName -&gt; PortNumber -&gt; Text -&gt; IO (GRpcReply Text)
-</span><a href="Mu.GRpc.Client.Examples.html#sayHello%27"><span class="hs-identifier hs-var hs-var">sayHello'</span></a></span></span><span> </span><span id="local-6989586621679225201"><span class="annot"><span class="annottext">host :: HostName
-</span><a href="#local-6989586621679225201"><span class="hs-identifier hs-var">host</span></a></span></span><span> </span><span id="local-6989586621679225200"><span class="annot"><span class="annottext">port :: PortNumber
-</span><a href="#local-6989586621679225200"><span class="hs-identifier hs-var">port</span></a></span></span><span> </span><span id="local-6989586621679225199"><span class="annot"><span class="annottext">req :: Text
-</span><a href="#local-6989586621679225199"><span class="hs-identifier hs-var">req</span></a></span></span><span>
-</span><span id="line-29"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679225198"><span class="annot"><span class="annottext">c :: GrpcClient
-</span><a href="#local-6989586621679225198"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GrpcClientConfig -&gt; IO (Either ClientError GrpcClient)
+</span><a href="Mu.GRpc.Client.Examples.html#sayHello%27"><span class="hs-identifier hs-var hs-var">sayHello'</span></a></span></span><span> </span><span id="local-6989586621679225255"><span class="annot"><span class="annottext">host :: HostName
+</span><a href="#local-6989586621679225255"><span class="hs-identifier hs-var">host</span></a></span></span><span> </span><span id="local-6989586621679225254"><span class="annot"><span class="annottext">port :: PortNumber
+</span><a href="#local-6989586621679225254"><span class="hs-identifier hs-var">port</span></a></span></span><span> </span><span id="local-6989586621679225253"><span class="annot"><span class="annottext">req :: Text
+</span><a href="#local-6989586621679225253"><span class="hs-identifier hs-var">req</span></a></span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679225252"><span class="annot"><span class="annottext">c :: GrpcClient
+</span><a href="#local-6989586621679225252"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GrpcClientConfig -&gt; IO (Either ClientError GrpcClient)
 forall (m :: * -&gt; *).
 MonadIO m =&gt;
 GrpcClientConfig -&gt; m (Either ClientError GrpcClient)
 </span><a href="Mu.GRpc.Client.Internal.html#setupGrpcClient%27"><span class="hs-identifier hs-var">setupGrpcClient'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HostName -&gt; PortNumber -&gt; UseTlsOrNot -&gt; GrpcClientConfig
 </span><span class="hs-identifier hs-var">grpcClientConfigSimple</span></span><span> </span><span class="annot"><span class="annottext">HostName
-</span><a href="#local-6989586621679225201"><span class="hs-identifier hs-var">host</span></a></span><span> </span><span class="annot"><span class="annottext">PortNumber
-</span><a href="#local-6989586621679225200"><span class="hs-identifier hs-var">port</span></a></span><span> </span><span class="annot"><span class="annottext">UseTlsOrNot
+</span><a href="#local-6989586621679225255"><span class="hs-identifier hs-var">host</span></a></span><span> </span><span class="annot"><span class="annottext">PortNumber
+</span><a href="#local-6989586621679225254"><span class="hs-identifier hs-var">port</span></a></span><span> </span><span class="annot"><span class="annottext">UseTlsOrNot
 </span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
 </span><span id="line-30"></span><span>       </span><span class="annot"><span class="annottext">(HelloResponse -&gt; Text)
 -&gt; GRpcReply HelloResponse -&gt; GRpcReply Text
 forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
-</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HelloResponse</span></span><span> </span><span id="local-6989586621679225194"><span class="annot"><span class="annottext">r :: Text
-</span><a href="#local-6989586621679225194"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679225194"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(GRpcReply HelloResponse -&gt; GRpcReply Text)
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HelloResponse</span></span><span> </span><span id="local-6989586621679225248"><span class="annot"><span class="annottext">r :: Text
+</span><a href="#local-6989586621679225248"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679225248"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(GRpcReply HelloResponse -&gt; GRpcReply Text)
 -&gt; IO (GRpcReply HelloResponse) -&gt; IO (GRpcReply Text)
 forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
 </span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">GrpcClient -&gt; HelloRequest -&gt; IO (GRpcReply HelloResponse)
 </span><a href="Mu.GRpc.Client.Examples.html#sayHello"><span class="hs-identifier hs-var">sayHello</span></a></span><span> </span><span class="annot"><span class="annottext">GrpcClient
-</span><a href="#local-6989586621679225198"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; HelloRequest
+</span><a href="#local-6989586621679225252"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; HelloRequest
 </span><span class="hs-identifier hs-var">HelloRequest</span></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679225199"><span class="hs-identifier hs-var">req</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679225253"><span class="hs-identifier hs-var">req</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-31"></span><span>
 </span><span id="line-32"></span><span class="annot"><a href="Mu.GRpc.Client.Examples.html#sayHello"><span class="hs-identifier hs-type">sayHello</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">GrpcClient</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HelloRequest</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GRpc.Client.Internal.html#GRpcReply"><span class="hs-identifier hs-type">GRpcReply</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">HelloResponse</span></span><span class="hs-special">)</span><span>
 </span><span id="line-33"></span><span id="sayHello"><span class="annot"><span class="annottext">sayHello :: GrpcClient -&gt; HelloRequest -&gt; IO (GRpcReply HelloResponse)
@@ -81,34 +81,34 @@ GrpcClient -&gt; h
 </span><span id="line-34"></span><span>
 </span><span id="line-35"></span><span class="annot"><a href="Mu.GRpc.Client.Examples.html#sayHi%27"><span class="hs-identifier hs-type">sayHi'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HostName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PortNumber</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Mu.GRpc.Client.Internal.html#GRpcReply"><span class="hs-identifier hs-type">GRpcReply</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">]</span><span>
 </span><span id="line-36"></span><span id="sayHi%27"><span class="annot"><span class="annottext">sayHi' :: HostName -&gt; PortNumber -&gt; Int -&gt; IO [GRpcReply Text]
-</span><a href="Mu.GRpc.Client.Examples.html#sayHi%27"><span class="hs-identifier hs-var hs-var">sayHi'</span></a></span></span><span> </span><span id="local-6989586621679225188"><span class="annot"><span class="annottext">host :: HostName
-</span><a href="#local-6989586621679225188"><span class="hs-identifier hs-var">host</span></a></span></span><span> </span><span id="local-6989586621679225187"><span class="annot"><span class="annottext">port :: PortNumber
-</span><a href="#local-6989586621679225187"><span class="hs-identifier hs-var">port</span></a></span></span><span> </span><span id="local-6989586621679225186"><span class="annot"><span class="annottext">n :: Int
-</span><a href="#local-6989586621679225186"><span class="hs-identifier hs-var">n</span></a></span></span><span>
-</span><span id="line-37"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679225185"><span class="annot"><span class="annottext">c :: GrpcClient
-</span><a href="#local-6989586621679225185"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GrpcClientConfig -&gt; IO (Either ClientError GrpcClient)
+</span><a href="Mu.GRpc.Client.Examples.html#sayHi%27"><span class="hs-identifier hs-var hs-var">sayHi'</span></a></span></span><span> </span><span id="local-6989586621679225242"><span class="annot"><span class="annottext">host :: HostName
+</span><a href="#local-6989586621679225242"><span class="hs-identifier hs-var">host</span></a></span></span><span> </span><span id="local-6989586621679225241"><span class="annot"><span class="annottext">port :: PortNumber
+</span><a href="#local-6989586621679225241"><span class="hs-identifier hs-var">port</span></a></span></span><span> </span><span id="local-6989586621679225240"><span class="annot"><span class="annottext">n :: Int
+</span><a href="#local-6989586621679225240"><span class="hs-identifier hs-var">n</span></a></span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679225239"><span class="annot"><span class="annottext">c :: GrpcClient
+</span><a href="#local-6989586621679225239"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GrpcClientConfig -&gt; IO (Either ClientError GrpcClient)
 forall (m :: * -&gt; *).
 MonadIO m =&gt;
 GrpcClientConfig -&gt; m (Either ClientError GrpcClient)
 </span><a href="Mu.GRpc.Client.Internal.html#setupGrpcClient%27"><span class="hs-identifier hs-var">setupGrpcClient'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HostName -&gt; PortNumber -&gt; UseTlsOrNot -&gt; GrpcClientConfig
 </span><span class="hs-identifier hs-var">grpcClientConfigSimple</span></span><span> </span><span class="annot"><span class="annottext">HostName
-</span><a href="#local-6989586621679225188"><span class="hs-identifier hs-var">host</span></a></span><span> </span><span class="annot"><span class="annottext">PortNumber
-</span><a href="#local-6989586621679225187"><span class="hs-identifier hs-var">port</span></a></span><span> </span><span class="annot"><span class="annottext">UseTlsOrNot
+</span><a href="#local-6989586621679225242"><span class="hs-identifier hs-var">host</span></a></span><span> </span><span class="annot"><span class="annottext">PortNumber
+</span><a href="#local-6989586621679225241"><span class="hs-identifier hs-var">port</span></a></span><span> </span><span class="annot"><span class="annottext">UseTlsOrNot
 </span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
-</span><span id="line-38"></span><span>       </span><span id="local-6989586621679225184"><span class="annot"><span class="annottext">ConduitT () (GRpcReply HelloResponse) IO ()
-</span><a href="#local-6989586621679225184"><span class="hs-identifier hs-var">cndt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GrpcClient
+</span><span id="line-38"></span><span>       </span><span id="local-6989586621679225238"><span class="annot"><span class="annottext">ConduitT () (GRpcReply HelloResponse) IO ()
+</span><a href="#local-6989586621679225238"><span class="hs-identifier hs-var">cndt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GrpcClient
 -&gt; HiRequest -&gt; IO (ConduitT () (GRpcReply HelloResponse) IO ())
 </span><a href="Mu.GRpc.Client.Examples.html#sayHi"><span class="hs-identifier hs-var">sayHi</span></a></span><span> </span><span class="annot"><span class="annottext">GrpcClient
-</span><a href="#local-6989586621679225185"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; HiRequest
+</span><a href="#local-6989586621679225239"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; HiRequest
 </span><span class="hs-identifier hs-var">HiRequest</span></span><span> </span><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621679225186"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679225240"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-39"></span><span>       </span><span class="annot"><span class="annottext">ConduitT () Void IO [GRpcReply Text] -&gt; IO [GRpcReply Text]
 forall (m :: * -&gt; *) r. Monad m =&gt; ConduitT () Void m r -&gt; m r
 </span><span class="hs-identifier hs-var">runConduit</span></span><span> </span><span class="annot"><span class="annottext">(ConduitT () Void IO [GRpcReply Text] -&gt; IO [GRpcReply Text])
 -&gt; ConduitT () Void IO [GRpcReply Text] -&gt; IO [GRpcReply Text]
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ConduitT () (GRpcReply HelloResponse) IO ()
-</span><a href="#local-6989586621679225184"><span class="hs-identifier hs-var">cndt</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitT () (GRpcReply HelloResponse) IO ()
+</span><a href="#local-6989586621679225238"><span class="hs-identifier hs-var">cndt</span></a></span><span> </span><span class="annot"><span class="annottext">ConduitT () (GRpcReply HelloResponse) IO ()
 -&gt; ConduitM (GRpcReply HelloResponse) Void IO [GRpcReply Text]
 -&gt; ConduitT () Void IO [GRpcReply Text]
 forall (m :: * -&gt; *) a b c r.
@@ -120,9 +120,9 @@ forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; b) -&gt; ConduitT a b m ()
 </span><span class="hs-identifier hs-var">C.map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(HelloResponse -&gt; Text)
 -&gt; GRpcReply HelloResponse -&gt; GRpcReply Text
 forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
-</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HelloResponse</span></span><span> </span><span id="local-6989586621679225178"><span class="annot"><span class="annottext">r :: Text
-</span><a href="#local-6989586621679225178"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679225178"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ConduitT (GRpcReply HelloResponse) (GRpcReply Text) IO ()
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HelloResponse</span></span><span> </span><span id="local-6989586621679225232"><span class="annot"><span class="annottext">r :: Text
+</span><a href="#local-6989586621679225232"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679225232"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ConduitT (GRpcReply HelloResponse) (GRpcReply Text) IO ()
 -&gt; ConduitM (GRpcReply Text) Void IO [GRpcReply Text]
 -&gt; ConduitM (GRpcReply HelloResponse) Void IO [GRpcReply Text]
 forall (m :: * -&gt; *) a b c r.
