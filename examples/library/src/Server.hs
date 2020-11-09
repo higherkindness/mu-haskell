@@ -124,14 +124,20 @@ libraryServer conn
       = runDb conn $ runConduit $
           selectSource [] [Asc BookTitle] .| liftServerConduit sink
 
-    newAuthor :: NewAuthor -> ServerErrorIO (Maybe (Entity Author))
-    newAuthor (NewAuthor name) = runDb conn $ do
-      let new = Author name
-      result <- insertUnique new
-      pure $ Entity <$> result <*> pure new
+    newAuthor :: NewAuthor -> ServerErrorIO (Entity Author)
+    newAuthor (NewAuthor name) = do
+      maybeEntity <- runDb conn $ do
+        let new = Author name
+        result <- insertUnique new
+        pure $ Entity <$> result <*> pure new
+      let errorMsg = "Author \"" <> T.unpack name <> "\" already exists"
+      maybe (serverError $ ServerError Invalid errorMsg) pure maybeEntity
 
-    newBook :: NewBook -> ServerErrorIO (Maybe (Entity Book))
-    newBook (NewBook title authorId) = runDb conn $ do
-      let new = Book title (toAuthorId $ fromInteger authorId)
-      result <- insertUnique new
-      pure $ Entity <$> result <*> pure new
+    newBook :: NewBook -> ServerErrorIO (Entity Book)
+    newBook (NewBook title authorId) = do
+      maybeEntity <- runDb conn $ do
+        let new = Book title (toAuthorId $ fromInteger authorId)
+        result <- insertUnique new
+        pure $ Entity <$> result <*> pure new
+      let errorMsg = "Book \"" <> T.unpack title <> "\" already exists"
+      maybe (serverError $ ServerError Invalid errorMsg) pure maybeEntity

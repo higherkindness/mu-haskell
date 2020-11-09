@@ -25,8 +25,8 @@ type Query {
 }
 
 type Mutation {
-  newAuthor(author: NewAuthor!): Author
-  newBook(book: NewBook!): Book
+  newAuthor(author: NewAuthor!): Author!
+  newBook(book: NewBook!): Book!
 }
 
 type Subscription {
