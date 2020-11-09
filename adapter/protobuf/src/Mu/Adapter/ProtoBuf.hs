@@ -44,6 +44,7 @@ import           Data.Int
 import           Data.SOP                 (All)
 import qualified Data.Text                as T
 import qualified Data.Text.Lazy           as LT
+import           Data.Word                (Word64, Word32)
 import           GHC.TypeLits
 import           Proto3.Wire
 import qualified Proto3.Wire.Decode       as PBDec
@@ -418,6 +419,22 @@ instance ProtoBridgeOneFieldValue sch ('TPrimitive Int64) where
   supportsPacking _ = True
   packedFieldValueToProto fid vs
     = PBEnc.packedVarints fid $ map (\(FPrimitive i) -> fromIntegral i) vs
+  protoToPackedFieldValue = map FPrimitive <$> PBDec.packedVarints
+
+instance ProtoBridgeOneFieldValue sch ('TPrimitive Word32) where
+  defaultOneFieldValue = Just $ FPrimitive 0
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.uint32 fid n
+  protoToOneFieldValue = FPrimitive <$> PBDec.uint32
+  supportsPacking _ = True
+  packedFieldValueToProto fid vs = PBEnc.packedVarints fid $ map (\(FPrimitive i) -> fromIntegral i) vs
+  protoToPackedFieldValue = map FPrimitive <$> PBDec.packedVarints
+
+instance ProtoBridgeOneFieldValue sch ('TPrimitive Word64) where
+  defaultOneFieldValue = Just $ FPrimitive 0
+  oneFieldValueToProto fid (FPrimitive n) = PBEnc.uint64 fid n
+  protoToOneFieldValue = FPrimitive <$> PBDec.uint64
+  supportsPacking _ = True
+  packedFieldValueToProto fid vs = PBEnc.packedVarints fid $ map (\(FPrimitive i) -> i) vs
   protoToPackedFieldValue = map FPrimitive <$> PBDec.packedVarints
 
 -- WARNING! These instances may go out of bounds
