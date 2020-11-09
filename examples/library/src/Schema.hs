@@ -3,22 +3,15 @@
 {-# language DeriveAnyClass             #-}
 {-# language DeriveGeneric              #-}
 {-# language DerivingStrategies         #-}
-{-# language FlexibleContexts           #-}
 {-# language FlexibleInstances          #-}
 {-# language GADTs                      #-}
 {-# language GeneralizedNewtypeDeriving #-}
 {-# language MultiParamTypeClasses      #-}
 {-# language OverloadedStrings          #-}
-{-# language PartialTypeSignatures      #-}
-{-# language PolyKinds                  #-}
 {-# language QuasiQuotes                #-}
-{-# language ScopedTypeVariables        #-}
 {-# language StandaloneDeriving         #-}
 {-# language TemplateHaskell            #-}
-{-# language TupleSections              #-}
-{-# language TypeApplications           #-}
 {-# language TypeFamilies               #-}
-{-# language TypeOperators              #-}
 {-# language UndecidableInstances       #-}
 module Schema where
 

@@ -1,12 +1,9 @@
 {-# language DataKinds             #-}
-{-# language FlexibleContexts      #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
-{-# language ScopedTypeVariables   #-}
 {-# language TypeApplications      #-}
-{-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
-{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+{-# options_ghc -fno-warn-partial-type-signatures #-}
 
 module Main where
 
