@@ -22,13 +22,14 @@
 {-# language UndecidableInstances       #-}
 module Schema where
 
-import           Data.Int                (Int32, Int64)
+import           Data.Int                (Int64)
 import qualified Data.Text               as T
-import           Database.Persist.Sqlite
-import           Database.Persist.TH
-import           GHC.Generics
-import           Mu.GraphQL.Quasi
-import           Mu.Schema
+import           Database.Persist.Sqlite (BackendKey (SqlBackendKey), toSqlKey)
+import           Database.Persist.TH     (mkMigrate, mkPersist, persistLowerCase, share,
+                                          sqlSettings)
+import           GHC.Generics            (Generic)
+import           Mu.GraphQL.Quasi        (graphql)
+import           Mu.Schema               (FromSchema)
 
 #if __GHCIDE__
 graphql "Library" "examples/library/library.graphql"
@@ -51,12 +52,12 @@ Book json
 toAuthorId :: Int64 -> AuthorId
 toAuthorId = toSqlKey
 
-newtype NewAuthor = NewAuthor { name :: T.Text }
+newtype NewAuthor
+  = NewAuthor { name :: T.Text }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromSchema LibrarySchema "NewAuthor")
 
 data NewBook
-  = NewBook { title    :: T.Text
-            , authorId :: Integer }
+  = NewBook { title :: T.Text, authorId :: Integer }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromSchema LibrarySchema "NewBook")
