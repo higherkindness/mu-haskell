@@ -20,10 +20,7 @@ import           Mu.Adapter.Persistent             (runDb)
 import           Mu.GraphQL.Server                 (graphQLApp, liftServerConduit)
 import           Mu.Instrumentation.Prometheus     (initPrometheus, prometheus)
 import           Mu.Schema                         (Mapping ((:->)), Proxy (Proxy))
-import           Mu.Server                         (ServerError (ServerError),
-                                                    ServerErrorCode (Invalid), ServerErrorIO,
-                                                    ServerT, field, method, object, resolver,
-                                                    serverError)
+import           Mu.Server
 import           Network.Wai.Handler.Warp          (run)
 import           Network.Wai.Middleware.AddHeaders (addHeaders)
 
