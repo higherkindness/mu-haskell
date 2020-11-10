@@ -36,15 +36,15 @@ module Mu.GraphQL.Server (
 
 import           Control.Applicative              ((<|>))
 import           Control.Exception                (throw)
-import           Control.Monad.Except
+import           Control.Monad.Except             (MonadIO (..), join, runExceptT)
 import qualified Data.Aeson                       as A
 import           Data.Aeson.Text                  (encodeToLazyText)
 import           Data.ByteString.Lazy             (fromStrict, toStrict)
-import           Data.Conduit
+import           Data.Conduit                     (ConduitT, transPipe)
 import qualified Data.HashMap.Strict              as HM
-import           Data.Proxy
+import           Data.Proxy                       (Proxy (..))
 import qualified Data.Text                        as T
-import           Data.Text.Encoding               (decodeUtf8)
+import           Data.Text.Encoding               (decodeUtf8')
 import qualified Data.Text.Lazy.Encoding          as T
 import           Language.GraphQL.Draft.Parser    (parseExecutableDoc)
 import qualified Language.GraphQL.Draft.Syntax    as GQL
@@ -57,8 +57,9 @@ import           Network.Wai.Handler.Warp         (Port, Settings, run, runSetti
 import qualified Network.Wai.Handler.WebSockets   as WS
 import qualified Network.WebSockets               as WS
 
-import           Mu.GraphQL.Query.Parse
-import           Mu.GraphQL.Query.Run
+import           Data.Text.Encoding.Error         (UnicodeException (..))
+import           Mu.GraphQL.Query.Parse           (VariableMapC)
+import           Mu.GraphQL.Query.Run             (GraphQLApp, runPipeline, runSubscriptionPipeline)
 import           Mu.GraphQL.Subscription.Protocol
 import           Mu.Server
 
@@ -133,17 +134,22 @@ httpGraphQLAppTrans ::
     -> Application
 httpGraphQLAppTrans f server q m s req res =
   case parseMethod (requestMethod req) of
-    Left err   -> toError $ decodeUtf8 err
-    Right GET  -> do
+    Left err  -> toError $ either unpackUnicodeException id (decodeUtf8' err)
+    Right GET -> do
       let qst = queryString req
-          opN = decodeUtf8 <$> join (lookup "operationName" qst)
-      case (fmap decodeUtf8 <$> lookup "query" qst, lookup "variables" qst) of
-        (Just (Just qry), Just (Just vars)) ->
+          opN = decodeUtf8' <$> join (lookup "operationName" qst)
+          decodedQuery = fmap decodeUtf8' =<< lookup "query" qst
+      case (decodedQuery, lookup "variables" qst) of
+        (Just (Right qry), Just (Just vars)) ->
           case A.eitherDecode $ fromStrict vars of
             Left err  -> toError $ T.pack err
-            Right vrs -> execQuery opN vrs qry
-        (Just (Just qry), _)                -> execQuery opN HM.empty qry
-        _                                   -> toError "Error parsing query"
+            Right vrs -> case sequence opN of
+              Left err     -> toError $ "Could not parse operation name: " <> unpackUnicodeException err
+              Right opName -> execQuery opName vrs qry
+        (Just (Right qry), _)                -> case sequence opN of
+              Left err     -> toError $ "Could not parse query: " <> unpackUnicodeException err
+              Right opName -> execQuery opName HM.empty qry
+        _                            -> toError "Error parsing query"
     Right POST -> do
       body <- strictRequestBody req
       case lookup hContentType $ requestHeaders req of
@@ -152,7 +158,9 @@ httpGraphQLAppTrans f server q m s req res =
             Left err                             -> toError $ T.pack err
             Right (GraphQLInput qry vars opName) -> execQuery opName vars qry
         Just "application/graphql" ->
-          execQuery Nothing HM.empty (decodeUtf8 $ toStrict body)
+          case decodeUtf8' $ toStrict body of
+            Left err  -> toError $ "Could not decode utf8 from body: " <> unpackUnicodeException err
+            Right msg -> execQuery Nothing HM.empty msg
         _                          -> toError "No `Content-Type` header found!"
     _          -> toError "Unsupported method"
   where
@@ -166,6 +174,8 @@ httpGraphQLAppTrans f server q m s req res =
     toError err = toResponse $ A.object [ ("errors", A.Array [ A.object [ ("message", A.String err) ] ])]
     toResponse :: A.Value -> IO ResponseReceived
     toResponse = res . responseBuilder ok200 [] . T.encodeUtf8Builder . encodeToLazyText
+    unpackUnicodeException :: UnicodeException -> T.Text
+    unpackUnicodeException (DecodeError str _) = T.pack str
 
 wsGraphQLAppTrans
     :: ( GraphQLApp p qr mut sub m chn hs )
