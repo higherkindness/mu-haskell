@@ -54,13 +54,13 @@ insertSeedData conn = sequence_ <$> traverse (uncurry $ insertAuthorAndBooks con
   where seedData =
           [ (Author "Robert Louis Stevenson",
             [ Book "Treasure Island" "https://m.media-amazon.com/images/I/51C6NXR94gL.jpg"
-            , Book "Strange Case of Dr Jekyll and Mr Hyde" "https://images-na.ssl-images-amazon.com/images/I/51e8pkDxjfL._SX358_BO1,204,203,200_.jpg"
+            , Book "Strange Case of Dr Jekyll and Mr Hyde" "https://m.media-amazon.com/images/I/51e8pkDxjfL.jpg"
             ])
           , (Author "Immanuel Kant",
             [ Book "Critique of Pure Reason" "https://m.media-amazon.com/images/I/51h+rBXrYeL.jpg"])
           , (Author "Michael Ende",
-            [ Book "The Neverending Story" "https://images-na.ssl-images-amazon.com/images/I/51AnD2Fki3L._SX322_BO1,204,203,200_.jpg"
-            , Book "Momo" "https://images-na.ssl-images-amazon.com/images/I/61AuiRa4nmL._SX326_BO1,204,203,200_.jpg"
+            [ Book "The Neverending Story" "https://m.media-amazon.com/images/I/51AnD2Fki3L.jpg"
+            , Book "Momo" "https://m.media-amazon.com/images/I/61AuiRa4nmL.jpg"
             ])
           ]
 
