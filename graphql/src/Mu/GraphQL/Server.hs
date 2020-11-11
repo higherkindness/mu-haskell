@@ -45,10 +45,10 @@ import qualified Data.HashMap.Strict              as HM
 import           Data.Proxy                       (Proxy (..))
 import qualified Data.Text                        as T
 import           Data.Text.Encoding               (decodeUtf8')
+import           Data.Text.Encoding.Error         (UnicodeException (..))
 import qualified Data.Text.Lazy.Encoding          as T
 import           Language.GraphQL.Draft.Parser    (parseExecutableDoc)
 import qualified Language.GraphQL.Draft.Syntax    as GQL
-import           Mu.Adapter.Json                  ()
 import           Network.HTTP.Types.Header        (hContentType)
 import           Network.HTTP.Types.Method        (StdMethod (..), parseMethod)
 import           Network.HTTP.Types.Status        (ok200)
@@ -57,11 +57,10 @@ import           Network.Wai.Handler.Warp         (Port, Settings, run, runSetti
 import qualified Network.Wai.Handler.WebSockets   as WS
 import qualified Network.WebSockets               as WS
 
-import           Data.Text.Encoding.Error         (UnicodeException (..))
 import           Mu.GraphQL.Query.Parse           (VariableMapC)
 import           Mu.GraphQL.Query.Run             (GraphQLApp, runPipeline, runSubscriptionPipeline)
-import           Mu.GraphQL.Subscription.Protocol
-import           Mu.Server
+import           Mu.GraphQL.Subscription.Protocol (protocol)
+import           Mu.Server                        (ServerErrorIO, ServerT)
 
 data GraphQLInput = GraphQLInput T.Text VariableMapC (Maybe T.Text)
 
