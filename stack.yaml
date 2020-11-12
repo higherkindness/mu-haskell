@@ -38,7 +38,7 @@ extra-deps:
 - wai-middleware-prometheus-1.0.0
 - git: https://github.com/hasura/graphql-parser-hs.git
   commit: f4a093981ca5626982a17c2bfaad047cc0834a81
-- generic-aeson-0.2.0.10
+- generic-aeson-0.2.0.11
 - parameterized-0.5.0.0
 # Dropped in LTS 16
 - primitive-extras-0.8
