@@ -119,6 +119,9 @@ data ServerMessage
   | GQLKeepAlive
   deriving Show
 
+-- NOTE: using https://github.com/apollographql/subscriptions-transport-ws/blob/master/src/message-types.ts
+-- as source of truth for the message types
+
 instance A.FromJSON ClientMessage where
   parseJSON = A.withObject "ClientMessage" $ \v -> do
      ty :: String <- v .: "type"
@@ -147,7 +150,7 @@ instance A.ToJSON ServerMessage where
   toJSON (GQLConnectionError e)
     = A.object [theType "connection_error", "payload" .= e]
   toJSON GQLConnectionAck
-    = A.object [theType "connection_acl"]
+    = A.object [theType "connection_ack"]
   toJSON (GQLData i p)
     = A.object [theType "data", "id" .= i, "payload" .= p]
   toJSON (GQLError i p)
@@ -155,4 +158,4 @@ instance A.ToJSON ServerMessage where
   toJSON (GQLComplete i)
     = A.object [theType "complete", "id" .= i]
   toJSON GQLKeepAlive
-    = A.object [theType "connection_keep_alive"]
+    = A.object [theType "ka"]
