@@ -8,7 +8,7 @@ module Mu.GraphQL.Query.Definition where
 import           Data.SOP.NP
 import           Data.SOP.NS
 import           Data.Text
-import qualified Language.GraphQL.Draft.Syntax as GQL
+import qualified Language.GraphQL.AST as GQL
 import           Mu.Rpc
 import           Mu.Schema
 
@@ -44,12 +44,12 @@ data OneMethodQuery (p :: Package snm mnm anm (TypeRef snm))
   -- introspection fields
   SchemaQuery
     :: Maybe Text
-    -> GQL.SelectionSet
+    -> [GQL.Selection]
     -> OneMethodQuery p ('Service nm ms)
   TypeQuery
     :: Maybe Text
     -> Text
-    -> GQL.SelectionSet
+    -> [GQL.Selection]
     -> OneMethodQuery p ('Service nm ms)
 
 data ChosenMethodQuery (p :: Package snm mnm anm (TypeRef snm))

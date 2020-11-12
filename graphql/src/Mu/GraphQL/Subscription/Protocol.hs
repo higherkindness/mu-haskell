@@ -11,22 +11,22 @@ import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM
-import           Control.Monad                 (forM_)
-import           Control.Monad.IO.Class        (MonadIO (liftIO))
-import           Data.Aeson                    ((.:), (.:?), (.=))
-import qualified Data.Aeson                    as A
+import           Control.Monad               (forM_)
+import           Control.Monad.IO.Class      (MonadIO (liftIO))
+import           Data.Aeson                  ((.:), (.:?), (.=))
+import qualified Data.Aeson                  as A
 import           Data.Conduit
-import qualified Data.HashMap.Strict           as HM
-import qualified Data.Text                     as T
-import           Language.GraphQL.Draft.Parser (parseExecutableDoc)
-import           Language.GraphQL.Draft.Syntax (ExecutableDocument)
-import qualified ListT                         as L
+import qualified Data.HashMap.Strict         as HM
+import qualified Data.Text                   as T
+import           Language.GraphQL.AST
+import qualified ListT                       as L
 import           Network.WebSockets
-import qualified StmContainers.Map             as M
+import qualified StmContainers.Map           as M
 
+import qualified Mu.GraphQL.Quasi.LostParser as P
 import           Mu.GraphQL.Query.Parse
 
-protocol :: ( Maybe T.Text -> VariableMapC -> ExecutableDocument
+protocol :: ( Maybe T.Text -> VariableMapC -> [Definition]
               -> ConduitT A.Value Void IO ()
               -> IO () )
          -> Connection -> IO ()
@@ -71,7 +71,7 @@ protocol f conn = start
         _ -> listen ka vars  -- Keep going
     -- Handle a single query
     handle i q v o
-      = case parseExecutableDoc q of
+      = case P.parseDoc q of
           Left err -> sendJSON conn (GQLError i (A.toJSON err))
           Right d  -> do
             f o v d (cndt i)
