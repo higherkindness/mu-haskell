@@ -14,19 +14,19 @@ module Mu.GraphQL.Quasi (
 , graphql'
 ) where
 
-import           Control.Monad.IO.Class        (liftIO)
-import           Data.Coerce                   (coerce)
-import qualified Data.HashMap.Strict           as HM
-import           Data.List                     (foldl')
-import           Data.Maybe                    (catMaybes)
-import qualified Data.Text                     as T
-import qualified Data.Text.IO                  as TIO
-import           Data.UUID                     (UUID)
-import qualified Language.GraphQL.Draft.Syntax as GQL
+import           Control.Monad.IO.Class      (liftIO)
+import           Data.Foldable               (toList)
+import qualified Data.HashMap.Strict         as HM
+import           Data.List                   (foldl')
+import           Data.Maybe                  (catMaybes)
+import qualified Data.Text                   as T
+import qualified Data.Text.IO                as TIO
+import           Data.UUID                   (UUID)
+import qualified Language.GraphQL.AST        as GQL
 import           Language.Haskell.TH
 
 import           Mu.GraphQL.Annotations
-import           Mu.GraphQL.Quasi.LostParser   (parseTypeSysDefinition)
+import           Mu.GraphQL.Quasi.LostParser (parseTypeSysDefinition)
 import           Mu.Rpc
 import           Mu.Schema.Definition
 
@@ -62,38 +62,39 @@ data GQLType =
   | InputObject
   | Other
 
-classifySchema :: [GQL.SchemaDefinition] -> SchemaMap
+classifySchema :: [GQL.TypeSystemDefinition] -> SchemaMap
 classifySchema = foldl' schemaToMap HM.empty
   where
-    schemaToMap :: SchemaMap -> GQL.SchemaDefinition -> SchemaMap
-    schemaToMap mp (GQL.SchemaDefinition _ ops) = foldl' operationToKeyValue mp ops
-    operationToKeyValue :: SchemaMap -> GQL.RootOperationTypeDefinition -> SchemaMap
-    operationToKeyValue mp (GQL.RootOperationTypeDefinition opType (coerce -> name)) = HM.insert name opType mp
+    schemaToMap :: SchemaMap -> GQL.TypeSystemDefinition -> SchemaMap
+    schemaToMap mp (GQL.SchemaDefinition _ (toList -> ops)) = foldl' operationToKeyValue mp ops
+    schemaToMap _ _ = error "this should have been taken care by graphqlToDecls"
+    operationToKeyValue :: SchemaMap -> GQL.OperationTypeDefinition -> SchemaMap
+    operationToKeyValue mp (GQL.OperationTypeDefinition opType name) = HM.insert name opType mp
 
 classify :: [GQL.TypeDefinition] -> TypeMap
 classify = HM.fromList . (typeToKeyValue <$>)
   where
     typeToKeyValue :: GQL.TypeDefinition -> (T.Text, GQLType)
-    typeToKeyValue (GQL.TypeDefinitionScalar (GQL.ScalarTypeDefinition _ name _))
-      = (coerce name, Scalar)
-    typeToKeyValue (GQL.TypeDefinitionObject (GQL.ObjectTypeDefinition _ name _ _ _))
-      = (coerce name, Object)
-    typeToKeyValue (GQL.TypeDefinitionInterface (GQL.InterfaceTypeDefinition _ name _ _))
-      = (coerce name, Other)
-    typeToKeyValue (GQL.TypeDefinitionUnion (GQL.UnionTypeDefinition _ name _ _))
-      = (coerce name, Other)
-    typeToKeyValue (GQL.TypeDefinitionEnum (GQL.EnumTypeDefinition _ name _ _))
-      = (coerce name, Enum)
-    typeToKeyValue (GQL.TypeDefinitionInputObject (GQL.InputObjectTypeDefinition _ name _ _))
-      = (coerce name, InputObject)
+    typeToKeyValue (GQL.ScalarTypeDefinition _ name _)
+      = (name, Scalar)
+    typeToKeyValue (GQL.ObjectTypeDefinition _ name _ _ _)
+      = (name, Object)
+    typeToKeyValue (GQL.InterfaceTypeDefinition _ name _ _)
+      = (name, Other)
+    typeToKeyValue (GQL.UnionTypeDefinition _ name _ _)
+      = (name, Other)
+    typeToKeyValue (GQL.EnumTypeDefinition _ name _ _)
+      = (name, Enum)
+    typeToKeyValue (GQL.InputObjectTypeDefinition _ name _ _)
+      = (name, InputObject)
 
 -- | Constructs the GraphQL tree splitting between Schemas and Services.
 graphqlToDecls :: String -> String -> [GQL.TypeSystemDefinition] -> Q [Dec]
 graphqlToDecls schemaName serviceName allTypes = do
   let schemaName'  = mkName schemaName
       serviceName' = mkName serviceName
-      types        = [t | GQL.TypeSystemDefinitionType t <- allTypes]
-      schTypes     = [t | GQL.TypeSystemDefinitionSchema t <- allTypes]
+      types        = [t | GQL.TypeDefinition t <- allTypes]
+      schTypes     = [t | t@GQL.SchemaDefinition {} <- allTypes]
       typeMap      = classify types
       schMap       = classifySchema schTypes
   rs <- traverse (typeToDec schemaName' typeMap schMap) types
@@ -114,108 +115,100 @@ defaultDeclToTy (sn, (mn, (an, dv)))
 
 -- | Reads a GraphQL 'TypeDefinition' and returns a 'Result'.
 typeToDec :: Name -> TypeMap -> SchemaMap -> GQL.TypeDefinition -> Q Result
-typeToDec _ _ _ (GQL.TypeDefinitionInterface _)
+typeToDec _ _ _ GQL.InterfaceTypeDefinition {}
   = fail "interface types are not supported"
-typeToDec _ _ _ (GQL.TypeDefinitionUnion _)
+typeToDec _ _ _ GQL.UnionTypeDefinition {}
   = fail "union types are not supported"
-typeToDec schemaName tm _ (GQL.TypeDefinitionScalar (GQL.ScalarTypeDefinition _ s _)) =
+typeToDec schemaName tm _ (GQL.ScalarTypeDefinition _ s _) =
   GQLScalar <$ gqlTypeToType s tm schemaName
-typeToDec schemaName tm sm (GQL.TypeDefinitionObject objs) = objToDec objs
+typeToDec schemaName tm sm (GQL.ObjectTypeDefinition _ nm _ _ flds) = do
+  (fieldInfos, defaults) <- unzip <$> traverse (gqlFieldToType nm) flds
+  GQLService <$> [t| 'Service $(textToStrLit nm)
+                              $(pure $ typesToList fieldInfos) |]
+             <*> pure ((nm,) <$> concat defaults)
   where
-    objToDec :: GQL.ObjectTypeDefinition -> Q Result
-    objToDec (GQL.ObjectTypeDefinition _ (coerce -> nm) _ _ flds) = do
-      (fieldInfos, defaults) <- unzip <$> traverse (gqlFieldToType nm) flds
-      GQLService <$> [t| 'Service $(textToStrLit nm)
-                                  $(pure $ typesToList fieldInfos) |]
-                 <*> pure ((nm,) <$> concat defaults)
     gqlFieldToType :: T.Text -> GQL.FieldDefinition
                    -> Q (Type, [(T.Text, (T.Text, Type))])
-    gqlFieldToType sn (GQL.FieldDefinition _ (coerce -> fnm) args ftyp _) = do
+    gqlFieldToType sn (GQL.FieldDefinition _ fnm (GQL.ArgumentsDefinition args) ftyp _) = do
       (argInfos, defaults) <- unzip <$> traverse argToType args
       (,) <$> [t| 'Method $(textToStrLit fnm)
                           $(pure $ typesToList argInfos)
                           $(returnType sn ftyp) |]
           <*> pure ((fnm,) <$> catMaybes defaults)
-    returnType :: T.Text -> GQL.GType -> Q Type
+    returnType :: T.Text -> GQL.Type -> Q Type
     returnType serviceName typ =
       case HM.lookup serviceName sm of
-        Just GQL.OperationTypeSubscription -> [t|'RetStream $(retToType typ)|]
-        _                                  -> [t|'RetSingle $(retToType typ)|]
+        Just GQL.Subscription -> [t|'RetStream $(retToType typ)|]
+        _                     -> [t|'RetSingle $(retToType typ)|]
     argToType :: GQL.InputValueDefinition -> Q (Type, Maybe (T.Text, Type))
-    argToType (GQL.InputValueDefinition _ (coerce -> aname) atype Nothing) =
+    argToType (GQL.InputValueDefinition _ aname atype Nothing _) =
       (, Nothing) <$> [t| 'ArgSingle ('Just $(textToStrLit aname)) $(retToType atype) |]
-    argToType (GQL.InputValueDefinition _ (coerce -> aname) atype (Just defs)) =
+    argToType (GQL.InputValueDefinition _ aname atype (Just (GQL.Node defs _)) _) =
       (,) <$> [t| 'ArgSingle ('Just $(textToStrLit aname)) $(retToType atype) |]
           <*> (Just . (aname,) <$> [t| 'DefaultValue $( defToVConst defs ) |])
-    defToVConst :: GQL.DefaultValue -> Q Type
-    defToVConst (GQL.VCBoolean _) = [t| 'VCBoolean|]
-    defToVConst GQL.VCNull        = [t| 'VCNull |]
-    defToVConst (GQL.VCInt _)     = [t| 'VCInt |]
-    defToVConst (GQL.VCFloat _)
+    defToVConst :: GQL.ConstValue -> Q Type
+    defToVConst (GQL.ConstBoolean _) = [t| 'VCBoolean|]
+    defToVConst GQL.ConstNull        = [t| 'VCNull |]
+    defToVConst (GQL.ConstInt _)     = [t| 'VCInt |]
+    defToVConst (GQL.ConstFloat _)
       = fail "floats as default arguments are not supported"
-    defToVConst (GQL.VCString (coerce -> s))
+    defToVConst (GQL.ConstString s)
       = [t| 'VCString $(textToStrLit s) |]
-    defToVConst (GQL.VCEnum (coerce -> e))
+    defToVConst (GQL.ConstEnum e)
       = [t| 'VCEnum $(textToStrLit e) |]
-    defToVConst (GQL.VCList (GQL.ListValueG xs))
+    defToVConst (GQL.ConstList xs)
       = [t| 'VCList $(typesToList <$> traverse defToVConst xs) |]
-    defToVConst (GQL.VCObject (GQL.ObjectValueG obj))
+    defToVConst (GQL.ConstObject obj)
       = [t| 'VCObject $(typesToList <$> traverse fromGQLField obj) |]
-    fromGQLField :: GQL.ObjectFieldG GQL.ValueConst -> Q Type
-    fromGQLField (GQL.ObjectFieldG (coerce -> n) v)   = [t| ($(textToStrLit n), $(defToVConst v)) |]
-    retToType :: GQL.GType -> Q Type
-    retToType (GQL.TypeNamed (coerce -> False) (coerce -> a)) =
+    fromGQLField :: GQL.ObjectField GQL.ConstValue -> Q Type
+    fromGQLField (GQL.ObjectField n (GQL.Node v _) _) = [t| ($(textToStrLit n), $(defToVConst v)) |]
+    retToType :: GQL.Type -> Q Type
+    retToType (GQL.TypeNonNull (GQL.NonNullTypeNamed a)) =
       [t| $(gqlTypeToType a tm schemaName) |]
-    retToType (GQL.TypeNamed (coerce -> True) (coerce -> a)) =
-      [t| 'OptionalRef $(gqlTypeToType a tm schemaName) |]
-    retToType (GQL.TypeList (coerce -> False) (coerce -> a)) =
+    retToType (GQL.TypeNonNull (GQL.NonNullTypeList a)) =
       [t| 'ListRef $(retToType a) |]
-    retToType (GQL.TypeList (coerce -> True) (coerce -> a)) =
+    retToType (GQL.TypeNamed a) =
+      [t| 'OptionalRef $(gqlTypeToType a tm schemaName) |]
+    retToType (GQL.TypeList a) =
       [t| 'OptionalRef ('ListRef $(retToType a)) |]
-    retToType _ = fail "this should not happen, please, file an issue"
-typeToDec _ _ _ (GQL.TypeDefinitionEnum enums)        = enumToDecl enums
+typeToDec _ _ _ (GQL.EnumTypeDefinition _ name _ symbols) =
+  GQLSchema <$> [t|'DEnum $(textToStrLit name)
+                          $(typesToList <$> traverse gqlChoiceToType symbols)|]
   where
-    enumToDecl :: GQL.EnumTypeDefinition -> Q Result
-    enumToDecl (GQL.EnumTypeDefinition _ (coerce -> name) _ symbols) =
-      GQLSchema <$> [t|'DEnum $(textToStrLit name)
-                              $(typesToList <$> traverse gqlChoiceToType symbols)|]
     gqlChoiceToType :: GQL.EnumValueDefinition -> Q Type
-    gqlChoiceToType (GQL.EnumValueDefinition _ (coerce -> c) _) =
+    gqlChoiceToType (GQL.EnumValueDefinition _ c _) =
       [t|'ChoiceDef $(textToStrLit c)|]
-typeToDec _ _ _ (GQL.TypeDefinitionInputObject inpts) = inputObjToDec inpts
+typeToDec _ _ _ (GQL.InputObjectTypeDefinition _ name _ fields) =
+  GQLSchema <$> [t|'DRecord $(textToStrLit name)
+                            $(typesToList <$> traverse gqlFieldToType fields)|]
   where
-    inputObjToDec :: GQL.InputObjectTypeDefinition -> Q Result
-    inputObjToDec (GQL.InputObjectTypeDefinition _ (coerce -> name) _ fields) =
-        GQLSchema <$> [t|'DRecord $(textToStrLit name)
-                                  $(typesToList <$> traverse gqlFieldToType fields)|]
     gqlFieldToType :: GQL.InputValueDefinition -> Q Type
-    gqlFieldToType (GQL.InputValueDefinition _ (coerce -> fname) ftype _) =
+    gqlFieldToType (GQL.InputValueDefinition _ fname ftype _ _) =
       [t|'FieldDef $(textToStrLit fname) $(ginputTypeToType ftype)|]
-    ginputTypeToType :: GQL.GType -> Q Type
-    ginputTypeToType (GQL.TypeNamed (coerce -> False) (coerce -> a)) =
+    ginputTypeToType :: GQL.Type -> Q Type
+    ginputTypeToType (GQL.TypeNonNull (GQL.NonNullTypeNamed a)) =
       [t| $(typeToPrimType a) |]
-    ginputTypeToType (GQL.TypeNamed (coerce -> True) (coerce -> a)) =
-      [t| 'OptionalRef $(typeToPrimType a) |]
-    ginputTypeToType (GQL.TypeList (coerce -> False) (coerce -> a)) =
+    ginputTypeToType (GQL.TypeNonNull (GQL.NonNullTypeList a)) =
       [t| 'ListRef $(ginputTypeToType a) |]
-    ginputTypeToType (GQL.TypeList (coerce -> True) (coerce -> a)) =
+    ginputTypeToType (GQL.TypeNamed a) =
+      [t| 'OptionalRef $(typeToPrimType a) |]
+    ginputTypeToType (GQL.TypeList a) =
       [t| 'OptionalRef ('ListRef $(ginputTypeToType a)) |]
-    ginputTypeToType _ = fail "this should not happen, please, file an issue"
     typeToPrimType :: GQL.Name -> Q Type
-    typeToPrimType (GQL.unName -> "Int")     = [t|'TPrimitive Integer|]
-    typeToPrimType (GQL.unName -> "Float")   = [t|'TPrimitive Double|]
-    typeToPrimType (GQL.unName -> "String")  = [t|'TPrimitive T.Text|]
-    typeToPrimType (GQL.unName -> "Boolean") = [t|'TPrimitive Bool|]
-    typeToPrimType (GQL.unName -> "ID")      = [t|'TPrimitive UUID|]
-    typeToPrimType (coerce -> name)          = [t|'TSchematic $(textToStrLit name)|]
+    typeToPrimType "Int"     = [t|'TPrimitive Integer|]
+    typeToPrimType "Float"   = [t|'TPrimitive Double|]
+    typeToPrimType "String"  = [t|'TPrimitive T.Text|]
+    typeToPrimType "Boolean" = [t|'TPrimitive Bool|]
+    typeToPrimType "ID"      = [t|'TPrimitive UUID|]
+    typeToPrimType nm        = [t|'TSchematic $(textToStrLit nm)|]
 
 gqlTypeToType :: GQL.Name -> TypeMap -> Name -> Q Type
-gqlTypeToType (GQL.unName -> "Int") _  _     = [t|'PrimitiveRef Integer|]
-gqlTypeToType (GQL.unName -> "Float") _ _    = [t|'PrimitiveRef Double|]
-gqlTypeToType (GQL.unName -> "String") _ _   = [t|'PrimitiveRef T.Text|]
-gqlTypeToType (GQL.unName -> "Boolean") _ _  = [t|'PrimitiveRef Bool|]
-gqlTypeToType (GQL.unName -> "ID") _ _       = [t|'PrimitiveRef UUID|]
-gqlTypeToType (coerce -> name) tm schemaName =
+gqlTypeToType "Int"     _ _ = [t|'PrimitiveRef Integer|]
+gqlTypeToType "Float"   _ _ = [t|'PrimitiveRef Double|]
+gqlTypeToType "String"  _ _ = [t|'PrimitiveRef T.Text|]
+gqlTypeToType "Boolean" _ _ = [t|'PrimitiveRef Bool|]
+gqlTypeToType "ID"      _ _ = [t|'PrimitiveRef UUID|]
+gqlTypeToType name tm schemaName =
   let schemaRef = [t|'SchemaRef $(conT schemaName) $(textToStrLit name)|]
    in case HM.lookup name tm of
         Just Enum        -> schemaRef

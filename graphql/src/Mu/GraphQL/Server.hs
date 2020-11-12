@@ -47,8 +47,7 @@ import qualified Data.Text                        as T
 import           Data.Text.Encoding               (decodeUtf8')
 import           Data.Text.Encoding.Error         (UnicodeException (..))
 import qualified Data.Text.Lazy.Encoding          as T
-import           Language.GraphQL.Draft.Parser    (parseExecutableDoc)
-import qualified Language.GraphQL.Draft.Syntax    as GQL
+import qualified Language.GraphQL.AST             as GQL
 import           Network.HTTP.Types.Header        (hContentType)
 import           Network.HTTP.Types.Method        (StdMethod (..), parseMethod)
 import           Network.HTTP.Types.Status        (ok200)
@@ -57,6 +56,7 @@ import           Network.Wai.Handler.Warp         (Port, Settings, run, runSetti
 import qualified Network.Wai.Handler.WebSockets   as WS
 import qualified Network.WebSockets               as WS
 
+import           Mu.GraphQL.Quasi.LostParser      (parseDoc)
 import           Mu.GraphQL.Query.Parse           (VariableMapC)
 import           Mu.GraphQL.Query.Run             (GraphQLApp, runPipeline, runSubscriptionPipeline)
 import           Mu.GraphQL.Subscription.Protocol (protocol)
@@ -165,7 +165,7 @@ httpGraphQLAppTrans f server q m s req res =
   where
     execQuery :: Maybe T.Text -> VariableMapC -> T.Text -> IO ResponseReceived
     execQuery opn vals qry =
-      case parseExecutableDoc qry of
+      case parseDoc qry of
         Left err  -> toError err
         Right doc -> runPipeline f (requestHeaders req) server q m s opn vals doc
                        >>= toResponse
@@ -175,6 +175,7 @@ httpGraphQLAppTrans f server q m s req res =
     toResponse = res . responseBuilder ok200 [] . T.encodeUtf8Builder . encodeToLazyText
     unpackUnicodeException :: UnicodeException -> T.Text
     unpackUnicodeException (DecodeError str _) = T.pack str
+    unpackUnicodeException _                   = error "EncodeError is deprecated"
 
 wsGraphQLAppTrans
     :: ( GraphQLApp p qr mut sub m chn hs )

@@ -5,7 +5,6 @@
 {-# language TupleSections       #-}
 {-# language TypeApplications    #-}
 {-# language TypeOperators       #-}
-{-# language ViewPatterns        #-}
 {-|
 Description : Annotations for GraphQL services
 
@@ -23,12 +22,11 @@ module Mu.GraphQL.Annotations (
 , module Mu.Rpc.Annotations
 ) where
 
-import           Control.Applicative           (Alternative (..))
-import           Data.Coerce
+import           Control.Applicative  (Alternative (..))
 import           Data.Proxy
-import qualified Data.Text                     as T
+import qualified Data.Text            as T
 import           GHC.TypeLits
-import qualified Language.GraphQL.Draft.Syntax as GQL
+import qualified Language.GraphQL.AST as GQL
 
 import           Mu.Rpc.Annotations
 
@@ -54,24 +52,24 @@ data ValueConst nat symbol
 --   in the annotation data type. Mostly used
 --   internally to generate Mu schemas from GraphQL schemas.
 fromGQLValueConst :: forall f. Alternative f
-                  => GQL.ValueConst -> f (ValueConst Integer String)
-fromGQLValueConst (GQL.VCInt n)
+                  => GQL.ConstValue -> f (ValueConst Integer String)
+fromGQLValueConst (GQL.ConstInt n)
   = pure $ VCInt (fromIntegral n)
-fromGQLValueConst (GQL.VCString (coerce -> s))
+fromGQLValueConst (GQL.ConstString s)
   = pure $ VCString $ T.unpack s
-fromGQLValueConst (GQL.VCBoolean b)
+fromGQLValueConst (GQL.ConstBoolean b)
   = pure $ VCBoolean b
-fromGQLValueConst GQL.VCNull
+fromGQLValueConst GQL.ConstNull
   = pure VCNull
-fromGQLValueConst (GQL.VCEnum (coerce -> s))
+fromGQLValueConst (GQL.ConstEnum s)
   = pure $ VCEnum $ T.unpack s
-fromGQLValueConst (GQL.VCList (coerce -> xs))
+fromGQLValueConst (GQL.ConstList xs)
   = VCList <$> traverse fromGQLValueConst xs
-fromGQLValueConst (GQL.VCObject (coerce -> o))
+fromGQLValueConst (GQL.ConstObject o)
   = VCObject <$> traverse fromGQLField o
-  where fromGQLField :: GQL.ObjectFieldG GQL.ValueConst
+  where fromGQLField :: GQL.ObjectField GQL.ConstValue
                      -> f (String, ValueConst Integer String)
-        fromGQLField (GQL.ObjectFieldG (coerce -> n) v)
+        fromGQLField (GQL.ObjectField n (GQL.Node v _) _)
           = (T.unpack n,) <$> fromGQLValueConst v
 fromGQLValueConst _ = empty
 
@@ -82,26 +80,26 @@ fromGQLValueConst _ = empty
 class ReflectValueConst (v :: ValueConst nat symbol) where
   -- | Obtain the GraphQL constant corresponding
   --   to a type-level constant.
-  reflectValueConst :: proxy v -> GQL.ValueConst
+  reflectValueConst :: proxy v -> GQL.ConstValue
 instance KnownNat n => ReflectValueConst ('VCInt n) where
-  reflectValueConst _ = GQL.VCInt $ fromInteger $ natVal (Proxy @n)
+  reflectValueConst _ = GQL.ConstInt $ fromInteger $ natVal (Proxy @n)
 instance KnownSymbol s => ReflectValueConst ('VCString s) where
-  reflectValueConst _ = GQL.VCString $ coerce $ T.pack $ symbolVal (Proxy @s)
+  reflectValueConst _ = GQL.ConstString $ T.pack $ symbolVal (Proxy @s)
 instance ReflectValueConst ('VCBoolean 'True) where
-  reflectValueConst _ = GQL.VCBoolean True
+  reflectValueConst _ = GQL.ConstBoolean True
 instance ReflectValueConst ('VCBoolean 'False) where
-  reflectValueConst _ = GQL.VCBoolean False
+  reflectValueConst _ = GQL.ConstBoolean False
 instance ReflectValueConst 'VCNull where
-  reflectValueConst _ = GQL.VCNull
+  reflectValueConst _ = GQL.ConstNull
 instance KnownSymbol e => ReflectValueConst ('VCEnum e) where
-  reflectValueConst _ = GQL.VCString $ coerce $ T.pack $ symbolVal (Proxy @e)
+  reflectValueConst _ = GQL.ConstString $ T.pack $ symbolVal (Proxy @e)
 instance ReflectValueConstList xs => ReflectValueConst ('VCList xs) where
-  reflectValueConst _ = GQL.VCList $ coerce $ reflectValueConstList (Proxy @xs)
+  reflectValueConst _ = GQL.ConstList $ reflectValueConstList (Proxy @xs)
 instance ReflectValueConstObject xs => ReflectValueConst ('VCObject xs) where
-  reflectValueConst _ = GQL.VCObject $ coerce $ reflectValueConstObject (Proxy @xs)
+  reflectValueConst _ = GQL.ConstObject $ reflectValueConstObject (Proxy @xs)
 
 class ReflectValueConstList xs where
-  reflectValueConstList :: proxy xs -> [GQL.ValueConst]
+  reflectValueConstList :: proxy xs -> [GQL.ConstValue]
 instance ReflectValueConstList '[] where
   reflectValueConstList _ = []
 instance (ReflectValueConst x, ReflectValueConstList xs)
@@ -110,11 +108,14 @@ instance (ReflectValueConst x, ReflectValueConstList xs)
     = reflectValueConst (Proxy @x) : reflectValueConstList (Proxy @xs)
 
 class ReflectValueConstObject xs where
-  reflectValueConstObject :: proxy xs -> [GQL.ObjectFieldG GQL.ValueConst]
+  reflectValueConstObject :: proxy xs -> [GQL.ObjectField GQL.ConstValue]
 instance ReflectValueConstObject '[] where
   reflectValueConstObject _ = []
 instance (KnownSymbol a, ReflectValueConst x, ReflectValueConstObject xs)
          => ReflectValueConstObject ( '(a, x) ': xs) where
   reflectValueConstObject _
-    = GQL.ObjectFieldG (coerce $ T.pack $ symbolVal (Proxy @a)) (reflectValueConst (Proxy @x))
+    = GQL.ObjectField (T.pack $ symbolVal (Proxy @a))
+                      (GQL.Node (reflectValueConst (Proxy @x)) zl)
+                      zl
       : reflectValueConstObject (Proxy @xs)
+    where zl = GQL.Location 0 0
