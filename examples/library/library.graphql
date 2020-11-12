@@ -1,6 +1,7 @@
 type Book {
   id: Int!
   title: String!
+  imageUrl: String!
   author: Author!
 }
 
@@ -17,6 +18,7 @@ input NewAuthor {
 input NewBook {
   title: String!
   authorId: Int!
+  imageUrl: String!
 }
 
 type Query {

@@ -37,6 +37,7 @@ Author json
   deriving Show Generic
 Book json
   title T.Text
+  imageUrl T.Text
   author AuthorId
   UniqueTitlePerAuthor title author
   deriving Show Generic
@@ -51,6 +52,6 @@ newtype NewAuthor
   deriving anyclass (FromSchema LibrarySchema "NewAuthor")
 
 data NewBook
-  = NewBook { title :: T.Text, authorId :: Integer }
+  = NewBook { title :: T.Text, authorId :: Integer, imageUrl :: T.Text }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromSchema LibrarySchema "NewBook")

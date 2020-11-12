@@ -1,4 +1,5 @@
 {-# language DataKinds             #-}
+{-# language NamedFieldPuns        #-}
 {-# language OverloadedStrings     #-}
 {-# language PartialTypeSignatures #-}
 {-# language TypeApplications      #-}
@@ -51,9 +52,16 @@ main = do
 insertSeedData :: SqlBackend -> LoggingT IO (Maybe ())
 insertSeedData conn = sequence_ <$> traverse (uncurry $ insertAuthorAndBooks conn) seedData
   where seedData =
-          [ (Author "Robert Louis Stevenson", [Book "Treasure Island", Book "Strange Case of Dr Jekyll and Mr Hyde"])
-          , (Author "Immanuel Kant", [Book "Critique of Pure Reason"])
-          , (Author "Michael Ende", [Book "The Neverending Story", Book "Momo"])
+          [ (Author "Robert Louis Stevenson",
+            [ Book "Treasure Island" "https://m.media-amazon.com/images/I/51C6NXR94gL.jpg"
+            , Book "Strange Case of Dr Jekyll and Mr Hyde" "https://m.media-amazon.com/images/I/51e8pkDxjfL.jpg"
+            ])
+          , (Author "Immanuel Kant",
+            [ Book "Critique of Pure Reason" "https://m.media-amazon.com/images/I/51h+rBXrYeL.jpg"])
+          , (Author "Michael Ende",
+            [ Book "The Neverending Story" "https://m.media-amazon.com/images/I/51AnD2Fki3L.jpg"
+            , Book "Momo" "https://m.media-amazon.com/images/I/61AuiRa4nmL.jpg"
+            ])
           ]
 
 {- | Inserts Author and Books
@@ -75,9 +83,10 @@ type ObjectMapping = '[
 libraryServer :: SqlBackend -> ServerT ObjectMapping i Library ServerErrorIO _
 libraryServer conn = resolver
   ( object @"Book"
-    ( field @"id"     bookId
-    , field @"title"  bookTitle
-    , field @"author" bookAuthor
+    ( field @"id"       bookId
+    , field @"title"    bookTitle
+    , field @"author"   bookAuthor
+    , field @"imageUrl" bookImage
     )
   , object @"Author"
     ( field @"id"    authorId
@@ -99,15 +108,18 @@ libraryServer conn = resolver
     bookId :: Entity Book -> ServerErrorIO Integer
     bookId (Entity (BookKey k) _) = pure $ toInteger k
     bookTitle :: Entity Book -> ServerErrorIO T.Text
-    bookTitle (Entity _ Book { bookTitle = t }) = pure t
+    bookTitle (Entity _ Book { bookTitle }) = pure bookTitle
     bookAuthor :: Entity Book -> ServerErrorIO (Entity Author)
-    bookAuthor (Entity _ Book { bookAuthor = a }) = runDb conn $ Entity a . fromJust <$> get a
+    bookAuthor (Entity _ Book { bookAuthor }) = runDb conn $ Entity bookAuthor . fromJust <$> get bookAuthor
+    bookImage :: Entity Book -> ServerErrorIO T.Text
+    bookImage (Entity _ Book { bookImageUrl }) = pure bookImageUrl
+
     authorId :: Entity Author -> ServerErrorIO Integer
     authorId (Entity (AuthorKey k) _) = pure $ toInteger k
     authorName :: Entity Author -> ServerErrorIO T.Text
-    authorName (Entity _ Author { authorName = t }) = pure t
+    authorName (Entity _ Author { authorName }) = pure authorName
     authorBooks :: Entity Author -> ServerErrorIO [Entity Book]
-    authorBooks (Entity a _) = runDb conn $ selectList [BookAuthor ==. a] [Asc BookTitle]
+    authorBooks (Entity author _) = runDb conn $ selectList [BookAuthor ==. author] [Asc BookTitle]
 
     allAuthors :: T.Text -> ServerErrorIO [Entity Author]
     allAuthors nameFilter
@@ -130,9 +142,9 @@ libraryServer conn = resolver
       maybe (serverError $ ServerError Invalid errorMsg) pure maybeEntity
 
     newBook :: NewBook -> ServerErrorIO (Entity Book)
-    newBook (NewBook title authorId) = do
+    newBook (NewBook title authorId img) = do
       maybeEntity <- runDb conn $ do
-        let new = Book title (toAuthorId $ fromInteger authorId)
+        let new = Book title img (toAuthorId $ fromInteger authorId)
         result <- insertUnique new
         pure $ Entity <$> result <*> pure new
       let errorMsg = "Book \"" <> T.unpack title <> "\" already exists"
