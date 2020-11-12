@@ -107,13 +107,13 @@ forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
 -&gt; Parser Text [[TypeSystemDefinition]]
 forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
 </span><span class="hs-identifier hs-var">many1</span></span><span> </span><span class="hs-special">(</span><span>
-</span><span id="line-34"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">GQL.SchemaDocument</span></span><span> </span><span id="local-6989586621679245121"><span class="annot"><span class="annottext">d :: [TypeDefinition]
-</span><a href="#local-6989586621679245121"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TypeDefinition -&gt; TypeSystemDefinition
+</span><span id="line-34"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">GQL.SchemaDocument</span></span><span> </span><span id="local-6989586621679244546"><span class="annot"><span class="annottext">d :: [TypeDefinition]
+</span><a href="#local-6989586621679244546"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TypeDefinition -&gt; TypeSystemDefinition
 </span><span class="hs-identifier hs-var">GQL.TypeSystemDefinitionType</span></span><span> </span><span class="annot"><span class="annottext">(TypeDefinition -&gt; TypeSystemDefinition)
 -&gt; [TypeDefinition] -&gt; [TypeSystemDefinition]
 forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
 </span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[TypeDefinition]
-</span><a href="#local-6989586621679245121"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(SchemaDocument -&gt; [TypeSystemDefinition])
+</span><a href="#local-6989586621679244546"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(SchemaDocument -&gt; [TypeSystemDefinition])
 -&gt; Parser Text SchemaDocument -&gt; Parser [TypeSystemDefinition]
 forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
 </span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Parser Text SchemaDocument
