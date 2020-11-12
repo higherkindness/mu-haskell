@@ -186,8 +186,13 @@ wsGraphQLAppTrans
     -> WS.ServerApp
 wsGraphQLAppTrans f server q m s conn
   = do let headers = WS.requestHeaders $ WS.pendingRequest conn
-       conn' <- WS.acceptRequest conn
-       flip protocol conn' $ runSubscriptionPipeline f headers server q m s
+       case lookup "Sec-WebSocket-Protocol" headers of
+         Just v
+           | v == "graphql-ws" || v == "graphql-transport-ws"
+           -> do conn' <- WS.acceptRequestWith conn (WS.AcceptRequest (Just v) [])
+                 flip protocol conn' $
+                   runSubscriptionPipeline f headers server q m s
+         _ -> WS.rejectRequest conn "unsupported protocol"
 
 -- | Run a Mu 'graphQLApp' using the given 'Settings'.
 --
