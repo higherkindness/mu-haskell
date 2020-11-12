@@ -13,7 +13,6 @@
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
-{-# language ViewPatterns          #-}
 {-# OPTIONS_GHC -fprint-explicit-foralls #-}
 module Mu.GraphQL.Query.Run (
   GraphQLApp
@@ -31,7 +30,6 @@ import           Control.Monad.Except           (MonadError, runExceptT)
 import           Control.Monad.Writer
 import qualified Data.Aeson                     as Aeson
 import qualified Data.Aeson.Types               as Aeson
-import           Data.Coerce                    (coerce)
 import           Data.Conduit
 import           Data.Conduit.Combinators       (sinkList, yieldMany)
 import           Data.Conduit.TQueue
@@ -39,7 +37,7 @@ import qualified Data.HashMap.Strict            as HM
 import           Data.Maybe
 import qualified Data.Text                      as T
 import           GHC.TypeLits
-import qualified Language.GraphQL.Draft.Syntax  as GQL
+import qualified Language.GraphQL.AST           as GQL
 import           Network.HTTP.Types.Header
 
 import           Mu.GraphQL.Query.Definition
@@ -61,7 +59,7 @@ runPipeline
   -> RequestHeaders
   -> ServerT chn GQL.Field p m hs
   -> Proxy qr -> Proxy mut -> Proxy sub
-  -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
+  -> Maybe T.Text -> VariableMapC -> [GQL.Definition]
   -> IO Aeson.Value
 runPipeline f req svr _ _ _ opName vmap doc
   = case parseDoc @qr @mut @sub opName vmap doc of
@@ -78,7 +76,7 @@ runSubscriptionPipeline
   -> RequestHeaders
   -> ServerT chn GQL.Field p m hs
   -> Proxy qr -> Proxy mut -> Proxy sub
-  -> Maybe T.Text -> VariableMapC -> GQL.ExecutableDocument
+  -> Maybe T.Text -> VariableMapC -> [GQL.Definition]
   -> ConduitT Aeson.Value Void IO ()
   -> IO ()
 runSubscriptionPipeline f req svr _ _ _ opName vmap doc sink
@@ -601,13 +599,13 @@ instance RunSchemaQuery sch (sch :/: l)
 
 
 runIntroSchema
-  :: [T.Text] -> Intro.Schema -> GQL.SelectionSet
+  :: [T.Text] -> Intro.Schema -> [GQL.Selection]
   -> WriterT [GraphQLError] IO Aeson.Value
 runIntroSchema path s@(Intro.Schema qr mut sub ts) ss
   = do things <- catMaybes <$> traverse runOne ss
        pure $ Aeson.object things
   where
-    runOne (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
+    runOne (GQL.FieldSelection (GQL.Field alias nm _ _ innerss _))
       = let realName :: T.Text = fromMaybe nm alias
             path' = path ++ [realName]
         in fmap (realName,) <$> case nm of
@@ -639,7 +637,7 @@ runIntroSchema path s@(Intro.Schema qr mut sub ts) ss
     runOne _ = pure Nothing
 
 runIntroType
-  :: [T.Text] -> Intro.Schema -> Intro.Type -> GQL.SelectionSet
+  :: [T.Text] -> Intro.Schema -> Intro.Type -> [GQL.Selection]
   -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
 runIntroType path s@(Intro.Schema _ _ _ ts) (Intro.TypeRef t) ss
   = case HM.lookup t ts of
@@ -649,7 +647,7 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
   = do things <- catMaybes <$> traverse runOne ss
        pure $ Just $ Aeson.object things
   where
-    runOne (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
+    runOne (GQL.FieldSelection (GQL.Field alias nm _ _ innerss _))
       = let realName :: T.Text = fromMaybe nm alias
             path' = path ++ [realName]
         in fmap (realName,) <$> case (nm, innerss) of
@@ -696,14 +694,14 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
     runOne _ = pure Nothing
 
     runIntroFields
-      :: [T.Text] -> Intro.Field -> GQL.SelectionSet
+      :: [T.Text] -> Intro.Field -> [GQL.Selection]
       -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
     runIntroFields fpath fld fss
       = do things <- catMaybes <$> traverse (runIntroField fpath fld) fss
            pure $ Just $ Aeson.object things
 
     runIntroField fpath (Intro.Field fnm fargs fty)
-                  (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
+                  (GQL.FieldSelection (GQL.Field alias nm _ _ innerss _))
       = let realName :: T.Text = fromMaybe nm alias
             fpath' = fpath ++ [realName]
         in fmap (realName,) <$> case (nm, innerss) of
@@ -737,14 +735,14 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
     runIntroField _ _ _ = pure Nothing
 
     runIntroEnums
-      :: [T.Text] -> Intro.EnumValue -> GQL.SelectionSet
+      :: [T.Text] -> Intro.EnumValue -> [GQL.Selection]
       -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
     runIntroEnums epath enm ess
       = do things <- catMaybes <$> traverse (runIntroEnum epath enm) ess
            pure $ Just $ Aeson.object things
 
     runIntroEnum epath (Intro.EnumValue enm)
-                 (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
+                 (GQL.FieldSelection (GQL.Field alias nm _ _ innerss _))
       = let realName :: T.Text = fromMaybe nm alias
         in fmap (realName,) <$> case (nm, innerss) of
           ("name", [])
@@ -765,14 +763,14 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
     runIntroEnum _ _ _ = pure Nothing
 
     runIntroInputs
-      :: [T.Text] -> Intro.Input -> GQL.SelectionSet
+      :: [T.Text] -> Intro.Input -> [GQL.Selection]
       -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
     runIntroInputs ipath inm iss
       = do things <- catMaybes <$> traverse (runIntroInput ipath inm) iss
            pure $ Just $ Aeson.object things
 
     runIntroInput ipath (Intro.Input inm def ty)
-                 (GQL.SelectionField (GQL.Field (coerce -> alias) (coerce -> nm) _ _ innerss))
+                 (GQL.FieldSelection (GQL.Field alias nm _ _ innerss _))
       = let realName :: T.Text = fromMaybe nm alias
             ipath' = ipath ++ [realName]
         in fmap (realName,) <$> case (nm, innerss) of
