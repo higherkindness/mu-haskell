@@ -21,14 +21,14 @@ Look at the source code of this module.
 -}
 module Mu.Rpc.Examples where
 
-import qualified Data.Aeson as J
+import qualified Data.Aeson               as J
 import           Data.Conduit
 import           Data.Conduit.Combinators as C
 import qualified Data.Text                as T
 import           GHC.Generics
 import           GHC.TypeLits
 
-import           Mu.Adapter.Json ()
+import           Mu.Adapter.Json          ()
 import           Mu.Rpc
 import           Mu.Schema
 import           Mu.Server
@@ -46,17 +46,17 @@ type QuickstartSchema
      ]
 
 type QuickStartService
-  = 'Package ('Just "helloworld")
+  = ('Package ('Just "helloworld")
       '[ 'Service "Greeter"
         '[ 'Method "SayHello"
-          '[ 'ArgSingle ('Nothing @Symbol) ('SchemaRef QuickstartSchema "HelloRequest") ]
+          '[ 'ArgSingle ('Nothing :: Maybe Symbol) ('SchemaRef QuickstartSchema "HelloRequest") ]
             ('RetSingle ('SchemaRef QuickstartSchema "HelloResponse"))
         , 'Method "SayHi"
-          '[ 'ArgSingle ('Nothing @Symbol) ('SchemaRef QuickstartSchema "HiRequest")]
+          '[ 'ArgSingle ('Nothing :: Maybe Symbol) ('SchemaRef QuickstartSchema "HiRequest")]
             ('RetStream ('SchemaRef QuickstartSchema "HelloResponse"))
         , 'Method "SayManyHellos"
-          '[ 'ArgStream ('Nothing @Symbol) ('SchemaRef QuickstartSchema "HelloRequest")]
-                ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ] :: Package'
+          '[ 'ArgStream ('Nothing :: Maybe Symbol) ('SchemaRef QuickstartSchema "HelloRequest")]
+                ('RetStream ('SchemaRef QuickstartSchema "HelloResponse")) ] ] :: Package')
 
 newtype HelloRequest = HelloRequest { name :: T.Text }
   deriving ( Show, Eq, Generic

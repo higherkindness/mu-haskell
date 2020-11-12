@@ -1,3 +1,4 @@
+{-# language CPP                       #-}
 {-# language ConstraintKinds           #-}
 {-# language DataKinds                 #-}
 {-# language ExistentialQuantification #-}
@@ -77,6 +78,10 @@ import           GHC.TypeLits
 
 import           Mu.Rpc
 import           Mu.Schema
+
+#if __GLASGOW_HASKELL__ < 880
+import Unsafe.Coerce (unsafeCoerce)
+#endif
 
 -- | Constraint for monads that can be used as servers
 type MonadServer m = (MonadError ServerError m, MonadIO m)
@@ -434,7 +439,11 @@ wrapServer f (Services ss) = Services (wrapServices ss)
                  -> ServicesT chn info ss m hs
     wrapServices S0 = S0
     wrapServices (h :<&>: rest)
+#if __GLASGOW_HASKELL__ >= 880
       = wrapHandlers h :<&>: wrapServices rest
+#else
+      = unsafeCoerce (wrapHandlers (unsafeCoerce h)) :<&>: unsafeCoerce (wrapServices rest)
+#endif
 
     wrapHandlers :: forall inh ms innerHs.
                     HandlersT chn info inh ms m innerHs

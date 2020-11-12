@@ -26,7 +26,7 @@ library
     , base               >=4.12  && <5
     , http-client        >=0.6.4 && <0.7
     , language-protobuf  >=1.0.1 && <1.1
-    , megaparsec         >=8     && <9
+    , megaparsec         >=8     && <10
     , servant            >=0.16  && <0.19
     , servant-client     >=0.16  && <0.19
     , text               >=1.2   && <2
