@@ -25,7 +25,7 @@ library
       base         >=4.12 && <5
     , containers   >=0.6  && <0.7
     , mu-schema    ==0.3.*
-    , optics-core  >=0.2  && <0.3
+    , optics-core  >=0.2  && <0.4
     , sop-core     >=0.5  && <0.6
 
   hs-source-dirs:   src
