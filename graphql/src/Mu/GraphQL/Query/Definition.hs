@@ -36,20 +36,24 @@ data OneMethodQuery (p :: Package snm mnm anm (TypeRef snm))
   OneMethodQuery
     :: Maybe Text
     -> NS (ChosenMethodQuery p) ms
+    -> GQL.Location
     -> OneMethodQuery p ('Service nm ms)
   -- the special '__typename' field
   TypeNameQuery
     :: Maybe Text
+    -> GQL.Location
     -> OneMethodQuery p ('Service nm ms)
   -- introspection fields
   SchemaQuery
     :: Maybe Text
     -> [GQL.Selection]
+    -> GQL.Location
     -> OneMethodQuery p ('Service nm ms)
   TypeQuery
     :: Maybe Text
     -> Text
     -> [GQL.Selection]
+    -> GQL.Location
     -> OneMethodQuery p ('Service nm ms)
 
 data ChosenMethodQuery (p :: Package snm mnm anm (TypeRef snm))

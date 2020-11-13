@@ -48,7 +48,7 @@ import           Mu.Schema
 import           Mu.Server
 
 data GraphQLError
-  = GraphQLError ServerError [T.Text]
+  = GraphQLError ServerError [T.Text] (Maybe GQL.Location)
 
 type GraphQLApp p qr mut sub m chn hs
   = (ParseTypedDoc p qr mut sub, RunDocument p qr mut sub m chn hs)
@@ -63,7 +63,7 @@ runPipeline
   -> IO Aeson.Value
 runPipeline f req svr _ _ _ opName vmap doc
   = case parseDoc @qr @mut @sub opName vmap doc of
-      Left e -> pure $ singleErrValue e
+      Left e -> pure $ singleErrValue e Nothing
       Right (d :: Document p qr mut sub) -> do
         (data_, errors) <- runWriterT (runDocument f req svr d)
         case errors of
@@ -82,32 +82,40 @@ runSubscriptionPipeline
 runSubscriptionPipeline f req svr _ _ _ opName vmap doc sink
   = case parseDoc @qr @mut @sub opName vmap doc of
       Left e
-        -> yieldSingleError e sink
+        -> yieldSingleError e Nothing sink
       Right (d :: Document p qr mut sub)
         -> runDocumentSubscription f req svr d sink
 
-singleErrValue :: T.Text -> Aeson.Value
-singleErrValue e
-  = Aeson.object [ ("errors", Aeson.Array [
-                       Aeson.object [ ("message", Aeson.String e) ] ])]
+singleErrValue :: T.Text -> Maybe GQL.Location -> Aeson.Value
+singleErrValue e loc
+  = let o = Aeson.object (
+              ("message", Aeson.String e)
+              : [errLoc l | Just l <- [loc]] )
+    in Aeson.object [ ("errors", Aeson.Array [o]) ]
 
 errValue :: GraphQLError -> Aeson.Value
-errValue (GraphQLError (ServerError _ msg) path)
-  = Aeson.object [
+errValue (GraphQLError (ServerError _ msg) path loc)
+  = Aeson.object ([
       ("message", Aeson.String $ T.pack msg)
     , ("path", Aeson.toJSON path)
-    ]
+    ] ++ [errLoc l | Just l <- [loc]])
+
+errLoc :: GQL.Location -> Aeson.Pair
+errLoc (GQL.Location ln cl)
+  = ( "locations"
+    , Aeson.listValue id [Aeson.object ["line" Aeson..= ln, "column" Aeson..= cl]] )
 
 yieldSingleError :: Monad m
-                 => T.Text -> ConduitM Aeson.Value Void m () -> m ()
-yieldSingleError e sink =
-  runConduit $ yieldMany ([singleErrValue e] :: [Aeson.Value]) .| sink
+                 => T.Text -> Maybe GQL.Location
+                 -> ConduitM Aeson.Value Void m () -> m ()
+yieldSingleError e loc sink =
+  runConduit $ yieldMany ([singleErrValue e loc] :: [Aeson.Value]) .| sink
 
 yieldError :: Monad m
-           => ServerError -> [T.Text]
+           => ServerError -> [T.Text] -> Maybe GQL.Location
            -> ConduitM Aeson.Value Void m () -> m ()
-yieldError e path sink = do
-  let val = Aeson.object [ ("errors", Aeson.listValue errValue [GraphQLError e path]) ]
+yieldError e path loc sink = do
+  let val = Aeson.object [ ("errors", Aeson.listValue errValue [GraphQLError e path loc]) ]
   runConduit $ yieldMany ([val] :: [Aeson.Value]) .| sink
 
 class RunDocument (p :: Package')
@@ -150,7 +158,7 @@ instance
            MutationDoc q
              -> runQuery f req i svr [] () q
            SubscriptionDoc _
-             -> pure $ singleErrValue "cannot execute subscriptions in this wire"
+             -> pure $ singleErrValue "cannot execute subscriptions in this wire" Nothing
   runDocumentSubscription f req svr (SubscriptionDoc d)
     = runSubscription f req svr [] () d
   runDocumentSubscription f req svr d = yieldDocument f req svr d
@@ -190,7 +198,7 @@ instance
            QueryDoc q
              -> runQuery f req i svr [] () q
            SubscriptionDoc _
-             -> pure $ singleErrValue "cannot execute subscriptions in this wire"
+             -> pure $ singleErrValue "cannot execute subscriptions in this wire" Nothing
   runDocumentSubscription f req svr (SubscriptionDoc d)
     = runSubscription f req svr [] () d
   runDocumentSubscription f req svr d = yieldDocument f req svr d
@@ -311,18 +319,18 @@ instance {-# OVERLAPS #-}
     where
       -- if we include the signature we have to write
       -- an explicit type signature for 'runQueryFindHandler'
-      runOneQuery (OneMethodQuery nm args)
+      runOneQuery (OneMethodQuery nm args _)
         = runMethod f req whole (Proxy @s) path nm inh this args
       -- handle __typename
-      runOneQuery (TypeNameQuery nm)
+      runOneQuery (TypeNameQuery nm _)
         = let realName = fromMaybe "__typename" nm
           in pure $ Just (realName, Aeson.String $ T.pack $ nameVal (Proxy @sname))
       -- handle __schema
-      runOneQuery (SchemaQuery nm ss)
+      runOneQuery (SchemaQuery nm ss _)
         = do let realName = fromMaybe "__schema" nm
              Just . (realName, ) <$> runIntroSchema path sch ss
       -- handle __type
-      runOneQuery (TypeQuery nm ty ss)
+      runOneQuery (TypeQuery nm ty ss loc)
         = do let realName = fromMaybe "__schema" nm
              res <- runIntroType path sch (Intro.TypeRef ty) ss
              case res of
@@ -330,18 +338,23 @@ instance {-# OVERLAPS #-}
                Nothing  -> do tell [GraphQLError
                                      (ServerError Invalid
                                        $ "cannot find type '" <> T.unpack ty <> "'")
-                                    path]
+                                    path (Just loc)]
                               pure $ Just (realName, Aeson.Null)
   -- subscriptions should only have one element
-  runSubscriptionFindHandler f req whole path (this :<&>: _) inh (OneMethodQuery nm args) sink
+  runSubscriptionFindHandler f req whole path (this :<&>: _) inh (OneMethodQuery nm args _) sink
     = runMethodSubscription f req whole (Proxy @s) path nm inh this args sink
-  runSubscriptionFindHandler _ _ _ _ _ _ (TypeNameQuery nm) sink
+  runSubscriptionFindHandler _ _ _ _ _ _ (TypeNameQuery nm _loc) sink
     = let realName = fromMaybe "__typename" nm
           o = Aeson.object [(realName, Aeson.String $ T.pack $ nameVal (Proxy @sname))]
       in runConduit $ yieldMany ([o] :: [Aeson.Value]) .| sink
-  runSubscriptionFindHandler _ _ _ _ _ _ _ sink
+  runSubscriptionFindHandler _ _ _ _ _ _ (SchemaQuery _ _ loc) sink
     = runConduit $ yieldMany
-                   ([singleErrValue "__schema and __type are not supported in subscriptions"]
+                   ([singleErrValue "__schema is not supported in subscriptions" (Just loc)]
+                      :: [Aeson.Value])
+                   .| sink
+  runSubscriptionFindHandler _ _ _ _ _ _ (TypeQuery _ _ _ loc) sink
+    = runConduit $ yieldMany
+                   ([singleErrValue "__type is not supported in subscriptions" (Just loc)]
                       :: [Aeson.Value])
                    .| sink
 
@@ -379,19 +392,26 @@ instance ( RunMethod m p whole chn s ms hs
          , ReflectRpcInfo p s ('Method mname args r) )
          => RunMethod m p whole chn s ('Method mname args r ': ms) (h ': hs) where
   -- handle normal methods
-  runMethod f req whole _ path nm inh (h :<||>: _) (Z (ChosenMethodQuery fld args ret))
-    = ((realName ,) <$>) <$> runHandler f req whole (path ++ [realName]) (h rpcInfo inh) args ret
+  runMethod f req whole _ path nm inh (h :<||>: _)
+            (Z (ChosenMethodQuery fld@(GQL.Field _ _ _ _ _ loc) args ret))
+    = ((realName ,) <$>)
+         <$> runHandler f req whole (path ++ [realName]) (h rpcInfo inh) args ret loc
     where realName = fromMaybe (T.pack $ nameVal (Proxy @mname)) nm
           rpcInfo = reflectRpcInfo (Proxy @p) (Proxy @s) (Proxy @('Method mname args r)) req fld
   runMethod f req whole p path nm inh (_ :<||>: r) (S cont)
     = runMethod f req whole p path nm inh r cont
+  runMethod _ _ _ _ _ _ _ _ _
+    = error "runMethod: this should never happen"
   -- handle subscriptions
-  runMethodSubscription f req whole _ path nm inh (h :<||>: _) (Z (ChosenMethodQuery fld args ret)) sink
-    = runHandlerSubscription f req whole (path ++ [realName]) (h rpcInfo inh) args ret sink
+  runMethodSubscription f req whole _ path nm inh (h :<||>: _)
+                        (Z (ChosenMethodQuery fld@(GQL.Field _ _ _ _ _ loc) args ret)) sink
+    = runHandlerSubscription f req whole (path ++ [realName]) (h rpcInfo inh) args ret loc sink
     where realName = fromMaybe (T.pack $ nameVal (Proxy @mname)) nm
           rpcInfo = reflectRpcInfo (Proxy @p) (Proxy @s) (Proxy @('Method mname args r)) req fld
   runMethodSubscription f req whole p path nm inh (_ :<||>: r) (S cont) sink
     = runMethodSubscription f req whole p path nm inh r cont sink
+  runMethodSubscription _ _ _ _ _ _ _ _ _ _
+    = error "runMethodSubscription: this should never happen"
 
 class Handles chn args r m h
       => RunHandler m p whole chn args r h where
@@ -403,6 +423,7 @@ class Handles chn args r m h
     -> h
     -> NP (ArgumentValue p) args
     -> ReturnQuery p r
+    -> GQL.Location
     -> WriterT [GraphQLError] IO (Maybe Aeson.Value)
   runHandlerSubscription
     :: (forall a. m a -> ServerErrorIO a)
@@ -412,6 +433,7 @@ class Handles chn args r m h
     -> h
     -> NP (ArgumentValue p) args
     -> ReturnQuery p r
+    -> GQL.Location
     -> ConduitT Aeson.Value Void IO ()
     -> IO ()
 
@@ -434,24 +456,24 @@ instance ( MonadError ServerError m
       in runHandlerSubscription f req whole path (h (yieldMany converted)) rest sink
 instance (MonadError ServerError m)
          => RunHandler m p whole chn '[] 'RetNothing (m ()) where
-  runHandler f _req _ path h Nil _ = do
+  runHandler f _req _ path h Nil _ loc = do
     res <- liftIO $ runExceptT (f h)
     case res of
       Right _ -> pure $ Just Aeson.Null
-      Left e  -> tell [GraphQLError e path] >> pure Nothing
-  runHandlerSubscription f _req _ path h Nil _ sink = do
+      Left e  -> tell [GraphQLError e path (Just loc)] >> pure Nothing
+  runHandlerSubscription f _req _ path h Nil _ loc sink = do
     res <- liftIO $ runExceptT (f h)
     case res of
       Right _ -> runConduit $ yieldMany ([] :: [Aeson.Value]) .| sink
-      Left e  -> yieldError e path sink
+      Left e  -> yieldError e path (Just loc) sink
 instance (MonadError ServerError m, ResultConversion m p whole chn r l)
          => RunHandler m p whole chn '[] ('RetSingle r) (m l) where
-  runHandler f req whole path h Nil (RSingle q) = do
+  runHandler f req whole path h Nil (RSingle q) loc = do
     res <- liftIO $ runExceptT (f h)
     case res of
       Right v -> convertResult f req whole path q v
-      Left e  -> tell [GraphQLError e path] >> pure Nothing
-  runHandlerSubscription f req whole path h Nil (RSingle q) sink = do
+      Left e  -> tell [GraphQLError e path (Just loc)] >> pure Nothing
+  runHandlerSubscription f req whole path h Nil (RSingle q) loc sink = do
     res <- liftIO $ runExceptT (f h)
     val <- case res of
       Right v -> do
@@ -460,24 +482,24 @@ instance (MonadError ServerError m, ResultConversion m p whole chn r l)
           [] -> pure $ Aeson.object [ ("data", fromMaybe Aeson.Null data_) ]
           _  -> pure $ Aeson.object [ ("data", fromMaybe Aeson.Null data_)
                                     , ("errors", Aeson.listValue errValue errors) ]
-      Left e -> pure $ Aeson.object [ ("errors", Aeson.listValue errValue [GraphQLError e path]) ]
+      Left e -> pure $ Aeson.object [ ("errors", Aeson.listValue errValue [GraphQLError e path (Just loc)]) ]
     runConduit $ yieldMany ([val] :: [Aeson.Value]) .| sink
 instance (MonadIO m, MonadError ServerError m, ResultConversion m p whole chn r l)
          => RunHandler m p whole chn '[] ('RetStream r) (ConduitT l Void m () -> m ()) where
-  runHandler f req whole path h Nil (RStream q) = do
+  runHandler f req whole path h Nil (RStream q) loc = do
     queue <- liftIO newTMQueueIO
     res <- liftIO $ runExceptT $ f $ h (sinkTMQueue queue)
     case res of
       Right _ -> do
         info <- runConduit $ sourceTMQueue queue .| sinkList
         Just . Aeson.toJSON . catMaybes <$> traverse (convertResult f req whole path q) info
-      Left e  -> tell [GraphQLError e []] >> pure Nothing
-  runHandlerSubscription f req whole path h Nil (RStream q) sink = do
+      Left e  -> tell [GraphQLError e [] (Just loc)] >> pure Nothing
+  runHandlerSubscription f req whole path h Nil (RStream q) loc sink = do
     res <- liftIO $ runExceptT $ f $ h
       (transPipe liftIO (mapInputM convert (error "this should not be called") sink))
     case res of
       Right _ -> return ()
-      Left e  -> yieldError e path sink
+      Left e  -> yieldError e path (Just loc) sink
     where
       convert :: l -> IO Aeson.Value
       convert v = do
@@ -605,7 +627,7 @@ runIntroSchema path s@(Intro.Schema qr mut sub ts) ss
   = do things <- catMaybes <$> traverse runOne ss
        pure $ Aeson.object things
   where
-    runOne (GQL.FieldSelection (GQL.Field alias nm _ _ innerss _))
+    runOne (GQL.FieldSelection (GQL.Field alias nm _ _ innerss loc))
       = let realName :: T.Text = fromMaybe nm alias
             path' = path ++ [realName]
         in fmap (realName,) <$> case nm of
@@ -631,7 +653,7 @@ runIntroSchema path s@(Intro.Schema qr mut sub ts) ss
              _ -> do tell [GraphQLError
                              (ServerError Invalid
                                $ "field '" <> T.unpack nm <> "' was not found on type '__Schema'")
-                             path]
+                             path (Just loc)]
                      pure Nothing
     -- we do not support spreads here
     runOne _ = pure Nothing
@@ -647,7 +669,7 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
   = do things <- catMaybes <$> traverse runOne ss
        pure $ Just $ Aeson.object things
   where
-    runOne (GQL.FieldSelection (GQL.Field alias nm _ _ innerss _))
+    runOne (GQL.FieldSelection (GQL.Field alias nm _ _ innerss loc))
       = let realName :: T.Text = fromMaybe nm alias
             path' = path ++ [realName]
         in fmap (realName,) <$> case (nm, innerss) of
@@ -688,7 +710,7 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
              _ -> do tell [GraphQLError
                              (ServerError Invalid
                                $ "field '" <> T.unpack nm <> "' was not found on type '__Type'")
-                             path]
+                             path (Just loc)]
                      pure Nothing
     -- we do not support spreads here
     runOne _ = pure Nothing
@@ -701,7 +723,7 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
            pure $ Just $ Aeson.object things
 
     runIntroField fpath (Intro.Field fnm fargs fty)
-                  (GQL.FieldSelection (GQL.Field alias nm _ _ innerss _))
+                  (GQL.FieldSelection (GQL.Field alias nm _ _ innerss loc))
       = let realName :: T.Text = fromMaybe nm alias
             fpath' = fpath ++ [realName]
         in fmap (realName,) <$> case (nm, innerss) of
@@ -729,7 +751,7 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
           _ -> do tell [GraphQLError
                              (ServerError Invalid
                                $ "field '" <> T.unpack nm <> "' was not found on type '__Field'")
-                             fpath]
+                             fpath (Just loc)]
                   pure Nothing
     -- we do not support spreads here
     runIntroField _ _ _ = pure Nothing
@@ -742,7 +764,7 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
            pure $ Just $ Aeson.object things
 
     runIntroEnum epath (Intro.EnumValue enm)
-                 (GQL.FieldSelection (GQL.Field alias nm _ _ innerss _))
+                 (GQL.FieldSelection (GQL.Field alias nm _ _ innerss loc))
       = let realName :: T.Text = fromMaybe nm alias
         in fmap (realName,) <$> case (nm, innerss) of
           ("name", [])
@@ -757,7 +779,7 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
           _ -> do tell [GraphQLError
                              (ServerError Invalid
                                $ "field '" <> T.unpack nm <> "' was not found on type '__EnumValue'")
-                             epath]
+                             epath (Just loc)]
                   pure Nothing
     -- we do not support spreads here
     runIntroEnum _ _ _ = pure Nothing
@@ -770,7 +792,7 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
            pure $ Just $ Aeson.object things
 
     runIntroInput ipath (Intro.Input inm def ty)
-                 (GQL.FieldSelection (GQL.Field alias nm _ _ innerss _))
+                 (GQL.FieldSelection (GQL.Field alias nm _ _ innerss loc))
       = let realName :: T.Text = fromMaybe nm alias
             ipath' = ipath ++ [realName]
         in fmap (realName,) <$> case (nm, innerss) of
@@ -787,7 +809,7 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
           _ -> do tell [GraphQLError
                              (ServerError Invalid
                                $ "field '" <> T.unpack nm <> "' was not found on type '__Field'")
-                             ipath]
+                             ipath (Just loc)]
                   pure Nothing
     -- we do not support spreads here
     runIntroInput _ _ _ = pure Nothing

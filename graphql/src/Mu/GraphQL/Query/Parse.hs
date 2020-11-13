@@ -280,16 +280,16 @@ parseQuery pp ps vmap frmap (GQL.FieldSelection fld : ss)
          <*> parseQuery pp ps vmap frmap ss
   where
     fieldToMethod :: GQL.Field -> f (Maybe (OneMethodQuery p ('Service sname methods)))
-    fieldToMethod f@(GQL.Field alias name args dirs sels _)
+    fieldToMethod f@(GQL.Field alias name args dirs sels loc)
       | any (shouldSkip vmap) dirs
       = pure Nothing
       | name == "__typename"
       = case (args, sels) of
-          ([], []) -> pure $ Just $ TypeNameQuery alias
+          ([], []) -> pure $ Just $ TypeNameQuery alias loc
           _        -> throwError "__typename does not admit arguments nor selection of subfields"
       | name == "__schema"
       = case args of
-          [] -> Just . SchemaQuery alias <$> unFragment frmap (F.toList sels)
+          [] -> Just . flip (SchemaQuery alias) loc <$> unFragment frmap (F.toList sels)
           _  -> throwError "__schema does not admit selection of subfields"
       | name == "__type"
       = let getString (GQL.String s)   = Just s
@@ -298,11 +298,11 @@ parseQuery pp ps vmap frmap (GQL.FieldSelection fld : ss)
         in case args of
           [GQL.Argument _ (GQL.Node val _) _]
             -> case getString val of
-                 Just s -> Just . TypeQuery alias s <$> unFragment frmap sels
+                 Just s -> Just . flip (TypeQuery alias s) loc <$> unFragment frmap sels
                  _      -> throwError "__type requires a string argument"
           _ -> throwError "__type requires one single argument"
       | otherwise
-      = Just . OneMethodQuery alias
+      = Just . flip (OneMethodQuery alias) loc
          <$> selectMethod (Proxy @('Service s methods))
                           (T.pack $ nameVal (Proxy @s))
                           vmap frmap f
