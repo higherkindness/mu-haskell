@@ -23,9 +23,9 @@ import           Control.Monad.IO.Class
 import qualified Data.ByteString                 as B
 import           Data.Int
 import qualified Data.List                       as L
-import           Data.List.NonEmpty (NonEmpty(..))
-import           Data.Word
+import           Data.List.NonEmpty              (NonEmpty (..))
 import qualified Data.Text                       as T
+import           Data.Word
 import           Language.Haskell.TH
 import           Language.ProtocolBuffers.Parser
 import qualified Language.ProtocolBuffers.Types  as P
@@ -84,7 +84,7 @@ flattenDecls (currentScope :| higherScopes) = concatMap flattenDecl
       P.MapField (qualifyType scopes fkey) (qualifyType scopes fval) fname fnumber fopts
 
     qualifyType scopes (P.TOther ts) = P.TOther (qualifyTOther scopes ts)
-    qualifyType _scopes t = t
+    qualifyType _scopes t            = t
 
     qualifyTOther _scopes [] = error "This shouldn't be possible"
     qualifyTOther ((_, _) :| []) ts =
@@ -111,7 +111,7 @@ flattenDecls (currentScope :| higherScopes) = concatMap flattenDecl
     prependCurrentScope x =
       case fst currentScope of
         "" -> x
-        _ -> fst currentScope <> "." <> x
+        _  -> fst currentScope <> "." <> x
 
 pbTypeDeclToType :: P.TypeDeclaration -> Q (Type, [Type])
 pbTypeDeclToType (P.DEnum name _ fields) = do
