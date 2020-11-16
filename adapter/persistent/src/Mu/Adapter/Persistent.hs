@@ -21,7 +21,7 @@ module Mu.Adapter.Persistent (
   WithEntityNestedId(..)
 , WithEntityPlainId(..)
   -- * Generic utilities
-, runDb
+, runDb, Pool, runDbPool
 ) where
 
 import           Control.Monad.IO.Class
@@ -29,6 +29,7 @@ import           Control.Monad.Logger
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Resource.Internal
 import           Data.Int
+import           Data.Pool                             (Pool)
 import           Database.Persist.Sql
 import           GHC.Generics
 import           GHC.TypeLits
@@ -95,3 +96,12 @@ runDb :: MonadIO m
       -> ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a
       -> m a
 runDb = (liftIO .) . flip runSqlPersistM
+
+-- | Simple utility to execute a database operation
+--   in any monad which supports 'IO' operations.
+--   Note that all logging messages are discarded.
+runDbPool :: MonadIO m
+          => Pool SqlBackend
+          -> ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a
+          -> m a
+runDbPool = (liftIO .) . flip runSqlPersistMPool

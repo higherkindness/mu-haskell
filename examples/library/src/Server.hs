@@ -11,10 +11,11 @@ module Main where
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad.Logger              (LoggingT, runStderrLoggingT)
 import           Data.Conduit                      (ConduitT, Void, runConduit, (.|))
+import           Data.Conduit.Combinators          (yieldMany)
 import           Data.Maybe                        (fromJust)
 import qualified Data.Text                         as T
 import           Database.Persist.Sqlite
-import           Mu.Adapter.Persistent             (runDb)
+import           Mu.Adapter.Persistent             (Pool, runDbPool)
 import           Mu.GraphQL.Server                 (graphQLApp, liftServerConduit)
 import           Mu.Instrumentation.Prometheus     (initPrometheus, prometheus)
 import           Mu.Schema                         (Mapping ((:->)), Proxy (Proxy))
@@ -35,8 +36,8 @@ main = do
   p <- initPrometheus "library"
   -- Run the whole thing
   runStderrLoggingT $
-    withSqliteConn @(LoggingT IO) ":memory:" $ \conn -> do
-      runDb conn $ runMigration migrateAll
+    withSqlitePool @(LoggingT IO) ":memory:" 1000 $ \conn -> do
+      runDbPool conn $ runMigration migrateAll
       -- Insert demo data
       insertSeedData conn
       liftIO $ putStrLn "starting GraphQL server on port 8000"
@@ -49,7 +50,7 @@ main = do
 {- | Inserts demo data to make this example valueable for testing with different clients
      Returns Nothing in case of any failure, including attempts to insert non-unique values
 -}
-insertSeedData :: SqlBackend -> LoggingT IO (Maybe ())
+insertSeedData :: Pool SqlBackend -> LoggingT IO (Maybe ())
 insertSeedData conn = sequence_ <$> traverse (uncurry $ insertAuthorAndBooks conn) seedData
   where seedData =
           [ (Author "Robert Louis Stevenson",
@@ -67,9 +68,9 @@ insertSeedData conn = sequence_ <$> traverse (uncurry $ insertAuthorAndBooks con
 {- | Inserts Author and Books
      Returns Nothing in case of any failure, including attempts to insert non-unique values
 -}
-insertAuthorAndBooks :: SqlBackend -> Author -> [Key Author -> Book] -> LoggingT IO (Maybe ())
+insertAuthorAndBooks :: Pool SqlBackend -> Author -> [Key Author -> Book] -> LoggingT IO (Maybe ())
 insertAuthorAndBooks conn author books =
-  runDb conn . fmap sequence_ $ do
+  runDbPool conn . fmap sequence_ $ do
     authorResult <- insertUnique author
     case authorResult of
       Just authorId -> traverse (\kBook -> insertUnique (kBook authorId)) books
@@ -80,7 +81,7 @@ type ObjectMapping = '[
   , "Author" ':-> Entity Author
   ]
 
-libraryServer :: SqlBackend -> ServerT ObjectMapping i Library ServerErrorIO _
+libraryServer :: Pool SqlBackend -> ServerT ObjectMapping i Library ServerErrorIO _
 libraryServer conn = resolver
   ( object @"Book"
     ( field @"id"       bookId
@@ -108,33 +109,37 @@ libraryServer conn = resolver
     bookId :: Entity Book -> ServerErrorIO Integer
     bookId (Entity (BookKey k) _) = pure $ toInteger k
     bookTitle :: Entity Book -> ServerErrorIO T.Text
-    bookTitle (Entity _ Book { bookTitle }) = pure bookTitle
+    bookTitle (Entity _ Book { bookTitle = tl }) = pure tl
     bookAuthor :: Entity Book -> ServerErrorIO (Entity Author)
-    bookAuthor (Entity _ Book { bookAuthor }) = runDb conn $ Entity bookAuthor . fromJust <$> get bookAuthor
+    bookAuthor (Entity _ Book { bookAuthor = au }) = do
+      author <- runDbPool conn $ get au
+      pure $ Entity au (fromJust author)
     bookImage :: Entity Book -> ServerErrorIO T.Text
     bookImage (Entity _ Book { bookImageUrl }) = pure bookImageUrl
 
     authorId :: Entity Author -> ServerErrorIO Integer
     authorId (Entity (AuthorKey k) _) = pure $ toInteger k
     authorName :: Entity Author -> ServerErrorIO T.Text
-    authorName (Entity _ Author { authorName }) = pure authorName
+    authorName (Entity _ Author { authorName = nm }) = pure nm
     authorBooks :: Entity Author -> ServerErrorIO [Entity Book]
-    authorBooks (Entity author _) = runDb conn $ selectList [BookAuthor ==. author] [Asc BookTitle]
+    authorBooks (Entity author _) = runDbPool conn $ selectList [BookAuthor ==. author] [Asc BookTitle]
 
     allAuthors :: T.Text -> ServerErrorIO [Entity Author]
     allAuthors nameFilter
-      = runDb conn $ selectList [Filter AuthorName (FilterValue nameFilter) (BackendSpecificFilter "LIKE")] [Asc AuthorName]
+      = runDbPool conn $ selectList [Filter AuthorName (FilterValue nameFilter) (BackendSpecificFilter "LIKE")] [Asc AuthorName]
 
     allBooks :: T.Text -> ServerErrorIO [Entity Book]
     allBooks titleFilter
-      = runDb conn $ selectList [Filter BookTitle (FilterValue titleFilter) (BackendSpecificFilter "LIKE")] [Asc BookTitle]
+      = runDbPool conn $ selectList [Filter BookTitle (FilterValue titleFilter) (BackendSpecificFilter "LIKE")] [Asc BookTitle]
 
     allBooksConduit :: ConduitT (Entity Book) Void ServerErrorIO () -> ServerErrorIO ()
-    allBooksConduit sink = runDb conn $ runConduit $ selectSource [] [Asc BookTitle] .| liftServerConduit sink
+    allBooksConduit sink = do
+      lst <- liftIO $ runDbPool conn $ selectList [] [Asc BookTitle]
+      runConduit $ yieldMany lst .| liftServerConduit sink
 
     newAuthor :: NewAuthor -> ServerErrorIO (Entity Author)
     newAuthor (NewAuthor name) = do
-      maybeEntity <- runDb conn $ do
+      maybeEntity <- runDbPool conn $ do
         let new = Author name
         result <- insertUnique new
         pure $ Entity <$> result <*> pure new
@@ -143,7 +148,7 @@ libraryServer conn = resolver
 
     newBook :: NewBook -> ServerErrorIO (Entity Book)
     newBook (NewBook title authorId img) = do
-      maybeEntity <- runDb conn $ do
+      maybeEntity <- runDbPool conn $ do
         let new = Book title img (toAuthorId $ fromInteger authorId)
         result <- insertUnique new
         pure $ Entity <$> result <*> pure new
