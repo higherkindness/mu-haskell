@@ -7,16 +7,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: mstksg/setup-stack@v1
-    - uses: actions/cache@v1
+    - uses: actions/checkout@v2.3.4
+    - uses: mstksg/setup-stack@v2
+    - uses: actions/cache@v2.1.3
       name: Cache ~/.stack
       with:
         path: ~/.stack
         key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml') }}
         restore-keys: |
           ${{ runner.os }}-stack-
-    - uses: actions/cache@v1
+    - uses: actions/cache@v2.1.3
       name: Cache .stack-work
       with:
         path: .stack-work
@@ -46,7 +46,7 @@ jobs:
         bash ./generate-haddock-docs.sh
         BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell/wip -s docs -d gen-docs/wip
     - name: Deploy microsite
-      uses: peaceiris/actions-gh-pages@v2
+      uses: peaceiris/actions-gh-pages@v3.7.3
       env:
         ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }}
         PUBLISH_BRANCH: gh-pages
