@@ -22,8 +22,10 @@ import           Control.Monad                   (when)
 import           Control.Monad.IO.Class
 import qualified Data.ByteString                 as B
 import           Data.Int
-import           Data.Word
+import qualified Data.List                       as L
+import           Data.List.NonEmpty              (NonEmpty (..))
 import qualified Data.Text                       as T
+import           Data.Word
 import           Language.Haskell.TH
 import           Language.ProtocolBuffers.Parser
 import qualified Language.ProtocolBuffers.Types  as P
@@ -62,16 +64,54 @@ protobufToDecls schemaName p
 
 schemaFromProtoBuf :: P.ProtoBuf -> Q (Type, Type)
 schemaFromProtoBuf P.ProtoBuf {P.types = tys} = do
-  let decls = flattenDecls tys
+  let decls = flattenDecls (("", tys) :| []) tys
   (schTys, anns) <- unzip <$> mapM pbTypeDeclToType decls
   pure (typesToList schTys, typesToList (concat anns))
 
-flattenDecls :: [P.TypeDeclaration] -> [P.TypeDeclaration]
-flattenDecls = concatMap flattenDecl
+flattenDecls :: NonEmpty (P.Identifier, [P.TypeDeclaration]) -> [P.TypeDeclaration] -> [P.TypeDeclaration]
+flattenDecls (currentScope :| higherScopes) = concatMap flattenDecl
   where
-    flattenDecl d@P.DEnum {} = [d]
+    flattenDecl (P.DEnum name o f) = [P.DEnum (prependCurrentScope name) o f]
     flattenDecl (P.DMessage name o r fs decls) =
-      P.DMessage name o r fs [] : flattenDecls decls
+      let newScopeName = prependCurrentScope name
+          newScopes = (newScopeName, decls) :| (currentScope : higherScopes)
+      in P.DMessage newScopeName o r (scopeFieldType newScopes <$> fs) [] : flattenDecls newScopes decls
+
+    scopeFieldType scopes (P.NormalField frep ftype fname fnum fopts) =
+      P.NormalField frep (qualifyType scopes ftype) fname fnum fopts
+    scopeFieldType scopes (P.OneOfField fname fields) = P.OneOfField fname (scopeFieldType scopes <$> fields)
+    scopeFieldType scopes (P.MapField fkey fval fname fnumber fopts) =
+      P.MapField (qualifyType scopes fkey) (qualifyType scopes fval) fname fnumber fopts
+
+    qualifyType scopes (P.TOther ts) = P.TOther (qualifyTOther scopes ts)
+    qualifyType _scopes t            = t
+
+    qualifyTOther _scopes [] = error "This shouldn't be possible"
+    qualifyTOther ((_, _) :| []) ts =
+      [T.intercalate "." ts] -- Top level scope, no need to search anything, use
+                             -- the name as is. Maybe we should search and fail
+                             -- if a type is not found even from top level, but
+                             -- that could be a lot of work as this function is
+                             -- pure right now.
+    qualifyTOther ((scopeName, decls) :| (restFirst : restTail)) ts =
+      if L.any (hasDeclFor ts) decls
+      then [T.intercalate "." (scopeName:ts)]
+      else qualifyTOther (restFirst :| restTail) ts
+
+    hasDeclFor [] _ = True
+    hasDeclFor [t] (P.DEnum enumName _ _) = t == enumName
+    hasDeclFor (_:_:_) P.DEnum{} = False
+    hasDeclFor (t:ts) (P.DMessage msgName _ _ _ rest) =
+      let nameMatch = t == msgName
+          -- 'L.any' returns 'False' if 'rest' is empty, hence the 'null ts'
+          -- check is required.
+          restMatch = null ts || L.any (hasDeclFor ts) rest
+      in nameMatch && restMatch
+
+    prependCurrentScope x =
+      case fst currentScope of
+        "" -> x
+        _  -> fst currentScope <> "." <> x
 
 pbTypeDeclToType :: P.TypeDeclaration -> Q (Type, [Type])
 pbTypeDeclToType (P.DEnum name _ fields) = do
