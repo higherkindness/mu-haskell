@@ -109,31 +109,44 @@ libraryServer conn = resolver
     bookId :: Entity Book -> ServerErrorIO Integer
     bookId (Entity (BookKey k) _) = pure $ toInteger k
     bookTitle :: Entity Book -> ServerErrorIO T.Text
-    bookTitle (Entity _ Book { bookTitle = tl }) = pure tl
+    bookTitle (Entity _ Book { bookTitle }) = pure bookTitle
     bookAuthor :: Entity Book -> ServerErrorIO (Entity Author)
-    bookAuthor (Entity _ Book { bookAuthor = au }) = do
-      author <- runDbPool conn $ get au
-      pure $ Entity au (fromJust author)
+    bookAuthor (Entity _ Book { bookAuthor }) = do
+      author <- runDbPool conn $ get bookAuthor
+      pure $ Entity bookAuthor (fromJust author)
     bookImage :: Entity Book -> ServerErrorIO T.Text
     bookImage (Entity _ Book { bookImageUrl }) = pure bookImageUrl
 
     authorId :: Entity Author -> ServerErrorIO Integer
     authorId (Entity (AuthorKey k) _) = pure $ toInteger k
     authorName :: Entity Author -> ServerErrorIO T.Text
-    authorName (Entity _ Author { authorName = nm }) = pure nm
+    authorName (Entity _ Author { authorName }) = pure authorName
     authorBooks :: Entity Author -> ServerErrorIO [Entity Book]
-    authorBooks (Entity author _) = runDbPool conn $ selectList [BookAuthor ==. author] [Asc BookTitle]
+    authorBooks (Entity author _)
+      = runDbPool conn $
+          selectList [BookAuthor ==. author] [Asc BookTitle]
 
     allAuthors :: T.Text -> ServerErrorIO [Entity Author]
     allAuthors nameFilter
-      = runDbPool conn $ selectList [Filter AuthorName (FilterValue nameFilter) (BackendSpecificFilter "LIKE")] [Asc AuthorName]
+      = runDbPool conn $
+          selectList [Filter AuthorName (FilterValue nameFilter)
+                             (BackendSpecificFilter "LIKE")]
+                     [Asc AuthorName]
 
     allBooks :: T.Text -> ServerErrorIO [Entity Book]
     allBooks titleFilter
-      = runDbPool conn $ selectList [Filter BookTitle (FilterValue titleFilter) (BackendSpecificFilter "LIKE")] [Asc BookTitle]
+      = runDbPool conn $
+          selectList [Filter BookTitle (FilterValue titleFilter)
+                             (BackendSpecificFilter "LIKE")]
+                     [Asc BookTitle]
 
     allBooksConduit :: ConduitT (Entity Book) Void ServerErrorIO () -> ServerErrorIO ()
     allBooksConduit sink = do
+      -- do not convert to a single selectConduit!
+      -- there seems to be a problem running nested runDb's
+      -- so we break it into two steps, assuming that the
+      -- list of books would fit in memory
+      -- see https://github.com/higherkindness/mu-haskell/issues/259
       lst <- liftIO $ runDbPool conn $ selectList [] [Asc BookTitle]
       runConduit $ yieldMany lst .| liftServerConduit sink
 
