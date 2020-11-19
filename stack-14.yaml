@@ -18,7 +18,6 @@ packages:
 - instrumentation/prometheus
 - instrumentation/tracing
 - examples/health-check
-- examples/library
 - examples/route-guide
 - examples/seed
 - examples/todolist
