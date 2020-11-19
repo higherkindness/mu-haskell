@@ -48,8 +48,8 @@ jobs:
         bash ./generate-haddock-docs.sh
         BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell/wip -s docs -d gen-docs/wip
     - name: Deploy microsite
-      uses: peaceiris/actions-gh-pages@v3.7.3
+      uses: peaceiris/actions-gh-pages@v2
       env:
-        deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-        publish_branch: gh-pages
-        publish_dir: ./gen-docs
+        ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+        PUBLISH_BRANCH: gh-pages
+        PUBLISH_DIR: ./gen-docs
