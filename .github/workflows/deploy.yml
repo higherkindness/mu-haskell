@@ -50,6 +50,6 @@ jobs:
     - name: Deploy microsite
       uses: peaceiris/actions-gh-pages@v3.7.3
       env:
-        deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
         publish_dir: ./gen-docs
