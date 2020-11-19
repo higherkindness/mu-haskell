@@ -78,18 +78,18 @@ executable persistent-client-optics
   main-is:          ClientOptics.hs
   other-modules:    Schema
   build-depends:
-      base                 >=4.12  && <5
-    , conduit              >=1.3.2 && <2
+      base                 >=4.12    && <5
+    , conduit              >=1.3.2   && <2
     , mu-grpc-client       >=0.3.0.0
     , mu-optics            >=0.3.0.0
     , mu-persistent        >=0.3.0
     , mu-protobuf          >=0.4.0
     , mu-rpc               >=0.4.0
     , mu-schema            >=0.3.0
-    , persistent           >=2.10  && <3
-    , persistent-sqlite    >=2.10  && <3
-    , persistent-template  >=2.8   && <3
-    , text                 >=1.2   && <2
+    , persistent           >=2.10    && <3
+    , persistent-sqlite    >=2.10    && <3
+    , persistent-template  >=2.8     && <3
+    , text                 >=1.2     && <2
 
   hs-source-dirs:   src
   default-language: Haskell2010
