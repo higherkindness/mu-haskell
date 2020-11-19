@@ -1,0 +1,3 @@
+[submodule "examples/library"]
+	path = examples/library
+	url = https://github.com/higherkindness/mu-graphql-example-elm.git
