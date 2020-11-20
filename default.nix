@@ -6,10 +6,17 @@ in
 { pkgs ? import nixpkgsSrc nixpkgsArgs
 }:
 let
+  gitignoreSrc = pkgs.fetchFromGitHub {
+    owner = "hercules-ci";
+    repo = "gitignore";
+    rev = "c4662e6";
+    sha256 = "sha256:1npnx0h6bd0d7ql93ka7azhj40zgjp815fw2r6smg8ch9p7mzdlx";
+  };
+  inherit (import gitignoreSrc { inherit (pkgs) lib; }) gitignoreSource;
   hnPkgs = pkgs.haskell-nix.stackProject {
     src = pkgs.haskell-nix.haskellLib.cleanGit {
       name = "mu-haskell";
-      src = ./.;
+      src = gitignoreSource ./.;
     };
   };
 in {

@@ -44,7 +44,7 @@ import           Data.Int
 import           Data.SOP                 (All)
 import qualified Data.Text                as T
 import qualified Data.Text.Lazy           as LT
-import           Data.Word                (Word64, Word32)
+import           Data.Word                (Word32, Word64)
 import           GHC.TypeLits
 import           Proto3.Wire
 import qualified Proto3.Wire.Decode       as PBDec
