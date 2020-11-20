@@ -1,6 +1,5 @@
 let
   haskellNix = import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/31029c1.tar.gz) {};
-  nix-pre-commit-hooks = import (builtins.fetchTarball "https://github.com/cachix/pre-commit-hooks.nix/tarball/master");
   nixpkgsSrc = haskellNix.sources.nixpkgs-2003;
   nixpkgsArgs = haskellNix.nixpkgsArgs;
 in
@@ -43,12 +42,4 @@ in {
   mu-schema = hnPkgs.mu-schema.components.library;
   mu-servant-server = hnPkgs.mu-servant-server.components.library;
   mu-tracing = hnPkgs.mu-tracing.components.library;
-  pre-commit-check = nix-pre-commit-hooks.run {
-    src = gitignoreSource ./.;
-    hooks = {
-      stylish-haskell.enable = true;
-      hlint.enable = true;
-      shellcheck.enable = true;
-    };
-  };
 }
