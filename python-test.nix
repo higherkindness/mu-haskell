@@ -10,8 +10,7 @@ let
   ];
   python2 = pkgs.python27Packages.python.withPackages python2-packages;
   stack = pkgs.stack;
-in
-{
+in {
   test-schema = writeShellScriptBin "test-schema.sh" ''
   #!/bin/sh
   echo "BUILDING"

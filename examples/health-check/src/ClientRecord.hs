@@ -5,7 +5,6 @@
 {-# language OverloadedStrings   #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeApplications    #-}
-{-# language TypeOperators       #-}
 module Main where
 
 import           Data.Conduit

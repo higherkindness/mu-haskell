@@ -22,8 +22,8 @@ import           Data.Int                    (Int32)
 import           Data.List                   (find)
 import           Data.Maybe
 import           Data.Proxy
-import           Data.SOP.NS
 import           Data.Scientific             (Scientific, floatingOrInteger, fromFloatDigits)
+import           Data.SOP.NS
 import qualified Data.Text                   as T
 import           GHC.TypeLits
 import qualified Language.GraphQL.AST        as GQL
