@@ -2,28 +2,28 @@ allow-newer: base, network, ghc-prim, template-haskell, proto3-wire, http2
 
 preferences: base16-bytestring < 1
 
-packages: compendium-client/
-          core/schema/
-          core/rpc/
-          core/optics/
-          core/lens/
-          adapter/avro/
-          adapter/protobuf/
-          adapter/persistent/
+packages: adapter/avro/
           adapter/kafka/
+          adapter/persistent/
+          adapter/protobuf/
+          compendium-client/
+          core/lens/
+          core/optics/
+          core/rpc/
+          core/schema/
           examples/health-check/
-          examples/library/
+          examples/library/backend
           examples/route-guide/
           examples/seed/
           examples/todolist/
           examples/with-persistent/
-          grpc/common/
-          grpc/client/
-          grpc/server/
           graphql/
-          servant/server/
+          grpc/client/
+          grpc/common/
+          grpc/server/
           instrumentation/prometheus/
           instrumentation/tracing/
+          servant/server/
 
 source-repository-package
     type: git
