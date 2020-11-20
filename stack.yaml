@@ -2,27 +2,28 @@ resolver: lts-16.22
 allow-newer: true
 
 packages:
-- core/schema
-- core/rpc
-- core/optics
-- core/lens
 - adapter/avro
-- adapter/protobuf
-- adapter/persistent
 - adapter/kafka
-- grpc/common
-- grpc/client
-- grpc/server
-- graphql
-- servant/server
-- instrumentation/prometheus
-- instrumentation/tracing
+- adapter/persistent
+- adapter/protobuf
+- compendium-client
+- core/lens
+- core/optics
+- core/rpc
+- core/schema
 - examples/health-check
+- examples/library/backend
 - examples/route-guide
 - examples/seed
 - examples/todolist
 - examples/with-persistent
-- compendium-client
+- graphql
+- grpc/client
+- grpc/common
+- grpc/server
+- instrumentation/prometheus
+- instrumentation/tracing
+- servant/server
 
 extra-deps:
 - http2-client-0.9.0.0
