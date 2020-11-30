@@ -18,6 +18,7 @@
           ]
       }
     },
-    {"name": "lucky_numbers", "type": { "type": "array", "items": "long" } }
+    {"name": "lucky_numbers", "type": { "type": "array", "items": "long" } },
+    {"name": "things", "type": "map", "values": "int"}
   ]
 }

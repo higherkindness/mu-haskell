@@ -139,7 +139,7 @@ schemaFromAvroType =
     A.String (Just A.UUID) -> [t|'TPrimitive UUID|]
     A.String _ -> [t|'TPrimitive T.Text|]
     A.Array item -> [t|'TList $(schemaFromAvroType item)|]
-    A.Map values -> [t|'TMap T.Text $(schemaFromAvroType values)|]
+    A.Map values -> [t|'TMap ('TPrimitive T.Text) $(schemaFromAvroType values)|]
     A.NamedType typeName ->
       [t|'TSchematic $(textToStrLit (A.baseName typeName))|]
     A.Enum {} -> fail "should never happen, please, file an issue"
