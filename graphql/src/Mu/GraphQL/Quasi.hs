@@ -15,6 +15,7 @@ module Mu.GraphQL.Quasi (
 ) where
 
 import           Control.Monad.IO.Class      (liftIO)
+import qualified Data.Aeson                  as JSON
 import           Data.Foldable               (toList)
 import qualified Data.HashMap.Strict         as HM
 import           Data.List                   (foldl')
@@ -195,19 +196,26 @@ typeToDec _ _ _ (GQL.InputObjectTypeDefinition _ name _ fields) =
     ginputTypeToType (GQL.TypeList a) =
       [t| 'OptionalRef ('ListRef $(ginputTypeToType a)) |]
     typeToPrimType :: GQL.Name -> Q Type
-    typeToPrimType "Int"     = [t|'TPrimitive Integer|]
-    typeToPrimType "Float"   = [t|'TPrimitive Double|]
-    typeToPrimType "String"  = [t|'TPrimitive T.Text|]
-    typeToPrimType "Boolean" = [t|'TPrimitive Bool|]
-    typeToPrimType "ID"      = [t|'TPrimitive UUID|]
-    typeToPrimType nm        = [t|'TSchematic $(textToStrLit nm)|]
+    typeToPrimType "Int"        = [t|'TPrimitive Integer|]
+    typeToPrimType "Float"      = [t|'TPrimitive Double|]
+    typeToPrimType "String"     = [t|'TPrimitive T.Text|]
+    typeToPrimType "Boolean"    = [t|'TPrimitive Bool|]
+    typeToPrimType "ID"         = [t|'TPrimitive UUID|]
+    typeToPrimType "JSON"       = [t|'TPrimitive JSON.Value|]
+    typeToPrimType "JSONObject" = [t|'TPrimitive JSON.Object|]
+    typeToPrimType nm           = [t|'TSchematic $(textToStrLit nm)|]
+
+-- For the JSON scalar we follow
+-- https://github.com/taion/graphql-type-json
 
 gqlTypeToType :: GQL.Name -> TypeMap -> Name -> Q Type
-gqlTypeToType "Int"     _ _ = [t|'PrimitiveRef Integer|]
-gqlTypeToType "Float"   _ _ = [t|'PrimitiveRef Double|]
-gqlTypeToType "String"  _ _ = [t|'PrimitiveRef T.Text|]
-gqlTypeToType "Boolean" _ _ = [t|'PrimitiveRef Bool|]
-gqlTypeToType "ID"      _ _ = [t|'PrimitiveRef UUID|]
+gqlTypeToType "Int"        _ _ = [t|'PrimitiveRef Integer|]
+gqlTypeToType "Float"      _ _ = [t|'PrimitiveRef Double|]
+gqlTypeToType "String"     _ _ = [t|'PrimitiveRef T.Text|]
+gqlTypeToType "Boolean"    _ _ = [t|'PrimitiveRef Bool|]
+gqlTypeToType "ID"         _ _ = [t|'PrimitiveRef UUID|]
+gqlTypeToType "JSON"       _ _ = [t|'PrimitiveRef JSON.Value|]
+gqlTypeToType "JSONObject" _ _ = [t|'PrimitiveRef JSON.Object|]
 gqlTypeToType name tm schemaName =
   let schemaRef = [t|'SchemaRef $(conT schemaName) $(textToStrLit name)|]
    in case HM.lookup name tm of
