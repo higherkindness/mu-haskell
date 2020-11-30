@@ -36,34 +36,34 @@ https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL
  -&gt; ConduitT Value Void IO ()
  -&gt; IO ())
 -&gt; Connection -&gt; IO ()
-</span><a href="Mu.GraphQL.Subscription.Protocol.html#protocol"><span class="hs-identifier hs-var hs-var">protocol</span></a></span></span><span> </span><span id="local-6989586621679234823"><span class="annot"><span class="annottext">f :: Maybe Text
+</span><a href="Mu.GraphQL.Subscription.Protocol.html#protocol"><span class="hs-identifier hs-var hs-var">protocol</span></a></span></span><span> </span><span id="local-6989586621679236481"><span class="annot"><span class="annottext">f :: Maybe Text
 -&gt; VariableMapC
 -&gt; [Definition]
 -&gt; ConduitT Value Void IO ()
 -&gt; IO ()
-</span><a href="#local-6989586621679234823"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679234822"><span class="annot"><span class="annottext">conn :: Connection
-</span><a href="#local-6989586621679234822"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO ()
-</span><a href="#local-6989586621679234821"><span class="hs-identifier hs-var">start</span></a></span><span>
+</span><a href="#local-6989586621679236481"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679236480"><span class="annot"><span class="annottext">conn :: Connection
+</span><a href="#local-6989586621679236480"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679236479"><span class="hs-identifier hs-var">start</span></a></span><span>
 </span><span id="line-34"></span><span>  </span><span class="hs-keyword">where</span><span>
 </span><span id="line-35"></span><span>    </span><span class="hs-comment">-- listen for GQL_CONNECTION_INIT</span><span>
-</span><span id="line-36"></span><span>    </span><span id="local-6989586621679234821"><span class="annot"><span class="annottext">start :: IO ()
-</span><a href="#local-6989586621679234821"><span class="hs-identifier hs-var hs-var">start</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-37"></span><span>      </span><span id="local-6989586621679234820"><span class="annot"><span class="annottext">Maybe ClientMessage
-</span><a href="#local-6989586621679234820"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; IO (Maybe ClientMessage)
+</span><span id="line-36"></span><span>    </span><span id="local-6989586621679236479"><span class="annot"><span class="annottext">start :: IO ()
+</span><a href="#local-6989586621679236479"><span class="hs-identifier hs-var hs-var">start</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-37"></span><span>      </span><span id="local-6989586621679236478"><span class="annot"><span class="annottext">Maybe ClientMessage
+</span><a href="#local-6989586621679236478"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; IO (Maybe ClientMessage)
 forall a. FromJSON a =&gt; Connection -&gt; IO (Maybe a)
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#receiveJSON"><span class="hs-identifier hs-var">receiveJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Connection
-</span><a href="#local-6989586621679234822"><span class="hs-identifier hs-var">conn</span></a></span><span>
+</span><a href="#local-6989586621679236480"><span class="hs-identifier hs-var">conn</span></a></span><span>
 </span><span id="line-38"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe ClientMessage
-</span><a href="#local-6989586621679234820"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="#local-6989586621679236478"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-39"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLConnectionInit"><span class="hs-identifier hs-type">GQLConnectionInit</span></a></span><span> </span><span class="hs-identifier">_</span><span class="hs-special">)</span><span>
 </span><span id="line-40"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-comment">-- send GQL_CONNECTION_ACK</span><span>
 </span><span id="line-41"></span><span>                </span><span class="annot"><span class="annottext">Connection -&gt; ServerMessage -&gt; IO ()
 forall a. ToJSON a =&gt; Connection -&gt; a -&gt; IO ()
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#sendJSON"><span class="hs-identifier hs-var">sendJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Connection
-</span><a href="#local-6989586621679234822"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="annot"><span class="annottext">ServerMessage
+</span><a href="#local-6989586621679236480"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="annot"><span class="annottext">ServerMessage
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#GQLConnectionAck"><span class="hs-identifier hs-var">GQLConnectionAck</span></a></span><span>
-</span><span id="line-42"></span><span>                </span><span id="local-6989586621679234815"><span class="annot"><span class="annottext">Map Text (Async ())
-</span><a href="#local-6989586621679234815"><span class="hs-identifier hs-var">vars</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Map Text (Async ()))
+</span><span id="line-42"></span><span>                </span><span id="local-6989586621679236473"><span class="annot"><span class="annottext">Map Text (Async ())
+</span><a href="#local-6989586621679236473"><span class="hs-identifier hs-var">vars</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Map Text (Async ()))
 forall key value. IO (Map key value)
 </span><span class="hs-identifier hs-var">M.newIO</span></span><span>
 </span><span id="line-43"></span><span>                </span><span class="hs-comment">-- send GQL_KEEP_ALIVE each 1s.</span><span>
@@ -71,55 +71,55 @@ forall key value. IO (Map key value)
 forall a b. IO a -&gt; (Async a -&gt; IO b) -&gt; IO b
 </span><span class="hs-identifier hs-var">withAsync</span></span><span> </span><span class="annot"><span class="annottext">IO Any
 forall b. IO b
-</span><a href="#local-6989586621679234812"><span class="hs-identifier hs-var">keepAlive</span></a></span><span> </span><span class="annot"><span class="annottext">((Async Any -&gt; IO ()) -&gt; IO ()) -&gt; (Async Any -&gt; IO ()) -&gt; IO ()
+</span><a href="#local-6989586621679236470"><span class="hs-identifier hs-var">keepAlive</span></a></span><span> </span><span class="annot"><span class="annottext">((Async Any -&gt; IO ()) -&gt; IO ()) -&gt; (Async Any -&gt; IO ()) -&gt; IO ()
 forall a b. (a -&gt; b) -&gt; a -&gt; b
-</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679234811"><span class="annot"><span class="annottext">ka :: Async Any
-</span><a href="#local-6989586621679234811"><span class="hs-identifier hs-var">ka</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679236469"><span class="annot"><span class="annottext">ka :: Async Any
+</span><a href="#local-6989586621679236469"><span class="hs-identifier hs-var">ka</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-45"></span><span>                </span><span class="hs-comment">-- start listening for incoming messages</span><span>
 </span><span id="line-46"></span><span>                  </span><span class="annot"><span class="annottext">Async Any -&gt; Map Text (Async ()) -&gt; IO ()
 forall a. Async a -&gt; Map Text (Async ()) -&gt; IO ()
-</span><a href="#local-6989586621679234810"><span class="hs-identifier hs-var">listen</span></a></span><span> </span><span class="annot"><span class="annottext">Async Any
-</span><a href="#local-6989586621679234811"><span class="hs-identifier hs-var">ka</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
-</span><a href="#local-6989586621679234815"><span class="hs-identifier hs-var">vars</span></a></span><span>
+</span><a href="#local-6989586621679236468"><span class="hs-identifier hs-var">listen</span></a></span><span> </span><span class="annot"><span class="annottext">Async Any
+</span><a href="#local-6989586621679236469"><span class="hs-identifier hs-var">ka</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
+</span><a href="#local-6989586621679236473"><span class="hs-identifier hs-var">vars</span></a></span><span>
 </span><span id="line-47"></span><span>        </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO ()
-</span><a href="#local-6989586621679234821"><span class="hs-identifier hs-var">start</span></a></span><span>  </span><span class="hs-comment">-- Keep waiting</span><span>
+</span><a href="#local-6989586621679236479"><span class="hs-identifier hs-var">start</span></a></span><span>  </span><span class="hs-comment">-- Keep waiting</span><span>
 </span><span id="line-48"></span><span>    </span><span class="hs-comment">-- keep-alive</span><span>
-</span><span id="line-49"></span><span>    </span><span id="local-6989586621679234812"><span class="annot"><span class="annottext">keepAlive :: IO b
-</span><a href="#local-6989586621679234812"><span class="hs-identifier hs-var hs-var">keepAlive</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-49"></span><span>    </span><span id="local-6989586621679236470"><span class="annot"><span class="annottext">keepAlive :: IO b
+</span><a href="#local-6989586621679236470"><span class="hs-identifier hs-var hs-var">keepAlive</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
 </span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">Connection -&gt; ServerMessage -&gt; IO ()
 forall a. ToJSON a =&gt; Connection -&gt; a -&gt; IO ()
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#sendJSON"><span class="hs-identifier hs-var">sendJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Connection
-</span><a href="#local-6989586621679234822"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="annot"><span class="annottext">ServerMessage
+</span><a href="#local-6989586621679236480"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="annot"><span class="annottext">ServerMessage
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#GQLKeepAlive"><span class="hs-identifier hs-var">GQLKeepAlive</span></a></span><span>
 </span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; IO ()
 </span><span class="hs-identifier hs-var">threadDelay</span></span><span> </span><span class="annot"><span class="hs-number">1000000</span></span><span>
 </span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">IO b
-</span><a href="#local-6989586621679234812"><span class="hs-identifier hs-var">keepAlive</span></a></span><span>
+</span><a href="#local-6989586621679236470"><span class="hs-identifier hs-var">keepAlive</span></a></span><span>
 </span><span id="line-53"></span><span>    </span><span class="hs-comment">-- listen for messages from client</span><span>
-</span><span id="line-54"></span><span>    </span><span id="local-6989586621679234810"><span class="annot"><span class="annottext">listen :: Async a -&gt; Map Text (Async ()) -&gt; IO ()
-</span><a href="#local-6989586621679234810"><span class="hs-identifier hs-var hs-var">listen</span></a></span></span><span> </span><span id="local-6989586621679234807"><span class="annot"><span class="annottext">ka :: Async a
-</span><a href="#local-6989586621679234807"><span class="hs-identifier hs-var">ka</span></a></span></span><span> </span><span id="local-6989586621679234806"><span class="annot"><span class="annottext">vars :: Map Text (Async ())
-</span><a href="#local-6989586621679234806"><span class="hs-identifier hs-var">vars</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-55"></span><span>      </span><span id="local-6989586621679234805"><span class="annot"><span class="annottext">Maybe ClientMessage
-</span><a href="#local-6989586621679234805"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; IO (Maybe ClientMessage)
+</span><span id="line-54"></span><span>    </span><span id="local-6989586621679236468"><span class="annot"><span class="annottext">listen :: Async a -&gt; Map Text (Async ()) -&gt; IO ()
+</span><a href="#local-6989586621679236468"><span class="hs-identifier hs-var hs-var">listen</span></a></span></span><span> </span><span id="local-6989586621679236465"><span class="annot"><span class="annottext">ka :: Async a
+</span><a href="#local-6989586621679236465"><span class="hs-identifier hs-var">ka</span></a></span></span><span> </span><span id="local-6989586621679236464"><span class="annot"><span class="annottext">vars :: Map Text (Async ())
+</span><a href="#local-6989586621679236464"><span class="hs-identifier hs-var">vars</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-55"></span><span>      </span><span id="local-6989586621679236463"><span class="annot"><span class="annottext">Maybe ClientMessage
+</span><a href="#local-6989586621679236463"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; IO (Maybe ClientMessage)
 forall a. FromJSON a =&gt; Connection -&gt; IO (Maybe a)
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#receiveJSON"><span class="hs-identifier hs-var">receiveJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Connection
-</span><a href="#local-6989586621679234822"><span class="hs-identifier hs-var">conn</span></a></span><span>
+</span><a href="#local-6989586621679236480"><span class="hs-identifier hs-var">conn</span></a></span><span>
 </span><span id="line-56"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe ClientMessage
-</span><a href="#local-6989586621679234805"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-keyword">of</span><span>
-</span><span id="line-57"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLStart"><span class="hs-identifier hs-type">GQLStart</span></a></span><span> </span><span id="local-6989586621679234803"><span class="annot"><span class="annottext">i :: Text
-</span><a href="#local-6989586621679234803"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679234802"><span class="annot"><span class="annottext">q :: Text
-</span><a href="#local-6989586621679234802"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span id="local-6989586621679234801"><span class="annot"><span class="annottext">v :: VariableMapC
-</span><a href="#local-6989586621679234801"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679234800"><span class="annot"><span class="annottext">o :: Maybe Text
-</span><a href="#local-6989586621679234800"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-comment">-- start handling</span><span>
+</span><a href="#local-6989586621679236463"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLStart"><span class="hs-identifier hs-type">GQLStart</span></a></span><span> </span><span id="local-6989586621679236461"><span class="annot"><span class="annottext">i :: Text
+</span><a href="#local-6989586621679236461"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679236460"><span class="annot"><span class="annottext">q :: Text
+</span><a href="#local-6989586621679236460"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span id="local-6989586621679236459"><span class="annot"><span class="annottext">v :: VariableMapC
+</span><a href="#local-6989586621679236459"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679236458"><span class="annot"><span class="annottext">o :: Maybe Text
+</span><a href="#local-6989586621679236458"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-comment">-- start handling</span><span>
 </span><span id="line-58"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; (Async () -&gt; IO ()) -&gt; IO ()
 forall a b. IO a -&gt; (Async a -&gt; IO b) -&gt; IO b
 </span><span class="hs-identifier hs-var">withAsync</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; VariableMapC -&gt; Maybe Text -&gt; IO ()
-</span><a href="#local-6989586621679234799"><span class="hs-identifier hs-var">handle</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234803"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234802"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">VariableMapC
-</span><a href="#local-6989586621679234801"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
-</span><a href="#local-6989586621679234800"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+</span><a href="#local-6989586621679236457"><span class="hs-identifier hs-var">handle</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236461"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236460"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">VariableMapC
+</span><a href="#local-6989586621679236459"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679236458"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
 forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
 </span><span class="hs-operator hs-var">&gt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
 forall a. STM a -&gt; IO a
@@ -128,11 +128,11 @@ forall key value.
 (Eq key, Hashable key) =&gt;
 key -&gt; Map key value -&gt; STM ()
 </span><span class="hs-identifier hs-var">M.delete</span></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234803"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
-</span><a href="#local-6989586621679234806"><span class="hs-identifier hs-var">vars</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Async () -&gt; IO ()) -&gt; IO ()) -&gt; (Async () -&gt; IO ()) -&gt; IO ()
+</span><a href="#local-6989586621679236461"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
+</span><a href="#local-6989586621679236464"><span class="hs-identifier hs-var">vars</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Async () -&gt; IO ()) -&gt; IO ()) -&gt; (Async () -&gt; IO ()) -&gt; IO ()
 forall a b. (a -&gt; b) -&gt; a -&gt; b
-</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679234796"><span class="annot"><span class="annottext">t :: Async ()
-</span><a href="#local-6989586621679234796"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679236454"><span class="annot"><span class="annottext">t :: Async ()
+</span><a href="#local-6989586621679236454"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
 </span><span id="line-59"></span><span>             </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
 forall a. STM a -&gt; IO a
 </span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
@@ -142,17 +142,17 @@ forall key value.
 (Eq key, Hashable key) =&gt;
 value -&gt; key -&gt; Map key value -&gt; STM ()
 </span><span class="hs-identifier hs-var">M.insert</span></span><span> </span><span class="annot"><span class="annottext">Async ()
-</span><a href="#local-6989586621679234796"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234803"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
-</span><a href="#local-6989586621679234806"><span class="hs-identifier hs-var">vars</span></a></span><span>
+</span><a href="#local-6989586621679236454"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236461"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
+</span><a href="#local-6989586621679236464"><span class="hs-identifier hs-var">vars</span></a></span><span>
 </span><span id="line-60"></span><span>             </span><span class="annot"><span class="annottext">Async a -&gt; Map Text (Async ()) -&gt; IO ()
-</span><a href="#local-6989586621679234810"><span class="hs-identifier hs-var">listen</span></a></span><span> </span><span class="annot"><span class="annottext">Async a
-</span><a href="#local-6989586621679234807"><span class="hs-identifier hs-var">ka</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
-</span><a href="#local-6989586621679234806"><span class="hs-identifier hs-var">vars</span></a></span><span>
-</span><span id="line-61"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLStop"><span class="hs-identifier hs-type">GQLStop</span></a></span><span> </span><span id="local-6989586621679234793"><span class="annot"><span class="annottext">i :: Text
-</span><a href="#local-6989586621679234793"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-comment">-- stop with handling that query</span><span>
-</span><span id="line-62"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679234792"><span class="annot"><span class="annottext">Maybe (Async ())
-</span><a href="#local-6989586621679234792"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (Maybe (Async ())) -&gt; IO (Maybe (Async ()))
+</span><a href="#local-6989586621679236468"><span class="hs-identifier hs-var">listen</span></a></span><span> </span><span class="annot"><span class="annottext">Async a
+</span><a href="#local-6989586621679236465"><span class="hs-identifier hs-var">ka</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
+</span><a href="#local-6989586621679236464"><span class="hs-identifier hs-var">vars</span></a></span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLStop"><span class="hs-identifier hs-type">GQLStop</span></a></span><span> </span><span id="local-6989586621679236451"><span class="annot"><span class="annottext">i :: Text
+</span><a href="#local-6989586621679236451"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-comment">-- stop with handling that query</span><span>
+</span><span id="line-62"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679236450"><span class="annot"><span class="annottext">Maybe (Async ())
+</span><a href="#local-6989586621679236450"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (Maybe (Async ())) -&gt; IO (Maybe (Async ()))
 forall a. STM a -&gt; IO a
 </span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM (Maybe (Async ())) -&gt; IO (Maybe (Async ())))
 -&gt; STM (Maybe (Async ())) -&gt; IO (Maybe (Async ()))
@@ -162,18 +162,18 @@ forall key value.
 (Eq key, Hashable key) =&gt;
 key -&gt; Map key value -&gt; STM (Maybe value)
 </span><span class="hs-identifier hs-var">M.lookup</span></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234793"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
-</span><a href="#local-6989586621679234806"><span class="hs-identifier hs-var">vars</span></a></span><span>
+</span><a href="#local-6989586621679236451"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
+</span><a href="#local-6989586621679236464"><span class="hs-identifier hs-var">vars</span></a></span><span>
 </span><span id="line-63"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (Async ())
-</span><a href="#local-6989586621679234792"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="#local-6989586621679236450"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-64"></span><span>                  </span><span class="annot"><span class="hs-identifier hs-type">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
 forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
 </span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><span id="line-65"></span><span>                  </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679234790"><span class="annot"><span class="annottext">a :: Async ()
-</span><a href="#local-6989586621679234790"><span class="hs-identifier hs-var">a</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="annottext">Async () -&gt; IO ()
+</span><span id="line-65"></span><span>                  </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679236448"><span class="annot"><span class="annottext">a :: Async ()
+</span><a href="#local-6989586621679236448"><span class="hs-identifier hs-var">a</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="annottext">Async () -&gt; IO ()
 forall a. Async a -&gt; IO ()
 </span><span class="hs-identifier hs-var">cancel</span></span><span> </span><span class="annot"><span class="annottext">Async ()
-</span><a href="#local-6989586621679234790"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><a href="#local-6989586621679236448"><span class="hs-identifier hs-var">a</span></a></span><span>
 </span><span id="line-66"></span><span>                                </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
 forall a. STM a -&gt; IO a
 </span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
@@ -183,105 +183,105 @@ forall key value.
 (Eq key, Hashable key) =&gt;
 key -&gt; Map key value -&gt; STM ()
 </span><span class="hs-identifier hs-var">M.delete</span></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234793"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
-</span><a href="#local-6989586621679234806"><span class="hs-identifier hs-var">vars</span></a></span><span>
+</span><a href="#local-6989586621679236451"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
+</span><a href="#local-6989586621679236464"><span class="hs-identifier hs-var">vars</span></a></span><span>
 </span><span id="line-67"></span><span>                </span><span class="annot"><span class="annottext">Async a -&gt; Map Text (Async ()) -&gt; IO ()
-</span><a href="#local-6989586621679234810"><span class="hs-identifier hs-var">listen</span></a></span><span> </span><span class="annot"><span class="annottext">Async a
-</span><a href="#local-6989586621679234807"><span class="hs-identifier hs-var">ka</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
-</span><a href="#local-6989586621679234806"><span class="hs-identifier hs-var">vars</span></a></span><span>
+</span><a href="#local-6989586621679236468"><span class="hs-identifier hs-var">listen</span></a></span><span> </span><span class="annot"><span class="annottext">Async a
+</span><a href="#local-6989586621679236465"><span class="hs-identifier hs-var">ka</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
+</span><a href="#local-6989586621679236464"><span class="hs-identifier hs-var">vars</span></a></span><span>
 </span><span id="line-68"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLTerminate"><span class="hs-identifier hs-type">GQLTerminate</span></a></span><span>  </span><span class="hs-comment">-- terminate all queries</span><span>
 </span><span id="line-69"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="annottext">Async a -&gt; Map Text (Async ()) -&gt; IO ()
 forall a a a. Async a -&gt; Map a (Async a) -&gt; IO ()
-</span><a href="#local-6989586621679234787"><span class="hs-identifier hs-var">cancelAll</span></a></span><span> </span><span class="annot"><span class="annottext">Async a
-</span><a href="#local-6989586621679234807"><span class="hs-identifier hs-var">ka</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
-</span><a href="#local-6989586621679234806"><span class="hs-identifier hs-var">vars</span></a></span><span>
+</span><a href="#local-6989586621679236445"><span class="hs-identifier hs-var">cancelAll</span></a></span><span> </span><span class="annot"><span class="annottext">Async a
+</span><a href="#local-6989586621679236465"><span class="hs-identifier hs-var">ka</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
+</span><a href="#local-6989586621679236464"><span class="hs-identifier hs-var">vars</span></a></span><span>
 </span><span id="line-70"></span><span>                </span><span class="annot"><span class="annottext">Connection -&gt; Text -&gt; IO ()
 forall a. WebSocketsData a =&gt; Connection -&gt; a -&gt; IO ()
 </span><span class="hs-identifier hs-var">sendClose</span></span><span> </span><span class="annot"><span class="annottext">Connection
-</span><a href="#local-6989586621679234822"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-string">&quot;GraphQL session terminated&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679236480"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-string">&quot;GraphQL session terminated&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">)</span><span>
 </span><span id="line-71"></span><span>        </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Async a -&gt; Map Text (Async ()) -&gt; IO ()
-</span><a href="#local-6989586621679234810"><span class="hs-identifier hs-var">listen</span></a></span><span> </span><span class="annot"><span class="annottext">Async a
-</span><a href="#local-6989586621679234807"><span class="hs-identifier hs-var">ka</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
-</span><a href="#local-6989586621679234806"><span class="hs-identifier hs-var">vars</span></a></span><span>  </span><span class="hs-comment">-- Keep going</span><span>
+</span><a href="#local-6989586621679236468"><span class="hs-identifier hs-var">listen</span></a></span><span> </span><span class="annot"><span class="annottext">Async a
+</span><a href="#local-6989586621679236465"><span class="hs-identifier hs-var">ka</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text (Async ())
+</span><a href="#local-6989586621679236464"><span class="hs-identifier hs-var">vars</span></a></span><span>  </span><span class="hs-comment">-- Keep going</span><span>
 </span><span id="line-72"></span><span>    </span><span class="hs-comment">-- Handle a single query</span><span>
-</span><span id="line-73"></span><span>    </span><span id="local-6989586621679234799"><span class="annot"><span class="annottext">handle :: Text -&gt; Text -&gt; VariableMapC -&gt; Maybe Text -&gt; IO ()
-</span><a href="#local-6989586621679234799"><span class="hs-identifier hs-var hs-var">handle</span></a></span></span><span> </span><span id="local-6989586621679234785"><span class="annot"><span class="annottext">i :: Text
-</span><a href="#local-6989586621679234785"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679234784"><span class="annot"><span class="annottext">q :: Text
-</span><a href="#local-6989586621679234784"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span id="local-6989586621679234783"><span class="annot"><span class="annottext">v :: VariableMapC
-</span><a href="#local-6989586621679234783"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679234782"><span class="annot"><span class="annottext">o :: Maybe Text
-</span><a href="#local-6989586621679234782"><span class="hs-identifier hs-var">o</span></a></span></span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679236457"><span class="annot"><span class="annottext">handle :: Text -&gt; Text -&gt; VariableMapC -&gt; Maybe Text -&gt; IO ()
+</span><a href="#local-6989586621679236457"><span class="hs-identifier hs-var hs-var">handle</span></a></span></span><span> </span><span id="local-6989586621679236443"><span class="annot"><span class="annottext">i :: Text
+</span><a href="#local-6989586621679236443"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679236442"><span class="annot"><span class="annottext">q :: Text
+</span><a href="#local-6989586621679236442"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span id="local-6989586621679236441"><span class="annot"><span class="annottext">v :: VariableMapC
+</span><a href="#local-6989586621679236441"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679236440"><span class="annot"><span class="annottext">o :: Maybe Text
+</span><a href="#local-6989586621679236440"><span class="hs-identifier hs-var">o</span></a></span></span><span>
 </span><span id="line-74"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either Text [Definition]
 </span><a href="Mu.GraphQL.Quasi.LostParser.html#parseDoc"><span class="hs-identifier hs-var">P.parseDoc</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234784"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="hs-keyword">of</span><span>
-</span><span id="line-75"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679234780"><span class="annot"><span class="annottext">err :: Text
-</span><a href="#local-6989586621679234780"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; ServerMessage -&gt; IO ()
+</span><a href="#local-6989586621679236442"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-75"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679236438"><span class="annot"><span class="annottext">err :: Text
+</span><a href="#local-6989586621679236438"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; ServerMessage -&gt; IO ()
 forall a. ToJSON a =&gt; Connection -&gt; a -&gt; IO ()
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#sendJSON"><span class="hs-identifier hs-var">sendJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Connection
-</span><a href="#local-6989586621679234822"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Value -&gt; ServerMessage
+</span><a href="#local-6989586621679236480"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Value -&gt; ServerMessage
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#GQLError"><span class="hs-identifier hs-var">GQLError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234785"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><a href="#local-6989586621679236443"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Value
 forall a. ToJSON a =&gt; a -&gt; Value
 </span><span class="hs-identifier hs-var">A.toJSON</span></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234780"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><span id="line-76"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679234777"><span class="annot"><span class="annottext">d :: [Definition]
-</span><a href="#local-6989586621679234777"><span class="hs-identifier hs-var">d</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><a href="#local-6989586621679236438"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679236435"><span class="annot"><span class="annottext">d :: [Definition]
+</span><a href="#local-6989586621679236435"><span class="hs-identifier hs-var">d</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
 </span><span id="line-77"></span><span>            </span><span class="annot"><span class="annottext">Maybe Text
 -&gt; VariableMapC
 -&gt; [Definition]
 -&gt; ConduitT Value Void IO ()
 -&gt; IO ()
-</span><a href="#local-6989586621679234823"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
-</span><a href="#local-6989586621679234782"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">VariableMapC
-</span><a href="#local-6989586621679234783"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">[Definition]
-</span><a href="#local-6989586621679234777"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; ConduitT Value Void IO ()
+</span><a href="#local-6989586621679236481"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679236440"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">VariableMapC
+</span><a href="#local-6989586621679236441"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">[Definition]
+</span><a href="#local-6989586621679236435"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; ConduitT Value Void IO ()
 forall (m :: * -&gt; *) o. MonadIO m =&gt; Text -&gt; ConduitT Value o m ()
-</span><a href="#local-6989586621679234776"><span class="hs-identifier hs-var">cndt</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234785"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679236434"><span class="hs-identifier hs-var">cndt</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236443"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-78"></span><span>            </span><span class="annot"><span class="annottext">Connection -&gt; ServerMessage -&gt; IO ()
 forall a. ToJSON a =&gt; Connection -&gt; a -&gt; IO ()
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#sendJSON"><span class="hs-identifier hs-var">sendJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Connection
-</span><a href="#local-6989586621679234822"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; ServerMessage
+</span><a href="#local-6989586621679236480"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; ServerMessage
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#GQLComplete"><span class="hs-identifier hs-var">GQLComplete</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234785"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679236443"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-79"></span><span>    </span><span class="hs-comment">-- Conduit which sends the results via the wire</span><span>
-</span><span id="line-80"></span><span>    </span><span id="local-6989586621679234776"><span class="annot"><span class="annottext">cndt :: Text -&gt; ConduitT Value o m ()
-</span><a href="#local-6989586621679234776"><span class="hs-identifier hs-var hs-var">cndt</span></a></span></span><span> </span><span id="local-6989586621679234774"><span class="annot"><span class="annottext">i :: Text
-</span><a href="#local-6989586621679234774"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-81"></span><span>      </span><span id="local-6989586621679234773"><span class="annot"><span class="annottext">Maybe Value
-</span><a href="#local-6989586621679234773"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ConduitT Value o m (Maybe Value)
+</span><span id="line-80"></span><span>    </span><span id="local-6989586621679236434"><span class="annot"><span class="annottext">cndt :: Text -&gt; ConduitT Value o m ()
+</span><a href="#local-6989586621679236434"><span class="hs-identifier hs-var hs-var">cndt</span></a></span></span><span> </span><span id="local-6989586621679236432"><span class="annot"><span class="annottext">i :: Text
+</span><a href="#local-6989586621679236432"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-81"></span><span>      </span><span id="local-6989586621679236431"><span class="annot"><span class="annottext">Maybe Value
+</span><a href="#local-6989586621679236431"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ConduitT Value o m (Maybe Value)
 forall (m :: * -&gt; *) i. Monad m =&gt; Consumer i m (Maybe i)
 </span><span class="hs-identifier hs-var">await</span></span><span>
 </span><span id="line-82"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Value
-</span><a href="#local-6989586621679234773"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="#local-6989586621679236431"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-83"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; ConduitT Value o m ()
 forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
 </span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
-</span><span id="line-84"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679234771"><span class="annot"><span class="annottext">v :: Value
-</span><a href="#local-6989586621679234771"><span class="hs-identifier hs-var">v</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; ConduitT Value o m ()
+</span><span id="line-84"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679236429"><span class="annot"><span class="annottext">v :: Value
+</span><a href="#local-6989586621679236429"><span class="hs-identifier hs-var">v</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; ConduitT Value o m ()
 forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
 </span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; ConduitT Value o m ()) -&gt; IO () -&gt; ConduitT Value o m ()
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Connection -&gt; ServerMessage -&gt; IO ()
 forall a. ToJSON a =&gt; Connection -&gt; a -&gt; IO ()
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#sendJSON"><span class="hs-identifier hs-var">sendJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Connection
-</span><a href="#local-6989586621679234822"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Value -&gt; ServerMessage
+</span><a href="#local-6989586621679236480"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Value -&gt; ServerMessage
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#GQLData"><span class="hs-identifier hs-var">GQLData</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234774"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Value
-</span><a href="#local-6989586621679234771"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679236432"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679236429"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-85"></span><span>                      </span><span class="annot"><span class="annottext">Text -&gt; ConduitT Value o m ()
-</span><a href="#local-6989586621679234776"><span class="hs-identifier hs-var">cndt</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234774"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><a href="#local-6989586621679236434"><span class="hs-identifier hs-var">cndt</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236432"><span class="hs-identifier hs-var">i</span></a></span><span>
 </span><span id="line-86"></span><span>    </span><span class="hs-comment">-- Cancel all pending subscriptions</span><span>
-</span><span id="line-87"></span><span>    </span><span id="local-6989586621679234787"><span class="annot"><span class="annottext">cancelAll :: Async a -&gt; Map a (Async a) -&gt; IO ()
-</span><a href="#local-6989586621679234787"><span class="hs-identifier hs-var hs-var">cancelAll</span></a></span></span><span> </span><span id="local-6989586621679234769"><span class="annot"><span class="annottext">ka :: Async a
-</span><a href="#local-6989586621679234769"><span class="hs-identifier hs-var">ka</span></a></span></span><span> </span><span id="local-6989586621679234768"><span class="annot"><span class="annottext">vars :: Map a (Async a)
-</span><a href="#local-6989586621679234768"><span class="hs-identifier hs-var">vars</span></a></span></span><span>
+</span><span id="line-87"></span><span>    </span><span id="local-6989586621679236445"><span class="annot"><span class="annottext">cancelAll :: Async a -&gt; Map a (Async a) -&gt; IO ()
+</span><a href="#local-6989586621679236445"><span class="hs-identifier hs-var hs-var">cancelAll</span></a></span></span><span> </span><span id="local-6989586621679236427"><span class="annot"><span class="annottext">ka :: Async a
+</span><a href="#local-6989586621679236427"><span class="hs-identifier hs-var">ka</span></a></span></span><span> </span><span id="local-6989586621679236426"><span class="annot"><span class="annottext">vars :: Map a (Async a)
+</span><a href="#local-6989586621679236426"><span class="hs-identifier hs-var">vars</span></a></span></span><span>
 </span><span id="line-88"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="annottext">Async a -&gt; IO ()
 forall a. Async a -&gt; IO ()
 </span><span class="hs-identifier hs-var">cancel</span></span><span> </span><span class="annot"><span class="annottext">Async a
-</span><a href="#local-6989586621679234769"><span class="hs-identifier hs-var">ka</span></a></span><span>
-</span><span id="line-89"></span><span>           </span><span id="local-6989586621679234767"><span class="annot"><span class="annottext">[(a, Async a)]
-</span><a href="#local-6989586621679234767"><span class="hs-identifier hs-var">vs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM [(a, Async a)] -&gt; IO [(a, Async a)]
+</span><a href="#local-6989586621679236427"><span class="hs-identifier hs-var">ka</span></a></span><span>
+</span><span id="line-89"></span><span>           </span><span id="local-6989586621679236425"><span class="annot"><span class="annottext">[(a, Async a)]
+</span><a href="#local-6989586621679236425"><span class="hs-identifier hs-var">vs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM [(a, Async a)] -&gt; IO [(a, Async a)]
 forall a. STM a -&gt; IO a
 </span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM [(a, Async a)] -&gt; IO [(a, Async a)])
 -&gt; STM [(a, Async a)] -&gt; IO [(a, Async a)]
@@ -294,7 +294,7 @@ forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map a (Async a) -&gt; ListT STM (a, Async a)
 forall key value. Map key value -&gt; ListT STM (key, value)
 </span><span class="hs-identifier hs-var">M.listT</span></span><span> </span><span class="annot"><span class="annottext">Map a (Async a)
-</span><a href="#local-6989586621679234768"><span class="hs-identifier hs-var">vars</span></a></span><span>
+</span><a href="#local-6989586621679236426"><span class="hs-identifier hs-var">vars</span></a></span><span>
 </span><span id="line-90"></span><span>           </span><span class="annot"><span class="annottext">[Async a] -&gt; (Async a -&gt; IO ()) -&gt; IO ()
 forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
 (Foldable t, Monad m) =&gt;
@@ -304,19 +304,19 @@ forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
 </span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">(a, Async a) -&gt; Async a
 forall a b. (a, b) -&gt; b
 </span><span class="hs-identifier hs-var">snd</span></span><span> </span><span class="annot"><span class="annottext">[(a, Async a)]
-</span><a href="#local-6989586621679234767"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Async a -&gt; IO ()
+</span><a href="#local-6989586621679236425"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Async a -&gt; IO ()
 forall a. Async a -&gt; IO ()
 </span><span class="hs-identifier hs-var">cancel</span></span><span>
 </span><span id="line-91"></span><span>
-</span><span id="line-92"></span><span id="local-6989586621679234927"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#receiveJSON"><span class="hs-identifier hs-type">receiveJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679234927"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Connection</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679234927"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-92"></span><span id="local-6989586621679236585"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#receiveJSON"><span class="hs-identifier hs-type">receiveJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679236585"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Connection</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679236585"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
 </span><span id="line-93"></span><span id="receiveJSON"><span class="annot"><span class="annottext">receiveJSON :: Connection -&gt; IO (Maybe a)
-</span><a href="Mu.GraphQL.Subscription.Protocol.html#receiveJSON"><span class="hs-identifier hs-var hs-var">receiveJSON</span></a></span></span><span> </span><span id="local-6989586621679234764"><span class="annot"><span class="annottext">conn :: Connection
-</span><a href="#local-6989586621679234764"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-94"></span><span>  </span><span id="local-6989586621679234763"><span class="annot"><span class="annottext">ByteString
-</span><a href="#local-6989586621679234763"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; IO ByteString
+</span><a href="Mu.GraphQL.Subscription.Protocol.html#receiveJSON"><span class="hs-identifier hs-var hs-var">receiveJSON</span></a></span></span><span> </span><span id="local-6989586621679236422"><span class="annot"><span class="annottext">conn :: Connection
+</span><a href="#local-6989586621679236422"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679236421"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679236421"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; IO ByteString
 forall a. WebSocketsData a =&gt; Connection -&gt; IO a
 </span><span class="hs-identifier hs-var">receiveData</span></span><span> </span><span class="annot"><span class="annottext">Connection
-</span><a href="#local-6989586621679234764"><span class="hs-identifier hs-var">conn</span></a></span><span>
+</span><a href="#local-6989586621679236422"><span class="hs-identifier hs-var">conn</span></a></span><span>
 </span><span id="line-95"></span><span>  </span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
 forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
 </span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; IO (Maybe a)) -&gt; Maybe a -&gt; IO (Maybe a)
@@ -324,20 +324,20 @@ forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe a
 forall a. FromJSON a =&gt; ByteString -&gt; Maybe a
 </span><span class="hs-identifier hs-var">A.decode</span></span><span> </span><span class="annot"><span class="annottext">ByteString
-</span><a href="#local-6989586621679234763"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><a href="#local-6989586621679236421"><span class="hs-identifier hs-var">d</span></a></span><span>
 </span><span id="line-96"></span><span>
-</span><span id="line-97"></span><span id="local-6989586621679234924"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#sendJSON"><span class="hs-identifier hs-type">sendJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679234924"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Connection</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679234924"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-97"></span><span id="local-6989586621679236582"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#sendJSON"><span class="hs-identifier hs-type">sendJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679236582"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Connection</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679236582"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
 </span><span id="line-98"></span><span id="sendJSON"><span class="annot"><span class="annottext">sendJSON :: Connection -&gt; a -&gt; IO ()
-</span><a href="Mu.GraphQL.Subscription.Protocol.html#sendJSON"><span class="hs-identifier hs-var hs-var">sendJSON</span></a></span></span><span> </span><span id="local-6989586621679234760"><span class="annot"><span class="annottext">conn :: Connection
-</span><a href="#local-6989586621679234760"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span id="local-6989586621679234759"><span class="annot"><span class="annottext">v :: a
-</span><a href="#local-6989586621679234759"><span class="hs-identifier hs-var">v</span></a></span></span><span>
+</span><a href="Mu.GraphQL.Subscription.Protocol.html#sendJSON"><span class="hs-identifier hs-var hs-var">sendJSON</span></a></span></span><span> </span><span id="local-6989586621679236418"><span class="annot"><span class="annottext">conn :: Connection
+</span><a href="#local-6989586621679236418"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span id="local-6989586621679236417"><span class="annot"><span class="annottext">v :: a
+</span><a href="#local-6989586621679236417"><span class="hs-identifier hs-var">v</span></a></span></span><span>
 </span><span id="line-99"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; ByteString -&gt; IO ()
 forall a. WebSocketsData a =&gt; Connection -&gt; a -&gt; IO ()
 </span><span class="hs-identifier hs-var">sendTextData</span></span><span> </span><span class="annot"><span class="annottext">Connection
-</span><a href="#local-6989586621679234760"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ByteString
+</span><a href="#local-6989586621679236418"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ByteString
 forall a. ToJSON a =&gt; a -&gt; ByteString
 </span><span class="hs-identifier hs-var">A.encode</span></span><span> </span><span class="annot"><span class="annottext">a
-</span><a href="#local-6989586621679234759"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679236417"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-100"></span><span>
 </span><span id="line-101"></span><span class="hs-keyword">data</span><span> </span><span id="ClientMessage"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#ClientMessage"><span class="hs-identifier hs-var">ClientMessage</span></a></span></span><span>
 </span><span id="line-102"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="GQLConnectionInit"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLConnectionInit"><span class="hs-identifier hs-var">GQLConnectionInit</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="initPayload"><span class="annot"><span class="annottext">ClientMessage -&gt; Maybe Value
@@ -352,7 +352,7 @@ forall a. ToJSON a =&gt; a -&gt; ByteString
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#operationName"><span class="hs-identifier hs-var hs-var">operationName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">}</span><span>
 </span><span id="line-107"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GQLStop"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLStop"><span class="hs-identifier hs-var">GQLStop</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="clientMsgId"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#clientMsgId"><span class="hs-identifier hs-var">clientMsgId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-special">}</span><span>
 </span><span id="line-108"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GQLTerminate"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLTerminate"><span class="hs-identifier hs-var">GQLTerminate</span></a></span></span><span>
-</span><span id="line-109"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679234746"><span id="local-6989586621679234748"><span id="local-6989586621679234750"><span class="annot"><span class="annottext">Int -&gt; ClientMessage -&gt; ShowS
+</span><span id="line-109"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679236404"><span id="local-6989586621679236406"><span id="local-6989586621679236408"><span class="annot"><span class="annottext">Int -&gt; ClientMessage -&gt; ShowS
 [ClientMessage] -&gt; ShowS
 ClientMessage -&gt; String
 (Int -&gt; ClientMessage -&gt; ShowS)
@@ -381,7 +381,7 @@ $cshowsPrec :: Int -&gt; ClientMessage -&gt; ShowS
 </span><span id="line-117"></span><span>                </span><span class="hs-special">,</span><span> </span><span id="payload"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#payload"><span class="hs-identifier hs-var">payload</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.Value</span></span><span> </span><span class="hs-special">}</span><span>
 </span><span id="line-118"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GQLComplete"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLComplete"><span class="hs-identifier hs-var">GQLComplete</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="serverMsgId"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#serverMsgId"><span class="hs-identifier hs-var">serverMsgId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span class="hs-special">}</span><span>
 </span><span id="line-119"></span><span>  </span><span class="hs-glyph">|</span><span>&#160;</span><span id="GQLKeepAlive"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLKeepAlive"><span class="hs-identifier hs-var">GQLKeepAlive</span></a></span></span><span>
-</span><span id="line-120"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679234735"><span id="local-6989586621679234737"><span id="local-6989586621679234739"><span class="annot"><span class="annottext">Int -&gt; ServerMessage -&gt; ShowS
+</span><span id="line-120"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679236393"><span id="local-6989586621679236395"><span id="local-6989586621679236397"><span class="annot"><span class="annottext">Int -&gt; ServerMessage -&gt; ShowS
 [ServerMessage] -&gt; ShowS
 ServerMessage -&gt; String
 (Int -&gt; ServerMessage -&gt; ShowS)
@@ -401,8 +401,8 @@ $cshowsPrec :: Int -&gt; ServerMessage -&gt; ShowS
 </span><span id="line-122"></span><span class="hs-comment">-- NOTE: using https://github.com/apollographql/subscriptions-transport-ws/blob/master/src/message-types.ts</span><span>
 </span><span id="line-123"></span><span class="hs-comment">-- as source of truth for the message types</span><span>
 </span><span id="line-124"></span><span>
-</span><span id="line-125"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679234732"><span class="annot"><span class="hs-identifier hs-type">A.FromJSON</span></span><span> </span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#ClientMessage"><span class="hs-identifier hs-type">ClientMessage</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-126"></span><span>  </span><span id="local-6989586621679234730"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser ClientMessage
+</span><span id="line-125"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679236390"><span class="annot"><span class="hs-identifier hs-type">A.FromJSON</span></span><span> </span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#ClientMessage"><span class="hs-identifier hs-type">ClientMessage</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679236388"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser ClientMessage
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
 -&gt; (Object -&gt; Parser ClientMessage)
 -&gt; Value
@@ -413,42 +413,42 @@ forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
 -&gt; Value
 -&gt; Parser ClientMessage
 forall a b. (a -&gt; b) -&gt; a -&gt; b
-</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679234727"><span class="annot"><span class="annottext">v :: Object
-</span><a href="#local-6989586621679234727"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-127"></span><span>     </span><span id="local-6989586621679234726"><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621679234726"><span class="hs-identifier hs-var">ty</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
-</span><a href="#local-6989586621679234727"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser String
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679236385"><span class="annot"><span class="annottext">v :: Object
+</span><a href="#local-6989586621679236385"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-127"></span><span>     </span><span id="local-6989586621679236384"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679236384"><span class="hs-identifier hs-var">ty</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679236385"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser String
 forall a. FromJSON a =&gt; Object -&gt; Text -&gt; Parser a
 </span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="hs-string">&quot;type&quot;</span></span><span>
 </span><span id="line-128"></span><span>     </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621679234726"><span class="hs-identifier hs-var">ty</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="#local-6989586621679236384"><span class="hs-identifier hs-var">ty</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-129"></span><span>       </span><span class="hs-string">&quot;connection_init&quot;</span><span>
 </span><span id="line-130"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Value -&gt; ClientMessage
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#GQLConnectionInit"><span class="hs-identifier hs-var">GQLConnectionInit</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Value -&gt; ClientMessage)
 -&gt; Parser (Maybe Value) -&gt; Parser ClientMessage
 forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
 </span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
-</span><a href="#local-6989586621679234727"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser (Maybe Value)
+</span><a href="#local-6989586621679236385"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser (Maybe Value)
 forall a. FromJSON a =&gt; Object -&gt; Text -&gt; Parser (Maybe a)
 </span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="hs-string">&quot;payload&quot;</span></span><span>
 </span><span id="line-131"></span><span>       </span><span class="hs-string">&quot;start&quot;</span><span>
-</span><span id="line-132"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679234724"><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234724"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
-</span><a href="#local-6989586621679234727"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser Text
+</span><span id="line-132"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679236382"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236382"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679236385"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser Text
 forall a. FromJSON a =&gt; Object -&gt; Text -&gt; Parser a
 </span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="hs-string">&quot;id&quot;</span></span><span>
-</span><span id="line-133"></span><span>               </span><span class="hs-special">(</span><span id="local-6989586621679234723"><span class="annot"><span class="annottext">q :: Text
-</span><a href="#local-6989586621679234723"><span class="hs-identifier hs-var">q</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679234722"><span class="annot"><span class="annottext">vrs :: VariableMapC
-</span><a href="#local-6989586621679234722"><span class="hs-identifier hs-var">vrs</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679234721"><span class="annot"><span class="annottext">opN :: Maybe Text
-</span><a href="#local-6989586621679234721"><span class="hs-identifier hs-var">opN</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
-</span><a href="#local-6989586621679234727"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser Value
+</span><span id="line-133"></span><span>               </span><span class="hs-special">(</span><span id="local-6989586621679236381"><span class="annot"><span class="annottext">q :: Text
+</span><a href="#local-6989586621679236381"><span class="hs-identifier hs-var">q</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679236380"><span class="annot"><span class="annottext">vrs :: VariableMapC
+</span><a href="#local-6989586621679236380"><span class="hs-identifier hs-var">vrs</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679236379"><span class="annot"><span class="annottext">opN :: Maybe Text
+</span><a href="#local-6989586621679236379"><span class="hs-identifier hs-var">opN</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679236385"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser Value
 forall a. FromJSON a =&gt; Object -&gt; Text -&gt; Parser a
 </span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="hs-string">&quot;payload&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser Value
 -&gt; (Value -&gt; Parser (Text, VariableMapC, Maybe Text))
 -&gt; Parser (Text, VariableMapC, Maybe Text)
 forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
 </span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser (Text, VariableMapC, Maybe Text)
-</span><a href="#local-6989586621679234720"><span class="hs-identifier hs-var">parsePayload</span></a></span><span>
+</span><a href="#local-6989586621679236378"><span class="hs-identifier hs-var">parsePayload</span></a></span><span>
 </span><span id="line-134"></span><span>               </span><span class="annot"><span class="annottext">ClientMessage -&gt; Parser ClientMessage
 forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
 </span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(ClientMessage -&gt; Parser ClientMessage)
@@ -456,16 +456,16 @@ forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; VariableMapC -&gt; Maybe Text -&gt; ClientMessage
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#GQLStart"><span class="hs-identifier hs-var">GQLStart</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234724"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234723"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">VariableMapC
-</span><a href="#local-6989586621679234722"><span class="hs-identifier hs-var">vrs</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
-</span><a href="#local-6989586621679234721"><span class="hs-identifier hs-var">opN</span></a></span><span>
+</span><a href="#local-6989586621679236382"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236381"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">VariableMapC
+</span><a href="#local-6989586621679236380"><span class="hs-identifier hs-var">vrs</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679236379"><span class="hs-identifier hs-var">opN</span></a></span><span>
 </span><span id="line-135"></span><span>       </span><span class="hs-string">&quot;stop&quot;</span><span>
 </span><span id="line-136"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ClientMessage
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#GQLStop"><span class="hs-identifier hs-var">GQLStop</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ClientMessage) -&gt; Parser Text -&gt; Parser ClientMessage
 forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
 </span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
-</span><a href="#local-6989586621679234727"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser Text
+</span><a href="#local-6989586621679236385"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser Text
 forall a. FromJSON a =&gt; Object -&gt; Text -&gt; Parser a
 </span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="hs-string">&quot;id&quot;</span></span><span>
 </span><span id="line-137"></span><span>       </span><span class="hs-string">&quot;terminate&quot;</span><span>
@@ -477,8 +477,8 @@ forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
 forall (f :: * -&gt; *) a. Alternative f =&gt; f a
 </span><span class="hs-identifier hs-var">empty</span></span><span>
 </span><span id="line-140"></span><span>    </span><span class="hs-keyword">where</span><span>
-</span><span id="line-141"></span><span>      </span><span id="local-6989586621679234720"><span class="annot"><span class="annottext">parsePayload :: Value -&gt; Parser (Text, VariableMapC, Maybe Text)
-</span><a href="#local-6989586621679234720"><span class="hs-identifier hs-var hs-var">parsePayload</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span id="line-141"></span><span>      </span><span id="local-6989586621679236378"><span class="annot"><span class="annottext">parsePayload :: Value -&gt; Parser (Text, VariableMapC, Maybe Text)
+</span><a href="#local-6989586621679236378"><span class="hs-identifier hs-var hs-var">parsePayload</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
 -&gt; (Object -&gt; Parser (Text, VariableMapC, Maybe Text))
 -&gt; Value
 -&gt; Parser (Text, VariableMapC, Maybe Text)
@@ -490,15 +490,15 @@ forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
 -&gt; Parser (Text, VariableMapC, Maybe Text)
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span>
-</span><span id="line-142"></span><span>        </span><span class="hs-glyph">\</span><span id="local-6989586621679234718"><span class="annot"><span class="annottext">v :: Object
-</span><a href="#local-6989586621679234718"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Text
+</span><span id="line-142"></span><span>        </span><span class="hs-glyph">\</span><span id="local-6989586621679236376"><span class="annot"><span class="annottext">v :: Object
+</span><a href="#local-6989586621679236376"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Text
  -&gt; VariableMapC -&gt; Maybe Text -&gt; (Text, VariableMapC, Maybe Text))
 -&gt; Parser Text
 -&gt; Parser
      (VariableMapC -&gt; Maybe Text -&gt; (Text, VariableMapC, Maybe Text))
 forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
 </span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
-</span><a href="#local-6989586621679234718"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser Text
+</span><a href="#local-6989586621679236376"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser Text
 forall a. FromJSON a =&gt; Object -&gt; Text -&gt; Parser a
 </span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="hs-string">&quot;query&quot;</span></span><span>
 </span><span id="line-143"></span><span>                   </span><span class="annot"><span class="annottext">Parser
@@ -507,7 +507,7 @@ forall a. FromJSON a =&gt; Object -&gt; Text -&gt; Parser a
 -&gt; Parser (Maybe Text -&gt; (Text, VariableMapC, Maybe Text))
 forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
 </span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
-</span><a href="#local-6989586621679234718"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser VariableMapC
+</span><a href="#local-6989586621679236376"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser VariableMapC
 forall a. FromJSON a =&gt; Object -&gt; Text -&gt; Parser a
 </span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="hs-string">&quot;variables&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser VariableMapC -&gt; Parser VariableMapC -&gt; Parser VariableMapC
 forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
@@ -520,69 +520,69 @@ forall k v. HashMap k v
 -&gt; Parser (Maybe Text) -&gt; Parser (Text, VariableMapC, Maybe Text)
 forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
 </span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Object
-</span><a href="#local-6989586621679234718"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser (Maybe Text)
+</span><a href="#local-6989586621679236376"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Text -&gt; Parser (Maybe Text)
 forall a. FromJSON a =&gt; Object -&gt; Text -&gt; Parser (Maybe a)
 </span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="hs-string">&quot;operationName&quot;</span></span><span>
 </span><span id="line-145"></span><span>
-</span><span id="line-146"></span><span id="local-6989586621679234830"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#theType"><span class="hs-identifier hs-type">theType</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">A.KeyValue</span></span><span> </span><span class="annot"><a href="#local-6989586621679234830"><span class="hs-identifier hs-type">kv</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679234830"><span class="hs-identifier hs-type">kv</span></a></span></span><span>
+</span><span id="line-146"></span><span id="local-6989586621679236488"><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#theType"><span class="hs-identifier hs-type">theType</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">A.KeyValue</span></span><span> </span><span class="annot"><a href="#local-6989586621679236488"><span class="hs-identifier hs-type">kv</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">T.Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679236488"><span class="hs-identifier hs-type">kv</span></a></span></span><span>
 </span><span id="line-147"></span><span id="theType"><span class="annot"><span class="annottext">theType :: Text -&gt; kv
-</span><a href="Mu.GraphQL.Subscription.Protocol.html#theType"><span class="hs-identifier hs-var hs-var">theType</span></a></span></span><span> </span><span id="local-6989586621679234714"><span class="annot"><span class="annottext">t :: Text
-</span><a href="#local-6989586621679234714"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-string">&quot;type&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; kv
+</span><a href="Mu.GraphQL.Subscription.Protocol.html#theType"><span class="hs-identifier hs-var hs-var">theType</span></a></span></span><span> </span><span id="local-6989586621679236372"><span class="annot"><span class="annottext">t :: Text
+</span><a href="#local-6989586621679236372"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-string">&quot;type&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; kv
 forall kv v. (KeyValue kv, ToJSON v) =&gt; Text -&gt; v -&gt; kv
 </span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234714"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><a href="#local-6989586621679236372"><span class="hs-identifier hs-var">t</span></a></span><span>
 </span><span id="line-148"></span><span>
-</span><span id="line-149"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679234707"><span id="local-6989586621679234709"><span id="local-6989586621679234711"><span class="annot"><span class="hs-identifier hs-type">A.ToJSON</span></span><span> </span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#ServerMessage"><span class="hs-identifier hs-type">ServerMessage</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-150"></span><span>  </span><span id="local-6989586621679234705"><span class="annot"><span class="annottext">toJSON :: ServerMessage -&gt; Value
-</span><a href="#local-6989586621679234705"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLConnectionError"><span class="hs-identifier hs-type">GQLConnectionError</span></a></span><span> </span><span id="local-6989586621679234704"><span class="annot"><span class="annottext">e :: Maybe Value
-</span><a href="#local-6989586621679234704"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679236365"><span id="local-6989586621679236367"><span id="local-6989586621679236369"><span class="annot"><span class="hs-identifier hs-type">A.ToJSON</span></span><span> </span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#ServerMessage"><span class="hs-identifier hs-type">ServerMessage</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-150"></span><span>  </span><span id="local-6989586621679236363"><span class="annot"><span class="annottext">toJSON :: ServerMessage -&gt; Value
+</span><a href="#local-6989586621679236363"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLConnectionError"><span class="hs-identifier hs-type">GQLConnectionError</span></a></span><span> </span><span id="local-6989586621679236362"><span class="annot"><span class="annottext">e :: Maybe Value
+</span><a href="#local-6989586621679236362"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span>
 </span><span id="line-151"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
 </span><span class="hs-identifier hs-var">A.object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; Pair
 forall kv. KeyValue kv =&gt; Text -&gt; kv
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#theType"><span class="hs-identifier hs-var">theType</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;connection_error&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;payload&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Value -&gt; Pair
 forall kv v. (KeyValue kv, ToJSON v) =&gt; Text -&gt; v -&gt; kv
 </span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Maybe Value
-</span><a href="#local-6989586621679234704"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">]</span><span>
+</span><a href="#local-6989586621679236362"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">]</span><span>
 </span><span id="line-152"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLConnectionAck"><span class="hs-identifier hs-type">GQLConnectionAck</span></a></span><span>
 </span><span id="line-153"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
 </span><span class="hs-identifier hs-var">A.object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; Pair
 forall kv. KeyValue kv =&gt; Text -&gt; kv
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#theType"><span class="hs-identifier hs-var">theType</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;connection_ack&quot;</span></span><span class="hs-special">]</span><span>
-</span><span id="line-154"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLData"><span class="hs-identifier hs-type">GQLData</span></a></span><span> </span><span id="local-6989586621679234702"><span class="annot"><span class="annottext">i :: Text
-</span><a href="#local-6989586621679234702"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679234701"><span class="annot"><span class="annottext">p :: Value
-</span><a href="#local-6989586621679234701"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLData"><span class="hs-identifier hs-type">GQLData</span></a></span><span> </span><span id="local-6989586621679236360"><span class="annot"><span class="annottext">i :: Text
+</span><a href="#local-6989586621679236360"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679236359"><span class="annot"><span class="annottext">p :: Value
+</span><a href="#local-6989586621679236359"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span>
 </span><span id="line-155"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
 </span><span class="hs-identifier hs-var">A.object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; Pair
 forall kv. KeyValue kv =&gt; Text -&gt; kv
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#theType"><span class="hs-identifier hs-var">theType</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;data&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;id&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Pair
 forall kv v. (KeyValue kv, ToJSON v) =&gt; Text -&gt; v -&gt; kv
 </span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234702"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;payload&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value -&gt; Pair
+</span><a href="#local-6989586621679236360"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;payload&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value -&gt; Pair
 forall kv v. (KeyValue kv, ToJSON v) =&gt; Text -&gt; v -&gt; kv
 </span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Value
-</span><a href="#local-6989586621679234701"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">]</span><span>
-</span><span id="line-156"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLError"><span class="hs-identifier hs-type">GQLError</span></a></span><span> </span><span id="local-6989586621679234700"><span class="annot"><span class="annottext">i :: Text
-</span><a href="#local-6989586621679234700"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679234699"><span class="annot"><span class="annottext">p :: Value
-</span><a href="#local-6989586621679234699"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679236359"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLError"><span class="hs-identifier hs-type">GQLError</span></a></span><span> </span><span id="local-6989586621679236358"><span class="annot"><span class="annottext">i :: Text
+</span><a href="#local-6989586621679236358"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679236357"><span class="annot"><span class="annottext">p :: Value
+</span><a href="#local-6989586621679236357"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span>
 </span><span id="line-157"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
 </span><span class="hs-identifier hs-var">A.object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; Pair
 forall kv. KeyValue kv =&gt; Text -&gt; kv
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#theType"><span class="hs-identifier hs-var">theType</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;error&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;id&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Pair
 forall kv v. (KeyValue kv, ToJSON v) =&gt; Text -&gt; v -&gt; kv
 </span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234700"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;payload&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value -&gt; Pair
+</span><a href="#local-6989586621679236358"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;payload&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value -&gt; Pair
 forall kv v. (KeyValue kv, ToJSON v) =&gt; Text -&gt; v -&gt; kv
 </span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Value
-</span><a href="#local-6989586621679234699"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">]</span><span>
-</span><span id="line-158"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLComplete"><span class="hs-identifier hs-type">GQLComplete</span></a></span><span> </span><span id="local-6989586621679234698"><span class="annot"><span class="annottext">i :: Text
-</span><a href="#local-6989586621679234698"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679236357"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLComplete"><span class="hs-identifier hs-type">GQLComplete</span></a></span><span> </span><span id="local-6989586621679236356"><span class="annot"><span class="annottext">i :: Text
+</span><a href="#local-6989586621679236356"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span>
 </span><span id="line-159"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
 </span><span class="hs-identifier hs-var">A.object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; Pair
 forall kv. KeyValue kv =&gt; Text -&gt; kv
 </span><a href="Mu.GraphQL.Subscription.Protocol.html#theType"><span class="hs-identifier hs-var">theType</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;complete&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;id&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Pair
 forall kv v. (KeyValue kv, ToJSON v) =&gt; Text -&gt; v -&gt; kv
 </span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
-</span><a href="#local-6989586621679234698"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">]</span><span>
+</span><a href="#local-6989586621679236356"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">]</span><span>
 </span><span id="line-160"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><a href="Mu.GraphQL.Subscription.Protocol.html#GQLKeepAlive"><span class="hs-identifier hs-type">GQLKeepAlive</span></a></span><span>
 </span><span id="line-161"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
 </span><span class="hs-identifier hs-var">A.object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; Pair
