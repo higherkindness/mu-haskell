@@ -60,6 +60,7 @@ executable test-avro
       avro        >=0.5.1 && <0.6
     , base        >=4.12  && <5
     , bytestring  >=0.10  && <0.11
+    , containers  >=0.6   && <0.7
     , mu-avro
     , mu-schema   >=0.3   && <0.4
 

@@ -12,6 +12,9 @@ example_person.gender = male
 for i in [1,2,3]:
   example_person.lucky_numbers.append(i)
 example_person.address.CopyFrom(example_address)
+example_person.things["hola"]  = 1
+example_person.things["hello"] = 2
+example_person.things["hallo"] = 3
 
 f = open(sys.argv[1], "wb")
 f.write(example_person.SerializeToString())

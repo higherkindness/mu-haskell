@@ -8,6 +8,7 @@ module Main where
 
 import           Data.Avro
 import qualified Data.ByteString.Lazy as BS
+import qualified Data.Map             as M
 import           System.Environment
 
 import           Mu.Adapter.Avro      ()
@@ -18,8 +19,11 @@ exampleAddress :: Address
 exampleAddress = Address "1111BB" "Spain"
 
 examplePerson1, examplePerson2 :: Person
-examplePerson1 = Person "Haskellio" "Gomez" (Just 30) (Just Male) exampleAddress [1,2,3]
-examplePerson2 = Person "Cuarenta" "Siete" Nothing Nothing exampleAddress []
+examplePerson1
+  = Person "Haskellio" "Gomez" (Just 30) (Just Male) exampleAddress [1,2,3] M.empty
+examplePerson2
+  = Person "Cuarenta" "Siete" Nothing Nothing exampleAddress []
+           (M.fromList [("hola", 1), ("hello", 2)])
 
 deriving via (WithSchema ExampleSchema "person" Person) instance HasAvroSchema Person
 deriving via (WithSchema ExampleSchema "person" Person) instance FromAvro Person
