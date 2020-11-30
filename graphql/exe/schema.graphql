@@ -2,6 +2,7 @@ type Book {
   id: Int!
   title: String!
   author: Author!
+  info: JSON
 }
 
 type Author {
