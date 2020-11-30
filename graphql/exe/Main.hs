@@ -14,6 +14,7 @@
 
 module Main where
 
+import qualified Data.Aeson                        as JSON
 import           Data.Conduit
 import           Data.Conduit.Combinators          (yieldMany)
 import           Data.List                         (find)
@@ -56,11 +57,11 @@ type ServiceMapping = '[
   , "Author" ':-> Integer
   ]
 
-library :: [(Integer, T.Text, [(Integer, T.Text)])]
+library :: [(Integer, T.Text, [(Integer, (T.Text, Integer))])]
 library
-  = [ (1, "Robert Louis Stevenson", [(1, "Treasure Island"), (2, "Strange Case of Dr Jekyll and Mr Hyde")])
-    , (2, "Immanuel Kant", [(3, "Critique of Pure Reason")])
-    , (3, "Michael Ende", [(4, "The Neverending Story"), (5, "Momo")])
+  = [ (1, "Robert Louis Stevenson", [(1, ("Treasure Island", 4)), (2, ("Strange Case of Dr Jekyll and Mr Hyde", 4))])
+    , (2, "Immanuel Kant", [(3, ("Critique of Pure Reason", 1))])
+    , (3, "Michael Ende", [(4, ("The Neverending Story", 5)), (5, ("Momo", 3))])
     ]
 
 libraryServer :: forall m i. (MonadServer m)
@@ -68,7 +69,8 @@ libraryServer :: forall m i. (MonadServer m)
 libraryServer
   = resolver ( object @"Book"   ( field  @"id"      bookId
                                 , field  @"title"   bookTitle
-                                , field  @"author"  bookAuthor )
+                                , field  @"author"  bookAuthor
+                                , field  @"info"    bookInfo )
              , object @"Author" ( field  @"id"      authorId
                                 , field  @"name"    authorName
                                 , field  @"books"   authorBooks )
@@ -82,8 +84,15 @@ libraryServer
     findBook i = find ((==i) . fst3) library
 
     bookId (_, bid) = pure bid
-    bookTitle (aid, bid) = pure $ maybe "" (fromMaybe "" . lookup bid . thd3) (findBook aid)
+    bookTitle (aid, bid) = pure $ fromMaybe "" $ do
+      bk <- findBook aid
+      ev <- lookup bid (thd3 bk)
+      pure (fst ev)
     bookAuthor (aid, _) = pure aid
+    bookInfo (aid, bid) = pure $ do
+      bk <- findBook aid
+      ev <- lookup bid (thd3 bk)
+      pure $ JSON.object ["score" JSON..= snd ev]
 
     authorId = pure
     authorName aid = pure $ maybe "" snd3 (findBook aid)
@@ -94,7 +103,7 @@ libraryServer
 
     findBookTitle rx = pure $ listToMaybe
       [(aid, bid) | (aid, _, books) <- library
-                  , (bid, title) <- books
+                  , (bid, (title, _)) <- books
                   , title =~ rx]
 
     allAuthors = pure $ fst3 <$> library

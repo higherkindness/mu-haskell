@@ -11,6 +11,7 @@
 module Mu.GraphQL.Query.Introspection where
 
 import           Control.Monad.Writer
+import qualified Data.Aeson           as JSON
 import qualified Data.HashMap.Strict  as HM
 import qualified Data.HashSet         as S
 import           Data.Int             (Int32)
@@ -104,7 +105,10 @@ instance ( IntrospectServices ss sub
     = let (_, ts) = runWriter $
            introspectServices (Proxy @ss) (Proxy @sub) >>
            tell (HM.fromList (
-             (\i -> (i, tSimple i)) <$> ["Null", "Int", "Float", "String", "Boolean", "ID"]))
+             (\i -> (i, tSimple i))
+               <$> [ "Null", "Int", "Float"
+                   , "String", "Boolean", "ID"
+                   , "JSON", "JSONObject" ] ))
           -- return only reachable types
           qrS  = maybeSymbolVal (Proxy @qr)
           mutS = maybeSymbolVal (Proxy @mut)
@@ -252,6 +256,10 @@ instance IntrospectTypeRef ('PrimitiveRef String) where
   introspectTypeRef _ _ = pure $ tNonNull $ tSimple "String"
 instance IntrospectTypeRef ('PrimitiveRef T.Text) where
   introspectTypeRef _ _ = pure $ tNonNull $ tSimple "String"
+instance IntrospectTypeRef ('PrimitiveRef JSON.Value) where
+  introspectTypeRef _ _ = pure $ tNonNull $ tSimple "JSON"
+instance IntrospectTypeRef ('PrimitiveRef JSON.Object) where
+  introspectTypeRef _ _ = pure $ tNonNull $ tSimple "JSONObject"
 
 instance (IntrospectTypeRef r)
          => IntrospectTypeRef ('ListRef r) where
@@ -329,6 +337,10 @@ instance IntrospectSchemaFieldType ('Mu.TPrimitive String) where
   introspectSchemaFieldType _ _ = tNonNull $ tSimple "String"
 instance IntrospectSchemaFieldType ('Mu.TPrimitive T.Text) where
   introspectSchemaFieldType _ _ = tNonNull $ tSimple "String"
+instance IntrospectSchemaFieldType ('Mu.TPrimitive JSON.Value) where
+  introspectSchemaFieldType _ _ = tNonNull $ tSimple "JSON"
+instance IntrospectSchemaFieldType ('Mu.TPrimitive JSON.Object) where
+  introspectSchemaFieldType _ _ = tNonNull $ tSimple "JSONObject"
 
 instance (IntrospectSchemaFieldType r)
          => IntrospectSchemaFieldType ('Mu.TList r) where
