@@ -41,6 +41,7 @@ module Mu.Adapter.ProtoBuf (
 import           Control.Applicative
 import qualified Data.ByteString          as BS
 import           Data.Int
+import qualified Data.Map                 as M
 import           Data.SOP                 (All)
 import qualified Data.Text                as T
 import qualified Data.Text.Lazy           as LT
@@ -337,10 +338,13 @@ instance KnownBool 'False where
   boolVal _ = False
 
 instance {-# OVERLAPS #-}
-         (ProtoBridgeOneFieldValue sch t, KnownNat (FindProtoBufId sch ty name), KnownBool (FindProtoBufPacked sch ty name))
+         ( ProtoBridgeOneFieldValue sch t
+         , KnownNat (FindProtoBufId sch ty name)
+         , KnownBool (FindProtoBufPacked sch ty name) )
          => ProtoBridgeField sch ty ('FieldDef name ('TList t)) where
   fieldToProto (Field (FList xs))
-    | boolVal (Proxy @(FindProtoBufPacked sch ty name)), supportsPacking (Proxy @(FieldValue sch t))
+    | boolVal (Proxy @(FindProtoBufPacked sch ty name))
+    , supportsPacking (Proxy @(FieldValue sch t))
     = packedFieldValueToProto fieldId xs
     | otherwise
     = foldMap (oneFieldValueToProto fieldId) xs
@@ -353,10 +357,35 @@ instance {-# OVERLAPS #-}
              | otherwise
              = base
 
-instance TypeError ('Text "maps are not currently supported")
+-- see https://developers.google.com/protocol-buffers/docs/proto3#maps
+{-
+message MapFieldEntry {
+  key_type key = 1;
+  value_type value = 2;
+}
+
+repeated MapFieldEntry map_field = N;
+-}
+instance ( KnownNat (FindProtoBufId sch ty name)
+         , ProtoBridgeOneFieldValue sch k
+         , ProtoBridgeOneFieldValue sch v
+         , Ord (FieldValue sch k) )
          => ProtoBridgeField sch ty ('FieldDef name ('TMap k v)) where
-  fieldToProto = error "maps are not currently supported"
-  protoToField = error "maps are not currently supported"
+  fieldToProto (Field (FMap mp))
+    = foldMap oneMapValueToProto (M.toAscList mp)
+    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
+          oneMapValueToProto (k, v)
+            = PBEnc.embedded fieldId $
+                oneFieldValueToProto 1 k <> oneFieldValueToProto 2 v
+  protoToField = Field . FMap . M.fromList <$> go
+    where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
+          go = PBDec.repeated (
+                 PBDec.embedded'
+                   ((,) <$> PBDec.one protoToOneFieldValue
+                              (error "key should always be present") `at` 1
+                        <*> PBDec.one protoToOneFieldValue
+                              (error "value should always be present") `at` 2))
+                 `at` fieldId
 
 instance {-# OVERLAPS #-}
          (ProtoBridgeUnionFieldValue (FindProtoBufOneOfIds sch ty name) sch ts)
@@ -518,14 +547,14 @@ instance TypeError ('Text "lists cannot be nested in protobuf")
   packedFieldValueToProto = error "lists cannot be nested in protobuf"
   protoToPackedFieldValue = error "lists cannot be nested in protobuf"
 
-instance TypeError ('Text "maps are not currently supported")
+instance TypeError ('Text "maps cannot be nested in protobuf")
          => ProtoBridgeOneFieldValue sch ('TMap k v) where
-  defaultOneFieldValue = error "maps are not currently supported"
-  oneFieldValueToProto = error "maps are not currently supported"
-  protoToOneFieldValue = error "maps are not currently supported"
-  supportsPacking      = error "maps are not currently supported"
-  packedFieldValueToProto = error "maps are not currently supported"
-  protoToPackedFieldValue = error "maps are not currently supported"
+  defaultOneFieldValue = error "maps cannot be nested in protobuf"
+  oneFieldValueToProto = error "maps cannot be nested in protobuf"
+  protoToOneFieldValue = error "maps cannot be nested in protobuf"
+  supportsPacking      = error "maps cannot be nested in protobuf"
+  packedFieldValueToProto = error "maps cannot be nested in protobuf"
+  protoToPackedFieldValue = error "maps cannot be nested in protobuf"
 
 instance TypeError ('Text "nested unions are not currently supported")
          => ProtoBridgeOneFieldValue sch ('TUnion choices) where
