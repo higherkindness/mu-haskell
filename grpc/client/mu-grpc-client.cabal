@@ -41,7 +41,7 @@ library
     , mu-grpc-common     >=0.4   && <0.5
     , mu-optics          >=0.3   && <0.4
     , mu-protobuf        >=0.4   && <0.5
-    , mu-rpc             >=0.4   && <0.5
+    , mu-rpc             >=0.4   && <0.6
     , mu-schema          >=0.3   && <0.4
     , optics-core        >=0.2   && <0.4
     , sop-core           >=0.5   && <0.6

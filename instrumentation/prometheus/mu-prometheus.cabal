@@ -1,5 +1,5 @@
 name:          mu-prometheus
-version:       0.4.0.0
+version:       0.5.0.0
 synopsis:      Metrics support for Mu using Prometheus
 description:   Get metrics of your running Mu servers using Prometheus
 license:       Apache-2.0
@@ -22,12 +22,12 @@ library
   build-depends:
       base                       >=4.12 && <5
     , lifted-base                >=0.2  && <0.3
-    , monad-control              >1    && <2
-    , mu-rpc                     >=0.4  && <0.5
-    , prometheus-client          >1    && <2
+    , monad-control              >1     && <2
+    , mu-rpc                     >=0.5  && <0.6
+    , prometheus-client          >1     && <2
     , text                       >=1.2  && <2
     , wai                        >=3.2  && <4
-    , wai-middleware-prometheus  >1    && <2
+    , wai-middleware-prometheus  >1     && <2
 
   hs-source-dirs:   src
   default-language: Haskell2010

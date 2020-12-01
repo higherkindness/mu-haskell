@@ -11,6 +11,7 @@
 {-# language ScopedTypeVariables   #-}
 {-# language TupleSections         #-}
 {-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# OPTIONS_GHC -fprint-explicit-foralls #-}
@@ -267,8 +268,7 @@ runSubscription f req whole@(Services ss) path
 class RunQueryFindHandler m p whole chn ss s hs where
   runQueryFindHandler
     :: ( p ~ 'Package pname wholess
-       , s ~ 'Service sname ms
-       , inh ~ MappingRight chn sname )
+       , inh ~ MappingRight chn (ServiceName s) )
     => (forall a. m a -> ServerErrorIO a)
     -> RequestHeaders
     -> Intro.Schema -> ServerT chn GQL.Field p m whole
@@ -279,13 +279,38 @@ class RunQueryFindHandler m p whole chn ss s hs where
     -> WriterT [GraphQLError] IO Aeson.Value
   runSubscriptionFindHandler
     :: ( p ~ 'Package pname wholess
-       , s ~ 'Service sname ms
-       , inh ~ MappingRight chn sname )
+       , inh ~ MappingRight chn (ServiceName s) )
     => (forall a. m a -> ServerErrorIO a)
     -> RequestHeaders
     -> ServerT chn GQL.Field p m whole
     -> [T.Text]
     -> ServicesT chn GQL.Field ss m hs
+    -> inh
+    -> OneMethodQuery p s
+    -> ConduitT Aeson.Value Void IO ()
+    -> IO ()
+
+class RunQueryOnFoundHandler m p whole chn (s :: Service snm mnm anm (TypeRef snm)) hs where
+  type ServiceName s :: snm
+  runQueryOnFoundHandler
+    :: ( p ~ 'Package pname wholess
+       , inh ~ MappingRight chn (ServiceName s) )
+    => (forall a. m a -> ServerErrorIO a)
+    -> RequestHeaders
+    -> Intro.Schema -> ServerT chn GQL.Field p m whole
+    -> [T.Text]
+    -> ServiceT chn GQL.Field s m hs
+    -> inh
+    -> ServiceQuery p s
+    -> WriterT [GraphQLError] IO Aeson.Value
+  runSubscriptionOnFoundHandler
+    :: ( p ~ 'Package pname wholess
+       , inh ~ MappingRight chn (ServiceName s) )
+    => (forall a. m a -> ServerErrorIO a)
+    -> RequestHeaders
+    -> ServerT chn GQL.Field p m whole
+    -> [T.Text]
+    -> ServiceT chn GQL.Field s m hs
     -> inh
     -> OneMethodQuery p s
     -> ConduitT Aeson.Value Void IO ()
@@ -302,17 +327,24 @@ instance {-# OVERLAPPABLE #-}
     = runQueryFindHandler f req sch whole path that
   runSubscriptionFindHandler f req whole path (_ :<&>: that)
     = runSubscriptionFindHandler f req whole path that
-instance {-# OVERLAPS #-}
-         ( s ~ 'Service sname ms, KnownName sname
-         , RunMethod m p whole chn s ms h )
+instance {-# OVERLAPS #-}
+         (RunQueryOnFoundHandler m p whole chn s h)
          => RunQueryFindHandler m p whole chn (s ': ss) s (h ': hs) where
-  runQueryFindHandler f req sch whole path (this :<&>: _) inh queries
+  runQueryFindHandler f req sch whole path (s :<&>: _)
+    = runQueryOnFoundHandler f req sch whole path s
+  runSubscriptionFindHandler f req whole path (s :<&>: _)
+    = runSubscriptionOnFoundHandler f req whole path s
+
+instance ( KnownName sname, RunMethod m p whole chn ('Service sname ms) ms h )
+         => RunQueryOnFoundHandler m p whole chn ('Service sname ms) h where
+  type ServiceName ('Service sname ms) = sname
+  runQueryOnFoundHandler f req sch whole path (ProperSvc this) inh queries
     = Aeson.object . catMaybes <$> mapM runOneQuery queries
     where
       -- if we include the signature we have to write
       -- an explicit type signature for 'runQueryFindHandler'
       runOneQuery (OneMethodQuery nm args)
-        = runMethod f req whole (Proxy @s) path nm inh this args
+        = runMethod f req whole (Proxy @('Service sname ms)) path nm inh this args
       -- handle __typename
       runOneQuery (TypeNameQuery nm)
         = let realName = fromMaybe "__typename" nm
@@ -333,13 +365,13 @@ instance {-# OVERLAPS #-}
                                     path]
                               pure $ Just (realName, Aeson.Null)
   -- subscriptions should only have one element
-  runSubscriptionFindHandler f req whole path (this :<&>: _) inh (OneMethodQuery nm args) sink
-    = runMethodSubscription f req whole (Proxy @s) path nm inh this args sink
-  runSubscriptionFindHandler _ _ _ _ _ _ (TypeNameQuery nm) sink
+  runSubscriptionOnFoundHandler f req whole path (ProperSvc this) inh (OneMethodQuery nm args) sink
+    = runMethodSubscription f req whole (Proxy @('Service sname ms)) path nm inh this args sink
+  runSubscriptionOnFoundHandler _ _ _ _ _ _ (TypeNameQuery nm) sink
     = let realName = fromMaybe "__typename" nm
           o = Aeson.object [(realName, Aeson.String $ T.pack $ nameVal (Proxy @sname))]
       in runConduit $ yieldMany ([o] :: [Aeson.Value]) .| sink
-  runSubscriptionFindHandler _ _ _ _ _ _ _ sink
+  runSubscriptionOnFoundHandler _ _ _ _ _ _ _ sink
     = runConduit $ yieldMany
                    ([singleErrValue "__schema and __type are not supported in subscriptions"]
                       :: [Aeson.Value])

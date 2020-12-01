@@ -1,3 +1,4 @@
+{-# language AllowAmbiguousTypes       #-}
 {-# language CPP                       #-}
 {-# language ConstraintKinds           #-}
 {-# language DataKinds                 #-}
@@ -56,10 +57,11 @@ module Mu.Server (
 , method, methodWithInfo
 , resolver, object
 , field, fieldWithInfo
+, unionChoice
 , NamedList(..)
   -- ** Definitions by position
 , SingleServerT, pattern Server
-, ServerT(..), ServicesT(..), HandlersT(.., (:<||>:), (:<|>:))
+, ServerT(..), ServicesT(..), ServiceT(..), HandlersT(.., (:<||>:), (:<|>:))
   -- ** Simple servers using only IO
 , ServerErrorIO, ServerIO
   -- * Errors which might be raised
@@ -151,7 +153,7 @@ data ServerT (chn :: ServiceChain snm) (info :: Type)
 pattern Server :: (MappingRight chn sname ~ ())
                => HandlersT chn info () methods m hs
                -> ServerT chn info ('Package pname '[ 'Service sname methods ]) m '[hs]
-pattern Server svr = Services (svr :<&>: S0)
+pattern Server svr = Services (ProperSvc svr :<&>: S0)
 
 infixr 3 :<&>:
 -- | Definition of a complete server for a service.
@@ -159,9 +161,30 @@ data ServicesT (chn :: ServiceChain snm) (info :: Type)
                (s :: [Service snm mnm anm (TypeRef snm)])
                (m :: Type -> Type) (hs :: [[Type]]) where
   S0 :: ServicesT chn info '[] m '[]
-  (:<&>:) :: HandlersT chn info (MappingRight chn sname) methods m hs
+  (:<&>:) :: ServiceT chn info svc m hs
           -> ServicesT chn info rest m hss
-          -> ServicesT chn info ('Service sname methods ': rest) m (hs ': hss)
+          -> ServicesT chn info (svc ': rest) m (hs ': hss)
+
+type family InUnion (x :: k) (xs :: [k]) :: Constraint where
+  InUnion x '[] = TypeError ('ShowType x ':<>: 'Text " is not part of the union")
+  InUnion x (x ': xs) = ()
+  InUnion x (y ': xs) = InUnion x xs
+
+data UnionChoice chn elts where
+  UnionChoice :: InUnion elt elts
+              => Proxy elt -> MappingRight chn elt
+              -> UnionChoice chn elts
+
+unionChoice :: forall elt elts chn. InUnion elt elts
+            => MappingRight chn elt -> UnionChoice chn elts
+unionChoice = UnionChoice (Proxy @elt)
+
+-- | Definition of different kinds of services.
+data ServiceT chn info svc m hs where
+  ProperSvc :: HandlersT chn info (MappingRight chn sname) methods m hs
+            -> ServiceT chn info ('Service sname methods) m hs
+  OneOfSvc  :: (MappingRight chn sname -> m (UnionChoice chn elts))
+            -> ServiceT chn info ('OneOf sname elts) m '[]
 
 -- | 'HandlersT' is a sequence of handlers.
 --   Note that the handlers for your service
@@ -412,7 +435,12 @@ instance ToServices chn info '[] m '[] nl where
 instance ( FindService name (HandlersT chn info (MappingRight chn name) methods m h) nl
          , ToServices chn info ss m hs nl)
          => ToServices chn info ('Service name methods ': ss) m (h ': hs) nl where
-  toServices nl = findService (Proxy @name) nl :<&>: toServices nl
+  toServices nl = ProperSvc (findService (Proxy @name) nl) :<&>: toServices nl
+instance ( FindService name (MappingRight chn name -> m (UnionChoice chn elts)) nl
+         , ToServices chn info ss m hs nl)
+         => ToServices chn info ('OneOf name elts ': ss) m ('[] ': hs) nl where
+  toServices nl = OneOfSvc (findService (Proxy @name) nl) :<&>: toServices nl
+
 
 class FindService name h nl | name nl -> h where
   findService :: Proxy name -> NamedList nl -> h

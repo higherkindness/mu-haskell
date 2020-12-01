@@ -1,5 +1,5 @@
 name:               mu-grpc-server
-version:            0.4.0.0
+version:            0.5.0.0
 synopsis:           gRPC servers for Mu definitions
 description:
   With @mu-grpc-server@ you can easily build gRPC servers for mu-haskell!
@@ -33,7 +33,7 @@ library
     , mtl               >=2.2     && <3
     , mu-grpc-common    >=0.4     && <0.5
     , mu-protobuf       >=0.4     && <0.5
-    , mu-rpc            >=0.4     && <0.5
+    , mu-rpc            >=0.5     && <0.6
     , mu-schema         >=0.3     && <0.4
     , sop-core          >=0.5     && <0.6
     , stm               >=2.5     && <3
@@ -59,9 +59,9 @@ executable grpc-example-server
     , http2-grpc-types  >=0.5     && <0.6
     , mtl               >=2.2     && <3
     , mu-grpc-common    >=0.4     && <0.5
-    , mu-grpc-server    >=0.4     && <0.5
+    , mu-grpc-server
     , mu-protobuf       >=0.4     && <0.5
-    , mu-rpc            >=0.4     && <0.5
+    , mu-rpc            >=0.5     && <0.6
     , mu-schema         >=0.3     && <0.4
     , sop-core          >=0.5     && <0.6
     , stm               >=2.5     && <3
