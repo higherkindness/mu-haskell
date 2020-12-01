@@ -3,6 +3,7 @@ protocol Service {
   record Person {
     string name;
     int age;
+    map<int> things;
   }
 
   error NotFoundError {

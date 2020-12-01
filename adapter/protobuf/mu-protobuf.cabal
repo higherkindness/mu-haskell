@@ -1,5 +1,5 @@
 name:          mu-protobuf
-version:       0.4.0.3
+version:       0.4.1.0
 synopsis:
   Protocol Buffers serialization and gRPC schema import for Mu microservices
 
@@ -34,6 +34,7 @@ library
       base                    >=4.12  && <5
     , bytestring              >=0.10  && <0.11
     , compendium-client       >=0.2   && <0.3
+    , containers              >=0.6   && <0.7
     , http-client             >=0.6   && <0.7
     , http2-grpc-proto3-wire  >=0.1   && <0.2
     , language-protobuf       >=1.0.1 && <2
@@ -54,6 +55,7 @@ executable test-protobuf
   build-depends:
       base         >=4.12  && <5
     , bytestring
+    , containers   >=0.6   && <0.7
     , mu-protobuf
     , mu-schema    >=0.3.0
     , proto3-wire
