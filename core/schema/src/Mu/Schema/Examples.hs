@@ -21,6 +21,7 @@ Look at the source code of this module.
 module Mu.Schema.Examples where
 
 import qualified Data.Aeson                         as J
+import qualified Data.Map                           as M
 import qualified Data.Text                          as T
 import           GHC.Generics
 
@@ -34,7 +35,8 @@ data Person
            , age           :: Maybe Int
            , gender        :: Maybe Gender
            , address       :: Address
-           , lucky_numbers :: [Int] }
+           , lucky_numbers :: [Int]
+           , things        :: M.Map T.Text Int }
   deriving (Eq, Show, Generic)
   deriving (ToSchema ExampleSchema "person", FromSchema ExampleSchema "person")
   deriving (J.ToJSON, J.FromJSON)
@@ -111,7 +113,8 @@ type ExampleSchema
                  , 'FieldDef "age"       ('TOption ('TPrimitive Int))
                  , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
                  , 'FieldDef "address"   ('TSchematic "address")
-                 , 'FieldDef "lucky_numbers" ('TList ('TPrimitive Int)) ]
+                 , 'FieldDef "lucky_numbers" ('TList ('TPrimitive Int))
+                 , 'FieldDef "things"    ('TMap ('TPrimitive T.Text) ('TPrimitive Int)) ]
      ]
 
 $(generateTypesFromSchema (++"Msg") ''ExampleSchema)

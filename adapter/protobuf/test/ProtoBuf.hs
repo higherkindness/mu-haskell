@@ -10,6 +10,7 @@ module Main where
 
 import qualified Data.ByteString      as BS
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map             as M
 import qualified Data.Text            as T
 import           GHC.Generics
 import qualified Proto3.Wire.Decode   as PBDec
@@ -26,7 +27,8 @@ data MPerson
             , age           :: Maybe Int
             , gender        :: Maybe Gender
             , address       :: MAddress
-            , lucky_numbers :: [Int] }
+            , lucky_numbers :: [Int]
+            , things        :: M.Map T.Text Int }
   deriving (Eq, Show, Generic)
   deriving (ToSchema ExampleSchema "person")
   deriving (FromSchema ExampleSchema "person")
@@ -60,7 +62,8 @@ type instance AnnotatedSchema ProtoBufAnnotation ExampleSchema
      , 'AnnField "person" "age"       ('ProtoBufId 3 '[])
      , 'AnnField "person" "gender"    ('ProtoBufId 4 '[])
      , 'AnnField "person" "address"   ('ProtoBufId 5 '[])
-     , 'AnnField "person" "lucky_numbers" ('ProtoBufId 6 '[ '("packed", 'ProtoBufOptionConstantBool 'True) ]) ]
+     , 'AnnField "person" "lucky_numbers" ('ProtoBufId 6 '[ '("packed", 'ProtoBufOptionConstantBool 'True) ])
+     , 'AnnField "person" "things"    ('ProtoBufId 7 '[]) ]
 
 exampleAddress :: MAddress
 exampleAddress = MAddress "1111BB" "Spain"
@@ -69,9 +72,10 @@ examplePerson1, examplePerson2 :: MPerson
 examplePerson1 = MPerson "Haskellio" "Gómez"
                          (Just 30) (Just Male)
                          exampleAddress [1,2,3]
+                         (M.fromList [("pepe", 1), ("juan", 2)])
 examplePerson2 = MPerson "Cuarenta" "Siete"
                          Nothing Nothing
-                         exampleAddress []
+                         exampleAddress [] M.empty
 
 main :: IO ()
 main = do -- Obtain the filenames
