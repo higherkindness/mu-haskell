@@ -381,11 +381,16 @@ instance ( KnownNat (FindProtoBufId sch ty name)
     where fieldId = fromInteger $ natVal (Proxy @(FindProtoBufId sch ty name))
           go = PBDec.repeated (
                  PBDec.embedded'
-                   ((,) <$> PBDec.one protoToOneFieldValue
-                              (error "key should always be present") `at` 1
-                        <*> PBDec.one protoToOneFieldValue
-                              (error "value should always be present") `at` 2))
+                   ((,) <$> fieldValueWithDefault 1
+                        <*> fieldValueWithDefault 2))
                  `at` fieldId
+          fieldValueWithDefault innerFieldId
+            = case defaultOneFieldValue of
+                Nothing
+                  -> do r <- PBDec.one (Just <$> protoToOneFieldValue) Nothing `at` innerFieldId
+                        maybe empty pure r
+                Just d
+                  -> PBDec.one protoToOneFieldValue d `at` innerFieldId <|> pure d
 
 instance {-# OVERLAPS #-}
          (ProtoBridgeUnionFieldValue (FindProtoBufOneOfIds sch ty name) sch ts)
