@@ -1,7 +1,6 @@
 {
   "recommendations": [
     "haskell.haskell",
-    "vigoo.stylish-haskell",
     "EditorConfig.EditorConfig"
   ]
 }
