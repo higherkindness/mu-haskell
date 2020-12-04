@@ -7,11 +7,9 @@ Most of our developers use using [Visual Studio Code](https://code.visualstudio.
 
 ## Visual Studio Code extensions
 
-To make our lives easier while developing in Haskell, we use a set of recommended extensions. The first time you open the project, the editor should suggest to install all those you do not have,
+To make our lives easier while developing in Haskell, we use a set of recommended extensions. The first time you open the project, the editor should suggest to install all those you do not have:
 
 - [Haskell](https://marketplace.visualstudio.com/items?itemName=haskell.haskell), the best thing that happened to Haskell for editors/IDEs! ❤️
-- [hlint](https://marketplace.visualstudio.com/items?itemName=hoovercj.haskell-linter), another great extension to have suggestions and refactors in Haskell 🛠
-- [stylish-haskell](https://marketplace.visualstudio.com/items?itemName=vigoo.stylish-haskell), the formatter we use to prettify the code 💅🏼
 - [editorconfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig), to have consistency between different editors and envs 🐀
 
 ## Styling 💅🏼
