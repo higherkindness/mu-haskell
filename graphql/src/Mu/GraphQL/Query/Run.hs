@@ -338,7 +338,7 @@ instance {-# OVERLAPS #-}
 instance ( KnownName sname, RunMethod m p whole chn ('Service sname ms) ms h )
          => RunQueryOnFoundHandler m p whole chn ('Service sname ms) h where
   type ServiceName ('Service sname ms) = sname
-  runQueryOnFoundHandler f req sch whole path (ProperSvc this) inh queries
+  runQueryOnFoundHandler f req sch whole path (ProperSvc this) inh (ServiceQuery queries)
     = Aeson.object . catMaybes <$> mapM runOneQuery queries
     where
       -- if we include the signature we have to write
@@ -376,6 +376,12 @@ instance ( KnownName sname, RunMethod m p whole chn ('Service sname ms) ms h )
                    ([singleErrValue "__schema and __type are not supported in subscriptions"]
                       :: [Aeson.Value])
                    .| sink
+
+instance ( KnownName sname )
+         => RunQueryOnFoundHandler m p whole chn ('OneOf sname elts) h where
+  type ServiceName ('OneOf sname elts) = sname
+  runQueryOnFoundHandler f req sch whole path (OneOfSvc this) inh (OneOfQuery queries)
+    = undefined
 
 class RunMethod m p whole chn s ms hs where
   runMethod
@@ -417,6 +423,7 @@ instance ( RunMethod m p whole chn s ms hs
           rpcInfo = reflectRpcInfo (Proxy @p) (Proxy @s) (Proxy @('Method mname args r)) req fld
   runMethod f req whole p path nm inh (_ :<||>: r) (S cont)
     = runMethod f req whole p path nm inh r cont
+  runMethod _ _ _ _ _ _ _ _ _ = error "this should never happen"
   -- handle subscriptions
   runMethodSubscription f req whole _ path nm inh (h :<||>: _) (Z (ChosenMethodQuery fld args ret)) sink
     = runHandlerSubscription f req whole (path ++ [realName]) (h rpcInfo inh) args ret sink
@@ -424,6 +431,7 @@ instance ( RunMethod m p whole chn s ms hs
           rpcInfo = reflectRpcInfo (Proxy @p) (Proxy @s) (Proxy @('Method mname args r)) req fld
   runMethodSubscription f req whole p path nm inh (_ :<||>: r) (S cont) sink
     = runMethodSubscription f req whole p path nm inh r cont sink
+  runMethodSubscription _ _ _ _ _ _ _ _ _ _ = error "this should never happen"
 
 class Handles chn args r m h
       => RunHandler m p whole chn args r h where

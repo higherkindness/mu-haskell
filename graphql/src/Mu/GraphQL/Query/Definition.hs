@@ -27,9 +27,12 @@ data Document (p :: Package snm mnm anm (TypeRef snm))
     => OneMethodQuery ('Package pname ss) (LookupService ss sub)
     -> Document ('Package pname ss) qr mut ('Just sub)
 
-type ServiceQuery (p :: Package snm mnm anm (TypeRef snm))
-                  (s :: Service snm mnm anm (TypeRef snm))
-  = [OneMethodQuery p s]
+data ServiceQuery (p :: Package snm mnm anm (TypeRef snm))
+                  (s :: Service snm mnm anm (TypeRef snm)) where
+  ServiceQuery :: [OneMethodQuery p ('Service nm ms)]
+               -> ServiceQuery p ('Service nm ms)
+  OneOfQuery   :: NP (ChosenOneOfQuery p) elts
+               -> ServiceQuery p ('OneOf nm elts)
 
 data OneMethodQuery (p :: Package snm mnm anm (TypeRef snm))
                     (s :: Service snm mnm anm (TypeRef snm)) where
@@ -40,17 +43,22 @@ data OneMethodQuery (p :: Package snm mnm anm (TypeRef snm))
   -- the special '__typename' field
   TypeNameQuery
     :: Maybe Text
-    -> OneMethodQuery p ('Service nm ms)
+    -> OneMethodQuery p s
   -- introspection fields
   SchemaQuery
     :: Maybe Text
     -> [GQL.Selection]
-    -> OneMethodQuery p ('Service nm ms)
+    -> OneMethodQuery p s
   TypeQuery
     :: Maybe Text
     -> Text
     -> [GQL.Selection]
-    -> OneMethodQuery p ('Service nm ms)
+    -> OneMethodQuery p s
+
+data ChosenOneOfQuery p elt where
+  ChosenOneOfQuery
+    :: ServiceQuery p (LookupService ss elt)
+    -> ChosenOneOfQuery ('Package pname ss) elt
 
 data ChosenMethodQuery (p :: Package snm mnm anm (TypeRef snm))
                        (m :: Method snm mnm anm (TypeRef snm)) where
