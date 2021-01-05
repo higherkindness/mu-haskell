@@ -105,30 +105,43 @@ quickstartServer
 type ApolloService
   = 'Package ('Just "apollo")
       '[ Object "Book"
-        '[ ObjectField "title" '[] ('RetSingle ('PrimitiveRef String))
-        , ObjectField "author" '[] ('RetSingle ('ObjectRef "Author"))
-        ]
-      , Object "Author"
-        '[ ObjectField "name" '[] ('RetSingle ('PrimitiveRef String))
-        , ObjectField "books" '[] ('RetSingle ('ListRef ('ObjectRef "Book")))
-        ]
+         '[ ObjectField "title" '[] ('RetSingle ('PrimitiveRef String))
+          , ObjectField "author" '[] ('RetSingle ('ObjectRef "Author"))
+          ]
+      ,  Object "Paper"
+         '[ ObjectField "title" '[] ('RetSingle ('PrimitiveRef String))
+          , ObjectField "author" '[] ('RetSingle ('ObjectRef "Author"))
+          ]
+      ,  Union "Writing" ["Book", "Paper"]
+      ,  Object "Author"
+         '[ ObjectField "name" '[] ('RetSingle ('PrimitiveRef String))
+          , ObjectField "writings" '[] ('RetSingle ('ListRef ('ObjectRef "Writing")))
+          ]
       ]
 
 type ApolloBookAuthor = '[
-    "Book"   ':-> (String, Integer)
-  , "Author" ':-> Integer
+    "Book"    ':-> (String, Integer)
+  , "Paper"   ':-> (String, Integer)
+  , "Writing" ':-> Either (String, Integer) (String, Integer)
+  , "Author"  ':-> Integer
   ]
 
 apolloServer :: forall m i. (MonadServer m)
              => ServerT ApolloBookAuthor i ApolloService m _
 apolloServer
   = resolver
-      ( object @"Author" ( field @"name"   authorName
-                         , field @"books"  authorBooks )
+      ( object @"Author" ( field @"name"     authorName
+                         , field @"writings" authorWrs )
       , object @"Book"   ( field @"author" (pure . snd)
-                         , field @"title"  (pure . fst) ) )
+                         , field @"title"  (pure . fst) )
+      , object @"Paper"  ( field @"author" (pure . snd)
+                         , field @"title"  (pure . fst) )
+      , union @"Writing" writing )
   where
     authorName :: Integer -> m String
     authorName _ = pure "alex"  -- this would run in the DB
-    authorBooks :: Integer -> m [(String, Integer)]
-    authorBooks _ = pure []
+    authorWrs :: Integer -> m [Either (String, Integer) (String, Integer)]
+    authorWrs _ = pure []
+
+    writing (Left  c) = pure $ unionChoice @"Book" c
+    writing (Right c) = pure $ unionChoice @"Paper" c

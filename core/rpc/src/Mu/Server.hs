@@ -55,7 +55,7 @@ module Mu.Server (
   -- ** Definitions by name
 , singleService
 , method, methodWithInfo
-, resolver, object
+, resolver, object, union
 , field, fieldWithInfo
 , unionChoice
 , NamedList(..)
@@ -344,6 +344,11 @@ object
      , ToHandlers chn info (MappingRight chn sname) ms m hs nl )
   => p -> Named sname (HandlersT chn info (MappingRight chn sname) ms m hs)
 object nl = Named $ toHandlers $ toNamedList nl
+
+union :: forall sname chn m elts.
+         (MappingRight chn sname -> m (UnionChoice chn elts))
+      -> Named sname (MappingRight chn sname -> m (UnionChoice chn elts))
+union = Named
 
 -- | Combines the implementation of several GraphQL objects,
 --   which means a whole Mu service for a GraphQL server.
