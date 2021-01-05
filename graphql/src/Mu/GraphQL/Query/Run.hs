@@ -37,9 +37,11 @@ import           Data.Conduit.TQueue
 import qualified Data.HashMap.Strict            as HM
 import           Data.Maybe
 import qualified Data.Text                      as T
+import           Data.Typeable
 import           GHC.TypeLits
 import qualified Language.GraphQL.AST           as GQL
 import           Network.HTTP.Types.Header
+import           Unsafe.Coerce                  (unsafeCoerce)
 
 import           Mu.GraphQL.Query.Definition
 import qualified Mu.GraphQL.Query.Introspection as Intro
@@ -377,11 +379,40 @@ instance ( KnownName sname, RunMethod m p whole chn ('Service sname ms) ms h )
                       :: [Aeson.Value])
                    .| sink
 
-instance ( KnownName sname )
+instance ( KnownName sname, RunUnion m p whole chn elts )
          => RunQueryOnFoundHandler m p whole chn ('OneOf sname elts) h where
   type ServiceName ('OneOf sname elts) = sname
   runQueryOnFoundHandler f req sch whole path (OneOfSvc this) inh (OneOfQuery queries)
-    = undefined
+    = do res <- liftIO $ runExceptT $ f $ this inh
+         case res of
+          Left e  -> tell [GraphQLError e path] >> pure Aeson.Null
+          Right x -> runUnion f req sch whole path queries x
+
+class RunUnion m p whole chn elts where
+  runUnion
+    :: (forall a. m a -> ServerErrorIO a)
+    -> RequestHeaders
+    -> Intro.Schema -> ServerT chn GQL.Field p m whole
+    -> [T.Text]
+    -> NP (ChosenOneOfQuery p) elts
+    -> UnionChoice chn elts
+    -> WriterT [GraphQLError] IO Aeson.Value
+
+instance RunUnion m p whole chn '[] where
+  runUnion _ = error "this should never happen"
+instance forall m p pname s sname whole ss chn elts ms.
+         ( RunQueryFindHandler m p whole chn ss s whole
+         , p ~ 'Package pname ss
+         , s ~ LookupService ss sname
+         , s ~ 'Service sname ms
+         , RunUnion m p whole chn elts )
+         => RunUnion m p whole chn (sname ': elts) where
+  runUnion f req sch whole path
+           (ChosenOneOfQuery (Proxy :: Proxy sname) q :* rest)
+           choice@(UnionChoice (Proxy :: Proxy other) v)
+    = case eqT @sname @other of
+        Nothing   -> runUnion f req sch whole path rest (unsafeCoerce choice)
+        Just Refl -> runQuery @m @('Package pname ss) @(LookupService ss sname) @pname @ss @whole @sname @ms f req sch whole path v q
 
 class RunMethod m p whole chn s ms hs where
   runMethod

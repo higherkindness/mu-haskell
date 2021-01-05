@@ -8,6 +8,7 @@ module Mu.GraphQL.Query.Definition where
 import           Data.SOP.NP
 import           Data.SOP.NS
 import           Data.Text
+import           Data.Typeable
 import qualified Language.GraphQL.AST as GQL
 import           Mu.Rpc
 import           Mu.Schema
@@ -57,7 +58,8 @@ data OneMethodQuery (p :: Package snm mnm anm (TypeRef snm))
 
 data ChosenOneOfQuery p elt where
   ChosenOneOfQuery
-    :: ServiceQuery p (LookupService ss elt)
+    :: Typeable elt => Proxy elt
+    -> ServiceQuery ('Package pname ss) (LookupService ss elt)
     -> ChosenOneOfQuery ('Package pname ss) elt
 
 data ChosenMethodQuery (p :: Package snm mnm anm (TypeRef snm))

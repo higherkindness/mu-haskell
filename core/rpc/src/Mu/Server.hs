@@ -57,7 +57,7 @@ module Mu.Server (
 , method, methodWithInfo
 , resolver, object, union
 , field, fieldWithInfo
-, unionChoice
+, UnionChoice(..), unionChoice
 , NamedList(..)
   -- ** Definitions by position
 , SingleServerT, pattern Server
@@ -76,6 +76,7 @@ import           Control.Exception    (Exception)
 import           Control.Monad.Except
 import           Data.Conduit
 import           Data.Kind
+import           Data.Typeable
 import           GHC.TypeLits
 
 import           Mu.Rpc
@@ -171,11 +172,12 @@ type family InUnion (x :: k) (xs :: [k]) :: Constraint where
   InUnion x (y ': xs) = InUnion x xs
 
 data UnionChoice chn elts where
-  UnionChoice :: InUnion elt elts
+  UnionChoice :: (InUnion elt elts, Typeable elt)
               => Proxy elt -> MappingRight chn elt
               -> UnionChoice chn elts
 
-unionChoice :: forall elt elts chn. InUnion elt elts
+unionChoice :: forall elt elts chn.
+               (InUnion elt elts, Typeable elt)
             => MappingRight chn elt -> UnionChoice chn elts
 unionChoice = UnionChoice (Proxy @elt)
 
