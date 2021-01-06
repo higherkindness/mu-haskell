@@ -1,16 +1,15 @@
-{-# language DataKinds              #-}
-{-# language FlexibleContexts       #-}
-{-# language FlexibleInstances      #-}
-{-# language FunctionalDependencies #-}
-{-# language GADTs                  #-}
-{-# language MultiParamTypeClasses  #-}
-{-# language OverloadedStrings      #-}
-{-# language PolyKinds              #-}
-{-# language ScopedTypeVariables    #-}
-{-# language TypeApplications       #-}
-{-# language TypeOperators          #-}
-{-# language UndecidableInstances   #-}
-{-# language ViewPatterns           #-}
+{-# language DataKinds             #-}
+{-# language FlexibleContexts      #-}
+{-# language FlexibleInstances     #-}
+{-# language GADTs                 #-}
+{-# language MultiParamTypeClasses #-}
+{-# language OverloadedStrings     #-}
+{-# language PolyKinds             #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language TypeOperators         #-}
+{-# language UndecidableInstances  #-}
+{-# language ViewPatterns          #-}
 {-# OPTIONS_GHC -Wincomplete-patterns -fno-warn-orphans #-}
 
 module Mu.GraphQL.Query.Parse where
