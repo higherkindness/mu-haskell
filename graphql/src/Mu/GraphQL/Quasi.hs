@@ -61,7 +61,8 @@ data GQLType =
   | Object
   | Scalar
   | InputObject
-  | Other
+  | Union
+  | Interface
 
 classifySchema :: [GQL.TypeSystemDefinition] -> SchemaMap
 classifySchema = foldl' schemaToMap HM.empty
@@ -81,9 +82,9 @@ classify = HM.fromList . (typeToKeyValue <$>)
     typeToKeyValue (GQL.ObjectTypeDefinition _ name _ _ _)
       = (name, Object)
     typeToKeyValue (GQL.InterfaceTypeDefinition _ name _ _)
-      = (name, Other)
+      = (name, Interface)
     typeToKeyValue (GQL.UnionTypeDefinition _ name _ _)
-      = (name, Other)
+      = (name, Union)
     typeToKeyValue (GQL.EnumTypeDefinition _ name _ _)
       = (name, Enum)
     typeToKeyValue (GQL.InputObjectTypeDefinition _ name _ _)
@@ -118,8 +119,11 @@ defaultDeclToTy (sn, (mn, (an, dv)))
 typeToDec :: Name -> TypeMap -> SchemaMap -> GQL.TypeDefinition -> Q Result
 typeToDec _ _ _ GQL.InterfaceTypeDefinition {}
   = fail "interface types are not supported"
-typeToDec _ _ _ GQL.UnionTypeDefinition {}
-  = fail "union types are not supported"
+typeToDec _ _ _ (GQL.UnionTypeDefinition _ nm _ (GQL.UnionMemberTypes elts)) = do
+  selts <- mapM textToStrLit elts
+  GQLService <$> [t| 'OneOf $(textToStrLit nm)
+                            $(pure $ typesToList selts) |]
+             <*> pure []
 typeToDec schemaName tm _ (GQL.ScalarTypeDefinition _ s _) =
   GQLScalar <$ gqlTypeToType s tm schemaName
 typeToDec schemaName tm sm (GQL.ObjectTypeDefinition _ nm _ _ flds) = do

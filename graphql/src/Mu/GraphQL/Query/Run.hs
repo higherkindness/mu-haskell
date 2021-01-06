@@ -236,11 +236,10 @@ yieldDocument f req svr doc sink = do
   runConduit $ yieldMany ([val] :: [Aeson.Value]) .| sink
 
 runQuery
-  :: forall m p s pname ss hs sname ms chn inh.
+  :: forall m p s pname ss hs chn inh.
      ( RunQueryFindHandler m p hs chn ss s hs
      , p ~ 'Package pname ss
-     , s ~ 'Service sname ms
-     , inh ~ MappingRight chn sname )
+     , inh ~ MappingRight chn (ServiceName s) )
   => (forall a. m a -> ServerErrorIO a)
   -> RequestHeaders
   -> Intro.Schema -> ServerT chn GQL.Field p m hs
@@ -251,11 +250,10 @@ runQuery
 runQuery f req sch whole@(Services ss) path = runQueryFindHandler f req sch whole path ss
 
 runSubscription
-  :: forall m p s pname ss hs sname ms chn inh.
+  :: forall m p s pname ss hs chn inh.
      ( RunQueryFindHandler m p hs chn ss s hs
      , p ~ 'Package pname ss
-     , s ~ 'Service sname ms
-     , inh ~ MappingRight chn sname )
+     , inh ~ MappingRight chn (ServiceName s) )
   => (forall a. m a -> ServerErrorIO a)
   -> RequestHeaders
   -> ServerT chn GQL.Field p m hs
@@ -387,6 +385,8 @@ instance ( KnownName sname, RunUnion m p whole chn elts )
          case res of
           Left e  -> tell [GraphQLError e path] >> pure Aeson.Null
           Right x -> runUnion f req sch whole path queries x
+  runSubscriptionOnFoundHandler _ _ _ _ (OneOfSvc _) _ _ _
+    = error "this should never happen"
 
 class RunUnion m p whole chn elts where
   runUnion
@@ -400,11 +400,11 @@ class RunUnion m p whole chn elts where
 
 instance RunUnion m p whole chn '[] where
   runUnion _ = error "this should never happen"
-instance forall m p pname s sname whole ss chn elts ms.
+instance forall m p pname s sname whole ss chn elts.
          ( RunQueryFindHandler m p whole chn ss s whole
          , p ~ 'Package pname ss
          , s ~ LookupService ss sname
-         , s ~ 'Service sname ms
+         , ServiceName s ~ sname
          , RunUnion m p whole chn elts )
          => RunUnion m p whole chn (sname ': elts) where
   runUnion f req sch whole path
@@ -412,13 +412,12 @@ instance forall m p pname s sname whole ss chn elts ms.
            choice@(UnionChoice (Proxy :: Proxy other) v)
     = case eqT @sname @other of
         Nothing   -> runUnion f req sch whole path rest (unsafeCoerce choice)
-        Just Refl -> runQuery @m @('Package pname ss) @(LookupService ss sname) @pname @ss @whole @sname @ms f req sch whole path v q
+        Just Refl -> runQuery @m @('Package pname ss) @(LookupService ss sname) @pname @ss @whole f req sch whole path v q
 
 class RunMethod m p whole chn s ms hs where
   runMethod
     :: ( p ~ 'Package pname wholess
-       , s ~ 'Service sname allMs
-       , inh ~ MappingRight chn sname )
+       , inh ~ MappingRight chn (ServiceName s) )
     => (forall a. m a -> ServerErrorIO a)
     -> RequestHeaders
     -> ServerT chn GQL.Field p m whole
@@ -428,8 +427,7 @@ class RunMethod m p whole chn s ms hs where
     -> WriterT [GraphQLError] IO (Maybe (T.Text, Aeson.Value))
   runMethodSubscription
     :: ( p ~ 'Package pname wholess
-       , s ~ 'Service sname allMs
-       , inh ~ MappingRight chn sname )
+       , inh ~ MappingRight chn (ServiceName s) )
     => (forall a. m a -> ServerErrorIO a)
     -> RequestHeaders
     -> ServerT chn GQL.Field p m whole
@@ -589,9 +587,9 @@ instance ( ToSchema sch l r
   convertResult _ _ _ _ (RetSchema r) t
     = pure $ Just $ runSchemaQuery (toSchema' @_ @_ @sch @r t) r
 instance ( MappingRight chn ref ~ t
-         , MappingRight chn sname ~ t
-         , LookupService ss ref ~ 'Service sname ms
-         , RunQueryFindHandler m ('Package pname ss) whole chn ss ('Service sname ms) whole)
+         , MappingRight chn (ServiceName svc) ~ t
+         , LookupService ss ref ~ svc
+         , RunQueryFindHandler m ('Package pname ss) whole chn ss svc whole)
          => ResultConversion m ('Package pname ss) whole chn ('ObjectRef ref) t where
   convertResult f req whole path (RetObject q) h
     = Just <$> runQuery @m @('Package pname ss) @(LookupService ss ref) f req
@@ -714,7 +712,7 @@ runIntroType path s@(Intro.Schema _ _ _ ts) (Intro.TypeRef t) ss
   = case HM.lookup t ts of
       Nothing -> pure Nothing
       Just ty -> runIntroType path s ty ss
-runIntroType path s (Intro.Type k tnm fs vals ofT) ss
+runIntroType path s (Intro.Type k tnm fs vals posTys ofT) ss
   = do things <- catMaybes <$> traverse runOne ss
        pure $ Just $ Aeson.object things
   where
@@ -754,7 +752,12 @@ runIntroType path s (Intro.Type k tnm fs vals ofT) ss
              ("interfaces", _)
                -> pure $ Just $ Aeson.Array []
              ("possibleTypes", _)
-               -> pure $ Just $ Aeson.Array []
+               -> case k of
+                    Intro.UNION
+                      -> do res <- catMaybes <$>
+                                     mapM (\o -> runIntroType path' s o innerss) posTys
+                            pure $ Just $ Aeson.toJSON res
+                    _ -> pure $ Just Aeson.Null
 
              _ -> do tell [GraphQLError
                              (ServerError Invalid
