@@ -47,6 +47,7 @@ import           Data.Conduit
 import           Data.Conduit.TMChan
 import           Data.Kind
 import           Data.Proxy
+import           GHC.TypeLits
 import           Network.GRPC.HTTP2.Encoding        (GRPCInput, GRPCOutput, gzip, uncompressed)
 import           Network.GRPC.HTTP2.Types           (GRPCStatus (..), GRPCStatusCode (..))
 import           Network.GRPC.Server.Handlers.Trans
@@ -174,12 +175,15 @@ instance ( KnownName name
                               p m chn (MappingRight chn name) methods h
          , GRpcServiceHandlers fullP p m chn rest hs )
          => GRpcServiceHandlers fullP p m chn ('Service name methods ': rest) (h ': hs) where
-  gRpcServiceHandlers f pfullP pr packageName (svr :<&>: rest)
+  gRpcServiceHandlers f pfullP pr packageName (ProperSvc svr :<&>: rest)
     =  gRpcMethodHandlers f pfullP (Proxy @('Service name methods)) pr
                           packageName serviceName svr
     ++ gRpcServiceHandlers f pfullP pr packageName rest
     where serviceName = BS.pack (nameVal (Proxy @name))
 
+instance ( GHC.TypeLits.TypeError ('Text "unions are not supported in gRPC") )
+         => GRpcServiceHandlers fullP p m chn ('OneOf name methods ': rest) hs where
+  gRpcServiceHandlers _ = error "unions are not supported in gRPC"
 
 class GRpcMethodHandlers (fullP :: Package snm mnm anm (TypeRef snm))
                          (fullS :: Service snm mnm anm (TypeRef snm))

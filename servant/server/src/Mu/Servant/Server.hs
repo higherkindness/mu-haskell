@@ -47,10 +47,10 @@ import qualified Data.ByteString.Lazy.UTF8 as LB8
 import           Data.Conduit.Internal     (ConduitT (..), Pipe (..))
 import           Data.Kind
 import           Data.Swagger              (Swagger, ToSchema (..))
-import           Generics.Generic.Aeson
 import           GHC.Generics
 import           GHC.TypeLits
 import           GHC.Types                 (Any)
+import           Generics.Generic.Aeson
 import           Mu.Rpc
 import           Mu.Rpc.Annotations
 import           Mu.Schema
@@ -170,9 +170,15 @@ instance
   type
     ServicesAPI pkg ('Service sname methods ': rest) (hs ': hss) =
       MethodsAPI pkg sname methods hs :<|> ServicesAPI pkg rest hss
-  servantServiceHandlers f pkgP (svr :<&>: rest) =
+  servantServiceHandlers f pkgP (ProperSvc svr :<&>: rest) =
     servantMethodHandlers f pkgP (Proxy @sname) svr
       :<|> servantServiceHandlers f pkgP rest
+
+instance (TypeError ('Text "unions are not supported by Servant servers"))
+         => ServantServiceHandlers pkg m chn ('OneOf sname methods ': rest) hs where
+  type ServicesAPI pkg ('OneOf sname methods ': rest) hs =
+    TypeError ('Text "unions are not supported by Servant servers")
+  servantServiceHandlers _ = error "unions are not supported by Servant servers"
 
 class
   ServantMethodHandlers
