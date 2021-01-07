@@ -38,7 +38,7 @@ library
     , http-client             >=0.6   && <0.7
     , http2-grpc-proto3-wire  >=0.1   && <0.2
     , language-protobuf       >=1.0.1 && <2
-    , mu-rpc                  >=0.4   && <0.5
+    , mu-rpc                  >=0.4   && <0.6
     , mu-schema               >=0.3   && <0.4
     , proto3-wire             >=1.1   && <2
     , servant-client-core     >=0.16  && <0.19

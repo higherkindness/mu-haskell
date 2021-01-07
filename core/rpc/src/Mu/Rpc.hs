@@ -20,7 +20,7 @@ and protocol.
 -}
 module Mu.Rpc (
   Package', Package(..)
-, Service', Service(..), Object
+, Service', Service(..), Object, Union
 , Method', Method(..), ObjectField
 , LookupService, LookupMethod
 , TypeRef(..), Argument', Argument(..), Return(..)
@@ -56,6 +56,7 @@ data Package serviceName methodName argName tyRef
 data Service serviceName methodName argName tyRef
   = Service serviceName
             [Method serviceName methodName argName tyRef]
+  | OneOf serviceName [serviceName]
 
 -- | A method is defined by its name, arguments, and return type.
 data Method serviceName methodName argName tyRef
@@ -66,6 +67,8 @@ data Method serviceName methodName argName tyRef
 -- Synonyms for GraphQL
 -- | An object is a set of fields, in GraphQL lingo.
 type Object = 'Service
+-- | A union is one of the objects.
+type Union = 'OneOf
 -- | A field in an object takes some input objects,
 --   and returns a value or some other object,
 --   in GraphQL lingo.
@@ -76,6 +79,7 @@ type family LookupService (ss :: [Service snm mnm anm tr]) (s :: snm)
               :: Service snm mnm anm tr where
   LookupService '[] s = TypeError ('Text "could not find method " ':<>: 'ShowType s)
   LookupService ('Service s ms ': ss) s = 'Service s ms
+  LookupService ('OneOf   s ms ': ss) s = 'OneOf   s ms
   LookupService (other         ': ss) s = LookupService ss s
 
 -- | Look up a method in a service definition using its name.
@@ -136,7 +140,7 @@ data RpcInfo i
   = NoRpcInfo
   | RpcInfo { packageInfo :: Package Text Text Text TyInfo
             , serviceInfo :: Service Text Text Text TyInfo
-            , methodInfo  :: Method  Text Text Text TyInfo
+            , methodInfo  :: Maybe (Method Text Text Text TyInfo)
             , headers     :: RequestHeaders
             , extraInfo   :: i
             }
@@ -150,10 +154,15 @@ data TyInfo
 instance Show (RpcInfo i) where
   show NoRpcInfo
     = "<no info>"
-  show (RpcInfo (Package Nothing _) (Service s _) (Method m _ _) _ _)
-    = T.unpack (s <> ":" <> m)
-  show (RpcInfo (Package (Just p) _) (Service s _) (Method m _ _) _ _)
-    = T.unpack (p <> ":" <> s <> ":" <> m)
+  show (RpcInfo (Package p _) s m _ _)
+    = T.unpack $ showPkg p (showMth m (showSvc s))
+    where
+      showPkg Nothing    = id
+      showPkg (Just pkg) = ((pkg <> ":") <>)
+      showMth Nothing                = id
+      showMth (Just (Method mt _ _)) = (<> (":" <> mt))
+      showSvc (Service sv _) = sv
+      showSvc (OneOf   sv _) = sv
 
 class ReflectRpcInfo (p :: Package') (s :: Service') (m :: Method') where
   reflectRpcInfo :: Proxy p -> Proxy s -> Proxy m -> RequestHeaders -> i -> RpcInfo i
@@ -174,6 +183,13 @@ instance KnownMaySymbol 'Nothing where
   maySymbolVal _ = Nothing
 instance (KnownSymbol s) => KnownMaySymbol ('Just s) where
   maySymbolVal _ = Just $ T.pack $ symbolVal (Proxy @s)
+
+class KnownSymbols (m :: [Symbol]) where
+  symbolsVal :: Proxy m -> [Text]
+instance KnownSymbols '[] where
+  symbolsVal _ = []
+instance (KnownSymbol s, KnownSymbols ss) => KnownSymbols (s ': ss) where
+  symbolsVal _ = T.pack (symbolVal (Proxy @s)) : symbolsVal (Proxy @ss)
 
 class ReflectServices (ss :: [Service']) where
   reflectServices :: Proxy ss -> [Service Text Text Text TyInfo]
@@ -204,13 +220,19 @@ instance (KnownMaySymbol pname, ReflectServices ss, ReflectService s, ReflectMet
   reflectRpcInfo _ ps pm req extra
     = RpcInfo (Package (maySymbolVal (Proxy @pname))
                        (reflectServices (Proxy @ss)))
-              (reflectService ps) (reflectMethod pm) req extra
+              (reflectService ps) (Just (reflectMethod pm)) req extra
 
 instance (KnownSymbol sname, ReflectMethods ms)
          => ReflectService ('Service sname ms) where
   reflectService _
     = Service (T.pack $ symbolVal (Proxy @sname))
               (reflectMethods (Proxy @ms))
+
+instance (KnownSymbol sname, KnownSymbols elts)
+         => ReflectService ('OneOf sname elts) where
+  reflectService _
+    = OneOf (T.pack $ symbolVal (Proxy @sname))
+            (symbolsVal (Proxy @elts))
 
 instance (KnownSymbol mname, ReflectArgs args, ReflectReturn r)
          => ReflectMethod ('Method mname args r) where

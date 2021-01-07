@@ -49,17 +49,23 @@ prometheusMetrics :: forall m a info. (MonadBaseControl IO m, MonadMonitor m)
 prometheusMetrics metrics NoRpcInfo run = do
   incGauge (activeCalls metrics)
   run `finally` decGauge (activeCalls metrics)
-prometheusMetrics metrics (RpcInfo _pkg (Service sname _) (Method mname _ _) _ _) run = do
+prometheusMetrics metrics (RpcInfo _pkg ss mm _ _) run = do
+  let sname' = case ss of
+                 Service sname _ -> sname
+                 OneOf   sname _ -> sname
+      mname' = case mm of
+                 Just (Method mname _ _) -> mname
+                 Nothing                 -> "<noname>"
   incGauge (activeCalls metrics)
-  withLabel (messagesReceived metrics) (sname, mname) incCounter
+  withLabel (messagesReceived metrics) (sname', mname') incCounter
   ( do -- We are forced to use a MVar because 'withLabel' only allows IO ()
        r <- liftBaseWith $ \runInIO -> do
          result :: MVar (StM m a) <- newEmptyMVar
-         withLabel (callsTotal metrics) (sname, mname) $ \h ->
+         withLabel (callsTotal metrics) (sname', mname') $ \h ->
            h `observeDuration` (runInIO run >>= putMVar result)
          takeMVar result
        x <- restoreM r
-       withLabel (messagesSent metrics) (sname, mname) incCounter
+       withLabel (messagesSent metrics) (sname', mname') incCounter
        pure x )
   `finally` decGauge (activeCalls metrics)
 

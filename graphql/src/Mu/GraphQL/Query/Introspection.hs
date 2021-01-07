@@ -33,11 +33,12 @@ data Schema
 
 data Type
   = Type
-    { kind       :: TypeKind
-    , typeName   :: Maybe T.Text
-    , fields     :: [Field]
-    , enumValues :: [EnumValue]
-    , ofType     :: Maybe Type
+    { kind          :: TypeKind
+    , typeName      :: Maybe T.Text
+    , fields        :: [Field]
+    , enumValues    :: [EnumValue]
+    , possibleTypes :: [Type]
+    , ofType        :: Maybe Type
     }
   | TypeRef { to :: T.Text }
   deriving Show
@@ -74,17 +75,17 @@ data TypeKind
   deriving Show
 
 tSimple :: T.Text -> Type
-tSimple t = Type SCALAR (Just t) [] [] Nothing
+tSimple t = Type SCALAR (Just t) [] [] [] Nothing
 
 tList :: Type -> Type
-tList = Type LIST Nothing [] [] . Just
+tList = Type LIST Nothing [] [] [] . Just
 
 tNonNull :: Type -> Type
-tNonNull = Type NON_NULL Nothing [] [] . Just
+tNonNull = Type NON_NULL Nothing [] [] [] . Just
 
 unwrapNonNull :: Type -> Maybe Type
-unwrapNonNull (Type NON_NULL _ _ _ x) = x
-unwrapNonNull _                       = Nothing
+unwrapNonNull (Type NON_NULL _ _ _ _ x) = x
+unwrapNonNull _                         = Nothing
 
 -- BUILD INTROSPECTION DATA
 -- ========================
@@ -175,11 +176,31 @@ instance ( KnownSymbol sname
   introspectServices _ psub = do
     let name = T.pack $ symbolVal (Proxy @sname)
     fs <- introspectFields (Proxy @smethods) (Proxy @(IsSub sname sub))
-    let t = Type OBJECT (Just name) fs [] Nothing
+    let t = Type OBJECT (Just name) fs [] [] Nothing
     -- add this one to the mix
     tell (HM.singleton name t)
     -- continue with the rest
     introspectServices (Proxy @ss) psub
+
+instance ( KnownSymbol sname, KnownSymbols elts
+         , IntrospectServices ss sub )
+         => IntrospectServices ('OneOf sname elts ': ss) sub where
+  introspectServices _ psub = do
+    let name = T.pack $ symbolVal (Proxy @sname)
+        tys  = map tSimple (symbolsVal (Proxy @elts))
+        t    = Type UNION (Just name) [] [] tys Nothing
+    -- add this one to the mix
+    tell (HM.singleton name t)
+    -- continue with the rest
+    introspectServices (Proxy @ss) psub
+
+class KnownSymbols (ss :: [Symbol]) where
+  symbolsVal :: Proxy ss -> [T.Text]
+instance KnownSymbols '[] where
+  symbolsVal _ = []
+instance (KnownSymbol s, KnownSymbols ss)
+         => KnownSymbols (s ': ss) where
+  symbolsVal _ = T.pack (symbolVal (Proxy @s)) : symbolsVal (Proxy @ss)
 
 class IntrospectFields (fs :: [Method']) (isSub :: Bool) where
   introspectFields
@@ -292,7 +313,7 @@ instance (KnownSymbol name, IntrospectSchemaFields fields, IntrospectSchema ts)
   introspectSchema k suffix _ = do
     let name = T.pack (symbolVal (Proxy @name)) <> suffix
         fs   = introspectSchemaFields suffix (Proxy @fields)
-        t    = Type k (Just name) fs [] Nothing
+        t    = Type k (Just name) fs [] [] Nothing
     -- add this one to the mix
     tell (HM.singleton name t)
     -- continue with the rest
@@ -302,7 +323,7 @@ instance (KnownSymbol name, IntrospectSchemaEnum choices, IntrospectSchema ts)
   introspectSchema k suffix _ = do
     let name = T.pack (symbolVal (Proxy @name)) <> suffix
         cs   = introspectSchemaEnum (Proxy @choices)
-        t    = Type ENUM (Just name) [] cs Nothing
+        t    = Type ENUM (Just name) [] cs [] Nothing
     -- add this one to the mix
     tell (HM.singleton name t)
     -- continue with the rest

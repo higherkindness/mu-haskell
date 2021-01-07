@@ -22,8 +22,8 @@ import           Data.Int                    (Int32)
 import           Data.List                   (find)
 import           Data.Maybe
 import           Data.Proxy
-import           Data.Scientific             (Scientific, floatingOrInteger, fromFloatDigits)
 import           Data.SOP.NS
+import           Data.Scientific             (Scientific, floatingOrInteger, fromFloatDigits)
 import qualified Data.Text                   as T
 import           GHC.TypeLits
 import qualified Language.GraphQL.AST        as GQL
@@ -139,14 +139,15 @@ instance
     KnownName sub, ParseMethod p ('Service sub smethods) smethods
   ) => ParseTypedDoc p ('Just qr) ('Just mut) ('Just sub) where
   parseTypedDocQuery vmap frmap sset
-    = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
+    = QueryDoc <$> parseQuery (Proxy @p) (Proxy @qr) vmap frmap sset
   parseTypedDocMutation vmap frmap sset
-    = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
+    = MutationDoc <$> parseQuery (Proxy @p) (Proxy @mut) vmap frmap sset
   parseTypedDocSubscription vmap frmap sset
-    = do q <- parseQuery Proxy Proxy vmap frmap sset
+    = do q <- parseQuery (Proxy @p) (Proxy @sub) vmap frmap sset
          case q of
-           [one] -> pure $ SubscriptionDoc one
-           _     -> throwError "subscriptions may only have one field"
+           ServiceQuery [one]
+             -> pure $ SubscriptionDoc one
+           _ -> throwError "subscriptions may only have one field"
 
 instance
   ( p ~ 'Package pname ss,
@@ -156,9 +157,9 @@ instance
     KnownName mut, ParseMethod p ('Service mut mmethods) mmethods
   ) => ParseTypedDoc p ('Just qr) ('Just mut) 'Nothing where
   parseTypedDocQuery vmap frmap sset
-    = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
+    = QueryDoc <$> parseQuery (Proxy @p) (Proxy @qr) vmap frmap sset
   parseTypedDocMutation vmap frmap sset
-    = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
+    = MutationDoc <$> parseQuery (Proxy @p) (Proxy @mut) vmap frmap sset
   parseTypedDocSubscription _ _ _
     = throwError "no subscriptions are defined in the schema"
 
@@ -170,14 +171,15 @@ instance
     KnownName sub, ParseMethod p ('Service sub smethods) smethods
   ) => ParseTypedDoc p ('Just qr) 'Nothing ('Just sub) where
   parseTypedDocQuery vmap frmap sset
-    = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
+    = QueryDoc <$> parseQuery (Proxy @p) (Proxy @qr) vmap frmap sset
   parseTypedDocMutation _ _ _
     = throwError "no mutations are defined in the schema"
   parseTypedDocSubscription vmap frmap sset
-    = do q <- parseQuery Proxy Proxy vmap frmap sset
+    = do q <- parseQuery (Proxy @p) (Proxy @sub) vmap frmap sset
          case q of
-           [one] -> pure $ SubscriptionDoc one
-           _     -> throwError "subscriptions may only have one field"
+           ServiceQuery [one]
+             -> pure $ SubscriptionDoc one
+           _ -> throwError "subscriptions may only have one field"
 
 instance
   ( p ~ 'Package pname ss,
@@ -185,7 +187,7 @@ instance
     KnownName qr, ParseMethod p ('Service qr qmethods) qmethods
   ) => ParseTypedDoc p ('Just qr) 'Nothing 'Nothing where
   parseTypedDocQuery vmap frmap sset
-    = QueryDoc <$> parseQuery Proxy Proxy vmap frmap sset
+    = QueryDoc <$> parseQuery (Proxy @p) (Proxy @qr) vmap frmap sset
   parseTypedDocMutation _ _ _
     = throwError "no mutations are defined in the schema"
   parseTypedDocSubscription _ _ _
@@ -201,12 +203,13 @@ instance
   parseTypedDocQuery _ _ _
     = throwError "no queries are defined in the schema"
   parseTypedDocMutation vmap frmap sset
-    = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
+    = MutationDoc <$> parseQuery (Proxy @p) (Proxy @mut) vmap frmap sset
   parseTypedDocSubscription vmap frmap sset
-    = do q <- parseQuery Proxy Proxy vmap frmap sset
+    = do q <- parseQuery (Proxy @p) (Proxy @sub) vmap frmap sset
          case q of
-           [one] -> pure $ SubscriptionDoc one
-           _     -> throwError "subscriptions may only have one field"
+           ServiceQuery [one]
+             -> pure $ SubscriptionDoc one
+           _ -> throwError "subscriptions may only have one field"
 
 instance
   ( p ~ 'Package pname ss,
@@ -216,7 +219,7 @@ instance
   parseTypedDocQuery _ _ _
     = throwError "no queries are defined in the schema"
   parseTypedDocMutation vmap frmap sset
-    = MutationDoc <$> parseQuery Proxy Proxy vmap frmap sset
+    = MutationDoc <$> parseQuery (Proxy @p) (Proxy @mut) vmap frmap sset
   parseTypedDocSubscription _ _ _
     = throwError "no subscriptions are defined in the schema"
 
@@ -230,10 +233,11 @@ instance
   parseTypedDocMutation _ _ _
     = throwError "no mutations are defined in the schema"
   parseTypedDocSubscription vmap frmap sset
-    = do q <- parseQuery Proxy Proxy vmap frmap sset
+    = do q <- parseQuery (Proxy @p) (Proxy @sub) vmap frmap sset
          case q of
-           [one] -> pure $ SubscriptionDoc one
-           _     -> throwError "subscriptions may only have one field"
+           ServiceQuery [one]
+             -> pure $ SubscriptionDoc one
+           _ -> throwError "subscriptions may only have one field"
 
 instance
   ParseTypedDoc p 'Nothing 'Nothing 'Nothing where
@@ -263,59 +267,91 @@ constToValue (GQL.ConstObject n)
       [ GQL.ObjectField a (GQL.Node (constToValue v) m) l
       | GQL.ObjectField a (GQL.Node v m) l <- n ]
 
+class ParseQuery (p :: Package') (s :: Symbol) where
+  parseQuery
+    :: ( MonadError T.Text f, p ~ 'Package pname ss )
+    => Proxy p -> Proxy s
+    -> VariableMap -> FragmentMap -> [GQL.Selection]
+    -> f (ServiceQuery p (LookupService ss s))
 
-parseQuery ::
-  forall (p :: Package') (s :: Symbol) pname ss methods f.
-  ( MonadError T.Text f, p ~ 'Package pname ss,
-    LookupService ss s ~ 'Service s methods,
-    KnownName s, ParseMethod p ('Service s methods) methods
-  ) =>
-  Proxy p ->
-  Proxy s ->
-  VariableMap -> FragmentMap -> [GQL.Selection] ->
-  f (ServiceQuery p (LookupService ss s))
-parseQuery _ _ _ _ [] = pure []
-parseQuery pp ps vmap frmap (GQL.FieldSelection fld : ss)
-  = (++) <$> (maybeToList <$> fieldToMethod fld)
-         <*> parseQuery pp ps vmap frmap ss
-  where
-    fieldToMethod :: GQL.Field -> f (Maybe (OneMethodQuery p ('Service sname methods)))
-    fieldToMethod f@(GQL.Field alias name args dirs sels _)
-      | any (shouldSkip vmap) dirs
-      = pure Nothing
-      | name == "__typename"
-      = case (args, sels) of
-          ([], []) -> pure $ Just $ TypeNameQuery alias
-          _        -> throwError "__typename does not admit arguments nor selection of subfields"
-      | name == "__schema"
-      = case args of
-          [] -> Just . SchemaQuery alias <$> unFragment frmap (F.toList sels)
-          _  -> throwError "__schema does not admit selection of subfields"
-      | name == "__type"
-      = let getString (GQL.String s)   = Just s
-            getString (GQL.Variable v) = HM.lookup v vmap >>= getString
-            getString _                = Nothing
-        in case args of
-          [GQL.Argument _ (GQL.Node val _) _]
-            -> case getString val of
-                 Just s -> Just . TypeQuery alias s <$> unFragment frmap sels
-                 _      -> throwError "__type requires a string argument"
-          _ -> throwError "__type requires one single argument"
-      | otherwise
-      = Just . OneMethodQuery alias
-         <$> selectMethod (Proxy @('Service s methods))
-                          (T.pack $ nameVal (Proxy @s))
-                          vmap frmap f
-parseQuery pp ps vmap frmap (GQL.FragmentSpreadSelection (GQL.FragmentSpread nm dirs _) : ss)
-  | Just fr <- HM.lookup nm frmap
-  = if not (any (shouldSkip vmap) dirs) && not (any (shouldSkip vmap) $ fdDirectives fr)
-       then (++) <$> parseQuery pp ps vmap frmap (fdSelectionSet fr)
-                 <*> parseQuery pp ps vmap frmap ss
-       else parseQuery pp ps vmap frmap ss
-  | otherwise  -- the fragment definition was not found
-  = throwError $ "fragment '" <> nm <> "' was not found"
-parseQuery _ _ _ _ (_ : _)  -- Inline fragments are not yet supported
-  = throwError "inline fragments are not (yet) supported"
+instance ( p ~ 'Package pname ss
+         , KnownName s
+         , ParseQuery' p s (LookupService ss s) )
+         => ParseQuery p s where
+  parseQuery pp ps = parseQuery' pp ps (Proxy @(LookupService ss s))
+
+class ParseQuery' (p :: Package') (s :: Symbol) (svc :: Service') where
+  parseQuery'
+    :: ( MonadError T.Text f, p ~ 'Package pname ss
+       , LookupService ss s ~ svc, KnownName s )
+    => Proxy p -> Proxy s -> Proxy svc
+    -> VariableMap -> FragmentMap -> [GQL.Selection]
+    -> f (ServiceQuery p svc)
+
+instance (ParseQueryOneOf p elts)
+         => ParseQuery' p s ('OneOf s elts) where
+  parseQuery' pp _ps _ vmap frmap fs
+    = OneOfQuery <$> parseQueryOneOf pp (Proxy @elts) vmap frmap fs
+
+class ParseQueryOneOf (p :: Package') (s :: [Symbol]) where
+  parseQueryOneOf
+    :: ( MonadError T.Text f, p ~ 'Package pname ss )
+    => Proxy p -> Proxy s
+    -> VariableMap -> FragmentMap -> [GQL.Selection]
+    -> f (NP (ChosenOneOfQuery p) s)
+
+instance ParseQueryOneOf p '[] where
+  parseQueryOneOf _ _ _ _ _ = pure Nil
+instance ( ParseQuery p s, KnownSymbol s
+         , ParseQueryOneOf p ss)
+         => ParseQueryOneOf p (s ': ss) where
+  parseQueryOneOf pp _ps vmap frmap sel
+    = (:*) <$> (ChosenOneOfQuery (Proxy @s) <$> parseQuery pp (Proxy @s) vmap frmap sel)
+           <*> parseQueryOneOf pp (Proxy @ss) vmap frmap sel
+
+instance ( ParseMethod p ('Service s methods) methods )
+         => ParseQuery' p s ('Service s methods) where
+  parseQuery' _pp _ps _psvc vmap frmap fs = ServiceQuery <$> go fs
+    where
+      go [] = pure []
+      go (GQL.FieldSelection fld : ss)
+            = (++) <$> (maybeToList <$> fieldToMethod fld) <*> go ss
+      go (GQL.FragmentSpreadSelection (GQL.FragmentSpread nm dirs _) : ss)
+        | Just fr <- HM.lookup nm frmap
+        = if not (any (shouldSkip vmap) dirs) && not (any (shouldSkip vmap) $ fdDirectives fr)
+            then (++) <$> go (fdSelectionSet fr) <*> go ss
+            else go ss
+        | otherwise  -- the fragment definition was not found
+        = throwError $ "fragment '" <> nm <> "' was not found"
+      go (_ : _)  -- Inline fragments are not yet supported
+        = throwError "inline fragments are not (yet) supported"
+      -- fieldToMethod :: GQL.Field -> f (Maybe (OneMethodQuery p ('Service sname methods)))
+      fieldToMethod f@(GQL.Field alias name args dirs sels _)
+        | any (shouldSkip vmap) dirs
+        = pure Nothing
+        | name == "__typename"
+        = case (args, sels) of
+            ([], []) -> pure $ Just $ TypeNameQuery alias
+            _        -> throwError "__typename does not admit arguments nor selection of subfields"
+        | name == "__schema"
+        = case args of
+            [] -> Just . SchemaQuery alias <$> unFragment frmap (F.toList sels)
+            _  -> throwError "__schema does not admit selection of subfields"
+        | name == "__type"
+        = let getString (GQL.String s)   = Just s
+              getString (GQL.Variable v) = HM.lookup v vmap >>= getString
+              getString _                = Nothing
+          in case args of
+            [GQL.Argument _ (GQL.Node val _) _]
+              -> case getString val of
+                  Just s -> Just . TypeQuery alias s <$> unFragment frmap sels
+                  _      -> throwError "__type requires a string argument"
+            _ -> throwError "__type requires one single argument"
+        | otherwise
+        = Just . OneMethodQuery alias
+          <$> selectMethod (Proxy @('Service s methods))
+                            (T.pack $ nameVal (Proxy @s))
+                            vmap frmap f
 
 shouldSkip :: VariableMap -> GQL.Directive -> Bool
 shouldSkip vmap (GQL.Directive nm [GQL.Argument ifn (GQL.Node v _) _] _)
@@ -362,7 +398,7 @@ instance ParseMethod p s '[] where
   selectMethod _ tyName _ _ (fName -> wanted)
     = throwError $ "field '" <> wanted <> "' was not found on type '" <> tyName <> "'"
 instance
-  ( KnownSymbol mname, ParseMethod p s ms
+  ( KnownName mname, ParseMethod p s ms
   , ParseArgs p s ('Method mname args r) args
   , ParseDifferentReturn p r) =>
   ParseMethod p s ('Method mname args r ': ms)
@@ -713,10 +749,8 @@ instance ParseReturn p r
          => ParseReturn p ('OptionalRef r) where
   parseReturn vmap frmap fname s
     = RetOptional <$> parseReturn vmap frmap fname s
-instance ( p ~ 'Package pname ss,
-           LookupService ss s ~ 'Service s methods,
-           KnownName s, ParseMethod p ('Service s methods) methods
-         ) => ParseReturn p ('ObjectRef s) where
+instance ( p ~ 'Package pname ss, ParseQuery p s )
+         => ParseReturn p ('ObjectRef s) where
   parseReturn vmap frmap _ s
     = RetObject <$> parseQuery (Proxy @p) (Proxy @s) vmap frmap s
 
@@ -732,7 +766,7 @@ instance ParseSchema sch ('DEnum name choices) where
     = pure QueryEnum
   parseSchema _ _ fname _
     = throwError $ "field '" <> fname <> "' should not have a selection of subfields"
-instance (KnownSymbol name, ParseField sch fields)
+instance (KnownName name, ParseField sch fields)
          => ParseSchema sch ('DRecord name fields) where
   parseSchema vmap frmap _ s
     = QueryRecord <$> parseSchemaQuery (Proxy @sch) (Proxy @('DRecord name fields)) vmap frmap s
@@ -741,7 +775,7 @@ parseSchemaQuery ::
   forall (sch :: Schema') t (rname :: Symbol) fields f.
   ( MonadError T.Text f
   , t ~  'DRecord rname fields
-  , KnownSymbol rname
+  , KnownName rname
   , ParseField sch fields ) =>
   Proxy sch ->
   Proxy t ->
@@ -790,7 +824,7 @@ instance ParseField sch '[] where
   selectField tyName _ _ wanted _
     = throwError $ "field '" <> wanted <> "' was not found on type '" <> tyName <> "'"
 instance
-  (KnownSymbol fname, ParseField sch fs, ParseSchemaReturn sch r) =>
+  (KnownName fname, ParseField sch fs, ParseSchemaReturn sch r) =>
   ParseField sch ('FieldDef fname r ': fs)
   where
   selectField tyName vmap frmap wanted sels
