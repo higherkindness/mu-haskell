@@ -194,11 +194,11 @@ typeToDec _ _ _ (GQL.InputObjectTypeDefinition _ name _ fields) =
     ginputTypeToType (GQL.TypeNonNull (GQL.NonNullTypeNamed a)) =
       [t| $(typeToPrimType a) |]
     ginputTypeToType (GQL.TypeNonNull (GQL.NonNullTypeList a)) =
-      [t| 'ListRef $(ginputTypeToType a) |]
+      [t| 'TList $(ginputTypeToType a) |]
     ginputTypeToType (GQL.TypeNamed a) =
-      [t| 'OptionalRef $(typeToPrimType a) |]
+      [t| 'TOption $(typeToPrimType a) |]
     ginputTypeToType (GQL.TypeList a) =
-      [t| 'OptionalRef ('ListRef $(ginputTypeToType a)) |]
+      [t| 'TOption ('TList $(ginputTypeToType a)) |]
     typeToPrimType :: GQL.Name -> Q Type
     typeToPrimType "Int"        = [t|'TPrimitive Integer|]
     typeToPrimType "Float"      = [t|'TPrimitive Double|]
