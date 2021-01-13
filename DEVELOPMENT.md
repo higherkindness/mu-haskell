@@ -5,6 +5,23 @@ Most of our developers use using [Visual Studio Code](https://code.visualstudio.
 - [Alejandro's post on setting up a Haskell development environment](https://www.47deg.com/blog/setting-up-haskell/), but forget about the Visual Studio Code configuration outlined there.
 - [Kowainik's Haskell Style Guide](https://kowainik.github.io/posts/2019-02-06-style-guide).
 
+## Setting up the project
+
+### Native dependencies
+
+The included `adapter/kafka` project requires development headers of the rdkafka library:
+* on macOS `sudo brew install librdkafka`
+* on fedora `sudo dnf install librdkafka-devel`
+* on debian `sudo apt-get install librdkafka-dev`
+
+### Git submodules
+
+This project uses git submodules (notably for examples/library/). You can run `git submodule update --init --recursive` once after checkout, or `git config --global submodule.recurse true` to globally enable submodules.
+
+### Integration tests
+
+See also https://github.com/higherkindness/mu-scala-haskell-integration-tests
+
 ## Visual Studio Code extensions
 
 To make our lives easier while developing in Haskell, we use a set of recommended extensions. The first time you open the project, the editor should suggest to install all those you do not have:
