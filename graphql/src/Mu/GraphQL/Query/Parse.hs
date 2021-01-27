@@ -6,6 +6,7 @@
 {-# language OverloadedStrings     #-}
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
+{-# language TupleSections         #-}
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
@@ -693,28 +694,21 @@ instance (ObjectOrEnumParser sch (sch :/: sty), KnownName sty)
 instance ValueParser sch ('TPrimitive A.Value) where
   valueParser vmap _ x = FPrimitive <$> toAeson x
     where
-      findVariable :: MonadError T.Text f => GQL.Name -> VariableMap -> f A.Value
-      findVariable n vmp =
-        case HM.lookup n vmp of
-          Nothing -> throwError $ "variable '" <> n <> "' was not found"
-          Just xs -> toAeson xs
+      toPairs :: MonadError T.Text f => GQL.ObjectField GQL.Value -> f (T.Text, A.Value)
+      toPairs (GQL.ObjectField key (GQL.Node v _) _) = (key, ) <$> toAeson v
       toAeson :: MonadError T.Text f => GQL.Value -> f A.Value
-      toAeson (GQL.Variable v) = findVariable v vmap
+      toAeson (GQL.Variable v) =
+        case HM.lookup v vmap of
+          Nothing -> throwError $ "variable '" <> v <> "' was not found"
+          Just xs -> toAeson xs
       toAeson (GQL.Int n)      = pure . A.Number $ fromIntegral n
       toAeson (GQL.Float d)    = pure . A.Number $ fromFloatDigits d
       toAeson (GQL.String s)   = pure $ A.String s
       toAeson (GQL.Boolean b)  = pure $ A.Bool b
       toAeson  GQL.Null        = pure A.Null
-      toAeson (GQL.Enum e)     = findVariable e vmap
+      toAeson (GQL.Enum e)     = pure $ A.String e
       toAeson (GQL.List xs)    = A.toJSON <$> traverse toAeson xs
-      toAeson (GQL.Object xs)  = do
-        maps <- traverse toMap xs
-        let keyVals = maps >>= HM.toList
-        pure . A.Object $ HM.fromList keyVals
-      toMap :: MonadError T.Text f => GQL.ObjectField GQL.Value -> f A.Object
-      toMap (GQL.ObjectField key (GQL.Node v _) _) = do
-        value <- toAeson v
-        pure $ HM.insert key value HM.empty
+      toAeson (GQL.Object xs)  = A.Object . HM.fromList <$> traverse toPairs xs
 instance ValueParser sch ('TPrimitive A.Object) where
   valueParser _ _ _ = undefined -- TODO: do this as well
 
