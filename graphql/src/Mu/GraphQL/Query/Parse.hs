@@ -704,14 +704,17 @@ instance ValueParser sch ('TPrimitive A.Value) where
       toAeson (GQL.Float d)    = pure . A.Number $ fromFloatDigits d
       toAeson (GQL.String s)   = pure $ A.String s
       toAeson (GQL.Boolean b)  = pure $ A.Bool b
-      toAeson GQL.Null         = pure A.Null
+      toAeson  GQL.Null        = pure A.Null
       toAeson (GQL.Enum e)     = findVariable e vmap
       toAeson (GQL.List xs)    = A.toJSON <$> traverse toAeson xs
-      toAeson (GQL.Object xs)  = pure . A.Object . HM.fromList $ fromObjFldtoPair <$> xs
-      fromObjFldtoPair :: GQL.ObjectField GQL.Value -> (T.Text, A.Value)
-      fromObjFldtoPair (GQL.ObjectField n (GQL.Node v _) _) = undefined -- TODO:
-        -- value <- toAeson v
-        -- pure (n, value)
+      toAeson (GQL.Object xs)  = do
+        maps <- traverse toMap xs
+        let keyVals = maps >>= HM.toList
+        pure . A.Object $ HM.fromList keyVals
+      toMap :: MonadError T.Text f => GQL.ObjectField GQL.Value -> f A.Object
+      toMap (GQL.ObjectField key (GQL.Node v _) _) = do
+        value <- toAeson v
+        pure $ HM.insert key value HM.empty
 instance ValueParser sch ('TPrimitive A.Object) where
   valueParser _ _ _ = undefined -- TODO: do this as well
 
