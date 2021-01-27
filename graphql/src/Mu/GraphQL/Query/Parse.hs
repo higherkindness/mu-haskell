@@ -693,14 +693,27 @@ instance (ObjectOrEnumParser sch (sch :/: sty), KnownName sty)
 instance ValueParser sch ('TPrimitive A.Value) where
   valueParser vmap _ x = FPrimitive <$> toAeson x
     where
-      toAeson :: MonadError T.Text f => GQL.Value -> f A.Value
-      toAeson (GQL.Int n)      = pure . A.Number $ fromIntegral n
-      toAeson (GQL.Variable v) =
-        case HM.lookup v vmap of
-          Nothing -> throwError $ "variable '" <> v <> "' was not found"
+      findVariable :: MonadError T.Text f => GQL.Name -> VariableMap -> f A.Value
+      findVariable n vmp =
+        case HM.lookup n vmp of
+          Nothing -> throwError $ "variable '" <> n <> "' was not found"
           Just xs -> toAeson xs
-      toAeson (GQL.List xs) = A.toJSON <$> traverse toAeson xs
-      toAeson _ = undefined -- TODO: define rest of the cases
+      toAeson :: MonadError T.Text f => GQL.Value -> f A.Value
+      toAeson (GQL.Variable v) = findVariable v vmap
+      toAeson (GQL.Int n)      = pure . A.Number $ fromIntegral n
+      toAeson (GQL.Float d)    = pure . A.Number $ fromFloatDigits d
+      toAeson (GQL.String s)   = pure $ A.String s
+      toAeson (GQL.Boolean b)  = pure $ A.Bool b
+      toAeson GQL.Null         = pure A.Null
+      toAeson (GQL.Enum e)     = findVariable e vmap
+      toAeson (GQL.List xs)    = A.toJSON <$> traverse toAeson xs
+      toAeson (GQL.Object xs)  = pure . A.Object . HM.fromList $ fromObjFldtoPair <$> xs
+      fromObjFldtoPair :: GQL.ObjectField GQL.Value -> (T.Text, A.Value)
+      fromObjFldtoPair (GQL.ObjectField n (GQL.Node v _) _) = undefined -- TODO:
+        -- value <- toAeson v
+        -- pure (n, value)
+instance ValueParser sch ('TPrimitive A.Object) where
+  valueParser _ _ _ = undefined -- TODO: do this as well
 
 class ParseDifferentReturn (p :: Package') (r :: Return Symbol (TypeRef Symbol)) where
   parseDiffReturn :: MonadError T.Text f
