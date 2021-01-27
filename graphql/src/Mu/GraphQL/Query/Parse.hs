@@ -692,25 +692,34 @@ instance (ObjectOrEnumParser sch (sch :/: sty), KnownName sty)
          => ValueParser sch ('TSchematic sty) where
   valueParser vmap _ v = FSchematic <$> parseObjectOrEnum' vmap (T.pack $ nameVal (Proxy @sty)) v
 instance ValueParser sch ('TPrimitive A.Value) where
-  valueParser vmap _ x = FPrimitive <$> toAeson x
-    where
-      toPairs :: MonadError T.Text f => GQL.ObjectField GQL.Value -> f (T.Text, A.Value)
-      toPairs (GQL.ObjectField key (GQL.Node v _) _) = (key, ) <$> toAeson v
-      toAeson :: MonadError T.Text f => GQL.Value -> f A.Value
-      toAeson (GQL.Variable v) =
-        case HM.lookup v vmap of
-          Nothing -> throwError $ "variable '" <> v <> "' was not found"
-          Just xs -> toAeson xs
-      toAeson (GQL.Int n)      = pure . A.Number $ fromIntegral n
-      toAeson (GQL.Float d)    = pure . A.Number $ fromFloatDigits d
-      toAeson (GQL.String s)   = pure $ A.String s
-      toAeson (GQL.Boolean b)  = pure $ A.Bool b
-      toAeson  GQL.Null        = pure A.Null
-      toAeson (GQL.Enum e)     = pure $ A.String e
-      toAeson (GQL.List xs)    = A.toJSON <$> traverse toAeson xs
-      toAeson (GQL.Object xs)  = A.Object . HM.fromList <$> traverse toPairs xs
+  valueParser vmap _ x = FPrimitive <$> toAesonValue vmap x
 instance ValueParser sch ('TPrimitive A.Object) where
-  valueParser _ _ _ = undefined -- TODO: do this as well
+  valueParser _ fname (GQL.Variable _) = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname (GQL.Int _) = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname (GQL.Float _) = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname (GQL.String _) = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname (GQL.Boolean _) = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname  GQL.Null = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname (GQL.Enum _) = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname (GQL.List _) = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ _     (GQL.Object obj) = undefined -- TODO: do stuff!
+
+toAesonValue :: MonadError T.Text f => VariableMap -> GQL.Value -> f A.Value
+toAesonValue vm (GQL.Variable v) =
+  case HM.lookup v vm of
+    Nothing -> throwError $ "variable '" <> v <> "' was not found"
+    Just xs -> toAesonValue vm xs
+toAesonValue _  (GQL.Int n)      = pure . A.Number $ fromIntegral n
+toAesonValue _  (GQL.Float d)    = pure . A.Number $ fromFloatDigits d
+toAesonValue _  (GQL.String s)   = pure $ A.String s
+toAesonValue _  (GQL.Boolean b)  = pure $ A.Bool b
+toAesonValue _   GQL.Null        = pure A.Null
+toAesonValue _  (GQL.Enum e)     = pure $ A.String e
+toAesonValue vm (GQL.List xs)    = A.toJSON <$> traverse (toAesonValue vm) xs
+toAesonValue vm (GQL.Object xs)  = A.Object . HM.fromList <$> traverse (toPairs vm) xs
+  where
+    toPairs :: MonadError T.Text f => VariableMap -> GQL.ObjectField GQL.Value -> f (T.Text, A.Value)
+    toPairs vmap (GQL.ObjectField key (GQL.Node v _) _) = (key,) <$> toAesonValue vmap v
 
 class ParseDifferentReturn (p :: Package') (r :: Return Symbol (TypeRef Symbol)) where
   parseDiffReturn :: MonadError T.Text f
