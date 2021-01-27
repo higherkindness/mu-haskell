@@ -694,15 +694,11 @@ instance (ObjectOrEnumParser sch (sch :/: sty), KnownName sty)
 instance ValueParser sch ('TPrimitive A.Value) where
   valueParser vmap _ x = FPrimitive <$> toAesonValue vmap x
 instance ValueParser sch ('TPrimitive A.Object) where
-  valueParser _ fname (GQL.Variable _) = throwError $ "field '" <> fname <> "' was not of right type"
-  valueParser _ fname (GQL.Int _) = throwError $ "field '" <> fname <> "' was not of right type"
-  valueParser _ fname (GQL.Float _) = throwError $ "field '" <> fname <> "' was not of right type"
-  valueParser _ fname (GQL.String _) = throwError $ "field '" <> fname <> "' was not of right type"
-  valueParser _ fname (GQL.Boolean _) = throwError $ "field '" <> fname <> "' was not of right type"
-  valueParser _ fname  GQL.Null = throwError $ "field '" <> fname <> "' was not of right type"
-  valueParser _ fname (GQL.Enum _) = throwError $ "field '" <> fname <> "' was not of right type"
-  valueParser _ fname (GQL.List _) = throwError $ "field '" <> fname <> "' was not of right type"
-  valueParser _ _     (GQL.Object obj) = undefined -- TODO: do stuff!
+  valueParser vm _ (GQL.Object xs) = FPrimitive . HM.fromList <$> traverse (toPairs vm) xs
+  valueParser _ fname _            = throwError $ "field '" <> fname <> "' was not of right type"
+
+toPairs :: MonadError T.Text f => VariableMap -> GQL.ObjectField GQL.Value -> f (T.Text, A.Value)
+toPairs vmap (GQL.ObjectField key (GQL.Node v _) _) = (key,) <$> toAesonValue vmap v
 
 toAesonValue :: MonadError T.Text f => VariableMap -> GQL.Value -> f A.Value
 toAesonValue vm (GQL.Variable v) =
@@ -717,9 +713,6 @@ toAesonValue _   GQL.Null        = pure A.Null
 toAesonValue _  (GQL.Enum e)     = pure $ A.String e
 toAesonValue vm (GQL.List xs)    = A.toJSON <$> traverse (toAesonValue vm) xs
 toAesonValue vm (GQL.Object xs)  = A.Object . HM.fromList <$> traverse (toPairs vm) xs
-  where
-    toPairs :: MonadError T.Text f => VariableMap -> GQL.ObjectField GQL.Value -> f (T.Text, A.Value)
-    toPairs vmap (GQL.ObjectField key (GQL.Node v _) _) = (key,) <$> toAesonValue vmap v
 
 class ParseDifferentReturn (p :: Package') (r :: Return Symbol (TypeRef Symbol)) where
   parseDiffReturn :: MonadError T.Text f
