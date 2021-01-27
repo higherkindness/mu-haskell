@@ -54,7 +54,7 @@ type instance AnnotatedSchema ProtoBufAnnotation ExampleSchema
      , 'AnnField "gender" "gender7" ('ProtoBufId 11 '[])
      , 'AnnField "gender" "gender8" ('ProtoBufId 12 '[])
      , 'AnnField "gender" "gender9" ('ProtoBufId 13 '[])
-     , 'AnnField "gender" "unspecified" ('ProtoBufId 14 '[])
+     , 'AnnField "gender" "unspecified" ('ProtoBufId 0 '[])
      , 'AnnField "address" "postcode" ('ProtoBufId 1 '[])
      , 'AnnField "address" "country"  ('ProtoBufId 2 '[])
      , 'AnnField "person" "firstName" ('ProtoBufId 1 '[])
