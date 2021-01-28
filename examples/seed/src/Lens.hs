@@ -67,10 +67,7 @@ getWeather :: (MonadServer m)
            => WeatherRequest
            -> m WeatherResponse
 getWeather msg
- | Just w <- msg ^. #currentWeather
- = pure $ record (go w)
- | otherwise
- = pure $ record "who knows?"
+ = pure $ record $ go $ msg ^. #currentWeather
  where go e | e `is` #sunny  = "is sunny! 😄"
             | e `is` #cloudy = "is cloudy 😟"
             | e `is` #rainy  = "is rainy... 😭"
