@@ -20,9 +20,9 @@ exampleAddress = Address "1111BB" "Spain"
 
 examplePerson1, examplePerson2 :: Person
 examplePerson1
-  = Person "Haskellio" "Gomez" (Just 30) (Just Male) exampleAddress [1,2,3] M.empty
+  = Person "Haskellio" "Gomez" (Just 30) Male exampleAddress [1,2,3] M.empty
 examplePerson2
-  = Person "Cuarenta" "Siete" Nothing Nothing exampleAddress []
+  = Person "Cuarenta" "Siete" Nothing Unspecified exampleAddress []
            (M.fromList [("hola", 1), ("hello", 2)])
 
 deriving via (WithSchema ExampleSchema "person" Person) instance HasAvroSchema Person

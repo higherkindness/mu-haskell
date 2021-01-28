@@ -25,7 +25,7 @@ data MPerson
   = MPerson { firstName     :: T.Text
             , lastName      :: T.Text
             , age           :: Maybe Int
-            , gender        :: Maybe Gender
+            , gender        :: Gender
             , address       :: MAddress
             , lucky_numbers :: [Int]
             , things        :: M.Map T.Text Int }
@@ -70,11 +70,11 @@ exampleAddress = MAddress "1111BB" "Spain"
 
 examplePerson1, examplePerson2 :: MPerson
 examplePerson1 = MPerson "Haskellio" "Gómez"
-                         (Just 30) (Just Male)
+                         (Just 30) Male
                          exampleAddress [1,2,3]
                          (M.fromList [("pepe", 1), ("juan", 2)])
 examplePerson2 = MPerson "Cuarenta" "Siete"
-                         Nothing Nothing
+                         Nothing Unspecified
                          exampleAddress [] M.empty
 
 main :: IO ()
