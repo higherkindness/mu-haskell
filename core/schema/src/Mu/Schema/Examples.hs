@@ -33,7 +33,7 @@ data Person
   = Person { firstName     :: T.Text
            , lastName      :: T.Text
            , age           :: Maybe Int
-           , gender        :: Maybe Gender
+           , gender        :: Gender
            , address       :: Address
            , lucky_numbers :: [Int]
            , things        :: M.Map T.Text Int }
@@ -111,7 +111,7 @@ type ExampleSchema
                 '[ 'FieldDef "firstName" ('TPrimitive T.Text)
                  , 'FieldDef "lastName"  ('TPrimitive T.Text)
                  , 'FieldDef "age"       ('TOption ('TPrimitive Int))
-                 , 'FieldDef "gender"    ('TOption ('TSchematic "gender"))
+                 , 'FieldDef "gender"    ('TSchematic "gender")
                  , 'FieldDef "address"   ('TSchematic "address")
                  , 'FieldDef "lucky_numbers" ('TList ('TPrimitive Int))
                  , 'FieldDef "things"    ('TMap ('TPrimitive T.Text) ('TPrimitive Int)) ]

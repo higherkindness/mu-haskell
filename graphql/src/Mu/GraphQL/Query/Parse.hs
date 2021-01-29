@@ -6,6 +6,7 @@
 {-# language OverloadedStrings     #-}
 {-# language PolyKinds             #-}
 {-# language ScopedTypeVariables   #-}
+{-# language TupleSections         #-}
 {-# language TypeApplications      #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
@@ -659,52 +660,59 @@ class ValueParser (sch :: Schema') (v :: FieldType Symbol) where
 
 instance ValueParser sch 'TNull where
   valueParser _ _ GQL.Null = pure FNull
-  valueParser _ fname _
-    = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname _    = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Bool) where
   valueParser _ _ (GQL.Boolean b) = pure $ FPrimitive b
-  valueParser _ fname _
-    = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname _           = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Int32) where
   valueParser _ _ (GQL.Int b) = pure $ FPrimitive $ fromIntegral b
-  valueParser _ fname _
-    = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname _       = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Integer) where
   valueParser _ _ (GQL.Int b) = pure $ FPrimitive $ toInteger b
-  valueParser _ fname _
-    = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname _       = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Scientific) where
   valueParser _ _ (GQL.Float b) = pure $ FPrimitive $ fromFloatDigits b
-  valueParser _ fname _
-    = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname _         = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive Double) where
   valueParser _ _ (GQL.Float b) = pure $ FPrimitive b
-  valueParser _ fname _
-    = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ fname _         = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive T.Text) where
-  valueParser _ _ (GQL.String b)
-    = pure $ FPrimitive b
-  valueParser _ fname _
-    = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ _ (GQL.String b) = pure $ FPrimitive b
+  valueParser _ fname _          = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive String) where
-  valueParser _ _ (GQL.String b)
-    = pure $ FPrimitive $ T.unpack b
-  valueParser _ fname _
-    = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser _ _ (GQL.String b) = pure $ FPrimitive $ T.unpack b
+  valueParser _ fname _          = throwError $ "field '" <> fname <> "' was not of right type"
 instance (ValueParser sch r) => ValueParser sch ('TList r) where
-  valueParser vmap fname (GQL.List xs)
-    = FList <$> traverse (valueParser' vmap fname) xs
-  valueParser _ fname _
-    = throwError $ "field '" <> fname <> "' was not of right type"
+  valueParser vmap fname (GQL.List xs) = FList <$> traverse (valueParser' vmap fname) xs
+  valueParser _ fname _                = throwError $ "field '" <> fname <> "' was not of right type"
 instance (ValueParser sch r) => ValueParser sch ('TOption r) where
-  valueParser _ _ GQL.Null
-    = pure $ FOption Nothing
-  valueParser vmap fname v
-    = FOption . Just <$> valueParser' vmap fname v
+  valueParser _ _ GQL.Null = pure $ FOption Nothing
+  valueParser vmap fname v = FOption . Just <$> valueParser' vmap fname v
 instance (ObjectOrEnumParser sch (sch :/: sty), KnownName sty)
          => ValueParser sch ('TSchematic sty) where
-  valueParser vmap _ v
-    = FSchematic <$> parseObjectOrEnum' vmap (T.pack $ nameVal (Proxy @sty)) v
+  valueParser vmap _ v = FSchematic <$> parseObjectOrEnum' vmap (T.pack $ nameVal (Proxy @sty)) v
+instance ValueParser sch ('TPrimitive A.Value) where
+  valueParser vmap _ x = FPrimitive <$> toAesonValue vmap x
+instance ValueParser sch ('TPrimitive A.Object) where
+  valueParser vm _ (GQL.Object xs) = FPrimitive . HM.fromList <$> traverse (toKeyValuePairs vm) xs
+  valueParser _ fname _            = throwError $ "field '" <> fname <> "' was not of right type"
+
+toKeyValuePairs :: MonadError T.Text m => VariableMap -> GQL.ObjectField GQL.Value -> m (T.Text, A.Value)
+toKeyValuePairs vmap (GQL.ObjectField key (GQL.Node v _) _) = (key,) <$> toAesonValue vmap v
+
+toAesonValue :: MonadError T.Text m => VariableMap -> GQL.Value -> m A.Value
+toAesonValue vm (GQL.Variable v) =
+  case HM.lookup v vm of
+    Nothing -> throwError $ "variable '" <> v <> "' was not found"
+    Just xs -> toAesonValue vm xs
+toAesonValue _  (GQL.Int n)      = pure . A.Number $ fromIntegral n
+toAesonValue _  (GQL.Float d)    = pure . A.Number $ fromFloatDigits d
+toAesonValue _  (GQL.String s)   = pure $ A.String s
+toAesonValue _  (GQL.Boolean b)  = pure $ A.Bool b
+toAesonValue _   GQL.Null        = pure A.Null
+toAesonValue _  (GQL.Enum e)     = pure $ A.String e
+toAesonValue vm (GQL.List xs)    = A.toJSON <$> traverse (toAesonValue vm) xs
+toAesonValue vm (GQL.Object xs)  = A.Object . HM.fromList <$> traverse (toKeyValuePairs vm) xs
 
 class ParseDifferentReturn (p :: Package') (r :: Return Symbol (TypeRef Symbol)) where
   parseDiffReturn :: MonadError T.Text f
