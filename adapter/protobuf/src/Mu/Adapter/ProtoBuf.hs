@@ -205,6 +205,7 @@ class ProtoBridgeTerm (sch :: Schema tn fn) (t :: TypeDef tn fn) where
 
 -- Embedded terms
 class ProtoBridgeEmbedTerm (sch :: Schema tn fn) (t :: TypeDef tn fn) where
+  embedDefaultOneFieldValue :: Maybe (Term sch t)
   termToEmbedProto :: FieldNumber -> Term sch t -> PBEnc.MessageBuilder
   embedProtoToOneFieldValue :: PBDec.Parser PBDec.RawPrimitive (Term sch t)
   -- support for packed encodings
@@ -257,6 +258,7 @@ instance (ProtoBridgeField sch ty f, ProtoBridgeFields sch ty fs)
 
 instance ProtoBridgeTerm sch ('DRecord name args)
          => ProtoBridgeEmbedTerm sch ('DRecord name args) where
+  embedDefaultOneFieldValue = Nothing
   termToEmbedProto fid v = PBEnc.embedded fid (termToProto v)
   embedProtoToOneFieldValue = PBDec.embedded' (protoToTerm @_ @_ @sch @('DRecord name args))
   supportsPackingTerm _ = False
@@ -271,8 +273,10 @@ instance TypeError ('Text "protobuf requires wrapping enums in a message")
   termToProto = error "protobuf requires wrapping enums in a message"
   protoToTerm = error "protobuf requires wrapping enums in a message"
 
-instance ProtoBridgeEnum sch name choices
+instance ( ProtoBridgeEnum sch name choices
+         , FindZeroEnum sch name choices )
          => ProtoBridgeEmbedTerm sch ('DEnum name choices) where
+  embedDefaultOneFieldValue = Just $ TEnum $ findZeroEnum @_ @_ @sch @name @choices
   termToEmbedProto fid (TEnum v) = PBEnc.int32 fid (enumToProto @_ @_ @sch @name v)
   embedProtoToOneFieldValue = PBDec.int32 >>= fmap TEnum . protoToEnum @_ @_ @sch @name
   supportsPackingTerm _ = True
@@ -295,6 +299,27 @@ instance (KnownNat (FindProtoBufId sch ty c), ProtoBridgeEnum sch ty cs)
     | n == enumValue = pure (Z Proxy)
     | otherwise      = S <$> protoToEnum @_ @_ @sch @ty n
     where enumValue = fromIntegral (natVal (Proxy @(FindProtoBufId sch ty c)))
+
+class FindZeroEnum (sch :: Schema tn fn) (ty :: tn) (choices :: [ChoiceDef fn]) where
+  findZeroEnum :: NS Proxy choices
+class FindZeroEnum_ (sch :: Schema tn fn) (ty :: tn) (thisChoice :: ChoiceDef fn) (pbId :: Nat) (restOfChoices :: [ChoiceDef fn]) where
+  findZeroEnum_ :: NS Proxy (thisChoice ': restOfChoices)
+
+instance TypeError ('Text "could not find value 0 for enum")
+         => FindZeroEnum sch ty '[] where
+  findZeroEnum = error "this should never be called"
+instance (FindZeroEnum_ sch ty ('ChoiceDef this) (FindProtoBufId sch ty this) rest)
+         => FindZeroEnum sch ty ('ChoiceDef this ': rest) where
+  findZeroEnum
+    = findZeroEnum_ @_ @_ @sch @ty @('ChoiceDef this) @(FindProtoBufId sch ty this) @rest
+
+instance {-# OVERLAPPABLE #-}
+         (FindZeroEnum sch ty rest)
+         => FindZeroEnum_ sch ty this n rest where
+  findZeroEnum_ = S (findZeroEnum @_ @_ @sch @ty @rest)
+instance {-# OVERLAPS #-}
+         FindZeroEnum_ sch ty this 0 rest where
+  findZeroEnum_ = Z Proxy
 
 -- SIMPLE
 -- ------
@@ -409,7 +434,7 @@ instance {-# OVERLAPS #-}
 
 instance ProtoBridgeEmbedTerm sch (sch :/: t)
          => ProtoBridgeOneFieldValue sch ('TSchematic t) where
-  defaultOneFieldValue = Nothing
+  defaultOneFieldValue = FSchematic <$> embedDefaultOneFieldValue
   oneFieldValueToProto fid (FSchematic v) = termToEmbedProto fid v
   protoToOneFieldValue = FSchematic <$> embedProtoToOneFieldValue
   supportsPacking _ = supportsPackingTerm (Proxy @(Term sch (sch :/: t)))

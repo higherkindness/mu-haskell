@@ -25,8 +25,6 @@ import           Mu.GraphQL.Server
 import           Mu.GRpc.Server
 import           Mu.Schema
 import           Mu.Server
-import           Network.Wai
-import           System.Random
 
 import           Schema
 
@@ -61,7 +59,7 @@ data Weather = SUNNY | CLOUDY | RAINY
     via ( CustomFieldMapping "Weather" WeatherMapping Weather )
 
 newtype WeatherRequest = WeatherRequest
-  { currentWeather :: Maybe Weather
+  { currentWeather :: Weather
   } deriving ( Eq, Show, Ord, Generic
              , ToSchema   SeedSchema "WeatherRequest"
              , FromSchema SeedSchema "WeatherRequest" )
@@ -112,9 +110,7 @@ getPersonStream source sink = runConduit $ source .| C.mapM reStream .| sink
 getWeather :: (MonadServer m)
            => WeatherRequest
            -> m WeatherResponse
-getWeather (WeatherRequest Nothing)
-  = pure $ WeatherResponse "who knows?"
-getWeather (WeatherRequest (Just w))
+getWeather (WeatherRequest w)
   = pure $ WeatherResponse $ go w
   where go SUNNY  = "is sunny! 😄"
         go CLOUDY = "is cloudy 😟"

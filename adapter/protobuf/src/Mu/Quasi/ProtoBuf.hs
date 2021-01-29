@@ -65,8 +65,17 @@ protobufToDecls schemaName p
 schemaFromProtoBuf :: P.ProtoBuf -> Q (Type, Type)
 schemaFromProtoBuf P.ProtoBuf {P.types = tys} = do
   let decls = flattenDecls (("", tys) :| []) tys
-  (schTys, anns) <- unzip <$> mapM pbTypeDeclToType decls
+  (schTys, anns) <- unzip <$> mapM (pbTypeDeclToType $ shouldOptional decls) decls
   pure (typesToList schTys, typesToList (concat anns))
+  where
+    shouldOptional :: [P.TypeDeclaration] -> P.TypeName -> Bool
+    shouldOptional [] _ = error "this should never happen"
+    shouldOptional (P.DMessage nm _ _ _ _ : _) this
+      | nm == last this = True
+    shouldOptional (P.DEnum nm _ _ : _) this
+      | nm == last this = False
+    shouldOptional (_ : rest) this
+      = shouldOptional rest this
 
 flattenDecls :: NonEmpty (P.Identifier, [P.TypeDeclaration]) -> [P.TypeDeclaration] -> [P.TypeDeclaration]
 flattenDecls (currentScope :| higherScopes) = concatMap flattenDecl
@@ -113,8 +122,8 @@ flattenDecls (currentScope :| higherScopes) = concatMap flattenDecl
         "" -> x
         _  -> fst currentScope <> "." <> x
 
-pbTypeDeclToType :: P.TypeDeclaration -> Q (Type, [Type])
-pbTypeDeclToType (P.DEnum name _ fields) = do
+pbTypeDeclToType :: (P.TypeName -> Bool) -> P.TypeDeclaration -> Q (Type, [Type])
+pbTypeDeclToType _ (P.DEnum name _ fields) = do
   (tys, anns) <- unzip <$> mapM pbChoiceToType fields
   (,) <$> [t|'DEnum $(textToStrLit name) $(pure $ typesToList tys)|] <*> pure anns
   where
@@ -122,7 +131,7 @@ pbTypeDeclToType (P.DEnum name _ fields) = do
     pbChoiceToType (P.EnumField nm number _)
       = (,) <$> [t|'ChoiceDef $(textToStrLit nm) |]
             <*> [t|'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit number) '[]) |]
-pbTypeDeclToType (P.DMessage name _ _ fields _) = do
+pbTypeDeclToType shouldOptional (P.DMessage name _ _ fields _) = do
   (tys, anns) <- unzip <$> mapM pbMsgFieldToType fields
   (,) <$> [t|'DRecord $(textToStrLit name) $(pure $ typesToList tys)|] <*> pure anns
   where
@@ -131,8 +140,12 @@ pbTypeDeclToType (P.DMessage name _ _ fields _) = do
     -- it's possible to distinguish whether it's missing on wire
     -- or should be set to the default, so use Option
     -- +info -> https://github.com/higherkindness/mu-haskell/pull/130#issuecomment-596433307
-    pbMsgFieldToType (P.NormalField P.Single ty@(P.TOther _) nm n opts) =
+    pbMsgFieldToType (P.NormalField P.Single ty@(P.TOther innerTy) nm n opts)
+        | shouldOptional innerTy =
         (,) <$> [t| 'FieldDef $(textToStrLit nm) ('TOption $(pbFieldTypeToType ty)) |]
+            <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n) $(typesToList <$> mapM pbOption opts)) |]
+        | otherwise =
+        (,) <$> [t| 'FieldDef $(textToStrLit nm) $(pbFieldTypeToType ty) |]
             <*> [t| 'AnnField $(textToStrLit name) $(textToStrLit nm) ('ProtoBufId $(intToLit n) $(typesToList <$> mapM pbOption opts)) |]
     pbMsgFieldToType (P.NormalField P.Single ty nm n opts) =
         (,) <$> [t| 'FieldDef $(textToStrLit nm) $(pbFieldTypeToType ty) |]
