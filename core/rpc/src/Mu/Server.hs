@@ -82,8 +82,8 @@ import           GHC.TypeLits
 import           Mu.Rpc
 import           Mu.Schema
 
-#if __GLASGOW_HASKELL__ < 880
-import Unsafe.Coerce (unsafeCoerce)
+#if __GLASGOW_HASKELL__ < 808
+import           Unsafe.Coerce        (unsafeCoerce)
 #endif
 
 -- | Constraint for monads that can be used as servers
@@ -473,11 +473,18 @@ wrapServer f (Services ss) = Services (wrapServices ss)
                     ServicesT chn info ss m hs
                  -> ServicesT chn info ss m hs
     wrapServices S0 = S0
-    wrapServices (h :<&>: rest)
-#if __GLASGOW_HASKELL__ >= 880
-      = wrapHandlers h :<&>: wrapServices rest
+#if __GLASGOW_HASKELL__ >= 808
+    wrapServices (ProperSvc h :<&>: rest)
+      = ProperSvc (wrapHandlers h) :<&>: wrapServices rest
+    wrapServices (OneOfSvc h :<&>: rest)
+      = OneOfSvc h :<&>: wrapServices rest
 #else
-      = unsafeCoerce (wrapHandlers (unsafeCoerce h)) :<&>: unsafeCoerce (wrapServices rest)
+    wrapServices (ProperSvc h :<&>: rest)
+      = ProperSvc (unsafeCoerce (wrapHandlers (unsafeCoerce h)))
+        :<&>: unsafeCoerce (wrapServices rest)
+    wrapServices (OneOfSvc h :<&>: rest)
+      = OneOfSvc (unsafeCoerce h)
+        :<&>: unsafeCoerce (wrapServices rest)
 #endif
 
     wrapHandlers :: forall inh ms innerHs.
