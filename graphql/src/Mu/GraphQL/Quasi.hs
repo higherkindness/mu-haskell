@@ -11,6 +11,8 @@ and 'Package' with one 'Service' per object in the schema.
 -}
 module Mu.GraphQL.Quasi (
   graphql
+, Primitives
+, graphqlWithExtendedPrimitives
 , graphql'
 ) where
 
@@ -35,18 +37,39 @@ import           Mu.Schema.Definition
 graphql :: String   -- ^ Name for the 'Package' type, the 'Schema' is derived from it
         -> FilePath -- ^ Route to the file
         -> Q [Dec]
-graphql name = graphql' (name <> "Schema") name
+graphql name = graphql' basicPrimitives (name <> "Schema") name
 
 -- | Imports an GraphQL schema definition from a file.
-graphql' :: String   -- ^ Name for the 'Schema' type
+graphqlWithExtendedPrimitives
+        :: Primitives
+        -> String   -- ^ Name for the 'Package' type, the 'Schema' is derived from it
+        -> FilePath -- ^ Route to the file
+        -> Q [Dec]
+graphqlWithExtendedPrimitives prims name = graphql' prims (name <> "Schema") name
+
+-- | Imports an GraphQL schema definition from a file.
+graphql' :: Primitives
+         -> String   -- ^ Name for the 'Schema' type
          -> String   -- ^ Name for the 'Package' type
          -> FilePath -- ^ Route to the file
          -> Q [Dec]
-graphql' scName svName file = do
+graphql' prims scName svName file = do
   schema <- liftIO $ TIO.readFile file
   case parseTypeSysDefinition schema of
     Left e  -> fail ("could not parse graphql spec: " ++ show e)
-    Right p -> graphqlToDecls scName svName p
+    Right p -> graphqlToDecls prims scName svName p
+
+type Primitives = [(GQL.Name, TypeQ)]
+
+basicPrimitives :: Primitives
+basicPrimitives
+  = [ ("Int",        [t|Integer|])
+    , ("Float",      [t|Double|])
+    , ("String",     [t|T.Text|])
+    , ("Boolean",    [t|Bool|])
+    , ("UUID",       [t|UUID|])
+    , ("JSON",       [t|JSON.Value|])
+    , ("JSONObject", [t|JSON.Object|])]
 
 type TypeMap   = HM.HashMap T.Text GQLType
 type SchemaMap = HM.HashMap T.Text GQL.OperationType
@@ -91,15 +114,18 @@ classify = HM.fromList . (typeToKeyValue <$>)
       = (name, InputObject)
 
 -- | Constructs the GraphQL tree splitting between Schemas and Services.
-graphqlToDecls :: String -> String -> [GQL.TypeSystemDefinition] -> Q [Dec]
-graphqlToDecls schemaName serviceName allTypes = do
+graphqlToDecls
+  :: Primitives
+  -> String -> String
+  -> [GQL.TypeSystemDefinition] -> Q [Dec]
+graphqlToDecls prims schemaName serviceName allTypes = do
   let schemaName'  = mkName schemaName
       serviceName' = mkName serviceName
       types        = [t | GQL.TypeDefinition t <- allTypes]
       schTypes     = [t | t@GQL.SchemaDefinition {} <- allTypes]
       typeMap      = classify types
       schMap       = classifySchema schTypes
-  rs <- traverse (typeToDec schemaName' typeMap schMap) types
+  rs <- traverse (typeToDec prims schemaName' typeMap schMap) types
   let schemaTypes  = [x | GQLSchema  x <- rs]
       serviceTypes = [x | GQLService x _ <- rs]
       defaultDefs  = concat [d | GQLService _ d <- rs]
@@ -116,17 +142,19 @@ defaultDeclToTy (sn, (mn, (an, dv)))
   = [t| 'AnnArg $(textToStrLit sn) $(textToStrLit mn) $(textToStrLit an) $(pure dv) |]
 
 -- | Reads a GraphQL 'TypeDefinition' and returns a 'Result'.
-typeToDec :: Name -> TypeMap -> SchemaMap -> GQL.TypeDefinition -> Q Result
-typeToDec _ _ _ GQL.InterfaceTypeDefinition {}
+typeToDec :: Primitives
+          -> Name -> TypeMap -> SchemaMap
+          -> GQL.TypeDefinition -> Q Result
+typeToDec _ _ _ _ GQL.InterfaceTypeDefinition {}
   = fail "interface types are not supported"
-typeToDec _ _ _ (GQL.UnionTypeDefinition _ nm _ (GQL.UnionMemberTypes elts)) = do
+typeToDec _ _ _ _ (GQL.UnionTypeDefinition _ nm _ (GQL.UnionMemberTypes elts)) = do
   selts <- mapM textToStrLit elts
   GQLService <$> [t| 'OneOf $(textToStrLit nm)
                             $(pure $ typesToList selts) |]
              <*> pure []
-typeToDec schemaName tm _ (GQL.ScalarTypeDefinition _ s _) =
-  GQLScalar <$ gqlTypeToType s tm schemaName
-typeToDec schemaName tm sm (GQL.ObjectTypeDefinition _ nm _ _ flds) = do
+typeToDec prims schemaName tm _ (GQL.ScalarTypeDefinition _ s _) =
+  GQLScalar <$ gqlTypeToType prims s tm schemaName
+typeToDec prims schemaName tm sm (GQL.ObjectTypeDefinition _ nm _ _ flds) = do
   (fieldInfos, defaults) <- unzip <$> traverse (gqlFieldToType nm) flds
   GQLService <$> [t| 'Service $(textToStrLit nm)
                               $(pure $ typesToList fieldInfos) |]
@@ -169,21 +197,21 @@ typeToDec schemaName tm sm (GQL.ObjectTypeDefinition _ nm _ _ flds) = do
     fromGQLField (GQL.ObjectField n (GQL.Node v _) _) = [t| ($(textToStrLit n), $(defToVConst v)) |]
     retToType :: GQL.Type -> Q Type
     retToType (GQL.TypeNonNull (GQL.NonNullTypeNamed a)) =
-      [t| $(gqlTypeToType a tm schemaName) |]
+      [t| $(gqlTypeToType prims a tm schemaName) |]
     retToType (GQL.TypeNonNull (GQL.NonNullTypeList a)) =
       [t| 'ListRef $(retToType a) |]
     retToType (GQL.TypeNamed a) =
-      [t| 'OptionalRef $(gqlTypeToType a tm schemaName) |]
+      [t| 'OptionalRef $(gqlTypeToType prims a tm schemaName) |]
     retToType (GQL.TypeList a) =
       [t| 'OptionalRef ('ListRef $(retToType a)) |]
-typeToDec _ _ _ (GQL.EnumTypeDefinition _ name _ symbols) =
+typeToDec _ _ _ _ (GQL.EnumTypeDefinition _ name _ symbols) =
   GQLSchema <$> [t|'DEnum $(textToStrLit name)
                           $(typesToList <$> traverse gqlChoiceToType symbols)|]
   where
     gqlChoiceToType :: GQL.EnumValueDefinition -> Q Type
     gqlChoiceToType (GQL.EnumValueDefinition _ c _) =
       [t|'ChoiceDef $(textToStrLit c)|]
-typeToDec _ _ _ (GQL.InputObjectTypeDefinition _ name _ fields) =
+typeToDec prims _ _ _ (GQL.InputObjectTypeDefinition _ name _ fields) =
   GQLSchema <$> [t|'DRecord $(textToStrLit name)
                             $(typesToList <$> traverse gqlFieldToType fields)|]
   where
@@ -200,32 +228,24 @@ typeToDec _ _ _ (GQL.InputObjectTypeDefinition _ name _ fields) =
     ginputTypeToType (GQL.TypeList a) =
       [t| 'TOption ('TList $(ginputTypeToType a)) |]
     typeToPrimType :: GQL.Name -> Q Type
-    typeToPrimType "Int"        = [t|'TPrimitive Integer|]
-    typeToPrimType "Float"      = [t|'TPrimitive Double|]
-    typeToPrimType "String"     = [t|'TPrimitive T.Text|]
-    typeToPrimType "Boolean"    = [t|'TPrimitive Bool|]
-    typeToPrimType "ID"         = [t|'TPrimitive UUID|]
-    typeToPrimType "JSON"       = [t|'TPrimitive JSON.Value|]
-    typeToPrimType "JSONObject" = [t|'TPrimitive JSON.Object|]
-    typeToPrimType nm           = [t|'TSchematic $(textToStrLit nm)|]
+    typeToPrimType nm
+      = case lookup nm prims of
+          Just ty -> [t|'TPrimitive $ty|]
+          Nothing -> [t|'TSchematic $(textToStrLit nm)|]
 
 -- For the JSON scalar we follow
 -- https://github.com/taion/graphql-type-json
 
-gqlTypeToType :: GQL.Name -> TypeMap -> Name -> Q Type
-gqlTypeToType "Int"        _ _ = [t|'PrimitiveRef Integer|]
-gqlTypeToType "Float"      _ _ = [t|'PrimitiveRef Double|]
-gqlTypeToType "String"     _ _ = [t|'PrimitiveRef T.Text|]
-gqlTypeToType "Boolean"    _ _ = [t|'PrimitiveRef Bool|]
-gqlTypeToType "ID"         _ _ = [t|'PrimitiveRef UUID|]
-gqlTypeToType "JSON"       _ _ = [t|'PrimitiveRef JSON.Value|]
-gqlTypeToType "JSONObject" _ _ = [t|'PrimitiveRef JSON.Object|]
-gqlTypeToType name tm schemaName =
-  let schemaRef = [t|'SchemaRef $(conT schemaName) $(textToStrLit name)|]
-   in case HM.lookup name tm of
-        Just Enum        -> schemaRef
-        Just InputObject -> schemaRef
-        _                -> [t|'ObjectRef $(textToStrLit name)|]
+gqlTypeToType :: Primitives -> GQL.Name -> TypeMap -> Name -> Q Type
+gqlTypeToType prims name tm schemaName
+  = case lookup name prims of
+      Just ty -> [t|'PrimitiveRef $ty|]
+      Nothing
+        -> let schemaRef = [t|'SchemaRef $(conT schemaName) $(textToStrLit name)|]
+           in case HM.lookup name tm of
+                Just Enum        -> schemaRef
+                Just InputObject -> schemaRef
+                _                -> [t|'ObjectRef $(textToStrLit name)|]
 
 typesToList :: [Type] -> Type
 typesToList = foldr (AppT . AppT PromotedConsT) PromotedNilT
