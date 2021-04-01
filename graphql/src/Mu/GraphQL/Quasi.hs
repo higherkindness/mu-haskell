@@ -37,7 +37,7 @@ import           Mu.Schema.Definition
 graphql :: String   -- ^ Name for the 'Package' type, the 'Schema' is derived from it
         -> FilePath -- ^ Route to the file
         -> Q [Dec]
-graphql name = graphql' basicPrimitives (name <> "Schema") name
+graphql name = graphql' [] (name <> "Schema") name
 
 -- | Imports an GraphQL schema definition from a file.
 graphqlWithExtendedPrimitives
@@ -57,7 +57,7 @@ graphql' prims scName svName file = do
   schema <- liftIO $ TIO.readFile file
   case parseTypeSysDefinition schema of
     Left e  -> fail ("could not parse graphql spec: " ++ show e)
-    Right p -> graphqlToDecls prims scName svName p
+    Right p -> graphqlToDecls (basicPrimitives <> prims) scName svName p
 
 type Primitives = [(GQL.Name, TypeQ)]
 
