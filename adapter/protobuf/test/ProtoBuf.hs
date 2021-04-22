@@ -1,11 +1,17 @@
-{-# language DataKinds           #-}
-{-# language DeriveAnyClass      #-}
-{-# language DeriveGeneric       #-}
-{-# language DerivingStrategies  #-}
-{-# language OverloadedStrings   #-}
-{-# language ScopedTypeVariables #-}
-{-# language TypeApplications    #-}
-{-# language TypeFamilies        #-}
+{-# language DataKinds             #-}
+{-# language DeriveAnyClass        #-}
+{-# language DeriveGeneric         #-}
+{-# language DerivingStrategies    #-}
+{-# language OverloadedStrings     #-}
+{-# language ScopedTypeVariables   #-}
+{-# language TypeApplications      #-}
+{-# language TypeFamilies          #-}
+{-# LANGUAGE EmptyCase             #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE DerivingVia           #-}
+{-# LANGUAGE TypeOperators         #-}
 module Main where
 
 import qualified Data.ByteString      as BS
@@ -17,21 +23,51 @@ import qualified Proto3.Wire.Decode   as PBDec
 import qualified Proto3.Wire.Encode   as PBEnc
 import           System.Environment
 
+import           Data.Int
 import           Mu.Adapter.ProtoBuf
+import           Mu.Adapter.ProtoBuf
+import           Mu.Quasi.ProtoBuf
 import           Mu.Schema
-import           Mu.Schema.Examples
+
+protobuf "ExampleSchema" "test/protobuf/example.proto"
+
+data MGender = NB | Male | Female
+  deriving (Eq, Show, Generic)
+  deriving (ToSchema ExampleSchema "gender", FromSchema ExampleSchema "gender")
+  via CustomFieldMapping "gender" ["NB" ':-> "nb", "Male" ':-> "male", "Female" ':-> "female" ] MGender
 
 data MPerson
   = MPerson { firstName     :: T.Text
             , lastName      :: T.Text
-            , age           :: Maybe Int
-            , gender        :: Gender
-            , address       :: MAddress
-            , lucky_numbers :: [Int]
-            , things        :: M.Map T.Text Int }
+            , age           :: Int32
+            , gender        :: MGender
+            , address       :: Maybe MAddress
+            , lucky_numbers :: [Int32]
+            , things        :: M.Map T.Text Int32
+            , foo           :: Maybe MFoo
+            }
   deriving (Eq, Show, Generic)
   deriving (ToSchema ExampleSchema "person")
   deriving (FromSchema ExampleSchema "person")
+
+data MFoo
+  = MFooInt Int32
+  | MFooStr T.Text
+  deriving (Eq, Show, Generic)
+
+instance ToSchema ExampleSchema "Foo" MFoo where
+  toSchema r =
+    let protoChoice = case r of
+                        MFooInt i -> Z (FPrimitive i)
+                        MFooStr t -> S (Z (FPrimitive t))
+    in TRecord (Field (FUnion protoChoice) :* Nil)
+
+instance FromSchema ExampleSchema "Foo" MFoo where
+  fromSchema (TRecord (Field (FUnion protoChoice) :* Nil)) =
+    case protoChoice of
+      Z (FPrimitive i) -> MFooInt i
+      S (Z (FPrimitive t)) -> MFooStr t
+      S (S x) -> case x of
 
 data MAddress
   = MAddress { postcode :: T.Text
@@ -40,42 +76,19 @@ data MAddress
   deriving (ToSchema ExampleSchema "address")
   deriving (FromSchema ExampleSchema "address")
 
-type instance AnnotatedSchema ProtoBufAnnotation ExampleSchema
-  = '[ 'AnnField "gender" "male"   ('ProtoBufId 1 '[])
-     , 'AnnField "gender" "female" ('ProtoBufId 2 '[])
-     , 'AnnField "gender" "nb"     ('ProtoBufId 3 '[])
-     , 'AnnField "gender" "gender0" ('ProtoBufId 4 '[])
-     , 'AnnField "gender" "gender1" ('ProtoBufId 5 '[])
-     , 'AnnField "gender" "gender2" ('ProtoBufId 6 '[])
-     , 'AnnField "gender" "gender3" ('ProtoBufId 7 '[])
-     , 'AnnField "gender" "gender4" ('ProtoBufId 8 '[])
-     , 'AnnField "gender" "gender5" ('ProtoBufId 9 '[])
-     , 'AnnField "gender" "gender6" ('ProtoBufId 10 '[])
-     , 'AnnField "gender" "gender7" ('ProtoBufId 11 '[])
-     , 'AnnField "gender" "gender8" ('ProtoBufId 12 '[])
-     , 'AnnField "gender" "gender9" ('ProtoBufId 13 '[])
-     , 'AnnField "gender" "unspecified" ('ProtoBufId 0 '[])
-     , 'AnnField "address" "postcode" ('ProtoBufId 1 '[])
-     , 'AnnField "address" "country"  ('ProtoBufId 2 '[])
-     , 'AnnField "person" "firstName" ('ProtoBufId 1 '[])
-     , 'AnnField "person" "lastName"  ('ProtoBufId 2 '[])
-     , 'AnnField "person" "age"       ('ProtoBufId 3 '[])
-     , 'AnnField "person" "gender"    ('ProtoBufId 4 '[])
-     , 'AnnField "person" "address"   ('ProtoBufId 5 '[])
-     , 'AnnField "person" "lucky_numbers" ('ProtoBufId 6 '[ '("packed", 'ProtoBufOptionConstantBool 'True) ])
-     , 'AnnField "person" "things"    ('ProtoBufId 7 '[]) ]
-
-exampleAddress :: MAddress
-exampleAddress = MAddress "1111BB" "Spain"
+exampleAddress :: Maybe MAddress
+exampleAddress = Just $ MAddress "1111BB" "Spain"
 
 examplePerson1, examplePerson2 :: MPerson
 examplePerson1 = MPerson "Haskellio" "Gómez"
-                         (Just 30) Male
+                         30 Male
                          exampleAddress [1,2,3]
                          (M.fromList [("pepe", 1), ("juan", 2)])
+                         (Just $ MFooInt 3)
 examplePerson2 = MPerson "Cuarenta" "Siete"
-                         Nothing Unspecified
+                         0 NB
                          exampleAddress [] M.empty
+                         (Just $ MFooStr "fasdfasdf")
 
 main :: IO ()
 main = do -- Obtain the filenames
@@ -83,8 +96,10 @@ main = do -- Obtain the filenames
   -- Read the file produced by Python
   putStrLn "haskell/consume"
   cbs <- BS.readFile conFile
-  let Right people = PBDec.parse (fromProtoViaSchema @_ @_ @ExampleSchema) cbs
-  print (people :: MPerson)
+  let Right parsedPerson1 = PBDec.parse (fromProtoViaSchema @_ @_ @ExampleSchema) cbs
+  if parsedPerson1 == examplePerson1
+    then putStrLn $ "Parsed correctly as: \n" <> show parsedPerson1
+    else putStrLn $ "Parsed person does not match expected person\nParsed person: \n" <> show parsedPerson <> "\nExpected person: " <> show examplePerson1
   -- Encode a couple of values
   putStrLn "haskell/generate"
   print examplePerson1
