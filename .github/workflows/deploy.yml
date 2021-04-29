@@ -36,7 +36,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install ruby-dev
         sudo gem install bundler --force
-        sudo gem update --system
+        sudo gem update --system 3.0.8
         sudo bundle update --bundler
         sudo bundle install --gemfile docs/Gemfile --path vendor/bundle
     - name: Build microsite from last release
