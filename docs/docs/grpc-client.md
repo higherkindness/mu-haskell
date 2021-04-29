@@ -146,7 +146,7 @@ get client idPerson = do
   let req = MPersonRequest $ read idPerson
   putStrLn $ "GET: is there some person with id: " ++ idPerson ++ "?"
   response :: GRpcReply MPerson
-    <- gRpcCall @Service @"getPerson" client req
+    <- gRpcCall @'MsgProtoBuf @Service @"Service" @"getPerson" client req
   putStrLn $ "GET: response was: " ++ show response
 ```
 
@@ -158,7 +158,7 @@ add client nm ag = do
   let p = MPerson Nothing (T.pack nm) (read ag)
   putStrLn $ "ADD: creating new person " ++ nm ++ " with age " ++ ag
   response :: GRpcReply MPersonRequest
-    <- gRpcCall @Service @"newPerson" client p
+    <- gRpcCall @'MsgProtoBuf @Service @"Service" @"newPerson" client p
   putStrLn $ "ADD: was creating successful? " ++ show response
 ```
 
@@ -167,7 +167,7 @@ We are being a bit more explicit with the types here (for example, `response :: 
 ```haskell
 watching :: GrpcClient -> IO ()
 watching client = do
-  replies <- gRpcCall @Service @"allPeople" client
+  replies <- gRpcCall @'MsgProtoBuf @Service @"Service" @"allPeople" client
   runConduit $ replies .| C.mapM_ (print :: GRpcReply MPerson -> IO ())
 ```
 
