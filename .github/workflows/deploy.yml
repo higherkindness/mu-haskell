@@ -32,7 +32,7 @@ jobs:
     - name: Get Ruby and Bundler
       uses: ruby/setup-ruby@v1
       with:
-        bundler: 2.0.1
+        bundler: 2.1.2
         ruby-version: 2.6
     - name: Get Jekyll
       run: |
