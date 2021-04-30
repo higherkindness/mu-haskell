@@ -8,6 +8,7 @@ message person {
   address address = 5;
   repeated int32 lucky_numbers = 6 [packed=true];
   map<string, int32> things = 7;
+  Foo foo = 8;
 }
 
 message address {
@@ -19,4 +20,11 @@ enum gender {
   nb = 0;
   male = 1;
   female = 2;
+}
+
+message Foo {
+  oneof fooChoice {
+    int32 foo_int = 1;
+    string foo_string = 2;
+  }
 }
