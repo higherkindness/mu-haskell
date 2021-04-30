@@ -63,4 +63,4 @@ executable test-protobuf
 
   hs-source-dirs:   test
   default-language: Haskell2010
-  ghc-options:      -Wall -fprint-explicit-foralls
+  ghc-options:      -Wall -fprint-explicit-foralls -fprint-potential-instances
