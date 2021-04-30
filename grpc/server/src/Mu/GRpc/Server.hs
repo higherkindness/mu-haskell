@@ -465,15 +465,15 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
                 cstreamFinalizer _
                   = liftIO $ atomically (closeTMChan chan) >> wait promise
                 readNext _
-                  = do nextOutput <- liftIO $ atomically $ tryTakeTMVar var
+                  = do nextOutput <- liftIO $ atomically $ takeTMVar var
                        case nextOutput of
-                         Just (Just o) ->
+                         Just o ->
                            pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
-                         Just Nothing  -> do
+                         Nothing -> do
                            liftIO $ cancel promise
                            pure Nothing
-                         Nothing -> -- no new elements to output
-                           readNext ()
+                         -- Nothing -> -- no new elements to output
+                         --   readNext ()
             pure ((), IncomingStream cstreamHandler cstreamFinalizer, (), OutgoingStream readNext)
 
 -----
