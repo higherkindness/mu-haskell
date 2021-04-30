@@ -1,4 +1,5 @@
 #!/bin/sh
 
-bundle install --gemfile docs/Gemfile --path vendor/bundle
+bundle config set path 'vendor/bundle'
+bundle install --gemfile docs/Gemfile
 BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll serve -s docs -b /mu-haskell
