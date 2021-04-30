@@ -34,10 +34,12 @@ jobs:
       with:
         bundler: 2.0.1
         ruby-version: 2.6
+    - name: Get Jekyll
+      run: |
+        bundle config set path 'vendor/bundle'
+        bundle install --gemfile docs/Gemfile
     - name: Get Standalone Haddock
       run: stack --resolver lts-14.27 install standalone-haddock
-    - name: Get Jekyll
-      run: bundle install --gemfile docs/Gemfile --path vendor/bundle
     - name: Build microsite from last release
       run: |
         LAST_TAG=$(git describe --abbrev=0 --tags)
