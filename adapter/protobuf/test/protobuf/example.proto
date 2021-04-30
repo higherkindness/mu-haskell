@@ -23,7 +23,7 @@ enum gender {
 }
 
 message Foo {
-  oneof Foo {
+  oneof fooChoice {
     int32 foo_int = 1;
     string foo_string = 2;
   }

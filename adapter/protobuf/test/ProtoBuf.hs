@@ -1,17 +1,17 @@
+{-# language CPP                   #-}
 {-# language DataKinds             #-}
 {-# language DeriveAnyClass        #-}
 {-# language DeriveGeneric         #-}
-{-# language DerivingStrategies    #-}
+{-# language DerivingVia           #-}
+{-# language EmptyCase             #-}
+{-# language FlexibleInstances     #-}
+{-# language MultiParamTypeClasses #-}
 {-# language OverloadedStrings     #-}
 {-# language ScopedTypeVariables   #-}
+{-# language TemplateHaskell       #-}
 {-# language TypeApplications      #-}
 {-# language TypeFamilies          #-}
-{-# LANGUAGE EmptyCase             #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE DerivingVia           #-}
-{-# LANGUAGE TypeOperators         #-}
+{-# language TypeOperators         #-}
 module Main where
 
 import qualified Data.ByteString      as BS
@@ -25,16 +25,20 @@ import           System.Environment
 
 import           Data.Int
 import           Mu.Adapter.ProtoBuf
-import           Mu.Adapter.ProtoBuf
 import           Mu.Quasi.ProtoBuf
 import           Mu.Schema
 
+#if __GHCIDE__
+protobuf "ExampleSchema" "adapter/protobuf/test/protobuf/example.proto"
+#else
 protobuf "ExampleSchema" "test/protobuf/example.proto"
+#endif
 
 data MGender = NB | Male | Female
   deriving (Eq, Show, Generic)
   deriving (ToSchema ExampleSchema "gender", FromSchema ExampleSchema "gender")
-  via CustomFieldMapping "gender" ["NB" ':-> "nb", "Male" ':-> "male", "Female" ':-> "female" ] MGender
+  via CustomFieldMapping "gender"
+        ["NB" ':-> "nb", "Male" ':-> "male", "Female" ':-> "female" ] MGender
 
 data MPerson
   = MPerson { firstName     :: T.Text
@@ -50,24 +54,11 @@ data MPerson
   deriving (ToSchema ExampleSchema "person")
   deriving (FromSchema ExampleSchema "person")
 
-data MFoo
-  = MFooInt Int32
-  | MFooStr T.Text
+newtype MFoo
+  = MFoo { fooChoice :: Either Int32 T.Text }
   deriving (Eq, Show, Generic)
-
-instance ToSchema ExampleSchema "Foo" MFoo where
-  toSchema r =
-    let protoChoice = case r of
-                        MFooInt i -> Z (FPrimitive i)
-                        MFooStr t -> S (Z (FPrimitive t))
-    in TRecord (Field (FUnion protoChoice) :* Nil)
-
-instance FromSchema ExampleSchema "Foo" MFoo where
-  fromSchema (TRecord (Field (FUnion protoChoice) :* Nil)) =
-    case protoChoice of
-      Z (FPrimitive i) -> MFooInt i
-      S (Z (FPrimitive t)) -> MFooStr t
-      S (S x) -> case x of
+  deriving (ToSchema ExampleSchema "Foo")
+  deriving (FromSchema ExampleSchema "Foo")
 
 data MAddress
   = MAddress { postcode :: T.Text
@@ -77,18 +68,18 @@ data MAddress
   deriving (FromSchema ExampleSchema "address")
 
 exampleAddress :: Maybe MAddress
-exampleAddress = Just $ MAddress "1111BB" "Spain"
+exampleAddress = Just $ MAddress "0000AA" "Nederland"
 
 examplePerson1, examplePerson2 :: MPerson
-examplePerson1 = MPerson "Haskellio" "Gómez"
+examplePerson1 = MPerson "Pythonio" "van Gogh"
                          30 Male
                          exampleAddress [1,2,3]
-                         (M.fromList [("pepe", 1), ("juan", 2)])
-                         (Just $ MFooInt 3)
+                         (M.fromList [("hola", 1), ("hello", 2), ("hallo", 3)])
+                         (Just $ MFoo $ Right "blah")
 examplePerson2 = MPerson "Cuarenta" "Siete"
                          0 NB
                          exampleAddress [] M.empty
-                         (Just $ MFooStr "fasdfasdf")
+                         (Just $ MFoo $ Left 3)
 
 main :: IO ()
 main = do -- Obtain the filenames
@@ -99,7 +90,9 @@ main = do -- Obtain the filenames
   let Right parsedPerson1 = PBDec.parse (fromProtoViaSchema @_ @_ @ExampleSchema) cbs
   if parsedPerson1 == examplePerson1
     then putStrLn $ "Parsed correctly as: \n" <> show parsedPerson1
-    else putStrLn $ "Parsed person does not match expected person\nParsed person: \n" <> show parsedPerson <> "\nExpected person: " <> show examplePerson1
+    else putStrLn $ "Parsed person does not match expected person\n"
+                    <> "Parsed person: \n" <> show parsedPerson1
+                    <> "\nExpected person: \n" <> show examplePerson1
   -- Encode a couple of values
   putStrLn "haskell/generate"
   print examplePerson1
