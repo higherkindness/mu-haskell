@@ -32,12 +32,15 @@ jobs:
     - name: Get Ruby and Bundler
       uses: ruby/setup-ruby@v1
       with:
-        bundler: 2.0.1
+        bundler: 2.1.2
         ruby-version: 2.6
     - name: Get Jekyll
       run: |
         bundle config set path 'vendor/bundle'
         bundle install --gemfile docs/Gemfile
+    - name: Build microsite without Haddock
+      run: |
+        BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs
     - name: Get Standalone Haddock
       run: stack --resolver lts-14.27 install standalone-haddock
     - name: Build microsite from last release
