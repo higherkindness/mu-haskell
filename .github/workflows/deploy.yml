@@ -27,14 +27,15 @@ jobs:
         key: ${{ runner.os }}-stack-work-${{ hashFiles('stack.yaml') }}-${{ '**/*.hs' }}
         restore-keys: |
           ${{ runner.os }}-stack-work-
-    - name: Get Standalone Haddock
-      run: stack --resolver lts-14.27 install standalone-haddock
     - name: Get rdkafka
       run: sudo apt-get install librdkafka-dev
     - name: Get Ruby and Bundler
       uses: ruby/setup-ruby@v1
       with:
         bundler: 2.0.1
+        ruby-version: 2.6
+    - name: Get Standalone Haddock
+      run: stack --resolver lts-14.27 install standalone-haddock
     - name: Get Jekyll
       run: bundle install --gemfile docs/Gemfile --path vendor/bundle
     - name: Build microsite from last release
