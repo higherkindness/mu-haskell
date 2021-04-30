@@ -450,7 +450,7 @@
     <div class="doc-content">
         <h1 id="grpc-clients">gRPC clients</h1>
 
-<p>There are several options for building clients: you can choose between optics, records, and <code class="highlighter-rouge">TypeApplications</code>. Let’s consider in detail an example client for the following service:</p>
+<p>There are several options for building clients: you can choose between optics, records, and <code class="language-plaintext highlighter-rouge">TypeApplications</code>. Let’s consider in detail an example client for the following service:</p>
 
 <div class="language-protobuf highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">service</span> <span class="n">Service</span> <span class="p">{</span>
   <span class="k">rpc</span> <span class="n">getPerson</span> <span class="p">(</span><span class="n">PersonRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">Person</span><span class="p">);</span>
@@ -475,18 +475,18 @@
     <span class="kr">_</span>               <span class="o">-&gt;</span> <span class="n">putStrLn</span> <span class="s">"unknown command"</span>
 </code></pre></div></div>
 
-<p>Where <code class="highlighter-rouge">watch</code>, <code class="highlighter-rouge">get</code> and <code class="highlighter-rouge">add</code> are the only valid 3 commands that our CLI is going to accept and call each respective service. The <code class="highlighter-rouge">setup</code> function is responsible from initializing the</p>
+<p>Where <code class="language-plaintext highlighter-rouge">watch</code>, <code class="language-plaintext highlighter-rouge">get</code> and <code class="language-plaintext highlighter-rouge">add</code> are the only valid 3 commands that our CLI is going to accept and call each respective service. The <code class="language-plaintext highlighter-rouge">setup</code> function is responsible from initializing the</p>
 
 <h3 id="using-optics">Using optics</h3>
 
-<p>The simplest way to call methods is to use the <code class="highlighter-rouge">optics</code>-based API. In that case, your setup is done using <code class="highlighter-rouge">initGRpc</code>, which receives the configuration.</p>
+<p>The simplest way to call methods is to use the <code class="language-plaintext highlighter-rouge">optics</code>-based API. In that case, your setup is done using <code class="language-plaintext highlighter-rouge">initGRpc</code>, which receives the configuration.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">main</span> <span class="o">=</span> <span class="kr">do</span> <span class="o">...</span>
   <span class="kr">where</span> <span class="n">setup</span> <span class="n">config</span> <span class="o">=</span> <span class="n">initGRpc</span> <span class="n">config</span> <span class="n">msgProtoBuf</span>
 </code></pre></div></div>
 
-<p>To call a method, you use the corresponding getter (for those familiar with optics, a version of a lens which does not allow to set). This means that your code reads <code class="highlighter-rouge">client ^. #method</code>, where <code class="highlighter-rouge">client</code> is the value obtained previously in the call to <code class="highlighter-rouge">initGRpc</code>.</p>
+<p>To call a method, you use the corresponding getter (for those familiar with optics, a version of a lens which does not allow to set). This means that your code reads <code class="language-plaintext highlighter-rouge">client ^. #method</code>, where <code class="language-plaintext highlighter-rouge">client</code> is the value obtained previously in the call to <code class="language-plaintext highlighter-rouge">initGRpc</code>.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language OverloadedLabels #-}</span>
 
@@ -498,9 +498,9 @@
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: response was: "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">res</span>
 </code></pre></div></div>
 
-<p>Notice the use of <code class="highlighter-rouge">read</code> to convert the strings to the appropiate type. Be careful, though, since that function throws an exception if the string is not a proper number! In a realistic scenario you should use <code class="highlighter-rouge">readMaybe</code> from <code class="highlighter-rouge">Text.Read</code> and handle the appropiate cases.</p>
+<p>Notice the use of <code class="language-plaintext highlighter-rouge">read</code> to convert the strings to the appropiate type. Be careful, though, since that function throws an exception if the string is not a proper number! In a realistic scenario you should use <code class="language-plaintext highlighter-rouge">readMaybe</code> from <code class="language-plaintext highlighter-rouge">Text.Read</code> and handle the appropiate cases.</p>
 
-<p>Using this approach you must also use the optics-based interface to the terms. As a quick reminder: you use <code class="highlighter-rouge">record</code> to build new values, and use <code class="highlighter-rouge">value ^. #field</code> to access a field. The rest of the methods look as follows:</p>
+<p>Using this approach you must also use the optics-based interface to the terms. As a quick reminder: you use <code class="language-plaintext highlighter-rouge">record</code> to build new values, and use <code class="language-plaintext highlighter-rouge">value ^. #field</code> to access a field. The rest of the methods look as follows:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">add</span> <span class="o">::</span> <span class="kt">GRpcConnection</span> <span class="kt">QuickstartService</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">add</span> <span class="n">client</span> <span class="n">nm</span> <span class="n">ag</span> <span class="o">=</span> <span class="kr">do</span>
@@ -519,7 +519,7 @@
 
 <p>This option is a bit more verbose but it’s also more explicit with the types. Furthermore, it allows us to use our Haskell data types, we are not forced to use plain terms. As discussed several times, this is important to ensure that Haskell types are not mere shadows of the schema types.</p>
 
-<p>We need to define a new record type (hence the name) that declares the services our client is going to consume. The names of the fields <strong>must</strong> match the names of the methods in the service, optionally prefixed by a <strong>common</strong> string. The prefix may also be empty, which means that the names in the record are exactly those in the service definition. In this case, we are prepending <code class="highlighter-rouge">call_</code> to each of them:</p>
+<p>We need to define a new record type (hence the name) that declares the services our client is going to consume. The names of the fields <strong>must</strong> match the names of the methods in the service, optionally prefixed by a <strong>common</strong> string. The prefix may also be empty, which means that the names in the record are exactly those in the service definition. In this case, we are prepending <code class="language-plaintext highlighter-rouge">call_</code> to each of them:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">GHC.Generics</span> <span class="p">(</span><span class="kt">Generic</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Mu.GRpc.Client.Record</span>
@@ -531,7 +531,7 @@
   <span class="p">}</span> <span class="kr">deriving</span> <span class="kt">Generic</span>
 </code></pre></div></div>
 
-<p>Note that we had to derive <code class="highlighter-rouge">Generic</code>. We also need to tweak our <code class="highlighter-rouge">setup</code> function a little bit:</p>
+<p>Note that we had to derive <code class="language-plaintext highlighter-rouge">Generic</code>. We also need to tweak our <code class="language-plaintext highlighter-rouge">setup</code> function a little bit:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TypeApplications #-}</span>
 
@@ -540,9 +540,9 @@
   <span class="kr">where</span> <span class="n">setup</span> <span class="n">config</span> <span class="o">=</span> <span class="n">buildService</span> <span class="o">@</span><span class="kt">Service</span> <span class="o">@</span><span class="s">"call_"</span> <span class="o">&lt;$&gt;</span> <span class="n">setupGrpcClient'</span> <span class="n">config</span>
 </code></pre></div></div>
 
-<p>Instead of building our client directly, we need to call <code class="highlighter-rouge">buildService</code> (and enable <code class="highlighter-rouge">TypeApplications</code>) to create the actual gRPC client. There are two type arguments to be explicitly given: the first one is the <code class="highlighter-rouge">Service</code> definition we want a client for, and the second one is the prefix in the record (in our case, this is <code class="highlighter-rouge">call_</code>). In the case you want an empty prefix, you write <code class="highlighter-rouge">@""</code> in that second position.</p>
+<p>Instead of building our client directly, we need to call <code class="language-plaintext highlighter-rouge">buildService</code> (and enable <code class="language-plaintext highlighter-rouge">TypeApplications</code>) to create the actual gRPC client. There are two type arguments to be explicitly given: the first one is the <code class="language-plaintext highlighter-rouge">Service</code> definition we want a client for, and the second one is the prefix in the record (in our case, this is <code class="language-plaintext highlighter-rouge">call_</code>). In the case you want an empty prefix, you write <code class="language-plaintext highlighter-rouge">@""</code> in that second position.</p>
 
-<p>After that, let’s have a look at an example implementation of the three service calls. Almost as before, except that we use <code class="highlighter-rouge">call_</code> followed by the name of the method.</p>
+<p>After that, let’s have a look at an example implementation of the three service calls. Almost as before, except that we use <code class="language-plaintext highlighter-rouge">call_</code> followed by the name of the method.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">get</span> <span class="o">::</span> <span class="kt">Call</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">get</span> <span class="n">client</span> <span class="n">idPerson</span> <span class="o">=</span> <span class="kr">do</span>
@@ -564,11 +564,11 @@
   <span class="n">runConduit</span> <span class="o">$</span> <span class="n">replies</span> <span class="o">.|</span> <span class="kt">C</span><span class="o">.</span><span class="n">mapM_</span> <span class="n">print</span>
 </code></pre></div></div>
 
-<h3 id="using-typeapplications">Using <code class="highlighter-rouge">TypeApplications</code></h3>
+<h3 id="using-typeapplications">Using <code class="language-plaintext highlighter-rouge">TypeApplications</code></h3>
 
-<p>With <code class="highlighter-rouge">TypeApplications</code> none of the above is needed, all you need to do is call <code class="highlighter-rouge">gRpcCall</code> with the appropiate service name as a type-level string, and the rest just <em>magically</em> works! ✨</p>
+<p>With <code class="language-plaintext highlighter-rouge">TypeApplications</code> none of the above is needed, all you need to do is call <code class="language-plaintext highlighter-rouge">gRpcCall</code> with the appropiate service name as a type-level string, and the rest just <em>magically</em> works! ✨</p>
 
-<p>If you are not familiar with <code class="highlighter-rouge">TypeApplications</code>, you can check <a href="https://www.reddit.com/r/haskell/comments/6ufnmr/scrap_your_proxy_arguments_with_typeapplications/">this</a>, <a href="https://blog.sumtypeofway.com/posts/fluent-polymorphism-type-applications.html">that</a> and <a href="https://kseo.github.io/posts/2017-01-08-visible-type-application-ghc8.html">this</a>.</p>
+<p>If you are not familiar with <code class="language-plaintext highlighter-rouge">TypeApplications</code>, you can check <a href="https://www.reddit.com/r/haskell/comments/6ufnmr/scrap_your_proxy_arguments_with_typeapplications/">this</a>, <a href="https://blog.sumtypeofway.com/posts/fluent-polymorphism-type-applications.html">that</a> and <a href="https://kseo.github.io/posts/2017-01-08-visible-type-application-ghc8.html">this</a>.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Mu.GRpc.Client.TyApps</span>
 
@@ -580,30 +580,30 @@
   <span class="kr">let</span> <span class="n">req</span> <span class="o">=</span> <span class="kt">MPersonRequest</span> <span class="o">$</span> <span class="n">read</span> <span class="n">idPerson</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: is there some person with id: "</span> <span class="o">++</span> <span class="n">idPerson</span> <span class="o">++</span> <span class="s">"?"</span>
   <span class="n">response</span> <span class="o">::</span> <span class="kt">GRpcReply</span> <span class="kt">MPerson</span>
-    <span class="o">&lt;-</span> <span class="n">gRpcCall</span> <span class="o">@</span><span class="kt">Service</span> <span class="o">@</span><span class="s">"getPerson"</span> <span class="n">client</span> <span class="n">req</span>
+    <span class="o">&lt;-</span> <span class="n">gRpcCall</span> <span class="o">@</span><span class="kt">'MsgProtoBuf</span> <span class="o">@</span><span class="kt">Service</span> <span class="o">@</span><span class="s">"Service"</span> <span class="o">@</span><span class="s">"getPerson"</span> <span class="n">client</span> <span class="n">req</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: response was: "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">response</span>
 </code></pre></div></div>
 
-<p>Notice that the type signatures of our functions needed to change to receive the <code class="highlighter-rouge">GrpcClient</code> as an argument, instead of our custom record type.</p>
+<p>Notice that the type signatures of our functions needed to change to receive the <code class="language-plaintext highlighter-rouge">GrpcClient</code> as an argument, instead of our custom record type.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">add</span> <span class="o">::</span> <span class="kt">GrpcClient</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">add</span> <span class="n">client</span> <span class="n">nm</span> <span class="n">ag</span> <span class="o">=</span> <span class="kr">do</span>
   <span class="kr">let</span> <span class="n">p</span> <span class="o">=</span> <span class="kt">MPerson</span> <span class="kt">Nothing</span> <span class="p">(</span><span class="kt">T</span><span class="o">.</span><span class="n">pack</span> <span class="n">nm</span><span class="p">)</span> <span class="p">(</span><span class="n">read</span> <span class="n">ag</span><span class="p">)</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: creating new person "</span> <span class="o">++</span> <span class="n">nm</span> <span class="o">++</span> <span class="s">" with age "</span> <span class="o">++</span> <span class="n">ag</span>
   <span class="n">response</span> <span class="o">::</span> <span class="kt">GRpcReply</span> <span class="kt">MPersonRequest</span>
-    <span class="o">&lt;-</span> <span class="n">gRpcCall</span> <span class="o">@</span><span class="kt">Service</span> <span class="o">@</span><span class="s">"newPerson"</span> <span class="n">client</span> <span class="n">p</span>
+    <span class="o">&lt;-</span> <span class="n">gRpcCall</span> <span class="o">@</span><span class="kt">'MsgProtoBuf</span> <span class="o">@</span><span class="kt">Service</span> <span class="o">@</span><span class="s">"Service"</span> <span class="o">@</span><span class="s">"newPerson"</span> <span class="n">client</span> <span class="n">p</span>
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: was creating successful? "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">response</span>
 </code></pre></div></div>
 
-<p>We are being a bit more explicit with the types here (for example, <code class="highlighter-rouge">response :: GRpcReply MPersonRequest</code>) to help a bit the <code class="highlighter-rouge">show</code> function because GHC is not able to infer the type on its own.</p>
+<p>We are being a bit more explicit with the types here (for example, <code class="language-plaintext highlighter-rouge">response :: GRpcReply MPersonRequest</code>) to help a bit the <code class="language-plaintext highlighter-rouge">show</code> function because GHC is not able to infer the type on its own.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">watching</span> <span class="o">::</span> <span class="kt">GrpcClient</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">watching</span> <span class="n">client</span> <span class="o">=</span> <span class="kr">do</span>
-  <span class="n">replies</span> <span class="o">&lt;-</span> <span class="n">gRpcCall</span> <span class="o">@</span><span class="kt">Service</span> <span class="o">@</span><span class="s">"allPeople"</span> <span class="n">client</span>
+  <span class="n">replies</span> <span class="o">&lt;-</span> <span class="n">gRpcCall</span> <span class="o">@</span><span class="kt">'MsgProtoBuf</span> <span class="o">@</span><span class="kt">Service</span> <span class="o">@</span><span class="s">"Service"</span> <span class="o">@</span><span class="s">"allPeople"</span> <span class="n">client</span>
   <span class="n">runConduit</span> <span class="o">$</span> <span class="n">replies</span> <span class="o">.|</span> <span class="kt">C</span><span class="o">.</span><span class="n">mapM_</span> <span class="p">(</span><span class="n">print</span> <span class="o">::</span> <span class="kt">GRpcReply</span> <span class="kt">MPerson</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>Here though, while mapping <code class="highlighter-rouge">print</code> to the <code class="highlighter-rouge">Conduit</code>, we needed to add a type annotation because the type was ambiguous… I think it’s a small price to pay in exchange for the terseness. 🤑</p>
+<p>Here though, while mapping <code class="language-plaintext highlighter-rouge">print</code> to the <code class="language-plaintext highlighter-rouge">Conduit</code>, we needed to add a type annotation because the type was ambiguous… I think it’s a small price to pay in exchange for the terseness. 🤑</p>
 
 <hr />
 

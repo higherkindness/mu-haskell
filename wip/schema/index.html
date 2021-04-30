@@ -450,18 +450,18 @@
     <div class="doc-content">
         <h1 id="schemas">Schemas</h1>
 
-<p>Using <code class="highlighter-rouge">mu-schema</code> you can describe a schema for your data using type-level techniques. You can then automatically generate:</p>
+<p>Using <code class="language-plaintext highlighter-rouge">mu-schema</code> you can describe a schema for your data using type-level techniques. You can then automatically generate:</p>
 
 <ul>
   <li>conversion between your Haskell data types and the values as expected by the schema,</li>
   <li>serialization to <a href="https://avro.apache.org/">Avro</a>, <a href="https://developers.google.com/protocol-buffers/">Protocol Buffers</a>, and <a href="https://www.json.org/">JSON</a>.</li>
 </ul>
 
-<p>Since <code class="highlighter-rouge">mu-schema</code> makes heavy use of type-level techniques, you need to open up the Pandora’s box by enabling (at least) the following extensions: <code class="highlighter-rouge">PolyKinds</code> and <code class="highlighter-rouge">DataKinds</code>.</p>
+<p>Since <code class="language-plaintext highlighter-rouge">mu-schema</code> makes heavy use of type-level techniques, you need to open up the Pandora’s box by enabling (at least) the following extensions: <code class="language-plaintext highlighter-rouge">PolyKinds</code> and <code class="language-plaintext highlighter-rouge">DataKinds</code>.</p>
 
 <h2 id="records-and-enumerations">Records and enumerations</h2>
 
-<p>Here is a simple schema which defines the schema types <code class="highlighter-rouge">gender</code>, <code class="highlighter-rouge">address</code>, and <code class="highlighter-rouge">person</code>:</p>
+<p>Here is a simple schema which defines the schema types <code class="language-plaintext highlighter-rouge">gender</code>, <code class="language-plaintext highlighter-rouge">address</code>, and <code class="language-plaintext highlighter-rouge">person</code>:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language PolyKinds, DataKinds #-}</span>
 
@@ -469,15 +469,15 @@
 <span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Text</span> <span class="k">as</span> <span class="n">T</span>
 
 <span class="kr">type</span> <span class="kt">ExampleSchema</span>
-  <span class="o">=</span> <span class="sc">'[</span><span class="err"> </span><span class="kt">'DEnum</span>   <span class="s">"gender"</span>
-                <span class="sc">'[</span><span class="err"> </span><span class="kt">'ChoiceDef</span> <span class="s">"male"</span>
+  <span class="o">=</span> <span class="n">'</span><span class="p">[</span> <span class="kt">'DEnum</span>   <span class="s">"gender"</span>
+                <span class="n">'</span><span class="p">[</span> <span class="kt">'ChoiceDef</span> <span class="s">"male"</span>
                  <span class="p">,</span> <span class="kt">'ChoiceDef</span> <span class="s">"female"</span>
                  <span class="p">,</span> <span class="kt">'ChoiceDef</span> <span class="s">"nb"</span> <span class="p">]</span>
      <span class="p">,</span> <span class="kt">'DRecord</span> <span class="s">"address"</span>
-               <span class="sc">'[</span><span class="err"> </span><span class="kt">'FieldDef</span> <span class="s">"postcode"</span> <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span><span class="p">)</span>
+               <span class="n">'</span><span class="p">[</span> <span class="kt">'FieldDef</span> <span class="s">"postcode"</span> <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span><span class="p">)</span>
                 <span class="p">,</span> <span class="kt">'FieldDef</span> <span class="s">"country"</span>  <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span><span class="p">)</span> <span class="p">]</span>
      <span class="p">,</span> <span class="kt">'DRecord</span> <span class="s">"person"</span>
-                <span class="sc">'[</span><span class="err"> </span><span class="kt">'FieldDef</span> <span class="s">"firstName"</span> <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span><span class="p">)</span>
+                <span class="n">'</span><span class="p">[</span> <span class="kt">'FieldDef</span> <span class="s">"firstName"</span> <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span><span class="p">)</span>
                  <span class="p">,</span> <span class="kt">'FieldDef</span> <span class="s">"lastName"</span>  <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span><span class="p">)</span>
                  <span class="p">,</span> <span class="kt">'FieldDef</span> <span class="s">"age"</span>       <span class="p">(</span><span class="kt">'TOption</span> <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">Int</span><span class="p">))</span>
                  <span class="p">,</span> <span class="kt">'FieldDef</span> <span class="s">"gender"</span>    <span class="p">(</span><span class="kt">'TOption</span> <span class="p">(</span><span class="kt">'TSchematic</span> <span class="s">"gender"</span><span class="p">))</span>
@@ -491,20 +491,20 @@
   <li>An <em>enumeration</em> defines a set of values that the type can take,</li>
   <li>A <em>record</em> contains a list of <em>fields</em>, each of them with a name and a <em>field type</em>. The allowed types for the fields are:
     <ul>
-      <li><code class="highlighter-rouge">TPrimitive</code> for primitive types such as <code class="highlighter-rouge">Int</code> and <code class="highlighter-rouge">Bool</code>. Note that if you want to have a string you should <em>not</em> use the <code class="highlighter-rouge">String</code> from <code class="highlighter-rouge">Prelude</code>, but rather <code class="highlighter-rouge">Text</code> from <code class="highlighter-rouge">Data.Text</code>.</li>
-      <li><code class="highlighter-rouge">TSchematic</code> to reference another type <em>in the same schema</em> by name.</li>
-      <li><code class="highlighter-rouge">TOption</code>, <code class="highlighter-rouge">TList</code>, <code class="highlighter-rouge">TMap</code>, and <code class="highlighter-rouge">TUnion</code> are combinators for the field types.</li>
+      <li><code class="language-plaintext highlighter-rouge">TPrimitive</code> for primitive types such as <code class="language-plaintext highlighter-rouge">Int</code> and <code class="language-plaintext highlighter-rouge">Bool</code>. Note that if you want to have a string you should <em>not</em> use the <code class="language-plaintext highlighter-rouge">String</code> from <code class="language-plaintext highlighter-rouge">Prelude</code>, but rather <code class="language-plaintext highlighter-rouge">Text</code> from <code class="language-plaintext highlighter-rouge">Data.Text</code>.</li>
+      <li><code class="language-plaintext highlighter-rouge">TSchematic</code> to reference another type <em>in the same schema</em> by name.</li>
+      <li><code class="language-plaintext highlighter-rouge">TOption</code>, <code class="language-plaintext highlighter-rouge">TList</code>, <code class="language-plaintext highlighter-rouge">TMap</code>, and <code class="language-plaintext highlighter-rouge">TUnion</code> are combinators for the field types.</li>
     </ul>
   </li>
 </ul>
 
-<p>Note that GHC requires all of <code class="highlighter-rouge">DEnum</code>, <code class="highlighter-rouge">DRecord</code>, <code class="highlighter-rouge">FieldDef</code>, and so forth to be prefixed by a quote sign <code class="highlighter-rouge">'</code>. This declares that we are working with <a href="https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#datatype-promotion">promoted types</a> (you do not have to understand what a promoted type is, but you need to remember to use the quote sign).</p>
+<p>Note that GHC requires all of <code class="language-plaintext highlighter-rouge">DEnum</code>, <code class="language-plaintext highlighter-rouge">DRecord</code>, <code class="language-plaintext highlighter-rouge">FieldDef</code>, and so forth to be prefixed by a quote sign <code class="language-plaintext highlighter-rouge">'</code>. This declares that we are working with <a href="https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#datatype-promotion">promoted types</a> (you do not have to understand what a promoted type is, but you need to remember to use the quote sign).</p>
 
 <h3 id="defining-a-schema-using-protocol-buffers">Defining a schema using Protocol Buffers</h3>
 
-<p>As discussed in the introduction, <code class="highlighter-rouge">mu-schema</code> has been developed with some common schema formats in mind. Instead of writing the type-level schemas by hand, you can also import your <a href="https://developers.google.com/protocol-buffers/">Protocol Buffers</a> schemas.</p>
+<p>As discussed in the introduction, <code class="language-plaintext highlighter-rouge">mu-schema</code> has been developed with some common schema formats in mind. Instead of writing the type-level schemas by hand, you can also import your <a href="https://developers.google.com/protocol-buffers/">Protocol Buffers</a> schemas.</p>
 
-<p>The idea is that your schema lives in an external file, so you can share it with other components of your system. To declare that we want the file to be pre-processed before compilation, we use a GHC feature called <code class="highlighter-rouge">TemplateHaskell</code>, hence the initial line starting with <code class="highlighter-rouge">language</code>.</p>
+<p>The idea is that your schema lives in an external file, so you can share it with other components of your system. To declare that we want the file to be pre-processed before compilation, we use a GHC feature called <code class="language-plaintext highlighter-rouge">TemplateHaskell</code>, hence the initial line starting with <code class="language-plaintext highlighter-rouge">language</code>.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TemplateHaskell #-}</span>
 
@@ -513,17 +513,17 @@
 <span class="n">protobuf</span> <span class="s">"ExampleSchema"</span> <span class="s">"path/to/file.proto"</span>
 </code></pre></div></div>
 
-<p>That single line asks the compiler to generate a <code class="highlighter-rouge">ExampleSchema</code> type which represents the schema from the given file. In addition, it also generates a mapping from fields to identifiers, as described below.</p>
+<p>That single line asks the compiler to generate a <code class="language-plaintext highlighter-rouge">ExampleSchema</code> type which represents the schema from the given file. In addition, it also generates a mapping from fields to identifiers, as described below.</p>
 
-<p>One word of warning: GHC reads the contents of the file <em>in order</em>, resolving <code class="highlighter-rouge">TemplateHaskell</code> blocks when found. Only then the results are visible to the rest of the file. In particular, the <code class="highlighter-rouge">protobuf</code> line should appear <em>before</em> any other code mentioning the <code class="highlighter-rouge">ExampleSchema</code> type.</p>
+<p>One word of warning: GHC reads the contents of the file <em>in order</em>, resolving <code class="language-plaintext highlighter-rouge">TemplateHaskell</code> blocks when found. Only then the results are visible to the rest of the file. In particular, the <code class="language-plaintext highlighter-rouge">protobuf</code> line should appear <em>before</em> any other code mentioning the <code class="language-plaintext highlighter-rouge">ExampleSchema</code> type.</p>
 
 <h3 id="schemas-part-of-services">Schemas part of services</h3>
 
-<p>If you use the <code class="highlighter-rouge">grpc</code> function to import a gRPC <code class="highlighter-rouge">.proto</code> file in the type-level, that function already takes care of creating an appropiate schema for <em>all</em> the messages. If you prefer to have different schemas for different subsets of messages (for example, aggregated by services), you can either:</p>
+<p>If you use the <code class="language-plaintext highlighter-rouge">grpc</code> function to import a gRPC <code class="language-plaintext highlighter-rouge">.proto</code> file in the type-level, that function already takes care of creating an appropiate schema for <em>all</em> the messages. If you prefer to have different schemas for different subsets of messages (for example, aggregated by services), you can either:</p>
 
 <ul>
   <li>Write the schemas by hand,</li>
-  <li>Split the definition file into several ones, and import each of them in its own <code class="highlighter-rouge">protobuf</code> block.</li>
+  <li>Split the definition file into several ones, and import each of them in its own <code class="language-plaintext highlighter-rouge">protobuf</code> block.</li>
 </ul>
 
 <h3 id="limitations-on-primitive-optionals">Limitations on primitive optionals</h3>
@@ -531,14 +531,14 @@
 <p>You should be aware of a limitation regarding optional values stated in the <a href="https://developers.google.com/protocol-buffers/docs/proto3#default">Protocol Buffers documentation</a>:</p>
 
 <blockquote>
-  <p>Note that for scalar message fields, once a message is parsed there’s no way of telling whether a field was explicitly set to the default value (for example whether a boolean was set to <code class="highlighter-rouge">false</code>) or just not set at all: you should bear this in mind when defining your message types. For example, don’t have a boolean that switches on some behaviour when set to <code class="highlighter-rouge">false</code> if you don’t want that behaviour to also happen by default. Also note that if a scalar message field <strong>is</strong> set to its default, the value will not be serialized on the wire.</p>
+  <p>Note that for scalar message fields, once a message is parsed there’s no way of telling whether a field was explicitly set to the default value (for example whether a boolean was set to <code class="language-plaintext highlighter-rouge">false</code>) or just not set at all: you should bear this in mind when defining your message types. For example, don’t have a boolean that switches on some behaviour when set to <code class="language-plaintext highlighter-rouge">false</code> if you don’t want that behaviour to also happen by default. Also note that if a scalar message field <strong>is</strong> set to its default, the value will not be serialized on the wire.</p>
 </blockquote>
 
-<p>That means that in a Protocol Buffers message it is not possible to have <code class="highlighter-rouge">'TOption ('TPrimitive p)</code>, since a lack of such a field means that the default value is to be used. In fact, Protocol Buffers implementations are expected to drop such values in order to save bandwidth. <code class="highlighter-rouge">mu-protobuf</code> will try to help here, raising a warning in some cases in which <code class="highlighter-rouge">default</code> is used.</p>
+<p>That means that in a Protocol Buffers message it is not possible to have <code class="language-plaintext highlighter-rouge">'TOption ('TPrimitive p)</code>, since a lack of such a field means that the default value is to be used. In fact, Protocol Buffers implementations are expected to drop such values in order to save bandwidth. <code class="language-plaintext highlighter-rouge">mu-protobuf</code> will try to help here, raising a warning in some cases in which <code class="language-plaintext highlighter-rouge">default</code> is used.</p>
 
 <h2 id="mapping-haskell-types">Mapping Haskell types</h2>
 
-<p>These schemas become more useful once you can map your Haskell types to them. <code class="highlighter-rouge">mu-schema</code> uses the generics mechanism built in GHC to automatically derive these mappings, asuming that you declare your data types using field names.</p>
+<p>These schemas become more useful once you can map your Haskell types to them. <code class="language-plaintext highlighter-rouge">mu-schema</code> uses the generics mechanism built in GHC to automatically derive these mappings, asuming that you declare your data types using field names.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances #-}</span>
 <span class="cp">{-# language DeriveGeneric, DeriveAnyClass #-}</span>
@@ -553,7 +553,7 @@
   <span class="kr">deriving</span> <span class="p">(</span><span class="kt">FromSchema</span> <span class="kt">ExampleSchema</span> <span class="s">"address"</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>Once again, you need to enable some extensions in the compiler (but do not worry, GHC should tell you which ones you need in case you forgot). You first must include <code class="highlighter-rouge">Generic</code> in the list of automatically-derived classes. Then you <em>derive</em> the mapping by using the lines:</p>
+<p>Once again, you need to enable some extensions in the compiler (but do not worry, GHC should tell you which ones you need in case you forgot). You first must include <code class="language-plaintext highlighter-rouge">Generic</code> in the list of automatically-derived classes. Then you <em>derive</em> the mapping by using the lines:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="kr">deriving</span> <span class="p">(</span><span class="kt">ToSchema</span>   <span class="kt">YourSchema</span> <span class="s">"yourSchemaType"</span><span class="p">)</span>
   <span class="kr">deriving</span> <span class="p">(</span><span class="kt">FromSchema</span> <span class="kt">YourSchema</span> <span class="s">"yourSchemaType"</span><span class="p">)</span>
@@ -561,15 +561,15 @@
 
 <h2 id="customizing-the-mapping">Customizing the mapping</h2>
 
-<p>Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our schema above we use <code class="highlighter-rouge">male</code>, <code class="highlighter-rouge">female</code>, and <code class="highlighter-rouge">nb</code>, but in a Haskell enumeration the name of each constructor must begin with a capital letter. By using a standalone <code class="highlighter-rouge">ToSchema</code> instance you can declare a custom mapping from Haskell fields or constructors to schema fields or enum choices, respectively:</p>
+<p>Sometimes the names of the fields in the Haskell data type and the names of the fields in the schema do not match. For example, in our schema above we use <code class="language-plaintext highlighter-rouge">male</code>, <code class="language-plaintext highlighter-rouge">female</code>, and <code class="language-plaintext highlighter-rouge">nb</code>, but in a Haskell enumeration the name of each constructor must begin with a capital letter. By using a standalone <code class="language-plaintext highlighter-rouge">ToSchema</code> instance you can declare a custom mapping from Haskell fields or constructors to schema fields or enum choices, respectively:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language DerivingVia  #-}</span>
 <span class="cp">{-# language TypeFamilies #-}</span>
 
 <span class="kr">type</span> <span class="kt">GenderFieldMapping</span>
-  <span class="o">=</span> <span class="sc">'[</span><span class="err"> </span><span class="s">"Male"</span>      <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="s">"male"</span>
-     <span class="p">,</span> <span class="s">"Female"</span>    <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="s">"female"</span>
-     <span class="p">,</span> <span class="s">"NonBinary"</span> <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="s">"nb"</span> <span class="p">]</span>
+  <span class="o">=</span> <span class="n">'</span><span class="p">[</span> <span class="s">"Male"</span>      <span class="n">'</span><span class="o">:-&gt;</span> <span class="s">"male"</span>
+     <span class="p">,</span> <span class="s">"Female"</span>    <span class="n">'</span><span class="o">:-&gt;</span> <span class="s">"female"</span>
+     <span class="p">,</span> <span class="s">"NonBinary"</span> <span class="n">'</span><span class="o">:-&gt;</span> <span class="s">"nb"</span> <span class="p">]</span>
 
 <span class="kr">data</span> <span class="kt">Gender</span> <span class="o">=</span> <span class="kt">Male</span> <span class="o">|</span><span class="err"> </span><span class="kt">Female</span> <span class="o">|</span> <span class="kt">NonBinary</span>
   <span class="kr">deriving</span> <span class="p">(</span><span class="kt">Eq</span><span class="p">,</span> <span class="kt">Show</span><span class="p">,</span> <span class="kt">Generic</span><span class="p">)</span>
@@ -579,16 +579,16 @@
 
 <h3 id="protocol-buffers-field-identifiers">Protocol Buffers field identifiers</h3>
 
-<p>If you want to use (de)serialization to Protocol Buffers, you need to declare one more piece of information. A Protocol Buffer record or enumeration assigns both names and <em>numeric identifiers</em> to each field or value, respectively. If you use <code class="highlighter-rouge">protobuf</code> or <code class="highlighter-rouge">grpc</code> to import your Protocol Buffers schemas, this is done automatically for you.</p>
+<p>If you want to use (de)serialization to Protocol Buffers, you need to declare one more piece of information. A Protocol Buffer record or enumeration assigns both names and <em>numeric identifiers</em> to each field or value, respectively. If you use <code class="language-plaintext highlighter-rouge">protobuf</code> or <code class="language-plaintext highlighter-rouge">grpc</code> to import your Protocol Buffers schemas, this is done automatically for you.</p>
 
-<p><code class="highlighter-rouge">mu-schema</code> supports extending the information of a schema by means of <em>annotations</em>. Annotations are linked to both a certain format (<code class="highlighter-rouge">ProtoBufAnnotation</code> in this case) and a certain schema. Furthermore, annotations may range over the whole schema, a specific record or enumeration, or a specific field or choice. In the case of Protocol Buffers, we only need the latter:</p>
+<p><code class="language-plaintext highlighter-rouge">mu-schema</code> supports extending the information of a schema by means of <em>annotations</em>. Annotations are linked to both a certain format (<code class="language-plaintext highlighter-rouge">ProtoBufAnnotation</code> in this case) and a certain schema. Furthermore, annotations may range over the whole schema, a specific record or enumeration, or a specific field or choice. In the case of Protocol Buffers, we only need the latter:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TypeFamilies #-}</span>
 
 <span class="kr">import</span> <span class="nn">Mu.Adapter.ProtoBuf</span>
 
 <span class="kr">type</span> <span class="kr">instance</span> <span class="kt">AnnotatedSchema</span> <span class="kt">ProtoBufAnnotation</span> <span class="kt">ExampleSchema</span>
-  <span class="o">=</span> <span class="sc">'[</span><span class="err"> </span><span class="o">...</span>
+  <span class="o">=</span> <span class="n">'</span><span class="p">[</span> <span class="o">...</span>
      <span class="p">,</span> <span class="kt">'AnnField</span> <span class="s">"address"</span> <span class="s">"postcode"</span> <span class="p">(</span><span class="kt">'ProtoBufId</span> <span class="mi">1</span><span class="p">)</span>
      <span class="p">,</span> <span class="kt">'AnnField</span> <span class="s">"address"</span> <span class="s">"country "</span> <span class="p">(</span><span class="kt">'ProtoBufId</span> <span class="mi">2</span><span class="p">)</span>
      <span class="p">,</span> <span class="o">...</span> <span class="p">]</span>

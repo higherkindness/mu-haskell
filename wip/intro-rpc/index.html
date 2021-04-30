@@ -459,8 +459,8 @@
 <p>The main goal of Mu-Haskell is to allow you to focus on your domain logic, instead of worrying about format and protocol issues. To achieve this goal, Mu-Haskell provides two sets of packages:</p>
 
 <ul>
-  <li><code class="highlighter-rouge">mu-schema</code> and <code class="highlighter-rouge">mu-rpc</code> define schemas for data and services, in a format- and protocol-independent way. These schemas are checked at compile-time, so you also gain an additional layer of type-safety.</li>
-  <li><code class="highlighter-rouge">mu-avro</code>, <code class="highlighter-rouge">mu-protobuf</code>, <code class="highlighter-rouge">mu-grpc</code>, <code class="highlighter-rouge">mu-graphql</code> (and other to come) implement each concrete format and protocol, following the interfaces laid out by the former two. In addition, most of those packages can turn a schema in the corresponding format into the corresponding one in <code class="highlighter-rouge">mu-schema</code> and <code class="highlighter-rouge">mu-rpc</code> terms, alleviating the need to duplicate definitions.</li>
+  <li><code class="language-plaintext highlighter-rouge">mu-schema</code> and <code class="language-plaintext highlighter-rouge">mu-rpc</code> define schemas for data and services, in a format- and protocol-independent way. These schemas are checked at compile-time, so you also gain an additional layer of type-safety.</li>
+  <li><code class="language-plaintext highlighter-rouge">mu-avro</code>, <code class="language-plaintext highlighter-rouge">mu-protobuf</code>, <code class="language-plaintext highlighter-rouge">mu-grpc</code>, <code class="language-plaintext highlighter-rouge">mu-graphql</code> (and other to come) implement each concrete format and protocol, following the interfaces laid out by the former two. In addition, most of those packages can turn a schema in the corresponding format into the corresponding one in <code class="language-plaintext highlighter-rouge">mu-schema</code> and <code class="language-plaintext highlighter-rouge">mu-rpc</code> terms, alleviating the need to duplicate definitions.</li>
 </ul>
 
 <h2 id="quickstart">Quickstart</h2>
@@ -468,15 +468,15 @@
 <h3 id="super-quick-summary">Super-quick summary</h3>
 
 <ol>
-  <li>Create a new project with <code class="highlighter-rouge">stack new</code>.</li>
-  <li>Define your schema and your services in the <code class="highlighter-rouge">.proto</code> file.</li>
-  <li>Map to your Haskell data types in <code class="highlighter-rouge">src/Schema.hs</code>, or use optics.</li>
-  <li>Implement the server in <code class="highlighter-rouge">src/Main.hs</code>.</li>
+  <li>Create a new project with <code class="language-plaintext highlighter-rouge">stack new</code>.</li>
+  <li>Define your schema and your services in the <code class="language-plaintext highlighter-rouge">.proto</code> file.</li>
+  <li>Map to your Haskell data types in <code class="language-plaintext highlighter-rouge">src/Schema.hs</code>, or use optics.</li>
+  <li>Implement the server in <code class="language-plaintext highlighter-rouge">src/Main.hs</code>.</li>
 </ol>
 
 <h3 id="step-by-step">Step by step</h3>
 
-<p>As an appetizer we are going to develop the same service as in the <a href="https://grpc.io/docs/quickstart/">gRPC Quickstart Guide</a>. The service is defined as a <code class="highlighter-rouge">.proto</code> file, which includes the schema for the messages and the signature for the methods in the service. The library also supports <code class="highlighter-rouge">.avdl</code> files which declare the messages in Avro IDL, check the <a href="/mu-haskell/wip/serializers/">serialization</a> section for more information.</p>
+<p>As an appetizer we are going to develop the same service as in the <a href="https://grpc.io/docs/quickstart/">gRPC Quickstart Guide</a>. The service is defined as a <code class="language-plaintext highlighter-rouge">.proto</code> file, which includes the schema for the messages and the signature for the methods in the service. The library also supports <code class="language-plaintext highlighter-rouge">.avdl</code> files which declare the messages in Avro IDL, check the <a href="/mu-haskell/wip/serializers/">serialization</a> section for more information.</p>
 
 <div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">service</span> <span class="nc">Service</span> <span class="o">{</span>
   <span class="n">rpc</span> <span class="nf">SayHello</span> <span class="o">(</span><span class="nc">HelloRequest</span><span class="o">)</span> <span class="n">returns</span> <span class="o">(</span><span class="nc">HelloReply</span><span class="o">)</span> <span class="o">{}</span>
@@ -488,22 +488,22 @@
 
 <p>To get started with the project, we provide a <a href="https://docs.haskellstack.org">Stack</a> template (in fact, we recommend that you use Stack as your build tool, although Cabal should also work perfectly fine). You should run:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>stack new my_project https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/grpc-server-protobuf.hsfiles -p "author-email:your@email.com" -p "author-name:Your name"
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>stack new my_project https://raw.githubusercontent.com/higherkindness/mu-haskell/master/templates/grpc-server-protobuf.hsfiles -p "author-email:your@email.com" -p "author-name:Your name"
 </code></pre></div></div>
 
-<p><strong>WARNING:</strong> Do not include a hyphen in your project name, as it will cause the template to generate a ‘.proto’ file containing an invalid package name. Use <code class="highlighter-rouge">my_project</code>, not <code class="highlighter-rouge">my-project</code>.</p>
+<p><strong>WARNING:</strong> Do not include a hyphen in your project name, as it will cause the template to generate a ‘.proto’ file containing an invalid package name. Use <code class="language-plaintext highlighter-rouge">my_project</code>, not <code class="language-plaintext highlighter-rouge">my-project</code>.</p>
 
-<p>This command creates a new folder called <code class="highlighter-rouge">my_project</code>, with a few files. The most important from those are the <code class="highlighter-rouge">.proto</code> file, in which you will define your service; <code class="highlighter-rouge">src/Schema.hs</code>, which loads the service definition at compile-time; and <code class="highlighter-rouge">src/Main.hs</code>, which contains the code of the server.</p>
+<p>This command creates a new folder called <code class="language-plaintext highlighter-rouge">my_project</code>, with a few files. The most important from those are the <code class="language-plaintext highlighter-rouge">.proto</code> file, in which you will define your service; <code class="language-plaintext highlighter-rouge">src/Schema.hs</code>, which loads the service definition at compile-time; and <code class="language-plaintext highlighter-rouge">src/Main.hs</code>, which contains the code of the server.</p>
 
-<p>The first step to get your project running is defining the right schema and service. In this case, you can just copy the definition above after the <code class="highlighter-rouge">package</code> declaration.</p>
+<p>The first step to get your project running is defining the right schema and service. In this case, you can just copy the definition above after the <code class="language-plaintext highlighter-rouge">package</code> declaration.</p>
 
 <h4 id="data-type-definition">Data type definition</h4>
 
-<p>The second step is to define Haskell types corresponding to the message types in the gRPC definition. The recommended route is to create new Haskell data types and check for compatibility at compile-time. The goal is to discourage from making your domain types simple copies of the protocol types. Another possibility is to use the <code class="highlighter-rouge">optics</code> bridge and work with lenses for the fields.</p>
+<p>The second step is to define Haskell types corresponding to the message types in the gRPC definition. The recommended route is to create new Haskell data types and check for compatibility at compile-time. The goal is to discourage from making your domain types simple copies of the protocol types. Another possibility is to use the <code class="language-plaintext highlighter-rouge">optics</code> bridge and work with lenses for the fields.</p>
 
 <h5 id="using-haskell-types">Using Haskell types</h5>
 
-<p>The aforementioned <code class="highlighter-rouge">.proto</code> file defines two messages. The corresponding data types are as follows:</p>
+<p>The aforementioned <code class="language-plaintext highlighter-rouge">.proto</code> file defines two messages. The corresponding data types are as follows:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">HelloRequestMessage</span>
   <span class="o">=</span> <span class="kt">HelloRequestMessage</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span> <span class="p">}</span>
@@ -518,15 +518,15 @@
            <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">TheSchema</span> <span class="s">"HelloReply"</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>These data types should be added to the file <code class="highlighter-rouge">src/Schema.hs</code>, under the line that starts <code class="highlighter-rouge">grpc ...</code>. (See the <a href="/mu-haskell/wip/rpc/">RPC services page</a> for information about what that line is doing.)</p>
+<p>These data types should be added to the file <code class="language-plaintext highlighter-rouge">src/Schema.hs</code>, under the line that starts <code class="language-plaintext highlighter-rouge">grpc ...</code>. (See the <a href="/mu-haskell/wip/rpc/">RPC services page</a> for information about what that line is doing.)</p>
 
 <p>You can give the data types and their constructors any name you like. However, keep in mind that:</p>
 
 <ul>
-  <li>The names of the fields must correspond with those in the <code class="highlighter-rouge">.proto</code> files. Otherwise you have to use a <em>custom mapping</em>, which is fully supported by <code class="highlighter-rouge">mu-schema</code> but requires more code.</li>
-  <li>The name <code class="highlighter-rouge">TheSchema</code> refers to a type generated by the <code class="highlighter-rouge">grpc</code> function, so it must match the first argument to that function.</li>
-  <li>The name between quotes in each <code class="highlighter-rouge">deriving</code> clause defines the message type in the <code class="highlighter-rouge">.proto</code> file each data type corresponds to.</li>
-  <li>To use the automatic-mapping functionality, it is required to also derive <code class="highlighter-rouge">Generic</code>, don’t forget it!</li>
+  <li>The names of the fields must correspond with those in the <code class="language-plaintext highlighter-rouge">.proto</code> files. Otherwise you have to use a <em>custom mapping</em>, which is fully supported by <code class="language-plaintext highlighter-rouge">mu-schema</code> but requires more code.</li>
+  <li>The name <code class="language-plaintext highlighter-rouge">TheSchema</code> refers to a type generated by the <code class="language-plaintext highlighter-rouge">grpc</code> function, so it must match the first argument to that function.</li>
+  <li>The name between quotes in each <code class="language-plaintext highlighter-rouge">deriving</code> clause defines the message type in the <code class="language-plaintext highlighter-rouge">.proto</code> file each data type corresponds to.</li>
+  <li>To use the automatic-mapping functionality, it is required to also derive <code class="language-plaintext highlighter-rouge">Generic</code>, don’t forget it!</li>
 </ul>
 
 <h5 id="using-optics">Using optics</h5>
@@ -537,13 +537,13 @@
 <span class="kr">type</span> <span class="kt">HelloReplyMessage'</span>   <span class="o">=</span> <span class="kt">Term</span> <span class="kt">TheSchema</span> <span class="p">(</span><span class="kt">TheSchema</span> <span class="o">:/:</span> <span class="s">"HelloReply"</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>The arguments to <code class="highlighter-rouge">Term</code> closely correspond to those in <code class="highlighter-rouge">FromSchema</code> and <code class="highlighter-rouge">ToSchema</code> described above.</p>
+<p>The arguments to <code class="language-plaintext highlighter-rouge">Term</code> closely correspond to those in <code class="language-plaintext highlighter-rouge">FromSchema</code> and <code class="language-plaintext highlighter-rouge">ToSchema</code> described above.</p>
 
 <h4 id="server-implementation">Server implementation</h4>
 
-<p>If you try to compile the project right now by means of <code class="highlighter-rouge">stack build</code>, you will receive an error about <code class="highlighter-rouge">server</code> not having the right type. This is because you haven’t yet defined any implementation for your service. This is one of the advantages of making the compiler aware of your service definitions: if the <code class="highlighter-rouge">.proto</code> file changes, you need to adapt your code correspondingly, or otherwise the project doesn’t even compile!</p>
+<p>If you try to compile the project right now by means of <code class="language-plaintext highlighter-rouge">stack build</code>, you will receive an error about <code class="language-plaintext highlighter-rouge">server</code> not having the right type. This is because you haven’t yet defined any implementation for your service. This is one of the advantages of making the compiler aware of your service definitions: if the <code class="language-plaintext highlighter-rouge">.proto</code> file changes, you need to adapt your code correspondingly, or otherwise the project doesn’t even compile!</p>
 
-<p>Open the <code class="highlighter-rouge">src/Main.hs</code> file. The contents are quite small right now: a <code class="highlighter-rouge">main</code> function asks to run the gRPC service defined by <code class="highlighter-rouge">server</code>, using Protocol Buffers as serialization layer. The <code class="highlighter-rouge">server</code> function, on the other hand, declares that it implements the <code class="highlighter-rouge">Service</code> service in its signature, but contains no implementations.</p>
+<p>Open the <code class="language-plaintext highlighter-rouge">src/Main.hs</code> file. The contents are quite small right now: a <code class="language-plaintext highlighter-rouge">main</code> function asks to run the gRPC service defined by <code class="language-plaintext highlighter-rouge">server</code>, using Protocol Buffers as serialization layer. The <code class="language-plaintext highlighter-rouge">server</code> function, on the other hand, declares that it implements the <code class="language-plaintext highlighter-rouge">Service</code> service in its signature, but contains no implementations.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="n">msgProtoBuf</span> <span class="mi">8080</span> <span class="n">server</span>
@@ -552,16 +552,16 @@
 <span class="n">server</span> <span class="o">=</span> <span class="n">singleService</span> <span class="nb">()</span>
 </code></pre></div></div>
 
-<p>The simplest way to provide an implementation for a service is to define one function for each method. You can define those functions completely in terms of Haskell data types; in our case <code class="highlighter-rouge">HelloRequestMessage</code> and <code class="highlighter-rouge">HelloReplyMessage</code>. Here is an example definition:</p>
+<p>The simplest way to provide an implementation for a service is to define one function for each method. You can define those functions completely in terms of Haskell data types; in our case <code class="language-plaintext highlighter-rouge">HelloRequestMessage</code> and <code class="language-plaintext highlighter-rouge">HelloReplyMessage</code>. Here is an example definition:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sayHello</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">HelloRequestMessage</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">HelloReplyMessage</span>
 <span class="n">sayHello</span> <span class="p">(</span><span class="kt">HelloRequestMessage</span> <span class="n">nm</span><span class="p">)</span>
   <span class="o">=</span> <span class="n">pure</span> <span class="o">$</span> <span class="kt">HelloReplyMessage</span> <span class="p">(</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>The <code class="highlighter-rouge">MonadServer</code> portion in the type is mandated by <code class="highlighter-rouge">mu-rpc</code>; it tells us that in a method we can perform any <code class="highlighter-rouge">IO</code> actions and additionally throw server errors (for conditions such as <em>not found</em>). We do not make use of any of those here, so we simply use <code class="highlighter-rouge">return</code> with a value. We could even make the definition a bit more polymorphic by replacing <code class="highlighter-rouge">MonadServer</code> by <code class="highlighter-rouge">Monad</code>.</p>
+<p>The <code class="language-plaintext highlighter-rouge">MonadServer</code> portion in the type is mandated by <code class="language-plaintext highlighter-rouge">mu-rpc</code>; it tells us that in a method we can perform any <code class="language-plaintext highlighter-rouge">IO</code> actions and additionally throw server errors (for conditions such as <em>not found</em>). We do not make use of any of those here, so we simply use <code class="language-plaintext highlighter-rouge">return</code> with a value. We could even make the definition a bit more polymorphic by replacing <code class="language-plaintext highlighter-rouge">MonadServer</code> by <code class="language-plaintext highlighter-rouge">Monad</code>.</p>
 
-<p>Another possibility is to use the <code class="highlighter-rouge">optics</code>-based API in <code class="highlighter-rouge">Mu.Schema.Optics</code>. In that case, you access the value of the fields using <code class="highlighter-rouge">(^.)</code> followed by the name of the field after <code class="highlighter-rouge">#</code>, and build messages by using <code class="highlighter-rouge">record</code> followed by a tuple of the components. The previous example would then be written:</p>
+<p>Another possibility is to use the <code class="language-plaintext highlighter-rouge">optics</code>-based API in <code class="language-plaintext highlighter-rouge">Mu.Schema.Optics</code>. In that case, you access the value of the fields using <code class="language-plaintext highlighter-rouge">(^.)</code> followed by the name of the field after <code class="language-plaintext highlighter-rouge">#</code>, and build messages by using <code class="language-plaintext highlighter-rouge">record</code> followed by a tuple of the components. The previous example would then be written:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language OverloadedLabels #-}</span>
 
@@ -570,12 +570,12 @@
   <span class="o">=</span> <span class="n">pure</span> <span class="o">$</span> <span class="n">record</span> <span class="p">(</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span> <span class="o">^.</span> <span class="o">#</span><span class="n">name</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>How does <code class="highlighter-rouge">server</code> know that <code class="highlighter-rouge">sayHello</code> (any of the two versions) is part of the implementation of the service? We have to tell it, by declaring that <code class="highlighter-rouge">sayHello</code> implements the <code class="highlighter-rouge">SayHello</code> method from the gRPC definition. If you had more methods, you list each of them using tuple syntax.</p>
+<p>How does <code class="language-plaintext highlighter-rouge">server</code> know that <code class="language-plaintext highlighter-rouge">sayHello</code> (any of the two versions) is part of the implementation of the service? We have to tell it, by declaring that <code class="language-plaintext highlighter-rouge">sayHello</code> implements the <code class="language-plaintext highlighter-rouge">SayHello</code> method from the gRPC definition. If you had more methods, you list each of them using tuple syntax.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">server</span> <span class="o">=</span> <span class="n">singleService</span> <span class="p">(</span><span class="n">method</span> <span class="o">@</span><span class="s">"SayHello"</span> <span class="n">sayHello</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>At this point you can build the project using <code class="highlighter-rouge">stack build</code>, and then execute via <code class="highlighter-rouge">stack run</code>. This spawns a gRPC server at port 8080, which you can test using applications such as <a href="https://github.com/uw-labs/bloomrpc">BloomRPC</a>.</p>
+<p>At this point you can build the project using <code class="language-plaintext highlighter-rouge">stack build</code>, and then execute via <code class="language-plaintext highlighter-rouge">stack run</code>. This spawns a gRPC server at port 8080, which you can test using applications such as <a href="https://github.com/uw-labs/bloomrpc">BloomRPC</a>.</p>
 
     </div>
 </main>

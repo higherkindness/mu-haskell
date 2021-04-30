@@ -470,7 +470,7 @@
 <span class="n">grpc</span> <span class="s">"Schema"</span> <span class="n">id</span> <span class="s">"defn.proto"</span>
 </code></pre></div></div>
 
-<p>This asks the compiler to load the <code class="highlighter-rouge">defn.proto</code> file in order to create a series of (Haskell) types. The first one, which is called <code class="highlighter-rouge">"Schema"</code>, as the first argument shows, includes the definition of all the schema types. Then, for every service defined in the file (since <code class="highlighter-rouge">.proto</code> files may have more than one), the second function is applied to obtain the name of the corresponding Haskell type. In this case we want to use the same names, so we use the identity function.</p>
+<p>This asks the compiler to load the <code class="language-plaintext highlighter-rouge">defn.proto</code> file in order to create a series of (Haskell) types. The first one, which is called <code class="language-plaintext highlighter-rouge">"Schema"</code>, as the first argument shows, includes the definition of all the schema types. Then, for every service defined in the file (since <code class="language-plaintext highlighter-rouge">.proto</code> files may have more than one), the second function is applied to obtain the name of the corresponding Haskell type. In this case we want to use the same names, so we use the identity function.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">PersonMsg</span>
   <span class="o">=</span> <span class="kt">PersonMsg</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">Text</span><span class="p">,</span> <span class="n">age</span> <span class="o">::</span> <span class="kt">Int</span> <span class="p">}</span>
@@ -479,9 +479,9 @@
            <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Schema</span> <span class="s">"Person"</span> <span class="p">)</span>
 </code></pre></div></div>
 
-<p>Protocol Buffers version 3 has complicated rules about when a field may or may not appear in the message. For example it is not possible to distinguish whether the empty string is to be transmitted, or that field is missing. In that case, deserialization from a Protocol Buffers message returns the default value. However, for references to other message we can spot the difference, so those references <em>must</em> be wrapped in a <code class="highlighter-rouge">Maybe</code>.</p>
+<p>Protocol Buffers version 3 has complicated rules about when a field may or may not appear in the message. For example it is not possible to distinguish whether the empty string is to be transmitted, or that field is missing. In that case, deserialization from a Protocol Buffers message returns the default value. However, for references to other message we can spot the difference, so those references <em>must</em> be wrapped in a <code class="language-plaintext highlighter-rouge">Maybe</code>.</p>
 
-<p>Finally, when starting a server or client you must provide <code class="highlighter-rouge">msgProtoBuf</code> as argument. For example, a server is started by running:</p>
+<p>Finally, when starting a server or client you must provide <code class="language-plaintext highlighter-rouge">msgProtoBuf</code> as argument. For example, a server is started by running:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">runGRpcApp</span> <span class="n">msgProtoBuf</span> <span class="mi">8080</span> <span class="n">server</span>
 </code></pre></div></div>
@@ -496,9 +496,9 @@
 <span class="n">avdl</span> <span class="s">"Schema"</span> <span class="s">"Service"</span> <span class="s">"."</span> <span class="s">"defn.avdl"</span>
 </code></pre></div></div>
 
-<p>Each <code class="highlighter-rouge">.avdl</code> file defines just one protocol, so instead of a function like in the case of Protocol Buffers, the second argument is simply the name of the Haskell type to create. But you might have noticed that there’s an additional argument, which in this case is <code class="highlighter-rouge">"."</code>. The reason for this argument is that <code class="highlighter-rouge">.avdl</code> files routinely <em>import</em> other files. This third argument indicates the <em>base directory</em> to search for those files.</p>
+<p>Each <code class="language-plaintext highlighter-rouge">.avdl</code> file defines just one protocol, so instead of a function like in the case of Protocol Buffers, the second argument is simply the name of the Haskell type to create. But you might have noticed that there’s an additional argument, which in this case is <code class="language-plaintext highlighter-rouge">"."</code>. The reason for this argument is that <code class="language-plaintext highlighter-rouge">.avdl</code> files routinely <em>import</em> other files. This third argument indicates the <em>base directory</em> to search for those files.</p>
 
-<p>The conversion is almost identical to Protocol Buffers too. In Avro fields are required by default, only those fields which are optional (usually specified as a union with <code class="highlighter-rouge">null</code>) must still use <code class="highlighter-rouge">Maybe</code>:</p>
+<p>The conversion is almost identical to Protocol Buffers too. In Avro fields are required by default, only those fields which are optional (usually specified as a union with <code class="language-plaintext highlighter-rouge">null</code>) must still use <code class="language-plaintext highlighter-rouge">Maybe</code>:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">PersonMsg</span>
   <span class="o">=</span> <span class="kt">PersonMsg</span> <span class="p">{</span> <span class="n">name</span> <span class="o">::</span> <span class="kt">Text</span><span class="p">,</span> <span class="n">age</span> <span class="o">::</span> <span class="kt">Int</span> <span class="p">}</span>
@@ -507,7 +507,7 @@
            <span class="p">,</span> <span class="kt">FromSchema</span> <span class="kt">Schema</span> <span class="s">"Person"</span> <span class="p">)</span>
 </code></pre></div></div>
 
-<p>Finally, when starting a server or client you must provide <code class="highlighter-rouge">msgAvro</code> as argument. For example, a server is started by running:</p>
+<p>Finally, when starting a server or client you must provide <code class="language-plaintext highlighter-rouge">msgAvro</code> as argument. For example, a server is started by running:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">runGRpcApp</span> <span class="n">msgAvro</span> <span class="mi">8080</span> <span class="n">server</span>
 </code></pre></div></div>

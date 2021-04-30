@@ -450,22 +450,22 @@
     <div class="doc-content">
         <h1 id="integration-with-wai-middleware">Integration with WAI middleware</h1>
 
-<p>Although you usually run a <code class="highlighter-rouge">mu-rpc</code> server directly using a function like <code class="highlighter-rouge">runGRpcApp</code>, this is just a convenience function to make it simpler to run the server. Under the hood, the library generates a so-called WAI application, which is then fed to an actual server.</p>
+<p>Although you usually run a <code class="language-plaintext highlighter-rouge">mu-rpc</code> server directly using a function like <code class="language-plaintext highlighter-rouge">runGRpcApp</code>, this is just a convenience function to make it simpler to run the server. Under the hood, the library generates a so-called WAI application, which is then fed to an actual server.</p>
 
 <p>WAI stands for <a href="https://www.yesodweb.com/book/web-application-interface"><em>Web Application Interface</em></a>. WAI defines a common set of APIs against which web application can be developed. Web servers, like <a href="http://www.aosabook.org/en/posa/warp.html">Warp</a>, take an application which uses that API and serves it against the actual network. The main benefit of this separation is that applications and servers can evolve separately, without a tight coupling between them.</p>
 
-<p>One of the features that WAI provides is the definition of <em>middleware</em> components. <em>Middlewares</em> are not complete applications; instead they wrap another application to provide additional capabilities. There is a whole ecosystem of WAI middleware, as one can notice by <a href="http://hackage.haskell.org/packages/search?terms=wai+middleware">searching <code class="highlighter-rouge">wai middleware</code> in Hackage</a>.</p>
+<p>One of the features that WAI provides is the definition of <em>middleware</em> components. <em>Middlewares</em> are not complete applications; instead they wrap another application to provide additional capabilities. There is a whole ecosystem of WAI middleware, as one can notice by <a href="http://hackage.haskell.org/packages/search?terms=wai+middleware">searching <code class="language-plaintext highlighter-rouge">wai middleware</code> in Hackage</a>.</p>
 
 <h2 id="serving-static-files">Serving static files</h2>
 
-<p>It’s a common task in web servers to send some static content for a subset of URLs (think of resources such as images or JavaScript code). <code class="highlighter-rouge">wai-middleware-static</code> automates that task, and also serves as the simplest example of WAI middleware.</p>
+<p>It’s a common task in web servers to send some static content for a subset of URLs (think of resources such as images or JavaScript code). <code class="language-plaintext highlighter-rouge">wai-middleware-static</code> automates that task, and also serves as the simplest example of WAI middleware.</p>
 
-<p>Remember that in our <a href="/mu-haskell/wip/grpc/server/">gRPC server example</a> our <code class="highlighter-rouge">main</code> function looked as follows:</p>
+<p>Remember that in our <a href="/mu-haskell/wip/grpc/server/">gRPC server example</a> our <code class="language-plaintext highlighter-rouge">main</code> function looked as follows:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runGRpcApp</span> <span class="n">msgSerializer</span> <span class="mi">8080</span> <span class="n">server</span>
 </code></pre></div></div>
 
-<p>We can split this single line into two phases: first creating the WAI application by means of <code class="highlighter-rouge">gRpcApp</code>, and then running it using Warp’s <code class="highlighter-rouge">run</code> function.</p>
+<p>We can split this single line into two phases: first creating the WAI application by means of <code class="language-plaintext highlighter-rouge">gRpcApp</code>, and then running it using Warp’s <code class="language-plaintext highlighter-rouge">run</code> function.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Network.Wai.Handler.Warp</span> <span class="p">(</span><span class="nf">run</span><span class="p">)</span>
 
@@ -480,11 +480,11 @@
 <span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">static</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">msgSerializer</span> <span class="n">server</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>With that simple change, our web server now first checks whether a file with the requested name exists in the directory from which the application is running. If that is the case, it’s cached and served, otherwise the underlying gRPC application is run. Needless to say, this behavior might not be the desired one, so the library provides <a href="http://hackage.haskell.org/package/wai-middleware-static/docs/Network-Wai-Middleware-Static.html#v:staticPolicy"><code class="highlighter-rouge">staticPolicy</code></a> to customize it.</p>
+<p>With that simple change, our web server now first checks whether a file with the requested name exists in the directory from which the application is running. If that is the case, it’s cached and served, otherwise the underlying gRPC application is run. Needless to say, this behavior might not be the desired one, so the library provides <a href="http://hackage.haskell.org/package/wai-middleware-static/docs/Network-Wai-Middleware-Static.html#v:staticPolicy"><code class="language-plaintext highlighter-rouge">staticPolicy</code></a> to customize it.</p>
 
 <h2 id="metrics">Metrics</h2>
 
-<p>Another interesting use of middleware is obtaining metrics for your application. Within the Haskell world, <a href="https://github.com/tibbe/ekg">EKG</a> is a common solution for monitoring any kind of running process. EKG provides <a href="https://ocharles.org.uk/blog/posts/2012-12-11-24-day-of-hackage-ekg.html">customizable counters</a>, so you are not tied to one specific set of variables. This is the idea behind the <a href="https://github.com/Helkafen/wai-middleware-metrics"><code class="highlighter-rouge">wai-middleware-metrics</code></a> package: provide counters for the specific needs of HTTP servers.</p>
+<p>Another interesting use of middleware is obtaining metrics for your application. Within the Haskell world, <a href="https://github.com/tibbe/ekg">EKG</a> is a common solution for monitoring any kind of running process. EKG provides <a href="https://ocharles.org.uk/blog/posts/2012-12-11-24-day-of-hackage-ekg.html">customizable counters</a>, so you are not tied to one specific set of variables. This is the idea behind the <a href="https://github.com/Helkafen/wai-middleware-metrics"><code class="language-plaintext highlighter-rouge">wai-middleware-metrics</code></a> package: provide counters for the specific needs of HTTP servers.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">System.Remote.Monitoring</span> <span class="p">(</span><span class="nf">serverMetricStore</span><span class="p">,</span> <span class="nf">forkServer</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Network.Wai.Handler.Warp</span> <span class="p">(</span><span class="nf">run</span><span class="p">)</span>
@@ -506,11 +506,11 @@
 <span class="n">main</span> <span class="o">=</span> <span class="n">run</span> <span class="mi">8080</span> <span class="o">$</span> <span class="n">prometheus</span> <span class="n">def</span> <span class="p">(</span><span class="n">gRpcApp</span> <span class="n">msgSerializer</span> <span class="n">server</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>The usage of <code class="highlighter-rouge">def</code> indicates that we want the default options: providing the metrics under the route <code class="highlighter-rouge">/metrics</code>.</p>
+<p>The usage of <code class="language-plaintext highlighter-rouge">def</code> indicates that we want the default options: providing the metrics under the route <code class="language-plaintext highlighter-rouge">/metrics</code>.</p>
 
 <h2 id="compression-header-manipulation-and-more">Compression, header manipulation, and more!</h2>
 
-<p>These docs only scrape the surface of WAI middleware. We encourage you to check the <a href="http://hackage.haskell.org/package/wai-extra"><code class="highlighter-rouge">wai-extra</code> package</a>, which includes many self-contained middlewares. For example, you may wish to have GZip compression, or to canonicalize routes before passing them to the actual application. Following the Haskell philosophy, the idea is to provide small components which can be easily composed to target your needs.</p>
+<p>These docs only scrape the surface of WAI middleware. We encourage you to check the <a href="http://hackage.haskell.org/package/wai-extra"><code class="language-plaintext highlighter-rouge">wai-extra</code> package</a>, which includes many self-contained middlewares. For example, you may wish to have GZip compression, or to canonicalize routes before passing them to the actual application. Following the Haskell philosophy, the idea is to provide small components which can be easily composed to target your needs.</p>
 
     </div>
 </main>

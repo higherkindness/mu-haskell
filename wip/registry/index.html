@@ -450,13 +450,13 @@
     <div class="doc-content">
         <h1 id="registry">Registry</h1>
 
-<p>Schemas evolve over time. It is a good practice to keep an inventory of all the schemas you can work with, in the form of a <em>registry</em>. Using <code class="highlighter-rouge">mu-schema</code> you can declare one such registry as simply a mapping from versions to schemas:</p>
+<p>Schemas evolve over time. It is a good practice to keep an inventory of all the schemas you can work with, in the form of a <em>registry</em>. Using <code class="language-plaintext highlighter-rouge">mu-schema</code> you can declare one such registry as simply a mapping from versions to schemas:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">ExampleRegistry</span>
-  <span class="o">=</span> <span class="sc">'[</span><span class="err"> </span><span class="mi">2</span> <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="kt">ExampleSchemaV2</span><span class="p">,</span> <span class="mi">1</span> <span class="sc">':</span><span class="err">-</span><span class="o">&gt;</span> <span class="kt">ExampleSchema</span> <span class="p">]</span>
+  <span class="o">=</span> <span class="n">'</span><span class="p">[</span> <span class="mi">2</span> <span class="n">'</span><span class="o">:-&gt;</span> <span class="kt">ExampleSchemaV2</span><span class="p">,</span> <span class="mi">1</span> <span class="n">'</span><span class="o">:-&gt;</span> <span class="kt">ExampleSchema</span> <span class="p">]</span>
 </code></pre></div></div>
 
-<p>Once we have done that you can use functions like <code class="highlighter-rouge">fromRegistry</code> to try to parse a term into a Haskell type by trying each of the schemas.</p>
+<p>Once we have done that you can use functions like <code class="language-plaintext highlighter-rouge">fromRegistry</code> to try to parse a term into a Haskell type by trying each of the schemas.</p>
 
 <h2 id="using-the-registry">Using the Registry</h2>
 
@@ -464,8 +464,8 @@
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">QuickstartService</span>
   <span class="o">=</span> <span class="kt">'Service</span> <span class="s">"Greeter"</span>
-      <span class="sc">'[</span><span class="err"> </span><span class="kt">'Method</span> <span class="s">"SayHello"</span>
-                 <span class="sc">'[</span><span class="err"> </span><span class="kt">'ArgSingle</span> <span class="p">(</span><span class="kt">'FromRegistry</span> <span class="kt">ExampleRegistry</span> <span class="kt">HelloRequest</span> <span class="mi">2</span><span class="p">)</span> <span class="p">]</span>
+      <span class="n">'</span><span class="p">[</span> <span class="kt">'Method</span> <span class="s">"SayHello"</span>
+                 <span class="n">'</span><span class="p">[</span> <span class="kt">'ArgSingle</span> <span class="p">(</span><span class="kt">'FromRegistry</span> <span class="kt">ExampleRegistry</span> <span class="kt">HelloRequest</span> <span class="mi">2</span><span class="p">)</span> <span class="p">]</span>
                  <span class="p">(</span><span class="kt">'RetSingle</span> <span class="p">(</span><span class="kt">'FromRegistry</span> <span class="kt">ExampleRegistry</span> <span class="kt">HelloResponse</span> <span class="mi">1</span><span class="p">))</span> <span class="p">]</span>
 </code></pre></div></div>
 

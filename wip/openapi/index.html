@@ -452,33 +452,33 @@
 
 <p>In order to expose a Mu server using a OpenAPI or REST interface, we make use of the awesome <a href="https://docs.servant.dev/en/stable/">Servant</a> library. Both libraries describe the API of a server at the type level, use the notion of <em>handlers</em>, and follow a similar structure.</p>
 
-<p>The <code class="highlighter-rouge">mu-servant-server</code> package contains a function <code class="highlighter-rouge">servantServerHandlers</code> which unpacks the Mu handlers and repackages them as Servant handlers, with some minor changes to support streaming. The trickiest part, however, is translating the Mu server <em>type</em> into a Servant server <em>type</em>.</p>
+<p>The <code class="language-plaintext highlighter-rouge">mu-servant-server</code> package contains a function <code class="language-plaintext highlighter-rouge">servantServerHandlers</code> which unpacks the Mu handlers and repackages them as Servant handlers, with some minor changes to support streaming. The trickiest part, however, is translating the Mu server <em>type</em> into a Servant server <em>type</em>.</p>
 
 <h2 id="annotating-the-server">Annotating the server</h2>
 
-<p>When Mu methods are converted to Servant APIs, you may customize certain aspects of the resulting API, including the route, HTTP method, and HTTP status.  Additionally, you must specify which content types use be used when encoding and decoding each type in your schema that appears in your methods. All of this customization is done with annotations, via the <code class="highlighter-rouge">AnnotatedSchema</code> and <code class="highlighter-rouge">AnnotatedPackage</code> type families.</p>
+<p>When Mu methods are converted to Servant APIs, you may customize certain aspects of the resulting API, including the route, HTTP method, and HTTP status.  Additionally, you must specify which content types use be used when encoding and decoding each type in your schema that appears in your methods. All of this customization is done with annotations, via the <code class="language-plaintext highlighter-rouge">AnnotatedSchema</code> and <code class="language-plaintext highlighter-rouge">AnnotatedPackage</code> type families.</p>
 
 <p>For the server we have developed in the <a href="/mu-haskell/wip/rpc/">generic RPC section</a>, the instances for the services look as follows:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kr">instance</span> <span class="kt">AnnotatedPackage</span> <span class="kt">ServantRoute</span> <span class="kt">QuickstartService</span>
-  <span class="o">=</span> <span class="sc">'[</span><span class="err"> </span><span class="kt">'AnnService</span> <span class="s">"Greeter"</span> <span class="p">(</span><span class="kt">'ServantTopLevelRoute</span> <span class="sc">'[</span><span class="err">"</span><span class="n">greet</span><span class="s">"])
-     , 'AnnMethod "</span><span class="kt">Greeter</span><span class="s">" "</span><span class="kt">SayHello</span><span class="s">"
-                   ('ServantRoute '["</span><span class="n">say</span><span class="s">", "</span><span class="n">hello</span><span class="s">"] 'POST 200),
-     ]
-</span></code></pre></div></div>
+  <span class="o">=</span> <span class="n">'</span><span class="p">[</span> <span class="kt">'AnnService</span> <span class="s">"Greeter"</span> <span class="p">(</span><span class="kt">'ServantTopLevelRoute</span> <span class="n">'</span><span class="p">[</span><span class="s">"greet"</span><span class="p">])</span>
+     <span class="p">,</span> <span class="kt">'AnnMethod</span> <span class="s">"Greeter"</span> <span class="s">"SayHello"</span>
+                   <span class="p">(</span><span class="kt">'ServantRoute</span> <span class="n">'</span><span class="p">[</span><span class="s">"say"</span><span class="p">,</span> <span class="s">"hello"</span><span class="p">]</span> <span class="kt">'POST</span> <span class="mi">200</span><span class="p">),</span>
+     <span class="p">]</span>
+</code></pre></div></div>
 
-<p>The first annotation defines that the whole service lives in the <code class="highlighter-rouge">/greet</code> route. Each method then gets its own route and HTTP verb. To execute <code class="highlighter-rouge">SayHello</code>, one has to make a <code class="highlighter-rouge">POST</code> request to <code class="highlighter-rouge">/greet/say/hello</code>. The last element is the HTTP status code to be returned by default, in this case <code class="highlighter-rouge">200</code> which means success.</p>
+<p>The first annotation defines that the whole service lives in the <code class="language-plaintext highlighter-rouge">/greet</code> route. Each method then gets its own route and HTTP verb. To execute <code class="language-plaintext highlighter-rouge">SayHello</code>, one has to make a <code class="language-plaintext highlighter-rouge">POST</code> request to <code class="language-plaintext highlighter-rouge">/greet/say/hello</code>. The last element is the HTTP status code to be returned by default, in this case <code class="language-plaintext highlighter-rouge">200</code> which means success.</p>
 
-<p>You also need to define how message types can be serialized in the API. This will be translated to a <code class="highlighter-rouge">ReqBody</code> in the corresponding Servant API, which requires a list of acceptable content types for the request. We provide a <code class="highlighter-rouge">DefaultServantContentTypes</code> which uses JSON for both unary and streaming calls.</p>
+<p>You also need to define how message types can be serialized in the API. This will be translated to a <code class="language-plaintext highlighter-rouge">ReqBody</code> in the corresponding Servant API, which requires a list of acceptable content types for the request. We provide a <code class="language-plaintext highlighter-rouge">DefaultServantContentTypes</code> which uses JSON for both unary and streaming calls.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kr">instance</span>
   <span class="kt">AnnotatedSchema</span> <span class="kt">ServantContentTypes</span> <span class="kt">QuickstartSchema</span> <span class="o">=</span>
-    <span class="sc">'[</span><span class="err"> </span><span class="kt">'AnnType</span> <span class="s">"HelloRequest"</span>  <span class="kt">DefaultServantContentTypes</span><span class="p">,</span>
+    <span class="n">'</span><span class="p">[</span> <span class="kt">'AnnType</span> <span class="s">"HelloRequest"</span>  <span class="kt">DefaultServantContentTypes</span><span class="p">,</span>
        <span class="kt">'AnnType</span> <span class="s">"HelloResponse"</span> <span class="kt">DefaultServantContentTypes</span>
      <span class="p">]</span>
 </code></pre></div></div>
 
-<p>The <code class="highlighter-rouge">MimeRender</code>/<code class="highlighter-rouge">MimeUnrender</code> instances necessary to perform this encoding/decoding must exist for the Haskell type you use to represent messages. In this case, that means that both types must support conversion to JSON, which can be achieved using <code class="highlighter-rouge">mu-schema</code> in combination with <code class="highlighter-rouge">DerivingVia</code>.</p>
+<p>The <code class="language-plaintext highlighter-rouge">MimeRender</code>/<code class="language-plaintext highlighter-rouge">MimeUnrender</code> instances necessary to perform this encoding/decoding must exist for the Haskell type you use to represent messages. In this case, that means that both types must support conversion to JSON, which can be achieved using <code class="language-plaintext highlighter-rouge">mu-schema</code> in combination with <code class="language-plaintext highlighter-rouge">DerivingVia</code>.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language DerivingVia #-}</span>
 
@@ -495,12 +495,12 @@
 
 <p>If you forget to provide one of these required instances, you will see a message like the following:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    • Missing required AnnotatedPackage ServantRoute type instance
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    • Missing required AnnotatedPackage ServantRoute type instance
       for "myschema" package
     • When checking the inferred type
 </code></pre></div></div>
 
-<p>followed by a large and difficult to read type representing several stuck type families.  This message is an indication that you must provide an <code class="highlighter-rouge">AnnotatedPackage</code> type instance, with a domain of <code class="highlighter-rouge">ServantRoute</code> for the package with the name <code class="highlighter-rouge">myschema</code>.</p>
+<p>followed by a large and difficult to read type representing several stuck type families.  This message is an indication that you must provide an <code class="language-plaintext highlighter-rouge">AnnotatedPackage</code> type instance, with a domain of <code class="language-plaintext highlighter-rouge">ServantRoute</code> for the package with the name <code class="language-plaintext highlighter-rouge">myschema</code>.</p>
 
 <h2 id="exposing-the-server">Exposing the server</h2>
 
@@ -515,24 +515,24 @@
   <span class="kr">in</span> <span class="n">run</span> <span class="mi">8081</span> <span class="p">(</span><span class="n">serve</span> <span class="n">api</span> <span class="n">server</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>The last line uses functions from Servant and Warp to run the server. The <code class="highlighter-rouge">serve</code> function has two parameters:</p>
+<p>The last line uses functions from Servant and Warp to run the server. The <code class="language-plaintext highlighter-rouge">serve</code> function has two parameters:</p>
 <ul>
-  <li>One is the definition of the API, which can be obtained using the provided <code class="highlighter-rouge">packageAPI</code> with your server. In this case we had to make explicit the monad we are operating to avoid an ambiguity error.</li>
-  <li>The other is the set of Servant handlers, which can be obtained by using <code class="highlighter-rouge">servantServerHandlers toHandler</code>.</li>
+  <li>One is the definition of the API, which can be obtained using the provided <code class="language-plaintext highlighter-rouge">packageAPI</code> with your server. In this case we had to make explicit the monad we are operating to avoid an ambiguity error.</li>
+  <li>The other is the set of Servant handlers, which can be obtained by using <code class="language-plaintext highlighter-rouge">servantServerHandlers toHandler</code>.</li>
 </ul>
 
 <h2 id="integration-with-swagger-ui">Integration with Swagger UI</h2>
 
-<p>You can easily expose not only the server itself, but also its <a href="https://swagger.io/">Swagger / OpenAPI</a> schema easily, alongside a <a href="https://swagger.io/tools/swagger-ui/">Swagger UI</a> for testing purposes. Here we make use of the awesome <a href="https://github.com/haskell-servant/servant-swagger-ui"><code class="highlighter-rouge">servant-swagger-ui</code> package</a>.</p>
+<p>You can easily expose not only the server itself, but also its <a href="https://swagger.io/">Swagger / OpenAPI</a> schema easily, alongside a <a href="https://swagger.io/tools/swagger-ui/">Swagger UI</a> for testing purposes. Here we make use of the awesome <a href="https://github.com/haskell-servant/servant-swagger-ui"><code class="language-plaintext highlighter-rouge">servant-swagger-ui</code> package</a>.</p>
 
 <p>First of all, you need to specify that you want an additional component in your Servant API. You do so in the annotation:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kr">instance</span> <span class="kt">AnnotatedPackage</span> <span class="kt">ServantRoute</span> <span class="kt">QuickstartService</span>
-  <span class="o">=</span> <span class="sc">'[</span><span class="err"> </span><span class="kt">'AnnPackage</span> <span class="p">(</span><span class="kt">'ServantAdditional</span> <span class="p">(</span><span class="kt">SwaggerSchemaUI</span> <span class="s">"swagger-ui"</span> <span class="s">"swagger.json"</span><span class="p">))</span>
+  <span class="o">=</span> <span class="n">'</span><span class="p">[</span> <span class="kt">'AnnPackage</span> <span class="p">(</span><span class="kt">'ServantAdditional</span> <span class="p">(</span><span class="kt">SwaggerSchemaUI</span> <span class="s">"swagger-ui"</span> <span class="s">"swagger.json"</span><span class="p">))</span>
      <span class="p">,</span> <span class="cm">{- rest of annotations -}</span> <span class="p">]</span>
 </code></pre></div></div>
 
-<p>The implementation of this additional component is given by using <code class="highlighter-rouge">servantServerHandlersExtra</code>, instead of its “non-extra” version. The aforementioned package is ready for consumption in that way:</p>
+<p>The implementation of this additional component is given by using <code class="language-plaintext highlighter-rouge">servantServerHandlersExtra</code>, instead of its “non-extra” version. The aforementioned package is ready for consumption in that way:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Mu.Servant.Server</span>
 <span class="kr">import</span> <span class="nn">Servant.Server</span>
@@ -547,15 +547,15 @@
   <span class="kr">in</span> <span class="n">run</span> <span class="mi">8081</span> <span class="p">(</span><span class="n">serve</span> <span class="n">api</span> <span class="n">server</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>And that’s all! When you users surf to <code class="highlighter-rouge">yourserver/swagger-ui</code> they’ll see a color- and featureful explanation of the endpoints of your server.</p>
+<p>And that’s all! When you users surf to <code class="language-plaintext highlighter-rouge">yourserver/swagger-ui</code> they’ll see a color- and featureful explanation of the endpoints of your server.</p>
 
 <h2 id="type-translation">Type translation</h2>
 
 <blockquote>
-  <p>This is not required for using <code class="highlighter-rouge">mu-servant-server</code>, but may help you understanding how it works under the hood and diagnosing problems.</p>
+  <p>This is not required for using <code class="language-plaintext highlighter-rouge">mu-servant-server</code>, but may help you understanding how it works under the hood and diagnosing problems.</p>
 </blockquote>
 
-<p>There are essentially four categories of <code class="highlighter-rouge">Method</code> types and each of these is translated slightly differently.</p>
+<p>There are essentially four categories of <code class="language-plaintext highlighter-rouge">Method</code> types and each of these is translated slightly differently.</p>
 
 <h3 id="full-unary">Full unary</h3>
 
@@ -572,7 +572,7 @@
       <span class="kt">Verb</span> <span class="n">method</span> <span class="n">status</span> <span class="n">ctypes2</span> <span class="n">responseType</span>
 </code></pre></div></div>
 
-<p>As you can see, the request body contains a <code class="highlighter-rouge">requestType</code> value, and the response body contains a <code class="highlighter-rouge">responseType</code> value. All other types are derived from Mu annotations.</p>
+<p>As you can see, the request body contains a <code class="language-plaintext highlighter-rouge">requestType</code> value, and the response body contains a <code class="language-plaintext highlighter-rouge">responseType</code> value. All other types are derived from Mu annotations.</p>
 
 <h3 id="server-streaming">Server streaming</h3>
 
@@ -589,7 +589,7 @@
       <span class="kt">Stream</span> <span class="n">method</span> <span class="n">status</span> <span class="n">framing</span> <span class="n">ctype</span> <span class="p">(</span><span class="kt">SourceIO</span> <span class="p">(</span><span class="kt">StreamResult</span> <span class="n">responseType</span><span class="p">))</span>
 </code></pre></div></div>
 
-<p>The request body contains a <code class="highlighter-rouge">requestType</code> value. The response body is a stream of <code class="highlighter-rouge">StreamResult</code> responseType@ values. <code class="highlighter-rouge">StreamResult responseType</code> contains either a <code class="highlighter-rouge">responseType</code> value or an error message describing a problem that occurred while producing <code class="highlighter-rouge">responseType</code> values. All other types are derived from Mu annotations.</p>
+<p>The request body contains a <code class="language-plaintext highlighter-rouge">requestType</code> value. The response body is a stream of <code class="language-plaintext highlighter-rouge">StreamResult</code> responseType@ values. <code class="language-plaintext highlighter-rouge">StreamResult responseType</code> contains either a <code class="language-plaintext highlighter-rouge">responseType</code> value or an error message describing a problem that occurred while producing <code class="language-plaintext highlighter-rouge">responseType</code> values. All other types are derived from Mu annotations.</p>
 
 <h3 id="client-streaming">Client streaming</h3>
 
@@ -620,7 +620,7 @@
     <span class="kt">Stream</span> <span class="n">method</span> <span class="n">status</span> <span class="n">framing2</span> <span class="n">ctype2</span> <span class="p">(</span><span class="kt">SourceIO</span> <span class="p">(</span><span class="kt">StreamResult</span> <span class="n">responseType</span><span class="p">))</span>
 </code></pre></div></div>
 
-<p>This type should look familiar if you already looked at the server streaming and client streaming examples. The request body is a stream of <code class="highlighter-rouge">requestType</code> values, and the response body is a stream of <code class="highlighter-rouge">StreamResult responseType</code> values. All the other types involved are derived from Mu annotations.</p>
+<p>This type should look familiar if you already looked at the server streaming and client streaming examples. The request body is a stream of <code class="language-plaintext highlighter-rouge">requestType</code> values, and the response body is a stream of <code class="language-plaintext highlighter-rouge">StreamResult responseType</code> values. All the other types involved are derived from Mu annotations.</p>
 
 
     </div>

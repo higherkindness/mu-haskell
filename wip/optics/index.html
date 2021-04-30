@@ -450,11 +450,11 @@
     <div class="doc-content">
         <h1 id="optics">Optics</h1>
 
-<p>We created a new package <code class="highlighter-rouge">mu-optics</code> is available from <strong>release v0.3 of Mu-Haskell</strong>, and provides an easier API to build both servers and clients using lenses and prisms (probably the ultimate API 😉). This document aims to be a reference of how to use this library and the common use cases for it.</p>
+<p>We created a new package <code class="language-plaintext highlighter-rouge">mu-optics</code> is available from <strong>release v0.3 of Mu-Haskell</strong>, and provides an easier API to build both servers and clients using lenses and prisms (probably the ultimate API 😉). This document aims to be a reference of how to use this library and the common use cases for it.</p>
 
-<h2 id="accessing-fields-with-field">Accessing fields with <code class="highlighter-rouge">#field</code></h2>
+<h2 id="accessing-fields-with-field">Accessing fields with <code class="language-plaintext highlighter-rouge">#field</code></h2>
 
-<p>When you want to refer to a method of your type-level schema, whereas in the server or the client, you can use the get operation from the lens (<code class="highlighter-rouge">^.</code>) in conjunction with the <code class="highlighter-rouge">OverloadedLabels</code> extension to access that field, as in this example. In this case, the label <code class="highlighter-rouge">#name</code> should have the same name as the field declared in the corresponding schema definition file.</p>
+<p>When you want to refer to a method of your type-level schema, whereas in the server or the client, you can use the get operation from the lens (<code class="language-plaintext highlighter-rouge">^.</code>) in conjunction with the <code class="language-plaintext highlighter-rouge">OverloadedLabels</code> extension to access that field, as in this example. In this case, the label <code class="language-plaintext highlighter-rouge">#name</code> should have the same name as the field declared in the corresponding schema definition file.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language OverloadedLabels #-}</span>
 
@@ -462,9 +462,9 @@
 <span class="n">sayHello</span> <span class="p">(</span><span class="kt">HelloRequestMessage</span> <span class="n">nm</span><span class="p">)</span> <span class="o">=</span> <span class="n">pure</span> <span class="o">$</span> <span class="n">record</span> <span class="p">(</span><span class="s">"hi, "</span> <span class="o">&lt;&gt;</span> <span class="n">nm</span> <span class="o">^.</span> <span class="o">#</span><span class="n">name</span><span class="p">)</span>
 </code></pre></div></div>
 
-<h2 id="generate-records-with-record-and-record1">Generate records with <code class="highlighter-rouge">record</code> and <code class="highlighter-rouge">record1</code></h2>
+<h2 id="generate-records-with-record-and-record1">Generate records with <code class="language-plaintext highlighter-rouge">record</code> and <code class="language-plaintext highlighter-rouge">record1</code></h2>
 
-<p>Sometimes you need to create values that match the generated type-level schema representations, for example, to construct the request of a certain service. Usually, those types will be records, and to help you achieve that task we provided the helpers <code class="highlighter-rouge">record</code> and <code class="highlighter-rouge">record1</code>:</p>
+<p>Sometimes you need to create values that match the generated type-level schema representations, for example, to construct the request of a certain service. Usually, those types will be records, and to help you achieve that task we provided the helpers <code class="language-plaintext highlighter-rouge">record</code> and <code class="language-plaintext highlighter-rouge">record1</code>:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">get</span> <span class="o">::</span> <span class="kt">GRpcConnection</span> <span class="kt">PersistentService</span> <span class="kt">'MsgProtoBuf</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">get</span> <span class="n">client</span> <span class="n">idPerson</span> <span class="o">=</span> <span class="kr">do</span>
@@ -474,7 +474,7 @@
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"GET: response was: "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">response</span>
 </code></pre></div></div>
 
-<p>Why the difference? Well, due to some ambiguity in the context of our Schemas, we need to help GHC to know if the record we’re creating contains only one field (<code class="highlighter-rouge">record1</code>) or more (<code class="highlighter-rouge">record</code>) contained in a tuple of elements.</p>
+<p>Why the difference? Well, due to some ambiguity in the context of our Schemas, we need to help GHC to know if the record we’re creating contains only one field (<code class="language-plaintext highlighter-rouge">record1</code>) or more (<code class="language-plaintext highlighter-rouge">record</code>) contained in a tuple of elements.</p>
 
 <blockquote>
   <p>This design might be improved in the future, by using “<a href="https://hackage.haskell.org/package/OneTuple-0.2.2.1/docs/Data-Tuple-OneTuple.html">OneTuple</a> to rule them all.”</p>
@@ -488,7 +488,7 @@
   <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"ADD: was creating successful? "</span> <span class="o">++</span> <span class="n">show</span> <span class="n">response</span>
 </code></pre></div></div>
 
-<h2 id="generating-enums-with-enum">Generating enums with <code class="highlighter-rouge">enum</code></h2>
+<h2 id="generating-enums-with-enum">Generating enums with <code class="language-plaintext highlighter-rouge">enum</code></h2>
 
 <p>Sometimes, besides using records, you’ll have your types defined as something like enums, as in this protobuf example:</p>
 
@@ -499,7 +499,7 @@
 <span class="p">}</span>
 </code></pre></div></div>
 
-<p>As expected, we also provided you with the tools you need to construct a valid enum-like value with the helper <code class="highlighter-rouge">enum</code>:</p>
+<p>As expected, we also provided you with the tools you need to construct a valid enum-like value with the helper <code class="language-plaintext highlighter-rouge">enum</code>:</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TypeApplications #-}</span>
 
@@ -512,7 +512,7 @@
 <span class="n">sunnyDays</span> <span class="n">n</span> <span class="o">=</span> <span class="n">replicate</span> <span class="n">n</span> <span class="p">(</span><span class="n">enum</span> <span class="o">@</span><span class="s">"sunny"</span><span class="p">)</span> <span class="c1">-- &lt;- see the magic here! ✨</span>
 </code></pre></div></div>
 
-<p>Simply enable <code class="highlighter-rouge">TypeApplications</code> and provide the value you are looking for to construct the enum! 🚀</p>
+<p>Simply enable <code class="language-plaintext highlighter-rouge">TypeApplications</code> and provide the value you are looking for to construct the enum! 🚀</p>
 
 <h2 id="accesing-enums-with-prisms">Accesing enums with prisms!</h2>
 
@@ -527,14 +527,14 @@
   <span class="o">|</span> <span class="n">e</span> <span class="p">`</span><span class="n">is</span><span class="p">`</span> <span class="o">#</span><span class="n">rainy</span>  <span class="o">=</span> <span class="n">putStrLn</span> <span class="s">"is rainy... 😭"</span>
 </code></pre></div></div>
 
-<p>Again, notice the use of <code class="highlighter-rouge">OverloadedLabels</code> to refer to the possible enum values and our special <code class="highlighter-rouge">is</code> prism helper, which is just <code class="highlighter-rouge">is s k = isJust (preview k s)</code>, got it? isJust… badum tss! 🥁</p>
+<p>Again, notice the use of <code class="language-plaintext highlighter-rouge">OverloadedLabels</code> to refer to the possible enum values and our special <code class="language-plaintext highlighter-rouge">is</code> prism helper, which is just <code class="language-plaintext highlighter-rouge">is s k = isJust (preview k s)</code>, got it? isJust… badum tss! 🥁</p>
 
 <h2 id="accessing-unions">Accessing unions</h2>
 
-<p>Besides this, you have <code class="highlighter-rouge">_U0</code>, <code class="highlighter-rouge">_U1</code>, … and <code class="highlighter-rouge">_Next</code>, with the goal of giving prisms for the different possibilities of a union. So, lets say you have a field that is an union of <code class="highlighter-rouge">String</code> and <code class="highlighter-rouge">Int</code>, you can get prisms using <code class="highlighter-rouge">#field % _U0</code> and <code class="highlighter-rouge">#field % _U1</code>.</p>
+<p>Besides this, you have <code class="language-plaintext highlighter-rouge">_U0</code>, <code class="language-plaintext highlighter-rouge">_U1</code>, … and <code class="language-plaintext highlighter-rouge">_Next</code>, with the goal of giving prisms for the different possibilities of a union. So, lets say you have a field that is an union of <code class="language-plaintext highlighter-rouge">String</code> and <code class="language-plaintext highlighter-rouge">Int</code>, you can get prisms using <code class="language-plaintext highlighter-rouge">#field % _U0</code> and <code class="language-plaintext highlighter-rouge">#field % _U1</code>.</p>
 
 <blockquote>
-  <p>We know the naming of these might be terrible, but they follow the usual convention for this kind of stuff: <code class="highlighter-rouge">_</code> for a prism, <code class="highlighter-rouge">U</code> from “Union” and then the index.</p>
+  <p>We know the naming of these might be terrible, but they follow the usual convention for this kind of stuff: <code class="language-plaintext highlighter-rouge">_</code> for a prism, <code class="language-plaintext highlighter-rouge">U</code> from “Union” and then the index.</p>
 </blockquote>
 
     </div>

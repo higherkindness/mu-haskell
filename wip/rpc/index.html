@@ -450,13 +450,13 @@
     <div class="doc-content">
         <h1 id="rpc-services">RPC services</h1>
 
-<p>There are several formats in the wild used to declare service APIs, including <a href="https://avro.apache.org/docs/current/idl.html">Avro IDL</a>, <a href="https://grpc.io/">gRPC</a>, and <a href="https://swagger.io/specification/">OpenAPI</a>. <code class="highlighter-rouge">mu-rpc</code> abstract the commonalities into a single type-level format for declaring these services, building on the format-independent schema facilities of <code class="highlighter-rouge">mu-schema</code>. In addition, this package provides a generic notion of <em>server</em> of a service. One such server defines one behavior for each method in the service, but does not bother with (de)serialization mechanisms.</p>
+<p>There are several formats in the wild used to declare service APIs, including <a href="https://avro.apache.org/docs/current/idl.html">Avro IDL</a>, <a href="https://grpc.io/">gRPC</a>, and <a href="https://swagger.io/specification/">OpenAPI</a>. <code class="language-plaintext highlighter-rouge">mu-rpc</code> abstract the commonalities into a single type-level format for declaring these services, building on the format-independent schema facilities of <code class="language-plaintext highlighter-rouge">mu-schema</code>. In addition, this package provides a generic notion of <em>server</em> of a service. One such server defines one behavior for each method in the service, but does not bother with (de)serialization mechanisms.</p>
 
 <h2 id="importing-the-schema-and-the-service">Importing the schema and the service</h2>
 
 <p>Let us begin with an example taken from the <a href="https://grpc.io/docs/quickstart/">gRPC Quickstart Guide</a>:</p>
 
-<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="n">helloworld</span><span class="o">;</span>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">helloworld</span><span class="o">;</span>
 
 <span class="n">service</span> <span class="nc">Greeter</span> <span class="o">{</span>
   <span class="n">rpc</span> <span class="nf">SayHello</span> <span class="o">(</span><span class="nc">HelloRequest</span><span class="o">)</span> <span class="n">returns</span> <span class="o">(</span><span class="nc">HelloReply</span><span class="o">)</span> <span class="o">{}</span>
@@ -466,7 +466,7 @@
 <span class="n">message</span> <span class="nc">HelloReply</span> <span class="o">{</span> <span class="n">string</span> <span class="n">message</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span> <span class="o">}</span>
 </code></pre></div></div>
 
-<p>As with our sibling <code class="highlighter-rouge">mu-schema</code> library, we use type-level techniques to represent the messages and services. Since the mapping from such a Protocol Buffers file into the require types is quite direct, you can just import them using one line (in addition to enabling the <code class="highlighter-rouge">TemplateHaskell</code> extension):</p>
+<p>As with our sibling <code class="language-plaintext highlighter-rouge">mu-schema</code> library, we use type-level techniques to represent the messages and services. Since the mapping from such a Protocol Buffers file into the require types is quite direct, you can just import them using one line (in addition to enabling the <code class="language-plaintext highlighter-rouge">TemplateHaskell</code> extension):</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TemplateHaskell #-}</span>
 
@@ -475,11 +475,11 @@
 <span class="n">grpc</span> <span class="s">"QuickstartSchema"</span> <span class="p">(</span><span class="n">const</span> <span class="s">"QuickstartService"</span><span class="p">)</span> <span class="s">"quickstart.proto"</span>
 </code></pre></div></div>
 
-<p>The <code class="highlighter-rouge">grpc</code> function takes three arguments:</p>
+<p>The <code class="language-plaintext highlighter-rouge">grpc</code> function takes three arguments:</p>
 
 <ul>
   <li>The first one defines the name of the schema type which is going to be generated, and which includes the declaration of all the messages in the file.</li>
-  <li>The second one declares how to map the name of <em>each</em> service in the file (since more than one may appear) to the name of a Haskell type. In this case, we declare a constant name “QuickstartService”. But we could also use <code class="highlighter-rouge">(++ "Service")</code>, which would then give <code class="highlighter-rouge">GreeterService</code> as name for the only service in the file.</li>
+  <li>The second one declares how to map the name of <em>each</em> service in the file (since more than one may appear) to the name of a Haskell type. In this case, we declare a constant name “QuickstartService”. But we could also use <code class="language-plaintext highlighter-rouge">(++ "Service")</code>, which would then give <code class="language-plaintext highlighter-rouge">GreeterService</code> as name for the only service in the file.</li>
   <li>The third argument is the route to the file <em>with respect to the project root</em>.</li>
 </ul>
 
@@ -487,7 +487,7 @@
 
 <h3 id="looking-at-the-resulting-code">Looking at the resulting code</h3>
 
-<p>In order to use the library proficiently, we should look a bit at the code generated in the previous sample. A type-level description of the messages is put into the type <code class="highlighter-rouge">QuickstartSchema</code>. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using <code class="highlighter-rouge">mu-schema</code> facilities, this amounts to declaring a bunch of data types and including <code class="highlighter-rouge">deriving (Generic, ToSchema &lt;SchemaName&gt; "&lt;MessageType&gt;", FromSchema &lt;SchemaName&gt; "&lt;MessageType&gt;")</code> at the end of each of them.</p>
+<p>In order to use the library proficiently, we should look a bit at the code generated in the previous sample. A type-level description of the messages is put into the type <code class="language-plaintext highlighter-rouge">QuickstartSchema</code>. However, there is some code you still have to write by hand, namely the Haskell type which correspond to that schema. Using <code class="language-plaintext highlighter-rouge">mu-schema</code> facilities, this amounts to declaring a bunch of data types and including <code class="language-plaintext highlighter-rouge">deriving (Generic, ToSchema &lt;SchemaName&gt; "&lt;MessageType&gt;", FromSchema &lt;SchemaName&gt; "&lt;MessageType&gt;")</code> at the end of each of them.</p>
 
 <div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language PolyKinds, DataKinds, TypeFamilies #-}</span>
 <span class="cp">{-# language MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances #-}</span>
@@ -501,11 +501,11 @@
 
 <span class="c1">-- GENERATED</span>
 <span class="kr">type</span> <span class="kt">QuickstartSchema</span>
-  <span class="o">=</span> <span class="sc">'[</span><span class="err"> </span><span class="kt">'DRecord</span> <span class="s">"HelloRequest"</span>  <span class="sc">'[</span><span class="err"> </span><span class="kt">'FieldDef</span> <span class="s">"name"</span>    <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span><span class="p">)</span> <span class="p">]</span>
-     <span class="p">,</span> <span class="kt">'DRecord</span> <span class="s">"HelloResponse"</span> <span class="sc">'[</span><span class="err"> </span><span class="kt">'FieldDef</span> <span class="s">"message"</span> <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span><span class="p">)</span> <span class="p">]</span> <span class="p">]</span>
+  <span class="o">=</span> <span class="n">'</span><span class="p">[</span> <span class="kt">'DRecord</span> <span class="s">"HelloRequest"</span>  <span class="n">'</span><span class="p">[</span> <span class="kt">'FieldDef</span> <span class="s">"name"</span>    <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span><span class="p">)</span> <span class="p">]</span>
+     <span class="p">,</span> <span class="kt">'DRecord</span> <span class="s">"HelloResponse"</span> <span class="n">'</span><span class="p">[</span> <span class="kt">'FieldDef</span> <span class="s">"message"</span> <span class="p">(</span><span class="kt">'TPrimitive</span> <span class="kt">T</span><span class="o">.</span><span class="kt">Text</span><span class="p">)</span> <span class="p">]</span> <span class="p">]</span>
 
 <span class="kr">type</span> <span class="kr">instance</span> <span class="kt">AnnotatedSchema</span> <span class="kt">ProtoBufAnnotation</span> <span class="kt">QuickstartSchema</span>
-  <span class="o">=</span> <span class="sc">'[</span><span class="err"> </span><span class="kt">'AnnField</span> <span class="s">"HelloRequest"</span>  <span class="s">"name"</span>    <span class="p">(</span><span class="kt">'ProtoBufId</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="o">=</span> <span class="n">'</span><span class="p">[</span> <span class="kt">'AnnField</span> <span class="s">"HelloRequest"</span>  <span class="s">"name"</span>    <span class="p">(</span><span class="kt">'ProtoBufId</span> <span class="mi">1</span><span class="p">)</span>
      <span class="p">,</span> <span class="kt">'AnnField</span> <span class="s">"HelloResponse"</span> <span class="s">"message"</span> <span class="p">(</span><span class="kt">'ProtoBufId</span> <span class="mi">1</span><span class="p">)</span> <span class="p">]</span>
 
 <span class="c1">-- TO BE WRITTEN</span>
@@ -528,17 +528,17 @@
 <span class="c1">-- GENERATED</span>
 <span class="kr">type</span> <span class="kt">QuickstartService</span>
   <span class="o">=</span> <span class="kt">'Service</span> <span class="s">"Greeter"</span>
-      <span class="sc">'[</span><span class="err"> </span><span class="kt">'Method</span> <span class="s">"SayHello"</span> <span class="sc">'[</span><span class="err">]</span>
-        <span class="sc">'[</span><span class="err"> </span><span class="kt">'ArgSingle</span> <span class="kt">'Nothing</span> <span class="sc">'[</span><span class="err">]</span> <span class="p">(</span><span class="kt">'FromSchema</span> <span class="kt">QuickstartSchema</span> <span class="s">"HelloRequest"</span><span class="p">)</span> <span class="p">]</span>
+      <span class="n">'</span><span class="p">[</span> <span class="kt">'Method</span> <span class="s">"SayHello"</span> <span class="n">'</span><span class="kt">[]</span>
+        <span class="n">'</span><span class="p">[</span> <span class="kt">'ArgSingle</span> <span class="kt">'Nothing</span> <span class="n">'</span><span class="kt">[]</span> <span class="p">(</span><span class="kt">'FromSchema</span> <span class="kt">QuickstartSchema</span> <span class="s">"HelloRequest"</span><span class="p">)</span> <span class="p">]</span>
         <span class="p">(</span><span class="kt">'RetSingle</span> <span class="p">(</span><span class="kt">'FromSchema</span> <span class="kt">QuickstartSchema</span> <span class="s">"HelloResponse"</span><span class="p">))</span> <span class="p">]</span>
 </code></pre></div></div>
 
 <p>In order to support both <a href="https://avro.apache.org/docs/current/idl.html">Avro IDL</a> and <a href="https://grpc.io/">gRPC</a>, the declaration of the method arguments and return types is a bit fancier than you might expect:</p>
 
 <ul>
-  <li>Each <em>argument</em> declares the schema type used for serialization. Furthermore, the argument can be declared as <code class="highlighter-rouge">ArgSingle</code> (only one value is provided by the client) or <code class="highlighter-rouge">ArgStream</code> (a stream of values is provided).</li>
-  <li>gRPC defines no names for arguments, hence the use of <code class="highlighter-rouge">Nothing</code> in <code class="highlighter-rouge">ArgSingle</code>. Other service APIs, like GraphQL, have names on that possitions.</li>
-  <li>The <em>return types</em> gives the same two choices under the names <code class="highlighter-rouge">RetSingle</code> or <code class="highlighter-rouge">RetStream</code>, and additionally supports the declaration of methods which may raise exceptions using <code class="highlighter-rouge">RetThrows</code>, or methods which do not retun any useful information using <code class="highlighter-rouge">RetNothing</code>.</li>
+  <li>Each <em>argument</em> declares the schema type used for serialization. Furthermore, the argument can be declared as <code class="language-plaintext highlighter-rouge">ArgSingle</code> (only one value is provided by the client) or <code class="language-plaintext highlighter-rouge">ArgStream</code> (a stream of values is provided).</li>
+  <li>gRPC defines no names for arguments, hence the use of <code class="language-plaintext highlighter-rouge">Nothing</code> in <code class="language-plaintext highlighter-rouge">ArgSingle</code>. Other service APIs, like GraphQL, have names on that possitions.</li>
+  <li>The <em>return types</em> gives the same two choices under the names <code class="language-plaintext highlighter-rouge">RetSingle</code> or <code class="language-plaintext highlighter-rouge">RetStream</code>, and additionally supports the declaration of methods which may raise exceptions using <code class="language-plaintext highlighter-rouge">RetThrows</code>, or methods which do not retun any useful information using <code class="language-plaintext highlighter-rouge">RetNothing</code>.</li>
 </ul>
 
 <p>Note that depending on the concrete implementation you use to run the server, one or more of these choices may not be available. For example, gRPC only supports one argument and return value, either single or streaming, but not exceptions.</p>
