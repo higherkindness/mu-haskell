@@ -611,7 +611,5 @@ instance ( ProtoBridgeOneFieldValue sch t, KnownNat thisId
   protoToUnionFieldValue
     = Z <$> p <|> S <$> protoToUnionFieldValue @_ @_ @restIds
     where fieldId = fromInteger $ natVal (Proxy @thisId)
-          p = case defaultOneFieldValue of
-            Nothing -> do r <- one (Just <$> protoToOneFieldValue) Nothing `at` fieldId
-                          maybe empty pure r
-            Just d  -> one protoToOneFieldValue d `at` fieldId <|> pure d
+          p = do r <- one (Just <$> protoToOneFieldValue) Nothing `at` fieldId
+                 maybe empty pure r
