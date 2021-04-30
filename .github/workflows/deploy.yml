@@ -31,14 +31,12 @@ jobs:
       run: stack --resolver lts-14.27 install standalone-haddock
     - name: Get rdkafka
       run: sudo apt-get install librdkafka-dev
-    - name: Get Bundle & Jekyll
-      run: |
-        sudo apt-get update
-        sudo apt-get install ruby-dev
-        sudo gem install bundler --force
-        sudo gem update --system 3.0.8
-        sudo bundle update --bundler
-        sudo bundle install --gemfile docs/Gemfile --path vendor/bundle
+    - name: Get Ruby and Bundler
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler: 2.0.1
+    - name: Get Jekyll
+      run: bundle install --gemfile docs/Gemfile --path vendor/bundle
     - name: Build microsite from last release
       run: |
         LAST_TAG=$(git describe --abbrev=0 --tags)
