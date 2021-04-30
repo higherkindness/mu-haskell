@@ -38,6 +38,9 @@ jobs:
       run: |
         bundle config set path 'vendor/bundle'
         bundle install --gemfile docs/Gemfile
+    - name: Build microsite without Haddock
+      run: |
+        BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs
     - name: Get Standalone Haddock
       run: stack --resolver lts-14.27 install standalone-haddock
     - name: Build microsite from last release
