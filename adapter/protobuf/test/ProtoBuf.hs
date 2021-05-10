@@ -55,10 +55,17 @@ data MPerson
   deriving (FromSchema ExampleSchema "person")
 
 newtype MFoo
-  = MFoo { fooChoice :: Either Int32 T.Text }
+  = MFoo { fooChoice :: MFooChoice }
   deriving (Eq, Show, Generic)
   deriving (ToSchema ExampleSchema "Foo")
   deriving (FromSchema ExampleSchema "Foo")
+
+data MFooChoice
+  = FooInt Int32
+  | FooString T.Text
+  | FooOtherInt Int32
+  | FooYetAnotherInt Int32
+  deriving (Eq, Show, Generic)
 
 data MAddress
   = MAddress { postcode :: T.Text
@@ -75,11 +82,11 @@ examplePerson1 = MPerson "Pythonio" "van Gogh"
                          30 Male
                          exampleAddress [1,2,3]
                          (M.fromList [("hola", 1), ("hello", 2), ("hallo", 3)])
-                         (Just $ MFoo $ Right "blah")
+                         (Just $ MFoo $ FooString "blah")
 examplePerson2 = MPerson "Cuarenta" "Siete"
                          0 NB
                          exampleAddress [] M.empty
-                         (Just $ MFoo $ Left 3)
+                         (Just $ MFoo $ FooInt 3)
 
 main :: IO ()
 main = do -- Obtain the filenames
