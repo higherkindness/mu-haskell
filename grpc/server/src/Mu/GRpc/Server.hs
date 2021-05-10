@@ -29,7 +29,7 @@ module Mu.GRpc.Server
 , runGRpcAppTLS, TLSSettings
   -- * Convert a 'Server' into a WAI application
 , gRpcApp, gRpcAppTrans
-, gRpcMultipleApp, gRpcMultipleAppTrans
+, WrappedServer(..), gRpcMultipleApp, gRpcMultipleAppTrans
   -- * Raise errors as exceptions in IO
 , raiseErrors, liftServerConduit
   -- * Re-export useful instances
@@ -154,9 +154,8 @@ gRpcAppTrans protocol f svr
 --   for example, @wai-routes@, or you can add middleware
 --   from @wai-extra@, among others.
 gRpcMultipleApp
-  :: ( ToMultipleServers protocol ServerErrorIO srvs )
-  => Proxy protocol
-  -> srvs
+  :: Proxy protocol
+  -> [WrappedServer protocol ServerErrorIO]
   -> Application
 gRpcMultipleApp protocol = gRpcMultipleAppTrans protocol id
 
@@ -166,14 +165,13 @@ gRpcMultipleApp protocol = gRpcMultipleAppTrans protocol id
 --   for example, @wai-routes@, or you can add middleware
 --   from @wai-extra@, among others.
 gRpcMultipleAppTrans
-  :: ( ToMultipleServers protocol m srvs )
-  => Proxy protocol
+  :: Proxy protocol
   -> (forall a. m a -> ServerErrorIO a)
-  -> srvs
+  -> [WrappedServer protocol m]
   -> Application
 gRpcMultipleAppTrans protocol f svr
   = Wai.grpcApp [uncompressed, gzip]
-                (gRpcMultipleServerHandlers protocol f $ toMultipleServers svr)
+                (concatMap (gRpcServerHandlersS protocol f) svr)
 
 gRpcServerHandlers
   :: forall name services handlers m protocol chn.
@@ -188,75 +186,20 @@ gRpcServerHandlers pr f (Services svr)
   = gRpcServiceHandlers f (Proxy @('Package ('Just name) services)) pr packageName svr
   where packageName = BS.pack (nameVal (Proxy @name))
 
-gRpcMultipleServerHandlers
+data WrappedServer protocol m where
+  Srv :: ( KnownName name
+         , GRpcServiceHandlers ('Package ('Just name) services)
+                             protocol m chn services handlers )
+      => ServerT chn () ('Package ('Just name) services) m handlers
+      -> WrappedServer protocol m
+
+gRpcServerHandlersS
   :: Proxy protocol
   -> (forall a. m a -> ServerErrorIO a)
-  -> MultipleServers protocol m
+  -> WrappedServer protocol m
   -> [ServiceHandler]
-gRpcMultipleServerHandlers pr f = go
-  where go MSEnd            = []
-        go (MSOneMore x xs) = gRpcServerHandlers pr f x <> go xs
-
-data MultipleServers protocol m where
-  MSEnd :: MultipleServers protocol m
-  MSOneMore
-    :: ( KnownName name
-       , GRpcServiceHandlers ('Package ('Just name) services)
-                             protocol m chn services handlers )
-    => ServerT chn () ('Package ('Just name) services) m handlers
-    -> MultipleServers protocol m
-    -> MultipleServers protocol m
-
-class ToMultipleServers protocol m srvs where
-  toMultipleServers :: srvs -> MultipleServers protocol m
-
-instance ToMultipleServers protocol m (MultipleServers protocol m) where
-  toMultipleServers = id
-
-instance ( KnownName name1
-         , GRpcServiceHandlers ('Package ('Just name1) services1)
-                               protocol m chn1 services1 handlers1
-         , KnownName name2
-         , GRpcServiceHandlers ('Package ('Just name2) services2)
-                               protocol m chn2 services2 handlers2 )
-  => ToMultipleServers protocol m
-        ( ServerT chn1 () ('Package ('Just name1) services1) m handlers1
-        , ServerT chn2 () ('Package ('Just name2) services2) m handlers2 ) where
-  toMultipleServers (x, y) = MSOneMore x (MSOneMore y MSEnd)
-
-instance ( KnownName name1
-         , GRpcServiceHandlers ('Package ('Just name1) services1)
-                               protocol m chn1 services1 handlers1
-         , KnownName name2
-         , GRpcServiceHandlers ('Package ('Just name2) services2)
-                               protocol m chn2 services2 handlers2
-         , KnownName name3
-         , GRpcServiceHandlers ('Package ('Just name3) services3)
-                               protocol m chn3 services3 handlers3 )
-  => ToMultipleServers protocol m
-        ( ServerT chn1 () ('Package ('Just name1) services1) m handlers1
-        , ServerT chn2 () ('Package ('Just name2) services2) m handlers2
-        , ServerT chn3 () ('Package ('Just name3) services3) m handlers3 ) where
-  toMultipleServers (x, y, z) = MSOneMore x (MSOneMore y (MSOneMore z MSEnd))
-
-instance ( KnownName name1
-         , GRpcServiceHandlers ('Package ('Just name1) services1)
-                               protocol m chn1 services1 handlers1
-         , KnownName name2
-         , GRpcServiceHandlers ('Package ('Just name2) services2)
-                               protocol m chn2 services2 handlers2
-         , KnownName name3
-         , GRpcServiceHandlers ('Package ('Just name3) services3)
-                               protocol m chn3 services3 handlers3
-         , KnownName name4
-         , GRpcServiceHandlers ('Package ('Just name4) services4)
-                               protocol m chn4 services4 handlers4 )
-  => ToMultipleServers protocol m
-        ( ServerT chn1 () ('Package ('Just name1) services1) m handlers1
-        , ServerT chn2 () ('Package ('Just name2) services2) m handlers2
-        , ServerT chn3 () ('Package ('Just name3) services3) m handlers3
-        , ServerT chn4 () ('Package ('Just name4) services4) m handlers4 ) where
-  toMultipleServers (x, y, z, w) = MSOneMore x (MSOneMore y (MSOneMore z (MSOneMore w MSEnd)))
+gRpcServerHandlersS pr f (Srv svr)
+  = gRpcServerHandlers pr f svr
 
 class GRpcServiceHandlers (fullP :: Package snm mnm anm (TypeRef snm))
                           (p :: GRpcMessageProtocol) (m :: Type -> Type)
