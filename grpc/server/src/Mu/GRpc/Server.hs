@@ -492,29 +492,34 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
                    -> m ( (), IncomingStream m (GRpcIWTy p vref v) ()
                         , (), OutgoingStream m (GRpcOWTy p rref r) () )
           bdstream req = do
-            -- Create a new TMChan and a new variable
-            chan <- liftIO newTMChanIO :: m (TMChan v)
-            let producer = sourceTMChan @m chan
-            var <- liftIO newEmptyTMVarIO :: m (TMVar (Maybe r))
+            -- Create a new TMChan for consuming the client stream, it will be
+            -- the producer for the conduit.
+            clientChan <- liftIO newTMChanIO :: m (TMChan v)
+            let producer = sourceTMChan @m clientChan
+
+            -- Create a new TMChan for producing the server stream, it will be
+            -- the consumer for the conduit.
+            serverChan <- liftIO newTMChanIO :: m (TMChan r)
+            let consumer = sinkTMChan @m serverChan
+
             -- Start executing the handler
-            promise <- liftIO $ async
-              (raiseErrors $ f $ h req producer (toTMVarConduit var))
+            handlerPromise <- liftIO $ async $ do
+              raiseErrors $ f $ h req producer consumer
+              atomically $ closeTMChan serverChan
+
             -- Build the actual handler
             let cstreamHandler _ newInput
                   = liftIO $ atomically $
-                      writeTMChan chan (unGRpcIWTy (Proxy @p) (Proxy @vref) newInput)
+                      writeTMChan clientChan (unGRpcIWTy (Proxy @p) (Proxy @vref) newInput)
                 cstreamFinalizer _
-                  = liftIO $ atomically (closeTMChan chan) >> wait promise
+                  = liftIO $ atomically (closeTMChan clientChan) >> wait handlerPromise
                 readNext _
-                  = do nextOutput <- liftIO $ atomically $ takeTMVar var
+                  = do nextOutput <- liftIO $ atomically $ readTMChan serverChan
                        case nextOutput of
                          Just o ->
                            pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
                          Nothing -> do
-                           liftIO $ cancel promise
                            pure Nothing
-                         -- Nothing -> -- no new elements to output
-                         --   readNext ()
             pure ((), IncomingStream cstreamHandler cstreamFinalizer, (), OutgoingStream readNext)
 
 -----
