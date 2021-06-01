@@ -10,6 +10,7 @@ stack test-avro dist/avro-haskell.avro dist/avro-python.avro
 echo "ptyhon/consume"
 python3 adapter/avro/test/avro/consume.py adapter/avro/test/avro/example.avsc dist/avro-haskell.avro
 
+# if protobuf is not installed, do so with 'pip install protobuf'
 echo "\nPROTOBUF\n========\n"
 echo "python/generate"
 python2 adapter/protobuf/test/protobuf/generate.py dist/protobuf-python.pbuf

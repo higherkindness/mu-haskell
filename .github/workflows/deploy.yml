@@ -27,28 +27,34 @@ jobs:
         key: ${{ runner.os }}-stack-work-${{ hashFiles('stack.yaml') }}-${{ '**/*.hs' }}
         restore-keys: |
           ${{ runner.os }}-stack-work-
-    - name: Get Standalone Haddock
-      run: stack --resolver lts-14.27 install standalone-haddock
     - name: Get rdkafka
       run: sudo apt-get install librdkafka-dev
-    - name: Get Bundle & Jekyll
+    - name: Get Ruby and Bundler
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler: 2.1.2
+        ruby-version: 2.6
+    - name: Build microsite without Haddock
       run: |
-        sudo apt-get update
-        sudo apt-get install ruby-dev
-        sudo gem install bundler --force
-        sudo gem update --system
-        sudo bundle update --bundler
-        sudo bundle install --gemfile docs/Gemfile --path vendor/bundle
+        bundle config set path 'vendor/bundle'
+        bundle install --gemfile docs/Gemfile
+        BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs
+    - name: Get Standalone Haddock
+      run: stack --resolver lts-14.27 install standalone-haddock
     - name: Build microsite from last release
       run: |
         LAST_TAG=$(git describe --abbrev=0 --tags)
         git checkout $LAST_TAG
         bash ./generate-haddock-docs.sh
+        bundle config set path 'vendor/bundle'
+        bundle install --gemfile docs/Gemfile
         BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell -s docs -d gen-docs
     - name: Build microsite from master
       run: |
         git checkout master
         bash ./generate-haddock-docs.sh
+        bundle config set path 'vendor/bundle'
+        bundle install --gemfile docs/Gemfile
         BUNDLE_GEMFILE=./docs/Gemfile bundle exec jekyll build -b /mu-haskell/wip -s docs -d gen-docs/wip
     - name: Deploy microsite
       uses: peaceiris/actions-gh-pages@v2

@@ -270,7 +270,7 @@ constToValue (GQL.ConstObject n)
 
 class ParseQuery (p :: Package') (s :: Symbol) where
   parseQuery
-    :: ( MonadError T.Text f, p ~ 'Package pname ss )
+    :: ( MonadError T.Text f, p ~ 'Package pname ss, KnownName s )
     => Proxy p -> Proxy s
     -> VariableMap -> FragmentMap -> [GQL.Selection]
     -> f (ServiceQuery p (LookupService ss s))
@@ -307,10 +307,34 @@ instance ( ParseQuery p s, KnownSymbol s
          , ParseQueryOneOf p ss)
          => ParseQueryOneOf p (s ': ss) where
   parseQueryOneOf pp _ps vmap frmap sel
-    = (:*) <$> (ChosenOneOfQuery (Proxy @s) <$> parseQuery pp (Proxy @s) vmap frmap sel)
-           <*> parseQueryOneOf pp (Proxy @ss) vmap frmap sel
+    = do refinedSel <- refineSelection sel
+         parsedQ    <- parseQuery pp (Proxy @s) vmap frmap refinedSel
+         restQ      <- parseQueryOneOf pp (Proxy @ss) vmap frmap sel
+         pure (ChosenOneOfQuery (Proxy @s) parsedQ :* restQ)
+    where
+      -- refineSelection :: [GQL.Selection] -> f [GQL.Selection]
+      refineSelection [] = pure []
+      refineSelection (f@GQL.FieldSelection {} : rest)
+        = (f :) <$> refineSelection rest
+      refineSelection (GQL.InlineFragmentSelection (GQL.InlineFragment ty dirs innerSs _) : rest)
+        | any (shouldSkip vmap) dirs
+        = refineSelection rest
+        | Nothing <- ty
+        = (++) <$> refineSelection (F.toList innerSs) <*> refineSelection rest
+        | Just selectedTy <- ty, selectedTy == T.pack (nameVal (Proxy @s))
+        = (++) <$> refineSelection (F.toList innerSs) <*> refineSelection rest
+        | otherwise
+        = refineSelection rest
+      refineSelection (GQL.FragmentSpreadSelection (GQL.FragmentSpread nm dirs _) : rest)
+        | any (shouldSkip vmap) dirs
+        = refineSelection rest
+        | Just (GQL.FragmentDefinition _ fTy fDirs fSel fLoc) <- HM.lookup nm frmap
+        = refineSelection (GQL.InlineFragmentSelection (GQL.InlineFragment (Just fTy) fDirs fSel fLoc) : rest)
+        | otherwise  -- the fragment definition was not found
+        = throwError $ "fragment '" <> nm <> "' was not found"
 
-instance ( ParseMethod p ('Service s methods) methods )
+
+instance ( ParseMethod p ('Service s methods) methods, KnownName s )
          => ParseQuery' p s ('Service s methods) where
   parseQuery' _pp _ps _psvc vmap frmap fs = ServiceQuery <$> go fs
     where
@@ -318,14 +342,22 @@ instance ( ParseMethod p ('Service s methods) methods )
       go (GQL.FieldSelection fld : ss)
             = (++) <$> (maybeToList <$> fieldToMethod fld) <*> go ss
       go (GQL.FragmentSpreadSelection (GQL.FragmentSpread nm dirs _) : ss)
-        | Just fr <- HM.lookup nm frmap
-        = if not (any (shouldSkip vmap) dirs) && not (any (shouldSkip vmap) $ fdDirectives fr)
-            then (++) <$> go (fdSelectionSet fr) <*> go ss
-            else go ss
+        | any (shouldSkip vmap) dirs
+        = go ss
+        | Just (GQL.FragmentDefinition _ fTy fDirs fSel fLoc) <- HM.lookup nm frmap
+        = go (GQL.InlineFragmentSelection (GQL.InlineFragment (Just fTy) fDirs fSel fLoc) : ss)
         | otherwise  -- the fragment definition was not found
         = throwError $ "fragment '" <> nm <> "' was not found"
-      go (_ : _)  -- Inline fragments are not yet supported
-        = throwError "inline fragments are not (yet) supported"
+      go (GQL.InlineFragmentSelection (GQL.InlineFragment ty dirs innerSs _) : ss)
+        | any (shouldSkip vmap) dirs
+        = go ss
+        | Nothing <- ty
+        = go (F.toList innerSs ++ ss)
+        | Just selectedTy <- ty
+        = let thisTy = T.pack (nameVal (Proxy @s))
+          in if selectedTy == thisTy
+             then go (F.toList innerSs ++ ss)
+             else throwError $ "fragment for '" <> selectedTy <> "' used in '" <> thisTy <> "'"
       -- fieldToMethod :: GQL.Field -> f (Maybe (OneMethodQuery p ('Service sname methods)))
       fieldToMethod f@(GQL.Field alias name args dirs sels _)
         | any (shouldSkip vmap) dirs
@@ -757,7 +789,7 @@ instance ParseReturn p r
          => ParseReturn p ('OptionalRef r) where
   parseReturn vmap frmap fname s
     = RetOptional <$> parseReturn vmap frmap fname s
-instance ( p ~ 'Package pname ss, ParseQuery p s )
+instance ( p ~ 'Package pname ss, ParseQuery p s, KnownName s )
          => ParseReturn p ('ObjectRef s) where
   parseReturn vmap frmap _ s
     = RetObject <$> parseQuery (Proxy @p) (Proxy @s) vmap frmap s

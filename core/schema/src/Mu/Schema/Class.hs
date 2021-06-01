@@ -394,30 +394,30 @@ instance {-# OVERLAPS #-} (GFromSchemaFieldTypeUnion sch (a ': b ': rest) v)
          => GFromSchemaFieldTypeUnion sch (a ': b ': rest) (M1 i t v) where
   fromSchemaFieldTypeUnion x = M1 (fromSchemaFieldTypeUnion x)
 
-instance (GToSchemaFieldTypeWrap sch t v, GToSchemaFieldTypeUnion sch ts vs)
+instance {-# OVERLAPPABLE #-} (GToSchemaFieldTypeWrap sch t v, GToSchemaFieldTypeUnion sch ts vs)
          => GToSchemaFieldTypeUnion sch (t ': ts) (v :+: vs) where
   toSchemaFieldTypeUnion (L1 x) = Z (toSchemaFieldTypeW x)
   toSchemaFieldTypeUnion (R1 r) = S (toSchemaFieldTypeUnion r)
-instance (GFromSchemaFieldTypeWrap sch t v, GFromSchemaFieldTypeUnion sch ts vs)
+instance {-# OVERLAPPABLE #-} (GFromSchemaFieldTypeWrap sch t v, GFromSchemaFieldTypeUnion sch ts vs)
          => GFromSchemaFieldTypeUnion sch (t ': ts) (v :+: vs) where
   fromSchemaFieldTypeUnion (Z x) = L1 (fromSchemaFieldTypeW x)
   fromSchemaFieldTypeUnion (S r) = R1 (fromSchemaFieldTypeUnion r)
 -- Weird nested instance produced by GHC
-instance ( GToSchemaFieldTypeWrap sch t1 v1
-         , GToSchemaFieldTypeWrap sch t2 v2
-         , GToSchemaFieldTypeUnion sch ts vs )
-         => GToSchemaFieldTypeUnion sch (t1 ': t2 ': ts) ((v1 :+: v2) :+: vs) where
-  toSchemaFieldTypeUnion (L1 (L1 x)) = Z (toSchemaFieldTypeW x)
-  toSchemaFieldTypeUnion (L1 (R1 x)) = S (Z (toSchemaFieldTypeW x))
-  toSchemaFieldTypeUnion (R1 r)      = S (S (toSchemaFieldTypeUnion r))
-instance ( GFromSchemaFieldTypeWrap sch t1 v1
-         , GFromSchemaFieldTypeWrap sch t2 v2
-         , GFromSchemaFieldTypeUnion sch ts vs )
-         => GFromSchemaFieldTypeUnion sch (t1 ': t2 ': ts) ((v1 :+: v2) :+: vs) where
-  fromSchemaFieldTypeUnion (Z x)     = L1 (L1 (fromSchemaFieldTypeW x))
-  fromSchemaFieldTypeUnion (S (Z x)) = L1 (R1 (fromSchemaFieldTypeW x))
-  fromSchemaFieldTypeUnion (S (S r)) = R1 (fromSchemaFieldTypeUnion r)
-
+instance {-# OVERLAPS #-} ( GToSchemaFieldTypeUnion sch (t ': ts) (v1 :+: (v2 :+: vs)) )
+         => GToSchemaFieldTypeUnion sch (t ': ts) ((v1 :+: v2) :+: vs) where
+  toSchemaFieldTypeUnion (L1 (L1 x))
+    = toSchemaFieldTypeUnion @_ @_ @sch @(t ': ts) @(v1 :+: (v2 :+: vs)) (L1 x)
+  toSchemaFieldTypeUnion (L1 (R1 x))
+    = toSchemaFieldTypeUnion @_ @_ @sch @(t ': ts) @(v1 :+: (v2 :+: vs)) (R1 (L1 x))
+  toSchemaFieldTypeUnion (R1 r)
+    = toSchemaFieldTypeUnion @_ @_ @sch @(t ': ts) @(v1 :+: (v2 :+: vs)) (R1 (R1 r))
+instance {-# OVERLAPS #-} ( GFromSchemaFieldTypeUnion sch (t ': ts) (v1 :+: (v2 :+: vs)) )
+         => GFromSchemaFieldTypeUnion sch (t ': ts) ((v1 :+: v2) :+: vs) where
+  fromSchemaFieldTypeUnion t
+    = case fromSchemaFieldTypeUnion @_ @_ @sch @(t ': ts) @(v1 :+: (v2 :+: vs)) t of
+        L1 x      -> L1 (L1 x)
+        R1 (L1 x) -> L1 (R1 x)
+        R1 (R1 x) -> R1 x
 
 -- ---------------
 -- ENUMERATIONS --

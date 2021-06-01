@@ -29,6 +29,7 @@ module Mu.GRpc.Server
 , runGRpcAppTLS, TLSSettings
   -- * Convert a 'Server' into a WAI application
 , gRpcApp, gRpcAppTrans
+, WrappedServer(..), gRpcMultipleApp, gRpcMultipleAppTrans
   -- * Raise errors as exceptions in IO
 , raiseErrors, liftServerConduit
   -- * Re-export useful instances
@@ -147,6 +148,31 @@ gRpcAppTrans protocol f svr
   = Wai.grpcApp [uncompressed, gzip]
                 (gRpcServerHandlers protocol f svr)
 
+-- | Turn several Mu 'Server's into a WAI 'Application'.
+--
+--   These 'Application's can be later combined using,
+--   for example, @wai-routes@, or you can add middleware
+--   from @wai-extra@, among others.
+gRpcMultipleApp
+  :: Proxy protocol
+  -> [WrappedServer protocol ServerErrorIO]
+  -> Application
+gRpcMultipleApp protocol = gRpcMultipleAppTrans protocol id
+
+-- | Turn several Mu 'Server's into a WAI 'Application'.
+--
+--   These 'Application's can be later combined using,
+--   for example, @wai-routes@, or you can add middleware
+--   from @wai-extra@, among others.
+gRpcMultipleAppTrans
+  :: Proxy protocol
+  -> (forall a. m a -> ServerErrorIO a)
+  -> [WrappedServer protocol m]
+  -> Application
+gRpcMultipleAppTrans protocol f svr
+  = Wai.grpcApp [uncompressed, gzip]
+                (concatMap (gRpcServerHandlersS protocol f) svr)
+
 gRpcServerHandlers
   :: forall name services handlers m protocol chn.
      ( KnownName name
@@ -159,6 +185,21 @@ gRpcServerHandlers
 gRpcServerHandlers pr f (Services svr)
   = gRpcServiceHandlers f (Proxy @('Package ('Just name) services)) pr packageName svr
   where packageName = BS.pack (nameVal (Proxy @name))
+
+data WrappedServer protocol m where
+  Srv :: ( KnownName name
+         , GRpcServiceHandlers ('Package ('Just name) services)
+                             protocol m chn services handlers )
+      => ServerT chn () ('Package ('Just name) services) m handlers
+      -> WrappedServer protocol m
+
+gRpcServerHandlersS
+  :: Proxy protocol
+  -> (forall a. m a -> ServerErrorIO a)
+  -> WrappedServer protocol m
+  -> [ServiceHandler]
+gRpcServerHandlersS pr f (Srv svr)
+  = gRpcServerHandlers pr f svr
 
 class GRpcServiceHandlers (fullP :: Package snm mnm anm (TypeRef snm))
                           (p :: GRpcMessageProtocol) (m :: Type -> Type)
@@ -451,29 +492,34 @@ instance (GRpcInputWrapper p vref v, GRpcOutputWrapper p rref r, MonadIO m)
                    -> m ( (), IncomingStream m (GRpcIWTy p vref v) ()
                         , (), OutgoingStream m (GRpcOWTy p rref r) () )
           bdstream req = do
-            -- Create a new TMChan and a new variable
-            chan <- liftIO newTMChanIO :: m (TMChan v)
-            let producer = sourceTMChan @m chan
-            var <- liftIO newEmptyTMVarIO :: m (TMVar (Maybe r))
+            -- Create a new TMChan for consuming the client stream, it will be
+            -- the producer for the conduit.
+            clientChan <- liftIO newTMChanIO :: m (TMChan v)
+            let producer = sourceTMChan @m clientChan
+
+            -- Create a new TMChan for producing the server stream, it will be
+            -- the consumer for the conduit.
+            serverChan <- liftIO newTMChanIO :: m (TMChan r)
+            let consumer = sinkTMChan @m serverChan
+
             -- Start executing the handler
-            promise <- liftIO $ async
-              (raiseErrors $ f $ h req producer (toTMVarConduit var))
+            handlerPromise <- liftIO $ async $ do
+              raiseErrors $ f $ h req producer consumer
+              atomically $ closeTMChan serverChan
+
             -- Build the actual handler
             let cstreamHandler _ newInput
                   = liftIO $ atomically $
-                      writeTMChan chan (unGRpcIWTy (Proxy @p) (Proxy @vref) newInput)
+                      writeTMChan clientChan (unGRpcIWTy (Proxy @p) (Proxy @vref) newInput)
                 cstreamFinalizer _
-                  = liftIO $ atomically (closeTMChan chan) >> wait promise
+                  = liftIO $ atomically (closeTMChan clientChan) >> wait handlerPromise
                 readNext _
-                  = do nextOutput <- liftIO $ atomically $ tryTakeTMVar var
+                  = do nextOutput <- liftIO $ atomically $ readTMChan serverChan
                        case nextOutput of
-                         Just (Just o) ->
+                         Just o ->
                            pure $ Just ((), buildGRpcOWTy (Proxy @p) (Proxy @rref) o)
-                         Just Nothing  -> do
-                           liftIO $ cancel promise
+                         Nothing -> do
                            pure Nothing
-                         Nothing -> -- no new elements to output
-                           readNext ()
             pure ((), IncomingStream cstreamHandler cstreamFinalizer, (), OutgoingStream readNext)
 
 -----
