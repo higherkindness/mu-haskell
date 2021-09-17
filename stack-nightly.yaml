@@ -1,4 +1,4 @@
-resolver: nightly-2021-01-27
+resolver: nightly-2021-09-17
 allow-newer: true
 
 packages:
@@ -26,12 +26,18 @@ packages:
 - servant/server
 
 extra-deps:
-- http2-client-0.9.0.0
+- http2-client-0.10.0.0
 - http2-client-grpc-0.8.0.0
 - http2-grpc-proto3-wire-0.1.0.0
 - http2-grpc-types-0.5.0.0
-- proto3-wire-1.2.0
+- proto3-wire-1.2.2
 - warp-grpc-0.4.0.1
 - hw-kafka-conduit-2.7.0
-- wai-middleware-prometheus-1.0.0
-- graphql-0.11.0.0
+- wai-middleware-prometheus-1.0.0.1
+- graphql-1.0.0.0
+# Not in nightly
+- generic-lens-2.2.0.0
+- generic-lens-core-2.2.0.0
+- swagger2-2.6
+- servant-swagger-1.1.10
+- tracing-control-0.0.6
