@@ -1,4 +1,4 @@
-resolver: nightly-2021-09-17
+resolver: nightly-2021-12-17
 allow-newer: true
 
 packages:
@@ -34,10 +34,13 @@ extra-deps:
 - warp-grpc-0.4.0.1
 - hw-kafka-conduit-2.7.0
 - wai-middleware-prometheus-1.0.0.1
-- graphql-1.0.0.0
+- graphql-1.0.1.0
+# we need an older version
+- http2-2.0.6
+- warp-3.3.14
 # Not in nightly
 - generic-lens-2.2.0.0
 - generic-lens-core-2.2.0.0
 - swagger2-2.6
 - servant-swagger-1.1.10
-- tracing-control-0.0.6
+- tracing-control-0.0.7.2

@@ -64,7 +64,7 @@ fromGQLValueConst GQL.ConstNull
 fromGQLValueConst (GQL.ConstEnum s)
   = pure $ VCEnum $ T.unpack s
 fromGQLValueConst (GQL.ConstList xs)
-  = VCList <$> traverse fromGQLValueConst xs
+  = VCList <$> traverse (fromGQLValueConst . GQL.node) xs
 fromGQLValueConst (GQL.ConstObject o)
   = VCObject <$> traverse fromGQLField o
   where fromGQLField :: GQL.ObjectField GQL.ConstValue
@@ -94,7 +94,8 @@ instance ReflectValueConst 'VCNull where
 instance KnownSymbol e => ReflectValueConst ('VCEnum e) where
   reflectValueConst _ = GQL.ConstString $ T.pack $ symbolVal (Proxy @e)
 instance ReflectValueConstList xs => ReflectValueConst ('VCList xs) where
-  reflectValueConst _ = GQL.ConstList $ reflectValueConstList (Proxy @xs)
+  reflectValueConst _ = GQL.ConstList $
+    map (`GQL.Node` GQL.Location 0 0) $ reflectValueConstList (Proxy @xs)
 instance ReflectValueConstObject xs => ReflectValueConst ('VCObject xs) where
   reflectValueConst _ = GQL.ConstObject $ reflectValueConstObject (Proxy @xs)
 

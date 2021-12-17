@@ -34,9 +34,9 @@ extra-deps:
 - warp-grpc-0.4.0.1
 - hw-kafka-client-4.0.3
 - hw-kafka-conduit-2.7.0
-- tracing-control-0.0.6
+- tracing-control-0.0.7.2
 - wai-middleware-prometheus-1.0.0.1
-- graphql-1.0.0
+- graphql-1.0.1.0
 - generic-aeson-0.2.0.12
 - parameterized-0.5.0.0
 # Not in LTS 14
