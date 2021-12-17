@@ -1,5 +1,5 @@
 name:               mu-grpc-client
-version:            0.4.0.1
+version:            0.4.0.2
 synopsis:           gRPC clients from Mu definitions
 description:
   With @mu-grpc-client@ you can easily build gRPC clients for mu-haskell!
