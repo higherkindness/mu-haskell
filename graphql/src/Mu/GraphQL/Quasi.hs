@@ -190,7 +190,7 @@ typeToDec prims schemaName tm sm (GQL.ObjectTypeDefinition _ nm _ _ flds) = do
     defToVConst (GQL.ConstEnum e)
       = [t| 'VCEnum $(textToStrLit e) |]
     defToVConst (GQL.ConstList xs)
-      = [t| 'VCList $(typesToList <$> traverse defToVConst xs) |]
+      = [t| 'VCList $(typesToList <$> traverse (defToVConst . GQL.node) xs) |]
     defToVConst (GQL.ConstObject obj)
       = [t| 'VCObject $(typesToList <$> traverse fromGQLField obj) |]
     fromGQLField :: GQL.ObjectField GQL.ConstValue -> Q Type

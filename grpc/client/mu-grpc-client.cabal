@@ -1,5 +1,5 @@
 name:               mu-grpc-client
-version:            0.4.0.1
+version:            0.4.0.2
 synopsis:           gRPC clients from Mu definitions
 description:
   With @mu-grpc-client@ you can easily build gRPC clients for mu-haskell!
@@ -51,7 +51,7 @@ library
     , template-haskell   >=2.14  && <2.17
     , text               >=1.2   && <2
     , th-abstraction     >=0.3.2 && <0.5
-    , tracing            >=0.0.5
+    , tracing-control    >=0.0.7
 
   hs-source-dirs:   src
   default-language: Haskell2010
