@@ -39,6 +39,7 @@ import           Control.Exception                (throw)
 import           Control.Monad.Except             (MonadIO (..), join, runExceptT)
 import qualified Data.Aeson                       as A
 import           Data.Aeson.Text                  (encodeToLazyText)
+import           Data.ByteString.Char8            (split)
 import           Data.ByteString.Lazy             (fromStrict, toStrict)
 import           Data.Conduit                     (ConduitT, transPipe)
 import qualified Data.HashMap.Strict              as HM
@@ -151,12 +152,12 @@ httpGraphQLAppTrans f server q m s req res =
         _                            -> toError "Error parsing query"
     Right POST -> do
       body <- strictRequestBody req
-      case lookup hContentType $ requestHeaders req of
-        Just "application/json"    ->
+      case split ';' <$> lookup hContentType (requestHeaders req) of
+        Just ("application/json" : _)    ->
           case A.eitherDecode body of
             Left err                             -> toError $ T.pack err
             Right (GraphQLInput qry vars opName) -> execQuery opName vars qry
-        Just "application/graphql" ->
+        Just ("application/graphql" : _) ->
           case decodeUtf8' $ toStrict body of
             Left err  -> toError $ "Could not decode utf8 from body: " <> unpackUnicodeException err
             Right msg -> execQuery Nothing HM.empty msg
