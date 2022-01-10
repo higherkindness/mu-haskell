@@ -46,8 +46,13 @@ This schema defines **three types: a book, an author, and a query**. All GraphQL
 Now let's have a look at the already finished `src/Main.hs` and we'll go bit by bit explaining what is going on:
 
 ```haskell
-graphql "ServiceDefinition" "schema.graphql"
+{-# language TupleSections #-} -- add this at the top of the file
 
+import Data.Text -- add this at the imports section
+
+graphql "ServiceDefinition" "schema.graphql"  -- this is already there
+
+-- you should replace the old main with this new code
 main :: IO ()
 main = do
   putStrLn "starting GraphQL server on port 8080"

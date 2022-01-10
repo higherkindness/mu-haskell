@@ -49,7 +49,7 @@ stack new my_project https://raw.githubusercontent.com/higherkindness/mu-haskell
 
 This command creates a new folder called `my_project`, with a few files. The most important from those are the `.proto` file, in which you will define your service; `src/Schema.hs`, which loads the service definition at compile-time; and `src/Main.hs`, which contains the code of the server.
 
-The first step to get your project running is defining the right schema and service. In this case, you can just copy the definition above after the `package` declaration.
+The first step to get your project running is defining the right schema and service. In this case, you can just copy the definition above after the `package` declaration in the newly created `.proto` file.
 
 #### Data type definition
 
@@ -120,7 +120,7 @@ The `MonadServer` portion in the type is mandated by `mu-rpc`; it tells us that 
 Another possibility is to use the `optics`-based API in `Mu.Schema.Optics`. In that case, you access the value of the fields using `(^.)` followed by the name of the field after `#`, and build messages by using `record` followed by a tuple of the components. The previous example would then be written:
 
 ```haskell
-{-# language OverloadedLabels #-}
+{-# language OverloadedLabels #-} -- add this at the top of the file
 
 sayHello :: (MonadServer m) => HelloRequestMessage' -> m HelloReplyMessage'
 sayHello (HelloRequestMessage nm)
