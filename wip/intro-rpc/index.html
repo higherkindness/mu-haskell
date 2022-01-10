@@ -495,7 +495,7 @@
 
 <p>This command creates a new folder called <code class="language-plaintext highlighter-rouge">my_project</code>, with a few files. The most important from those are the <code class="language-plaintext highlighter-rouge">.proto</code> file, in which you will define your service; <code class="language-plaintext highlighter-rouge">src/Schema.hs</code>, which loads the service definition at compile-time; and <code class="language-plaintext highlighter-rouge">src/Main.hs</code>, which contains the code of the server.</p>
 
-<p>The first step to get your project running is defining the right schema and service. In this case, you can just copy the definition above after the <code class="language-plaintext highlighter-rouge">package</code> declaration.</p>
+<p>The first step to get your project running is defining the right schema and service. In this case, you can just copy the definition above after the <code class="language-plaintext highlighter-rouge">package</code> declaration in the newly created <code class="language-plaintext highlighter-rouge">.proto</code> file.</p>
 
 <h4 id="data-type-definition">Data type definition</h4>
 
@@ -563,7 +563,7 @@
 
 <p>Another possibility is to use the <code class="language-plaintext highlighter-rouge">optics</code>-based API in <code class="language-plaintext highlighter-rouge">Mu.Schema.Optics</code>. In that case, you access the value of the fields using <code class="language-plaintext highlighter-rouge">(^.)</code> followed by the name of the field after <code class="language-plaintext highlighter-rouge">#</code>, and build messages by using <code class="language-plaintext highlighter-rouge">record</code> followed by a tuple of the components. The previous example would then be written:</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language OverloadedLabels #-}</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language OverloadedLabels #-}</span> <span class="c1">-- add this at the top of the file</span>
 
 <span class="n">sayHello</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadServer</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">HelloRequestMessage'</span> <span class="o">-&gt;</span> <span class="n">m</span> <span class="kt">HelloReplyMessage'</span>
 <span class="n">sayHello</span> <span class="p">(</span><span class="kt">HelloRequestMessage</span> <span class="n">nm</span><span class="p">)</span>

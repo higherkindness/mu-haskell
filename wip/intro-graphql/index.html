@@ -487,8 +487,13 @@
 
 <p>Now let’s have a look at the already finished <code class="language-plaintext highlighter-rouge">src/Main.hs</code> and we’ll go bit by bit explaining what is going on:</p>
 
-<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">graphql</span> <span class="s">"ServiceDefinition"</span> <span class="s">"schema.graphql"</span>
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{-# language TupleSections #-}</span> <span class="c1">-- add this at the top of the file</span>
 
+<span class="kr">import</span> <span class="nn">Data.Text</span> <span class="c1">-- add this at the imports section</span>
+
+<span class="n">graphql</span> <span class="s">"ServiceDefinition"</span> <span class="s">"schema.graphql"</span>  <span class="c1">-- this is already there</span>
+
+<span class="c1">-- you should replace the old main with this new code</span>
 <span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
 <span class="n">main</span> <span class="o">=</span> <span class="kr">do</span>
   <span class="n">putStrLn</span> <span class="s">"starting GraphQL server on port 8080"</span>
