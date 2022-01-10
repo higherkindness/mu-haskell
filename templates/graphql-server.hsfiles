@@ -76,6 +76,7 @@ import           Data.Proxy
 
 import           Mu.GraphQL.Quasi
 import           Mu.GraphQL.Server
+import           Mu.Schema
 import           Mu.Server
 
 graphql "ServiceDefinition" "schema.graphql"
