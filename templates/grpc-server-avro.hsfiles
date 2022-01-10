@@ -28,7 +28,7 @@ executable {{name}}
     , text
 
 {-# START_FILE stack.yaml #-}
-resolver: lts-18.18
+resolver: lts-18.21
 allow-newer: true
 extra-deps:
 # mu
