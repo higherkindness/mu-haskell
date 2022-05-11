@@ -1,6 +1,6 @@
 let
   haskellNix = import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/fae257e.tar.gz) {};
-  nixpkgsSrc = haskellNix.sources.nixpkgs-2003;
+  nixpkgsSrc = haskellNix.sources.nixpkgs-2009;
   nixpkgsArgs = haskellNix.nixpkgsArgs;
 in
 { pkgs ? import nixpkgsSrc nixpkgsArgs
