@@ -27,7 +27,7 @@ packages:
 
 extra-deps:
 - aeson-1.5.6.0
-- avro-0.6.1.0
+- avro-0.5.2.1
 - language-avro-0.1.4.0
 - http2-client-0.10.0.0
 - http2-client-grpc-0.8.0.0
