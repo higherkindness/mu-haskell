@@ -64,7 +64,7 @@ fromGQLValueConst GQL.ConstNull
 fromGQLValueConst (GQL.ConstEnum s)
   = pure $ VCEnum $ T.unpack s
 fromGQLValueConst (GQL.ConstList xs)
-  = VCList <$> traverse fromGQLValueConst xs
+  = VCList <$> traverse (fromGQLValueConst . GQL.node) xs
 fromGQLValueConst (GQL.ConstObject o)
   = VCObject <$> traverse fromGQLField o
   where fromGQLField :: GQL.ObjectField GQL.ConstValue
@@ -99,13 +99,14 @@ instance ReflectValueConstObject xs => ReflectValueConst ('VCObject xs) where
   reflectValueConst _ = GQL.ConstObject $ reflectValueConstObject (Proxy @xs)
 
 class ReflectValueConstList xs where
-  reflectValueConstList :: proxy xs -> [GQL.ConstValue]
+  reflectValueConstList :: proxy xs -> [GQL.Node GQL.ConstValue]
 instance ReflectValueConstList '[] where
   reflectValueConstList _ = []
 instance (ReflectValueConst x, ReflectValueConstList xs)
          => ReflectValueConstList (x ': xs) where
   reflectValueConstList _
-    = reflectValueConst (Proxy @x) : reflectValueConstList (Proxy @xs)
+    = GQL.Node (reflectValueConst (Proxy @x)) zl : reflectValueConstList (Proxy @xs)
+    where zl = GQL.Location 0 0
 
 class ReflectValueConstObject xs where
   reflectValueConstObject :: proxy xs -> [GQL.ObjectField GQL.ConstValue]

@@ -32,7 +32,7 @@ library
 
   build-depends:
       aeson                 >=1.4   && <2
-    , avro                  >=0.5.1 && <0.6
+    , avro                  >=0.5.1 && <0.7
     , base                  >=4.12  && <5
     , bytestring            >=0.10  && <0.11
     , containers            >=0.6   && <0.7
@@ -42,7 +42,7 @@ library
     , mu-schema             >=0.3   && <0.4
     , sop-core              >=0.5.0 && <0.6
     , tagged                >=0.8.6 && <0.9
-    , template-haskell      >=2.14  && <2.17
+    , template-haskell      >=2.14  && <2.18
     , text                  >=1.2   && <2
     , time                  >=1.9   && <2
     , transformers          >=0.5   && <0.6
@@ -57,7 +57,7 @@ library
 executable test-avro
   main-is:          Avro.hs
   build-depends:
-      avro        >=0.5.1 && <0.6
+      avro        >=0.5.1 && <0.7
     , base        >=4.12  && <5
     , bytestring  >=0.10  && <0.11
     , containers  >=0.6   && <0.7

@@ -1,4 +1,4 @@
-resolver: lts-17.8
+resolver: lts-18.28
 allow-newer: true
 
 packages:
@@ -26,12 +26,16 @@ packages:
 - servant/server
 
 extra-deps:
-- http2-client-0.9.0.0
+- http2-2.0.6
+- warp-3.3.14
+- http2-client-0.10.0.0
 - http2-client-grpc-0.8.0.0
 - http2-grpc-proto3-wire-0.1.0.0
 - http2-grpc-types-0.5.0.0
-- proto3-wire-1.2.0
 - warp-grpc-0.4.0.1
 - hw-kafka-conduit-2.7.0
-- wai-middleware-prometheus-1.0.0
-- graphql-0.11.0.0
+- graphql-1.0.3.0
+- stm-hamt-1.2.0.7
+- stm-containers-1.2
+- tracing-0.0.7.2
+- tracing-control-0.0.7.3

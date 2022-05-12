@@ -45,7 +45,9 @@ instance A.FromJSON GQL.ConstValue where
   parseJSON (A.Number n) = case floatingOrInteger n :: Either Double Int32 of
                              Right i -> pure $ GQL.ConstInt i
                              Left  m -> pure $ GQL.ConstFloat m
-  parseJSON (A.Array xs) = GQL.ConstList . F.toList <$> traverse A.parseJSON xs
+  parseJSON (A.Array xs) = GQL.ConstList . F.toList . fmap (`GQL.Node` zl) <$> traverse A.parseJSON xs
+    where
+      zl = GQL.Location 0 0
   parseJSON (A.Object o) = GQL.ConstObject . fmap toObjFld . HM.toList <$> traverse A.parseJSON o
     where
       toObjFld :: (T.Text, GQL.ConstValue) -> GQL.ObjectField GQL.ConstValue
@@ -262,7 +264,7 @@ constToValue (GQL.ConstBoolean n) = GQL.Boolean n
 constToValue GQL.ConstNull        = GQL.Null
 constToValue (GQL.ConstEnum n)    = GQL.Enum n
 constToValue (GQL.ConstList n)
-  = GQL.List $ constToValue <$> n
+  = GQL.List [ GQL.Node (constToValue v) l | GQL.Node v l <- n ]
 constToValue (GQL.ConstObject n)
   = GQL.Object
       [ GQL.ObjectField a (GQL.Node (constToValue v) m) l
@@ -557,7 +559,7 @@ class ParseArg (p :: Package') (a :: TypeRef Symbol) where
 
 instance (ParseArg p r) => ParseArg p ('ListRef r) where
   parseArg vmap aname (GQL.List xs)
-    = ArgList <$> traverse (parseArg' vmap aname) xs
+    = ArgList <$> traverse (parseArg' vmap aname . GQL.node) xs
   parseArg _ aname _
     = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef Bool) where
@@ -715,7 +717,7 @@ instance ValueParser sch ('TPrimitive String) where
   valueParser _ _ (GQL.String b) = pure $ FPrimitive $ T.unpack b
   valueParser _ fname _          = throwError $ "field '" <> fname <> "' was not of right type"
 instance (ValueParser sch r) => ValueParser sch ('TList r) where
-  valueParser vmap fname (GQL.List xs) = FList <$> traverse (valueParser' vmap fname) xs
+  valueParser vmap fname (GQL.List xs) = FList <$> traverse (valueParser' vmap fname . GQL.node) xs
   valueParser _ fname _                = throwError $ "field '" <> fname <> "' was not of right type"
 instance (ValueParser sch r) => ValueParser sch ('TOption r) where
   valueParser _ _ GQL.Null = pure $ FOption Nothing
@@ -743,7 +745,7 @@ toAesonValue _  (GQL.String s)   = pure $ A.String s
 toAesonValue _  (GQL.Boolean b)  = pure $ A.Bool b
 toAesonValue _   GQL.Null        = pure A.Null
 toAesonValue _  (GQL.Enum e)     = pure $ A.String e
-toAesonValue vm (GQL.List xs)    = A.toJSON <$> traverse (toAesonValue vm) xs
+toAesonValue vm (GQL.List xs)    = A.toJSON <$> traverse (toAesonValue vm . GQL.node) xs
 toAesonValue vm (GQL.Object xs)  = A.Object . HM.fromList <$> traverse (toKeyValuePairs vm) xs
 
 class ParseDifferentReturn (p :: Package') (r :: Return Symbol (TypeRef Symbol)) where

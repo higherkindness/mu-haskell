@@ -24,7 +24,7 @@ library
   exposed-modules:  Mu.GRpc.Server
   build-depends:
       async             >=2.2     && <3
-    , avro              >=0.5.1   && <0.6
+    , avro              >=0.5.1   && <0.7
     , base              >=4.12    && <5
     , binary            >=0.8     && <0.9
     , bytestring        >=0.10    && <0.11
@@ -51,7 +51,7 @@ executable grpc-example-server
   main-is:          ExampleServer.hs
   build-depends:
       async             >=2.2     && <3
-    , avro              >=0.5.1   && <0.6
+    , avro              >=0.5.1   && <0.7
     , base              >=4.12    && <5
     , binary            >=0.8     && <0.9
     , bytestring        >=0.10    && <0.11
