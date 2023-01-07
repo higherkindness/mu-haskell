@@ -12,7 +12,6 @@ jobs:
         submodules: true
     - name: Unshallow
       run: git fetch --prune --unshallow
-    - uses: serras/setup-stack@v3
     - uses: actions/cache@v3.2.2
       name: Cache ~/.stack
       with:
