@@ -38,13 +38,13 @@ library
   -- other-modules:
   -- other-extensions:
   build-depends:
-      aeson                 >=1.4   && <2
+      aeson                 >=1.4   && <2.1
     , base                  >=4.12  && <5
-    , bytestring            >=0.10  && <0.11
+    , bytestring            >=0.10  && <0.12
     , containers            >=0.6   && <0.7
     , first-class-families  >=0.8   && <0.9
     , sop-core              >=0.5   && <0.6
-    , template-haskell      >=2.14  && <2.18
+    , template-haskell      >=2.14  && <2.19
     , text                  >=1.2   && <2
     , th-abstraction        >=0.3.2 && <0.5
     , unordered-containers  >=0.2   && <0.3

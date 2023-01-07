@@ -31,7 +31,7 @@ library
   build-depends:
       avro              >=0.5.1 && <0.7
     , base              >=4.12  && <5
-    , bytestring        >=0.10  && <0.11
+    , bytestring        >=0.10  && <0.12
     , conduit           >=1.3.2 && <2
     , hw-kafka-client   >=3     && <5
     , hw-kafka-conduit  >=2.7   && <3

@@ -6,13 +6,10 @@
 Description : Quasi-quoters for gRPC files
 
 Read @.proto@ files as a 'Mu.Schema.Definition.Schema'
-and a set of 'Service's. The origin of those @.proto@
-files can be local (if using 'grpc') or come
-from a Compendium Registry (if using 'compendium').
+and a set of 'Service's.
 -}
 module Mu.Quasi.GRpc (
   grpc
-, compendium
 ) where
 
 import           Control.Monad.IO.Class
@@ -24,7 +21,6 @@ import qualified Language.ProtocolBuffers.Types  as P
 import           Network.HTTP.Client
 import           Servant.Client.Core.BaseUrl
 
-import           Compendium.Client
 import           Mu.Quasi.ProtoBuf
 import           Mu.Rpc
 
@@ -42,20 +38,6 @@ grpc schemaName servicePrefix fp
            -> fail ("could not parse protocol buffers spec: " ++ show e)
          Right p
            -> grpcToDecls schemaName servicePrefix p
-
--- | Obtains a schema and service definition from Compendium,
---   and generates the declarations from 'grpc'.
-compendium :: String -> (String -> String)
-           -> String -> String -> Q [Dec]
-compendium schemaTypeName servicePrefix baseUrl identifier
-  = do m <- liftIO $ newManager defaultManagerSettings
-       u <- liftIO $ parseBaseUrl baseUrl
-       r <- liftIO $ obtainProtoBuf m u (T.pack identifier)
-       case r of
-         Left e
-           -> fail ("could not parse protocol buffers spec: " ++ show e)
-         Right p
-           -> grpcToDecls schemaTypeName servicePrefix p
 
 grpcToDecls :: String -> (String -> String) -> P.ProtoBuf -> Q [Dec]
 grpcToDecls schemaName servicePrefix p@P.ProtoBuf { P.package = pkg, P.services = srvs }

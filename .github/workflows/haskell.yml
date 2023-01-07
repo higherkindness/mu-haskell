@@ -4,17 +4,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2.3.4
+    - uses: actions/checkout@v3.3.0
       with:
         submodules: true
-    - uses: cachix/install-nix-action@v17
-    - uses: cachix/cachix-action@v10
+    - uses: cachix/install-nix-action@v18
+    - uses: cachix/cachix-action@v11
       with:
         name: 47deg
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
     - run: nix-build
     - name: 'Set up HLint'
-      uses: rwe/actions-hlint-setup@v1.0.2
+      uses: rwe/actions-hlint-setup@v1.0.3
     - name: 'Run HLint'
       uses: rwe/actions-hlint-run@v2.0.1
       with:

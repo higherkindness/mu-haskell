@@ -1,5 +1,5 @@
 let
-  haskellNix = import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/fae257e.tar.gz) {};
+  haskellNix = import (builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/c22fb2e.tar.gz) {};
   nixpkgsSrc = haskellNix.sources.nixpkgs-2111;
   nixpkgsArgs = haskellNix.nixpkgsArgs;
 in
