@@ -18,8 +18,6 @@ import           GHC.TypeLits
 import           Language.Haskell.TH
 import           Language.ProtocolBuffers.Parser
 import qualified Language.ProtocolBuffers.Types  as P
-import           Network.HTTP.Client
-import           Servant.Client.Core.BaseUrl
 
 import           Mu.Quasi.ProtoBuf
 import           Mu.Rpc

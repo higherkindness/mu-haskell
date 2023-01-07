@@ -1,5 +1,5 @@
 name:          mu-graphql
-version:       0.5.0.3
+version:       0.5.0.4
 synopsis:      GraphQL support for Mu
 description:   GraphQL servers and clients for Mu-Haskell
 cabal-version: >=1.10

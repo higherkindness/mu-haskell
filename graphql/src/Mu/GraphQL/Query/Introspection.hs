@@ -18,6 +18,7 @@ import           Data.Int             (Int32)
 import           Data.Maybe           (catMaybes, fromMaybe)
 import           Data.Proxy
 import qualified Data.Text            as T
+import           Data.UUID            (UUID)
 import           GHC.TypeLits
 import           Mu.Rpc
 import qualified Mu.Schema            as Mu
@@ -67,7 +68,7 @@ data TypeKind
   = SCALAR
   | OBJECT
   | INTERFACE
-  | UNION
+  | UNION
   | ENUM
   | INPUT_OBJECT
   | LIST
@@ -75,13 +76,13 @@ data TypeKind
   deriving Show
 
 tSimple :: T.Text -> Type
-tSimple t = Type SCALAR (Just t) [] [] [] Nothing
+tSimple t = Type SCALAR (Just t) [] [] [] Nothing
 
 tList :: Type -> Type
 tList = Type LIST Nothing [] [] [] . Just
 
 tNonNull :: Type -> Type
-tNonNull = Type NON_NULL Nothing [] [] [] . Just
+tNonNull = Type NON_NULL Nothing [] [] [] . Just
 
 unwrapNonNull :: Type -> Maybe Type
 unwrapNonNull (Type NON_NULL _ _ _ _ x) = x
@@ -188,7 +189,7 @@ instance ( KnownSymbol sname, KnownSymbols elts
   introspectServices _ psub = do
     let name = T.pack $ symbolVal (Proxy @sname)
         tys  = map tSimple (symbolsVal (Proxy @elts))
-        t    = Type UNION (Just name) [] [] tys Nothing
+        t    = Type UNION (Just name) [] [] tys Nothing
     -- add this one to the mix
     tell (HM.singleton name t)
     -- continue with the rest
@@ -281,6 +282,8 @@ instance IntrospectTypeRef ('PrimitiveRef JSON.Value) where
   introspectTypeRef _ _ = pure $ tNonNull $ tSimple "JSON"
 instance IntrospectTypeRef ('PrimitiveRef JSON.Object) where
   introspectTypeRef _ _ = pure $ tNonNull $ tSimple "JSONObject"
+instance IntrospectTypeRef ('PrimitiveRef UUID) where
+  introspectTypeRef _ _ = pure $ tNonNull $ tSimple "UUID"
 
 instance (IntrospectTypeRef r)
          => IntrospectTypeRef ('ListRef r) where
