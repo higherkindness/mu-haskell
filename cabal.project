@@ -6,7 +6,6 @@ packages: adapter/avro/
           adapter/kafka/
           adapter/persistent/
           adapter/protobuf/
-          compendium-client/
           core/lens/
           core/optics/
           core/rpc/
