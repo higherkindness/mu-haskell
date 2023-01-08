@@ -26,9 +26,9 @@ import           Data.Proxy
 import           Data.SOP.NS
 import           Data.Scientific             (Scientific, floatingOrInteger, fromFloatDigits)
 import qualified Data.Text                   as T
+import qualified Data.UUID                   as UUID
 import           GHC.TypeLits
 import qualified Language.GraphQL.AST        as GQL
-
 import           Mu.GraphQL.Annotations
 import           Mu.GraphQL.Query.Definition
 import           Mu.Rpc
@@ -597,6 +597,13 @@ instance ParseArg p ('PrimitiveRef String) where
     = pure $ ArgPrimitive $ T.unpack b
   parseArg _ aname _
     = throwError $ "argument '" <> aname <> "' was not of right type"
+instance ParseArg p ('PrimitiveRef UUID.UUID) where
+  parseArg _ _ (GQL.String b)
+    = case UUID.fromText b of
+        Nothing -> throwError "string not in UUID format"
+        Just u  -> pure $ ArgPrimitive u
+  parseArg _ aname _
+    = throwError $ "argument '" <> aname <> "' was not of right type"
 instance ParseArg p ('PrimitiveRef ()) where
   parseArg _ _ GQL.Null = pure $ ArgPrimitive ()
   parseArg _ aname _
@@ -715,6 +722,12 @@ instance ValueParser sch ('TPrimitive T.Text) where
   valueParser _ fname _          = throwError $ "field '" <> fname <> "' was not of right type"
 instance ValueParser sch ('TPrimitive String) where
   valueParser _ _ (GQL.String b) = pure $ FPrimitive $ T.unpack b
+  valueParser _ fname _          = throwError $ "field '" <> fname <> "' was not of right type"
+instance ValueParser sch ('TPrimitive UUID.UUID) where
+  valueParser _ _ (GQL.String b) =
+    case UUID.fromText b of
+      Nothing -> throwError "string not in UUID format"
+      Just u  -> pure $ FPrimitive u
   valueParser _ fname _          = throwError $ "field '" <> fname <> "' was not of right type"
 instance (ValueParser sch r) => ValueParser sch ('TList r) where
   valueParser vmap fname (GQL.List xs) = FList <$> traverse (valueParser' vmap fname . GQL.node) xs
