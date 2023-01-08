@@ -11,7 +11,7 @@
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
 {-# language ViewPatterns          #-}
-{-# OPTIONS_GHC -Wincomplete-patterns -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wincomplete-patterns -fno-warn-orphans #-}
 
 module Mu.GraphQL.Query.Parse where
 
@@ -353,7 +353,7 @@ instance ( ParseMethod p ('Service s methods) methods, KnownName s )
       go (GQL.InlineFragmentSelection (GQL.InlineFragment ty dirs innerSs _) : ss)
         | any (shouldSkip vmap) dirs
         = go ss
-        | Nothing <- ty
+        | Nothing <- ty
         = go (F.toList innerSs ++ ss)
         | Just selectedTy <- ty
         = let thisTy = T.pack (nameVal (Proxy @s))
@@ -518,19 +518,19 @@ class ParseMaybeArg (p :: Package') (a :: TypeRef Symbol) where
                 -> Maybe GQL.Value
                 -> f (ArgumentValue' p a)
 
-instance {-# OVERLAPS #-} (ParseArg p a)
+instance {-# OVERLAPS #-} (ParseArg p a)
          => ParseMaybeArg p ('OptionalRef a) where
   parseMaybeArg vmap aname (Just x)
     = ArgOptional . Just <$> parseArg' vmap aname x
   parseMaybeArg _ _ Nothing
     = pure $ ArgOptional Nothing
-instance {-# OVERLAPS #-} (ParseArg p a)
+instance {-# OVERLAPS #-} (ParseArg p a)
          => ParseMaybeArg p ('ListRef a) where
   parseMaybeArg vmap aname (Just x)
     = parseArg' vmap aname x
   parseMaybeArg _ _ Nothing
     = pure $ ArgList []
-instance {-# OVERLAPPABLE #-} (ParseArg p a)
+instance {-# OVERLAPPABLE #-} (ParseArg p a)
          => ParseMaybeArg p a where
   parseMaybeArg vmap aname (Just x)
     = parseArg' vmap aname x
@@ -816,7 +816,7 @@ instance (KnownName name, ParseField sch fields)
 parseSchemaQuery ::
   forall (sch :: Schema') t (rname :: Symbol) fields f.
   ( MonadError T.Text f
-  , t ~  'DRecord rname fields
+  , t ~  'DRecord rname fields
   , KnownName rname
   , ParseField sch fields ) =>
   Proxy sch ->

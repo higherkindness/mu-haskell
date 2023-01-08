@@ -111,12 +111,12 @@ data ClientMessage
 data ServerMessage
   = GQLConnectionError { errorPayload :: Maybe A.Value }
   | GQLConnectionAck
-  | GQLData     { serverMsgId :: T.Text
+  | GQLData     { serverMsgId :: T.Text
                 , payload     :: A.Value }
-  | GQLError    { serverMsgId :: T.Text
+  | GQLError    { serverMsgId :: T.Text
                 , payload     :: A.Value }
   | GQLComplete { serverMsgId :: T.Text}
-  | GQLKeepAlive
+  | GQLKeepAlive
   deriving Show
 
 -- NOTE: using https://github.com/apollographql/subscriptions-transport-ws/blob/master/src/message-types.ts

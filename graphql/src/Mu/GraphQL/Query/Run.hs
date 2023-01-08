@@ -14,7 +14,7 @@
 {-# language TypeFamilies          #-}
 {-# language TypeOperators         #-}
 {-# language UndecidableInstances  #-}
-{-# OPTIONS_GHC -fprint-explicit-foralls #-}
+{-# OPTIONS_GHC -fprint-explicit-foralls #-}
 module Mu.GraphQL.Query.Run (
   GraphQLApp
 , runPipeline
@@ -267,7 +267,7 @@ runSubscription f req whole@(Services ss) path
 
 class RunQueryFindHandler m p whole chn ss s hs where
   runQueryFindHandler
-    :: ( p ~ 'Package pname wholess
+    :: ( p ~ 'Package pname wholess
        , inh ~ MappingRight chn (ServiceName s) )
     => (forall a. m a -> ServerErrorIO a)
     -> RequestHeaders
@@ -278,7 +278,7 @@ class RunQueryFindHandler m p whole chn ss s hs where
     -> ServiceQuery p s
     -> WriterT [GraphQLError] IO Aeson.Value
   runSubscriptionFindHandler
-    :: ( p ~ 'Package pname wholess
+    :: ( p ~ 'Package pname wholess
        , inh ~ MappingRight chn (ServiceName s) )
     => (forall a. m a -> ServerErrorIO a)
     -> RequestHeaders
@@ -293,7 +293,7 @@ class RunQueryFindHandler m p whole chn ss s hs where
 class RunQueryOnFoundHandler m p whole chn (s :: Service snm mnm anm (TypeRef snm)) hs where
   type ServiceName s :: snm
   runQueryOnFoundHandler
-    :: ( p ~ 'Package pname wholess
+    :: ( p ~ 'Package pname wholess
        , inh ~ MappingRight chn (ServiceName s) )
     => (forall a. m a -> ServerErrorIO a)
     -> RequestHeaders
@@ -304,7 +304,7 @@ class RunQueryOnFoundHandler m p whole chn (s :: Service snm mnm anm (TypeRef sn
     -> ServiceQuery p s
     -> WriterT [GraphQLError] IO Aeson.Value
   runSubscriptionOnFoundHandler
-    :: ( p ~ 'Package pname wholess
+    :: ( p ~ 'Package pname wholess
        , inh ~ MappingRight chn (ServiceName s) )
     => (forall a. m a -> ServerErrorIO a)
     -> RequestHeaders
@@ -320,7 +320,7 @@ instance TypeError ('Text "Could not find handler for " ':<>: 'ShowType s)
          => RunQueryFindHandler m p whole chn '[] s '[] where
   runQueryFindHandler _ = error "this should never be called"
   runSubscriptionFindHandler _ = error "this should never be called"
-instance {-# OVERLAPPABLE #-}
+instance {-# OVERLAPPABLE #-}
          RunQueryFindHandler m p whole chn ss s hs
          => RunQueryFindHandler m p whole chn (other ': ss) s (h ': hs) where
   runQueryFindHandler f req sch whole path (_ :<&>: that)
@@ -416,8 +416,8 @@ instance forall m p pname s sname whole ss chn elts.
 
 class RunMethod m p whole chn s ms hs where
   runMethod
-    :: ( p ~ 'Package pname wholess
-       , inh ~ MappingRight chn (ServiceName s) )
+    :: ( p ~ 'Package pname wholess
+       , inh ~ MappingRight chn (ServiceName s) )
     => (forall a. m a -> ServerErrorIO a)
     -> RequestHeaders
     -> ServerT chn GQL.Field p m whole
@@ -426,8 +426,8 @@ class RunMethod m p whole chn s ms hs where
     -> NS (ChosenMethodQuery p) ms
     -> WriterT [GraphQLError] IO (Maybe (T.Text, Aeson.Value))
   runMethodSubscription
-    :: ( p ~ 'Package pname wholess
-       , inh ~ MappingRight chn (ServiceName s) )
+    :: ( p ~ 'Package pname wholess
+       , inh ~ MappingRight chn (ServiceName s) )
     => (forall a. m a -> ServerErrorIO a)
     -> RequestHeaders
     -> ServerT chn GQL.Field p m whole
