@@ -42,7 +42,7 @@ jobs:
       run: stack --resolver lts-14.27 install standalone-haddock
     - name: Build microsite from last release
       run: |
-        LAST_TAG=$(git describe --abbrev=0 --tags)
+        LAST_TAG=$(git tag --sort=committerdate | tail -1)
         git checkout $LAST_TAG
         bash ./generate-haddock-docs.sh
         bundle config set path 'vendor/bundle'
